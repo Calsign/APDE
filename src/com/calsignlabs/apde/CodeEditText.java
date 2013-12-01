@@ -1,6 +1,14 @@
 package com.calsignlabs.apde;
 
+import java.io.IOException;
+import java.util.HashMap;
+
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.SAXException;
+
 import processing.core.PApplet;
+import processing.data.XML;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -14,24 +22,27 @@ import android.widget.EditText;
  * Custom EditText for syntax highlighting and some other stuff
  */
 public class CodeEditText extends EditText {
-	//TODO make these non-hard-coded, get ALL of them
-	public static final String[] keywordsBoldBlue = {"setup", "draw", "mousePressed", "mouseReleased", "mouseDragged", "mouseClicked", "keyPressed", "keyReleased",};
-	public static final String[] keywordsBlue = {"mousePressed", "background", "size", "println"};
-	public static final String[] keywordsOrange = {"true", "false", "int", "long", "float", "double", "boolean", "String", "char", "byte", "color", "Object"};
-	public static final String[] keywordsGreen = {"null", "this", "void", "for", "while", "if", "case", "switch", "continue", "break", "else", "public", "private", "protected",
-		"static", "final", "abstract", "class", "import", "implements", "interface", "extends", "return", "super", "try", "catch", "new"};
-	public static final String[] keywordsPink = {"width", "height", "displayWidth", "displayHeight"};
+//	//TODO make these non-hard-coded, get ALL of them
+//	public static final String[] keywordsBoldBlue = {"setup", "draw", "mousePressed", "mouseReleased", "mouseDragged", "mouseClicked", "keyPressed", "keyReleased",};
+//	public static final String[] keywordsBlue = {"mousePressed", "background", "size", "println"};
+//	public static final String[] keywordsOrange = {"true", "false", "int", "long", "float", "double", "boolean", "String", "char", "byte", "color", "Object"};
+//	public static final String[] keywordsGreen = {"null", "this", "void", "for", "while", "if", "case", "switch", "continue", "break", "else", "public", "private", "protected",
+//		"static", "final", "abstract", "class", "import", "implements", "interface", "extends", "return", "super", "try", "catch", "new"};
+//	public static final String[] keywordsPink = {"width", "height", "displayWidth", "displayHeight"};
 	
 	private static Paint lineHighlight;
 	private static Paint whitePaint;
 	
-	private static TextPaint keywordBoldBlue;
-	private static TextPaint keywordBlue;
-	private static TextPaint keywordOrange;
-	private static TextPaint keywordGreen;
-	private static TextPaint keywordPink;
-	private static TextPaint incompleteLiteral;
-	private static TextPaint comment;
+//	private static TextPaint keywordBoldBlue;
+//	private static TextPaint keywordBlue;
+//	private static TextPaint keywordOrange;
+//	private static TextPaint keywordGreen;
+//	private static TextPaint keywordPink;
+//	private static TextPaint incompleteLiteral;
+//	private static TextPaint comment;
+	
+	public static HashMap<String, TextPaint> styles;
+	public static HashMap<String, TextPaint> syntax;
 	
 	//The default indentation (two spaces)
 	public static final String indent = "  ";
@@ -62,35 +73,96 @@ public class CodeEditText extends EditText {
 		whitePaint.setStyle(Paint.Style.FILL);
 		whitePaint.setColor(0xFFFFFFFF);
 		
-		//Create the keyword highlight Paints
-		keywordBoldBlue = new TextPaint(getPaint());
-		keywordBoldBlue.setStyle(Paint.Style.FILL);
-		keywordBoldBlue.setFakeBoldText(true); //TODO what does "fake" mean? Is this something we should be concerned about?
-		keywordBoldBlue.setColor(0xFF5F95C9);
+//		//Create the keyword highlight Paints
+//		keywordBoldBlue = new TextPaint(getPaint());
+//		keywordBoldBlue.setStyle(Paint.Style.FILL);
+//		keywordBoldBlue.setFakeBoldText(true); //TODO what does "fake" mean? Is this something we should be concerned about?
+//		keywordBoldBlue.setColor(0xFF5F95C9);
+//		
+//		keywordBlue = new TextPaint(getPaint());
+//		keywordBlue.setStyle(TextPaint.Style.FILL);
+//		keywordBlue.setColor(0xFF5F95C9);
+//		
+//		keywordOrange = new TextPaint(getPaint());
+//		keywordOrange.setStyle(TextPaint.Style.FILL);
+//		keywordOrange.setColor(0xFFE8B665);
+//		
+//		keywordGreen = new TextPaint(getPaint());
+//		keywordGreen.setStyle(TextPaint.Style.FILL);
+//		keywordGreen.setColor(0xFF89DBC7);
+//		
+//		keywordPink = new TextPaint(getPaint());
+//		keywordPink.setStyle(TextPaint.Style.FILL);
+//		keywordPink.setColor(0xFFD693B2);
+//		
+//		incompleteLiteral = new TextPaint(keywordPink);
+//		incompleteLiteral.setFakeBoldText(true);
+//		
+//		//Create the comment highlight
+//		comment = new TextPaint(getPaint());
+//		comment.setStyle(TextPaint.Style.FILL);
+//		comment.setColor(0xFF999999);
 		
-		keywordBlue = new TextPaint(getPaint());
-		keywordBlue.setStyle(TextPaint.Style.FILL);
-		keywordBlue.setColor(0xFF5F95C9);
+		//Initialize the list of styles
+		styles = new HashMap<String, TextPaint>();
 		
-		keywordOrange = new TextPaint(getPaint());
-		keywordOrange.setStyle(TextPaint.Style.FILL);
-		keywordOrange.setColor(0xFFE8B665);
+		//Initialize the syntax map
+		syntax = new HashMap<String, TextPaint>();
 		
-		keywordGreen = new TextPaint(getPaint());
-		keywordGreen.setStyle(TextPaint.Style.FILL);
-		keywordGreen.setColor(0xFF89DBC7);
+		//Load the default syntax
+		try {
+			//Processing's XML is easier to work with... TODO maybe implement native XML?
+			loadSyntax(new XML(getResources().getAssets().open("default_syntax_colors.xml")));
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ParserConfigurationException e) {
+			e.printStackTrace();
+		} catch (SAXException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void loadSyntax(XML xml) {
+		//Get the list of defined styles
+		XML[] styleList = xml.getChild("styles").getChildren();
+		for(XML style : styleList) {
+			//Make sure that this is a "style" element
+			if(!style.getName().equals("style"))
+				continue;
+			
+			//Parse the style
+			TextPaint paint = new TextPaint(getPaint());
+			String name = style.getContent();
+			String hex = style.getString("color", "#00000000").substring(1);
+			boolean bold = style.getString("bold", "false").equals("true") ? true : false;
+			
+			//Build the TextPaint
+			paint.setStyle(TextPaint.Style.FILL);
+			paint.setColor(PApplet.unhex(hex));
+			paint.setFakeBoldText(bold); //TODO what does "fake" mean? Is this something we should be concerned about?
+			
+			//Add the style
+			styles.put(name, paint);
+		}
 		
-		keywordPink = new TextPaint(getPaint());
-		keywordPink.setStyle(TextPaint.Style.FILL);
-		keywordPink.setColor(0xFFD693B2);
-		
-		incompleteLiteral = new TextPaint(keywordPink);
-		incompleteLiteral.setFakeBoldText(true);
-		
-		//Create the comment highlight
-		comment = new TextPaint(getPaint());
-		comment.setStyle(TextPaint.Style.FILL);
-		comment.setColor(0xFF999999);
+		//Get the list of defined keywords
+		XML[] keywords = xml.getChild("keywords").getChildren();
+		for(XML keyword : keywords) {
+			//Make sure that this is a "keyword" element
+			if(!keyword.getName().equals("keyword"))
+				continue;
+			
+			//Parse the keyword
+			String style = keyword.getString("style", "");
+			String name = keyword.getContent();
+			
+			//If this isn't a valid style, bail out
+			if(!styles.containsKey(style))
+				continue;
+			
+			//Add the keyword
+			syntax.put(name, styles.get(style));
+		}
 	}
 	
 	@Override
@@ -166,11 +238,12 @@ public class CodeEditText extends EditText {
 				String[] items = PApplet.splitTokens(lines[i], "()[]{}=+-/*%&|?:;<>,. "); //TODO is this all of them?
 				
 				//Highlight words that match each list
-				syntaxHighlightForKeywords(lines[i], i, items, keywordsBlue, canvas, keywordBlue);
-				syntaxHighlightForKeywords(lines[i], i, items, keywordsBoldBlue, canvas, keywordBoldBlue);
-				syntaxHighlightForKeywords(lines[i], i, items, keywordsOrange, canvas, keywordOrange);
-				syntaxHighlightForKeywords(lines[i], i, items, keywordsGreen, canvas, keywordGreen);
-				syntaxHighlightForKeywords(lines[i], i, items, keywordsPink, canvas, keywordPink);
+//				syntaxHighlightForKeywords(lines[i], i, items, keywordsBlue, canvas, keywordBlue);
+//				syntaxHighlightForKeywords(lines[i], i, items, keywordsBoldBlue, canvas, keywordBoldBlue);
+//				syntaxHighlightForKeywords(lines[i], i, items, keywordsOrange, canvas, keywordOrange);
+//				syntaxHighlightForKeywords(lines[i], i, items, keywordsGreen, canvas, keywordGreen);
+//				syntaxHighlightForKeywords(lines[i], i, items, keywordsPink, canvas, keywordPink);
+				syntaxHighlightForKeywords(lines[i], i, items, canvas);
 				
 				int commentStart = -1;
 				
@@ -209,7 +282,7 @@ public class CodeEditText extends EditText {
 							//TODO clear the original text... this is close enough for now
 							
 							//Draw highlighted text
-							canvas.drawText(lines[i].substring(commentStart, lines[i].length()), x, y, comment);
+							canvas.drawText(lines[i].substring(commentStart, lines[i].length()), x, y, styles.get("comment_single"));
 						}
 					}
 					
@@ -220,14 +293,14 @@ public class CodeEditText extends EditText {
 						String test = lines[i];
 						int offset = 0;
 						while(multilineCommentStart == -1) {
+							//If there cannot be a comment in this line - breaks out of the loop
+							if(test.length() == 0 || test.indexOf("/*") == -1)
+								break;
+							
 							//Get the text to the right of the first slash ("/") character
 							int first = test.indexOf("/");
 							offset += first;
 							test = test.substring(first + 1, test.length());
-							
-							//If there cannot be a comment in this line - breaks out of the loop
-							if(test.length() == 0 || (test.indexOf('/') == -1 && test.indexOf('*') == -1))
-								break;
 							
 							//Test to see if the slashes are inside a String literal
 							int numQuotesBefore = lines[i].substring(0, offset + 1).split("\"").length - 1;
@@ -251,7 +324,7 @@ public class CodeEditText extends EditText {
 							//TODO clear the original text... this is close enough for now
 							
 							//Draw highlighted text
-							canvas.drawText(lines[i].substring(multilineCommentStart, commentEnd == offset - 1 ? lines[i].length() : commentEnd + 3), x, y, comment);
+							canvas.drawText(lines[i].substring(multilineCommentStart, commentEnd == offset - 1 ? lines[i].length() : commentEnd + 3), x, y, styles.get("comment_multi"));
 							
 							if(commentEnd == offset - 1)
 								multilineComment = true;
@@ -300,7 +373,7 @@ public class CodeEditText extends EditText {
 						//TODO clear the original text... this is close enough for now
 						
 						//Draw highlighted text
-						canvas.drawText(lines[i].substring(first + offset, last + offset + (incomplete ? 0 : 1)), x, y, incomplete ? incompleteLiteral : keywordPink);
+						canvas.drawText(lines[i].substring(first + offset, last + offset + (incomplete ? 0 : 1)), x, y, incomplete ? styles.get("literal_incomplete") : styles.get("literal"));
 						
 						//Get the remainder of the line
 						if(test.length() > last + 1) {
@@ -322,7 +395,7 @@ public class CodeEditText extends EditText {
 					//TODO clear the original text... this is close enough for now
 					
 					//Draw highlighted text
-					canvas.drawText(lines[i].substring(0, commentEnd == -1 ? lines[i].length() : commentEnd + 2), x, y, comment);
+					canvas.drawText(lines[i].substring(0, commentEnd == -1 ? lines[i].length() : commentEnd + 2), x, y, styles.get("comment_multi"));
 					
 					if(commentEnd != -1)
 						multilineComment = false;
@@ -401,7 +474,40 @@ public class CodeEditText extends EditText {
 		}
 	}
 	
-	private void syntaxHighlightForKeywords(String line, int lineNum, String[] items, String[] keywords, Canvas canvas, TextPaint paint) {
+//	private void syntaxHighlightForKeywords(String line, int lineNum, String[] items, String[] keywords, Canvas canvas, TextPaint paint) {
+//		int lineHeight = getLineHeight();
+//		int lineOffset = getCompoundPaddingTop() + 6; //TODO this hard-coded offset shouldn't be here, but we need it for some reason
+//		int xOffset = getCompoundPaddingLeft(); // TODO hopefully no one uses Arabic (right-aligned localities)
+//		
+//		//Get the width of the widest character ("m")... but this is monospace, anyway...
+//		float charWidth = this.getPaint().measureText("m");
+//		
+//		for(int j = 0; j < keywords.length; j ++) {
+//			int iter = 0;
+//			for(int i = 0; i < items.length; i ++) {
+//				String item = items[i];
+//				String cur = keywords[j];
+//				
+//				if(item.equals(cur)) {
+//					//Get the offset of the keyword
+//					int pos = recursiveSubstringIndexOf(line, iter, cur);
+//					
+//					//Calculate coordinates
+//					float x = (xOffset + pos * charWidth);
+//					float y = lineOffset - 10 + (lineNum + 1) * lineHeight;
+//					
+//					//TODO clear the original text... this is close enough for now
+//					
+//					//Draw highlighted text
+//					canvas.drawText(cur, x, y, paint);
+//					
+//					iter ++;
+//				}
+//			}
+//		}
+//	}
+	
+	private void syntaxHighlightForKeywords(String line, int lineNum, String[] items, Canvas canvas) {
 		int lineHeight = getLineHeight();
 		int lineOffset = getCompoundPaddingTop() + 6; //TODO this hard-coded offset shouldn't be here, but we need it for some reason
 		int xOffset = getCompoundPaddingLeft(); // TODO hopefully no one uses Arabic (right-aligned localities)
@@ -409,27 +515,45 @@ public class CodeEditText extends EditText {
 		//Get the width of the widest character ("m")... but this is monospace, anyway...
 		float charWidth = this.getPaint().measureText("m");
 		
-		for(int j = 0; j < keywords.length; j ++) {
-			int iter = 0;
-			for(int i = 0; i < items.length; i ++) {
-				String item = items[i];
-				String cur = keywords[j];
+		//Iterations of each keyword
+		HashMap<String, Integer> iter = new HashMap<String, Integer>();
+		
+		for(int i = 0; i < items.length; i ++) {
+			String item = items[i];
+			
+			if(syntax.containsKey(item)) {
+				TextPaint paint;
 				
-				if(item.equals(cur)) {
-					//Get the offset of the keyword
-					int pos = recursiveSubstringIndexOf(line, iter, cur);
-					
-					//Calculate coordinates
-					float x = (xOffset + pos * charWidth);
-					float y = lineOffset - 10 + (lineNum + 1) * lineHeight;
-					
-					//TODO clear the original text... this is close enough for now
-					
-					//Draw highlighted text
-					canvas.drawText(cur, x, y, paint);
-					
-					iter ++;
+				try {
+					paint = syntax.get(item);
+				} catch(Exception e) {
+					//A custom syntax template is badly formed
+					//TODO send message to user
+					e.printStackTrace();
+					continue;
 				}
+					
+				int it;
+				
+				if(iter.containsKey(item))
+					it = iter.get(item);
+				else
+					it = 0;
+				
+				//Get the offset of the keyword
+				int pos = recursiveSubstringIndexOf(line, it, item);
+				
+				//Calculate coordinates
+				float x = (xOffset + pos * charWidth);
+				float y = lineOffset - 10 + (lineNum + 1) * lineHeight;
+				
+				//TODO clear the original text... this is close enough for now
+				
+				//Draw highlighted text
+				canvas.drawText(item, x, y, paint);
+				
+				Integer num = Integer.valueOf(it + 1);
+				iter.put(item, num);
 			}
 		}
 	}
