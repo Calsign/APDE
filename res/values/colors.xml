@@ -1,0 +1,10 @@
+<resources>
+    <color name="bar_overlay">#31426C</color>
+    <color name="current_line">#CCCCCC</color>
+    <color name="message_back">#AAAAAA</color>
+    <color name="error_back">#89440F</color>
+    <color name="message_text">#000000</color>
+    <color name="error_text">#FFFFFF</color>
+    <color name="drawer_default_color">#EEEEEE</color>
+    <color name="holo_select">#ff33b5e5</color>
+</resources>
