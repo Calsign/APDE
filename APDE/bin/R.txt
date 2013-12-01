@@ -254,11 +254,12 @@ int drawable abs__toast_frame 0x7f02006f
 int drawable back 0x7f020070
 int drawable back_console 0x7f020071
 int drawable bg_key 0x7f020072
-int drawable ic_action_edit 0x7f020073
-int drawable ic_action_run 0x7f020074
-int drawable ic_action_stop 0x7f020075
-int drawable ic_launcher 0x7f020076
-int drawable ic_navigation_drawer 0x7f020077
+int drawable code_edit_text_cursor 0x7f020073
+int drawable ic_action_edit 0x7f020074
+int drawable ic_action_run 0x7f020075
+int drawable ic_action_stop 0x7f020076
+int drawable ic_launcher 0x7f020077
+int drawable ic_navigation_drawer 0x7f020078
 int id abs__action_bar 0x7f040020
 int id abs__action_bar_container 0x7f04001f
 int id abs__action_bar_subtitle 0x7f040011

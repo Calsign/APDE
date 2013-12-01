@@ -12,6 +12,11 @@
 	    tools:context=".APDE"
 	    android:orientation="vertical" >
 	    
+	    <View
+  			android:layout_width="fill_parent"
+  			android:layout_height="10dp"
+   			android:background="#FFFFFFFF" />
+	    
 		<com.calsignlabs.apde.CodeEditText android:id="@+id/code"
 		    android:inputType="text|textNoSuggestions|textMultiLine"
 		    android:layout_width="fill_parent"
@@ -21,7 +26,18 @@
 		    android:scrollbars="vertical"
 		    android:typeface="monospace"
 		    android:textSize="14sp"
-		    android:textColor="#000000" />
+		    android:textColor="#000000"
+		    android:textCursorDrawable="@drawable/code_edit_text_cursor"
+		    android:paddingTop="0dp"
+		    android:paddingBottom="0dp"
+		    android:paddingLeft="10dp"
+		    android:paddingRight="10dp"
+		    android:background="#FFFFFFFF" />
+		
+		<View
+  			android:layout_width="fill_parent"
+  			android:layout_height="10dp"
+   			android:background="#FFFFFFFF" />
 	    
 		<TextView
 		    android:id="@+id/message"
@@ -69,9 +85,9 @@
 		    android:background="#EEEEEE"
 		    android:textStyle="bold" />
 	    
-	    <View 
+	    <View
   			android:layout_width="fill_parent"
-  			android:layout_height="2dp"       
+  			android:layout_height="2dp"
    			android:background="#AAAAAA" />
 	    
 		<ListView android:id="@+id/drawer_list"

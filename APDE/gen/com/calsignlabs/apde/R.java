@@ -929,11 +929,12 @@ containing a value of this type.
         public static final int back=0x7f020070;
         public static final int back_console=0x7f020071;
         public static final int bg_key=0x7f020072;
-        public static final int ic_action_edit=0x7f020073;
-        public static final int ic_action_run=0x7f020074;
-        public static final int ic_action_stop=0x7f020075;
-        public static final int ic_launcher=0x7f020076;
-        public static final int ic_navigation_drawer=0x7f020077;
+        public static final int code_edit_text_cursor=0x7f020073;
+        public static final int ic_action_edit=0x7f020074;
+        public static final int ic_action_run=0x7f020075;
+        public static final int ic_action_stop=0x7f020076;
+        public static final int ic_launcher=0x7f020077;
+        public static final int ic_navigation_drawer=0x7f020078;
     }
     public static final class id {
         public static final int abs__action_bar=0x7f040020;
