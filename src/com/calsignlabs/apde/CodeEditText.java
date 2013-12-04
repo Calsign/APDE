@@ -174,7 +174,7 @@ public class CodeEditText extends EditText {
 		
 		if(isFocused())
 			//Draw line highlight around the line that the cursor is on
-			canvas.drawRect(0, lineOffset + currentLine * lineHeight, canvas.getWidth(), lineOffset + (currentLine + 1) * lineHeight, lineHighlight);
+			canvas.drawRect(getScrollX(), lineOffset + currentLine * lineHeight, canvas.getWidth() + getScrollX(), lineOffset + (currentLine + 1) * lineHeight, lineHighlight);
 		
 		//Draw the base text
 		super.onDraw(canvas);
