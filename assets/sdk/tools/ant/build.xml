@@ -64,7 +64,6 @@
            ...
     -->
     <property name="dex.force.jumbo" value="false" />
-    <property name="dex.disable.merger" value="false" />
 
     <!-- compilation options -->
     <property name="java.encoding" value="UTF-8" />
@@ -87,14 +86,14 @@
 
     <!-- Output location of the HTML report for the "lint" target.
          Ideally this would be specified as
-            value="${out.dir}/lint-results.html"
+            value="${out.dir}/lint.html"
          but we can't make a forward reference to the definition for
          ${out.dir}, and it is not a configurable property (yet).
      -->
-    <property name="lint.out.html" value="bin/lint-results.html" />
+    <property name="lint.out.html" value="bin/lint.html" />
 
     <!-- Output location of the XML report for the "lint" target -->
-    <property name="lint.out.xml" value="bin/lint-results.xml" />
+    <property name="lint.out.xml" value="bin/lint.xml" />
 
     <!-- ******************************************************* -->
     <!-- ********************* Custom Tasks ******************** -->
@@ -286,7 +285,6 @@
                     dexedlibs="${out.dexed.absolute.dir}"
                     nolocals="@{nolocals}"
                     forceJumbo="${dex.force.jumbo}"
-                    disableDexMerger="${dex.disable.merger}"
                     verbose="${verbose}">
                 <path path="${out.dex.input.absolute.dir}"/>
                 <path refid="out.dex.jar.input.ref" />
@@ -657,13 +655,11 @@
             <!-- renderscript generates resources so it must be called before aapt -->
             <echo level="info">----------</echo>
             <echo level="info">Handling RenderScript files...</echo>
-            <!-- set the rs target prop in case it hasn't been set. -->
-            <property name="renderscript.target" value="${project.minSdkVersion}" />
             <renderscript executable="${renderscript}"
                     includePathRefId="android.renderscript.include.path"
                     genFolder="${gen.absolute.dir}"
                     resFolder="${out.res.absolute.dir}/raw"
-                    targetApi="${renderscript.target}"
+                    targetApi="${project.minSdkVersion}"
                     optLevel="${renderscript.opt.level}"
                     buildType="${build.is.packaging.debug}"
                     previousBuildType="${build.last.is.packaging.debug}">
@@ -676,7 +672,6 @@
                     command="package"
                     verbose="${verbose}"
                     manifest="${out.manifest.abs.file}"
-                    originalManifestPackage="${project.app.package}"
                     androidjar="${project.target.android.jar}"
                     rfolder="${gen.absolute.dir}"
                     nonConstantId="${android.library}"
@@ -706,7 +701,7 @@
     <target name="-pre-compile"/>
 
     <!-- Compiles this project's .java files into .class files. -->
-    <target name="-compile" depends="-pre-build, -build-setup, -code-gen, -pre-compile">
+    <target name="-compile" depends="-build-setup, -pre-build, -code-gen, -pre-compile">
         <do-only-if-manifest-hasCode elseText="hasCode = false. Skipping...">
             <!-- merge the project's own classpath and the tested project's classpath -->
             <path id="project.javac.classpath">
@@ -1270,7 +1265,7 @@
                     </extra-instrument-args>
                 </run-tests-helper>
 
-                <echo level="info">Setting permission to download the coverage file...</echo>
+                <echo level="info">Settting permission to download the coverage file...</echo>
                 <exec executable="${adb}" failonerror="true">
                     <arg line="${adb.device.arg}" />
                     <arg value="shell" />
@@ -1491,8 +1486,9 @@
         <echo>Android Ant Build. Available targets:</echo>
         <echo>   help:      Displays this help.</echo>
         <echo>   clean:     Removes output files created by other targets.</echo>
-        <echo>              This calls the same target on all dependent projects.</echo>
-        <echo>              Use 'ant nodeps clean' to only clean the local project</echo>
+        <echo>              The 'all' target can be used to clean dependencies</echo>
+        <echo>              (tested projects and libraries)at the same time</echo>
+        <echo>              using: 'ant all clean'</echo>
         <echo>   debug:     Builds the application and signs it with a debug key.</echo>
         <echo>              The 'nodeps' target can be used to only build the</echo>
         <echo>              current project and ignore the libraries using:</echo>

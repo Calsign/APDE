@@ -47,7 +47,7 @@ public class Manifest {
 	}
 	
 	private String defaultPackageName() {
-		return "processing.test." + build.sketchName.toLowerCase(Locale.US) + "." + build.sketchName;
+		return "processing.test." + build.sketchName.toLowerCase(Locale.US);
 	}
 	
 	// called by other classes who want an actual package name
@@ -139,12 +139,12 @@ public class Manifest {
 		writer.println(" <application android:label=\"\""); // insert pretty name
 		writer.println(" android:icon=\"@drawable/icon\"");
 		writer.println(" android:debuggable=\"true\">");
-
+		
 		// activity/android:name should be the full name (package + class name) of
 		// the actual activity class. or the package can be replaced by a single
 		// dot as a prefix as an easier shorthand.
 		writer.println(" <activity android:name=\"\">");
-
+		
 		writer.println(" <intent-filter>");
 		writer.println(" <action android:name=\"android.intent.action.MAIN\" />");
 		writer.println(" <category android:name=\"android.intent.category.LAUNCHER\" />");
@@ -160,22 +160,21 @@ public class Manifest {
 	 * Save a new version of the manifest info to the build location.
 	 * Also fill in any missing attributes that aren't yet set properly.
 	 */
-	protected void writeBuild(File file, String className,
-			boolean debug) throws IOException {
+	protected void writeBuild(File file, String className, boolean debug) throws IOException {
 		// write a copy to the build location
 		save(file);
-
+		
 		// load the copy from the build location and start messing with it
 		XML mf = null;
 		try {
 			mf = new XML(file);
-
+			
 			// package name, or default
 			String p = mf.getString("package").trim();
 			if (p.length() == 0) {
 				mf.setString("package", defaultPackageName());
 			}
-
+			
 			// app name and label, or the class name
 			XML app = mf.getChild("application");
 			String label = app.getString("android:label");
@@ -183,17 +182,16 @@ public class Manifest {
 				app.setString("android:label", className);
 			}
 			app.setString("android:debuggable", debug ? "true" : "false");
-
+			
 			XML activity = app.getChild("activity");
 			// the '.' prefix is just an alias for the full package name
 			// http://developer.android.com/guide/topics/manifest/activity-element.html#name
 			activity.setString("android:name", "." + className); // this has to be right
-
+			
 			PrintWriter writer = new PrintWriter(file);
 			writer.print(mf.toString());
 			writer.flush();
 			writer.close();
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

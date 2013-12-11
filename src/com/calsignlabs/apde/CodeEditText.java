@@ -125,8 +125,6 @@ public class CodeEditText extends EditText {
 		
 		boolean result = super.onKeyDown(keyCode, event);
 		
-		System.out.println(lastLineNum);
-		
 		//Get the indentation of the previous line
 		String[] lines = getText().toString().split("\n");
 		String lastLine = lines[Math.min(lastLineNum, lines.length - 1)];

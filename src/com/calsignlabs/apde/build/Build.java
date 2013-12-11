@@ -7,7 +7,6 @@ package com.calsignlabs.apde.build;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -16,7 +15,6 @@ import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -25,17 +23,21 @@ import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import kellinwood.security.zipsigner.ZipSigner;
+
+import org.eclipse.jdt.internal.compiler.batch.Main;
+
 import processing.app.Preferences;
 import processing.core.PApplet;
 import processing.mode.java.preproc.PdePreprocessor;
 import processing.mode.java.preproc.PreprocessorResult;
 
+import android.content.Intent;
 import android.content.res.AssetManager;
+import android.net.Uri;
 import android.os.Environment;
 
 import com.calsignlabs.apde.*;
-
-import org.apache.tools.ant.*;
 
 public class Build {
 	public static final String PACKAGE_REGEX ="(?:^|\\s|;)package\\s+(\\S+)\\;";
@@ -47,9 +49,12 @@ public class Build {
 	
 	private File buildFolder;
 	private File srcFolder;
+	private File genFolder;
 	private File libsFolder;
 	private File assetsFolder;
 	private File binFolder;
+	private File tmpFolder;
+	
 	private File buildFile;
 	
 	protected String classPath;
@@ -91,9 +96,14 @@ public class Build {
 	public void build(String target) {
 		buildFolder = getBuildFolder();
 		srcFolder = new File(buildFolder, "src");
+		genFolder = new File(buildFolder, "gen");
 		libsFolder = new File(buildFolder, "libs");
 		assetsFolder = new File(buildFolder, "assets");
 		binFolder = new File(buildFolder, "bin");
+		
+		tmpFolder = getTempFolder();
+		
+		buildFile = new File(buildFolder, "build.xml");
 		
 		//Wipe the old build folder
 		if(buildFolder.exists())
@@ -105,21 +115,25 @@ public class Build {
 		assetsFolder.mkdir();
 		binFolder.mkdir();
 		
+		tmpFolder.mkdir();
+		
+		Manifest manifest = null;
+		String sketchClassName = null;
+		
 		try {
-			Manifest manifest = new Manifest(this);
+			manifest = new Manifest(this);
 			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
 			Preproc preproc = new Preproc(sketchName, manifest.getPackageName());
 			
 			//TODO what if the tab containing "size()" isn't the first tab?
 			preproc.initSketchSize(tabs[0].getText());
-			String sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false);
+			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false);
 			
 			if(sketchClassName != null) {
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
 				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
 				
 				writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
-				buildFile = new File(buildFolder, "build.xml");
 				writeBuildXML(buildFile, sketchName);
 				writeProjectProps(new File(buildFolder, "project.properties"), Manifest.MIN_SDK);
 				writeLocalProps(new File(buildFolder, "local.properties"));
@@ -130,9 +144,9 @@ public class Build {
 				final File libsFolder = mkdirs(buildFolder, "libs");
 				final File assetsFolder = mkdirs(buildFolder, "assets");
 				
-				AssetManager am = editor.getAssets(); //TODO copying android-core.jar from assets folder
-				InputStream inputStream = am.open("android-core.jar");
-				createFileFromInputStream(inputStream, new File(libsFolder, "android-core.jar"));
+				AssetManager am = editor.getAssets(); //TODO copying processing-core.jar from assets folder
+				InputStream inputStream = am.open("processing-core.jar");
+				createFileFromInputStream(inputStream, new File(libsFolder, "processing-core.jar"));
 				
 				// Copy any imported libraries (their libs and assets),
 				// and anything in the code folder contents to the project.
@@ -156,59 +170,240 @@ public class Build {
 			e.printStackTrace();
 		}
 		
-		//Onto the ANT build
+		File aaptLoc = new File(tmpFolder, "aapt");
 		
-		final Project p = new Project();
-		
-		String path = buildFile.getAbsolutePath();
-		p.setUserProperty("ant.file", path);
-		
-		// deals with a problem where javac error messages weren't coming through
-		p.setUserProperty("build.compiler", "extJavac");
-		
-		// try to spew something useful to the console
-		final DefaultLogger consoleLogger = new DefaultLogger();
-		consoleLogger.setErrorPrintStream(System.err);
-		consoleLogger.setOutputPrintStream(System.out);
-		// WARN, INFO, VERBOSE, DEBUG
-		consoleLogger.setMessageOutputLevel(Project.MSG_INFO);
-		p.addBuildListener(consoleLogger);
-		
-		// This logger is used to pick up javac errors to be parsed into
-		// SketchException objects. Note that most errors seem to show up on stdout
-		// since that's where the [javac] prefixed lines are coming through.
-		final DefaultLogger errorLogger = new DefaultLogger();
-		final ByteArrayOutputStream errb = new ByteArrayOutputStream();
-		final PrintStream errp = new PrintStream(errb);
-		errorLogger.setErrorPrintStream(errp);
-		final ByteArrayOutputStream outb = new ByteArrayOutputStream();
-		final PrintStream outp = new PrintStream(outb);
-		errorLogger.setOutputPrintStream(outp);
-		errorLogger.setMessageOutputLevel(Project.MSG_INFO);
-		p.addBuildListener(errorLogger);
-		
+		//AAPT setup
 		try {
-			p.fireBuildStarted();
-			p.init();
-			final ProjectHelper helper = ProjectHelper.getProjectHelper();
-			p.addReference("ant.projectHelper", helper);
-			helper.parse(p, buildFile); //TODO maybe this?
-			p.executeTarget(target);
-		} catch(final BuildException e) {
-			// Send a "build finished" event to the build listeners for this project.
-			p.fireBuildFinished(e);
+			AssetManager am = editor.getAssets();
 			
-			try {
-				antBuildProblems(new String(outb.toByteArray()), new String(errb.toByteArray()));
-			} catch(SketchException se) {
-				se.printStackTrace();
-			}
+			InputStream inputStream = am.open("aapt");
+			createFileFromInputStream(inputStream, aaptLoc);
+			
+			//Run "chmod" on aapt so that we can execute it
+			String[] chmod = {"/system/bin/chmod", "744", aaptLoc.getAbsolutePath()};
+			Runtime.getRuntime().exec(chmod);
+		} catch (IOException e) {
+			System.out.println("Unable to make AAPT executable");
+			e.printStackTrace();
+		}
+		
+		//Let's try a different method - who needs ANT, anyway?
+		
+		String androidVersion = "android-10";
+		String mainActivityLoc = manifest.getPackageName().replace(".", "/");
+		
+		Process aaptProc = null;
+		
+		// NOTE: make sure that all places where build folders are specfied
+		// (e.g. "buildFolder") it is followed by ".getAbsolutePath()"!!!!!
+		
+		//Run AAPT
+		try {
+			System.out.println("Running AAPT...");
+			
+			//Create folder structure for R.java TODO why is this necessary?
+			(new File(genFolder.getAbsolutePath() + "/" + mainActivityLoc + "/")).mkdirs();
+			
+			String[] args = {
+				aaptLoc.getAbsolutePath(), //The location of AAPT
+				"package", "-v", "-f", "-m",
+				"-S", buildFolder.getAbsolutePath() + "/res/", //The location of the /res folder
+				"-J", genFolder.getAbsolutePath(), //The location of the /gen folder
+				"-M", buildFolder.getAbsolutePath() + "/AndroidManifest.xml", //The location of the AndroidManifest.xml file
+				"-I", buildFolder.getAbsolutePath() + "/sdk/platforms/" + androidVersion + "/android.jar", //The location of the android.jar resource
+				"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res" //The location of the output .apk.res file
+			};
+			
+			aaptProc = Runtime.getRuntime().exec(args);
+			
+			System.out.println("Ran AAPT successfully");
+		} catch (IOException e) {
+			//Something weird happened
+			System.out.println("AAPT failed");
+			e.printStackTrace();
 			
 			return;
 		}
+		
+		//Run ECJ
+		{
+			System.out.println("Running ECJ...");
+			
+			Main main = new Main(new PrintWriter(System.out), new PrintWriter(System.err), false, null, null);
+			String[] args = {
+				"-verbose",
+				"-extdirs", libsFolder.getAbsolutePath(), //The location of the external libraries (Processing's core.jar and others)
+				"-bootclasspath", buildFolder.getAbsolutePath() + "/sdk/platforms/" + androidVersion + "/android.jar", //The location of android.jar
+				"-classpath", srcFolder.getAbsolutePath() //The location of the source folder
+				+ ":" + genFolder.getAbsolutePath() //The location of the generated folder
+				+ ":" + libsFolder.getAbsolutePath(), //The location of the library folder
+				"-d", binFolder.getAbsolutePath() + "/classes/", //The location of the output folder
+				srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java" //The location of the main Activity
+			};
+			
+			System.out.println("ECJing: " + srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java");
+			
+			if(main.compile(args)) {
+				System.out.println("ECJ compilation successful");
+			} else {
+				//We have some compilation errors
+				System.out.println("ECJ compilation failed");
+				return;
+			}
+		}
+		
+		//Run DX
+		try {
+			System.out.println("Running DX...");
+			
+			String[] args = {
+				"--dex",
+				"--output=" + binFolder.getAbsolutePath() + "/classes.dex", //The location of the output DEX class file
+				binFolder.getAbsolutePath() + "/classes/" //add "/classes/" to get DX to work properly
+			};
+			
+			com.android.dx.command.Main.main(args);
+			
+			System.out.println("Ran DX successfuly");
+		} catch(Exception e) {
+			System.out.println("DX failed");
+			e.printStackTrace();
+			
+			return;
+		}
+		
+		//Run APKBuilder
+		try {
+			System.out.println("Running APKBuilder...");
+			
+			String[] args = {
+				binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned", //The location of the output APK file (unsigned)
+				"-u",
+				"-z", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res", //The location of the output .apk.res file
+				"-f", binFolder.getAbsolutePath() + "/classes.dex", //The location of the DEX class file
+				"-rf", srcFolder.getAbsolutePath() //The location of the source folder
+			};
+			
+			com.android.sdklib.build.ApkBuilderMain.main(args);
+			
+			System.out.println("Ran APKBuilder succesfully");
+		} catch(Exception e) {
+			System.out.println("APKBuilder failed");
+			e.printStackTrace();
+			
+			return;
+		}
+		
+		//Sign the APK using ZipSigner
+		signApk();
+		
+		//TODO this writes AAPT error logs, is it necessary?
+		System.out.println("AAPT logs:");
+		copyStream(aaptProc.getErrorStream(), System.err);
+		
+		//Prompt the user to install the APK file
+		Intent promptInstall = new Intent(Intent.ACTION_VIEW)
+			.setDataAndType(Uri.parse(
+				"file:///" + binFolder.getAbsolutePath() + "/" + sketchName + ".apk"), //The location of the APK
+				"application/vnd.android.package-archive"
+			);
+		editor.startActivity(promptInstall);
+		
+		//Onto the ANT build - CHANGED who needs ANT, anyway?
+		
+//		final Project p = new Project();
+//		
+//		String path = buildFile.getAbsolutePath();
+//		p.setUserProperty("ant.file", path);
+//		
+//		// deals with a problem where javac error messages weren't coming through
+//		//p.setUserProperty("build.compiler", "extJavac"); //TODO commented this out to use Eclipse's compiler
+//		
+//		// try to spew something useful to the console
+//		final DefaultLogger consoleLogger = new DefaultLogger();
+//		consoleLogger.setErrorPrintStream(System.err);
+//		consoleLogger.setOutputPrintStream(System.out);
+//		// WARN, INFO, VERBOSE, DEBUG
+//		consoleLogger.setMessageOutputLevel(Project.MSG_INFO);
+//		p.addBuildListener(consoleLogger);
+//		
+//		// This logger is used to pick up javac errors to be parsed into
+//		// SketchException objects. Note that most errors seem to show up on stdout
+//		// since that's where the [javac] prefixed lines are coming through.
+//		final DefaultLogger errorLogger = new DefaultLogger();
+//		final ByteArrayOutputStream errb = new ByteArrayOutputStream();
+//		final PrintStream errp = new PrintStream(errb);
+//		errorLogger.setErrorPrintStream(errp);
+//		final ByteArrayOutputStream outb = new ByteArrayOutputStream();
+//		final PrintStream outp = new PrintStream(outb);
+//		errorLogger.setOutputPrintStream(outp);
+//		errorLogger.setMessageOutputLevel(Project.MSG_INFO);
+//		p.addBuildListener(errorLogger);
+//		
+//		try {
+//			p.fireBuildStarted();
+//			p.init();
+//			final ProjectHelper helper = ProjectHelper.getProjectHelper();
+//			p.addReference("ant.projectHelper", helper);
+//			helper.parse(p, buildFile); //TODO maybe this?
+//			p.executeTarget(target);
+//		} catch(final BuildException e) {
+//			// Send a "build finished" event to the build listeners for this project.
+//			p.fireBuildFinished(e);
+//			
+//			try {
+//				antBuildProblems(new String(outb.toByteArray()), new String(errb.toByteArray()));
+//			} catch(SketchException se) {
+//				se.printStackTrace();
+//			}
+//			
+//			return;
+//		}
 	}
 	
-	void antBuildProblems(String outPile, String errPile) throws SketchException {
+	//TODO implement private key signing
+	private void signApk() {
+		String mode = "testkey";
+		String infilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned";
+		String outfilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk";
+//		String provider = null;
+//		String keyfilename = null;
+//		String keypass = null;
+//		String certfilename = null;
+//		String templatefilename = null;
+		
+		ZipSigner signer;
+//		PrivateKey privateKey = null;
+//		URL privateKeyUrl, certUrl, sbtUrl;
+//		X509Certificate cert = null;
+//		byte[] sigBlockTemplate = null;
+		
+		try {
+			signer = new ZipSigner();
+//			if(provider!=null) signer.loadProvider(provider);
+//			
+//			if(keyfilename!=null) {
+//				certUrl = new File( certfilename).toURI().toURL();
+//				cert = signer.readPublicKey(certUrl);
+//				sbtUrl = new File(templatefilename).toURI().toURL();
+//				sigBlockTemplate = signer.readContentAsBytes(sbtUrl);
+//				privateKeyUrl = new File(keyfilename).toURI().toURL();
+//				privateKey = signer.readPrivateKey(privateKeyUrl, keypass);
+//				signer.setKeys("custom", cert, privateKey, sigBlockTemplate);
+//			} else {
+//				signer.setKeymode(mode);
+//			}
+			
+			signer.setKeymode(mode);
+			
+			signer.signZip(infilename, outfilename);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	//TODO don't need this anymore, I guess...
+	public void antBuildProblems(String outPile, String errPile) throws SketchException {
 		final String[] outLines = outPile.split(System.getProperty("line.separator"));
 		final String[] errLines = errPile.split(System.getProperty("line.separator"));
 
@@ -367,7 +562,7 @@ public class Build {
 						"without a } to match it.",
 						errorFile, errorLine, re.getColumn(), false);
 			}
-
+			
 			if (msg.contains("expecting LCURLY")) {
 				System.err.println(msg);
 				String suffix = ".";
@@ -587,12 +782,15 @@ public class Build {
 		try {
 			final PrintWriter writer = new PrintWriter(file);
 			writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-	
-			writer.println("<project name=\"" + projectName + "\" default=\"help\">");
+			
+			writer.println(" <project name=\"" + projectName + "\" default=\"help\">");
 	
 			writer.println(" <property file=\"local.properties\" />");
 			writer.println(" <property file=\"ant.properties\" />");
-	
+			
+			//TODO added this to use Eclipse's compiler istead of javac
+			writer.println("<property name=\"build.compiler\" value=\"org.eclipse.jdt.core.JDTCompilerAdapter\"/>");
+			
 			writer.println(" <property environment=\"env\" />");
 			writer.println(" <condition property=\"sdk.dir\" value=\"${env.ANDROID_HOME}\">");
 			writer.println(" <isset property=\"env.ANDROID_HOME\" />");
@@ -690,7 +888,7 @@ public class Build {
 				} else {
 					System.err.println("Could not create \"drawable-hdpi\" folder.");
 				}
-				if(buildIcon96.getParentFile().mkdirs()) {
+				if(buildIcon96.getParentFile().mkdirs()) { //TODO make a properly scaled "icon-96.png" graphic - right now, it's scaled up from the 72p version
 					InputStream inputStream = am.open("icon-96.png");
 					createFileFromInputStream(inputStream, buildIcon96);
 				} else {
@@ -828,7 +1026,7 @@ public class Build {
 			new File(toPath).mkdirs();
 			boolean res = true;
 			for(String file : files)
-				if((file.contains(".") && !file.equals("android-4.4")) || file.equals("aapt") || file.equals("aidl") || file.equals("adb")) //TODO changed this, it's awfully hard-coded now
+				if((file.contains(".") && !file.equals("android-4.4")) || file.equals("aapt") || file.equals("aidl")) //TODO changed this, it's awfully hard-coded now
 					res &= copyAsset(assetManager, fromAssetPath + "/" + file, toPath + "/" + file);
 				else 
 					res &= copyAssetFolder(assetManager, fromAssetPath + "/" + file, toPath + "/" + file);
@@ -1047,9 +1245,13 @@ public class Build {
 	}
 	
 	public File getBuildFolder() {
-		//TODO temp, revert this to private build directory
-		//return new File(editor.getFilesDir(), "build");
+		//TODO revert this
 		return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "build");
+		//return new File(editor.getFilesDir(), "build");
+	}
+	
+	public File getTempFolder() {
+		return new File(editor.getFilesDir(), "tmp");
 	}
 	
 	public File getSketchFolder() {
@@ -1062,5 +1264,23 @@ public class Build {
 	
 	public File getSketchCodeFolder() {
 		return new File(getSketchFolder(), "code");
+	}
+	
+	//StackOverflow: http://codereview.stackexchange.com/questions/8835/java-most-compact-way-to-print-inputstream-to-system-out
+	public static long copyStream(InputStream is, OutputStream os) {
+		final int BUFFER_SIZE = 8192;
+
+		byte[] buf = new byte[BUFFER_SIZE];
+		long total = 0;
+		int len = 0;
+		try {
+			while (-1 != (len = is.read(buf))) {
+				os.write(buf, 0, len);
+				total += len;
+			}
+		} catch (IOException ioe) {
+			throw new RuntimeException("error reading stream", ioe);
+		}
+		return total;
 	}
 }

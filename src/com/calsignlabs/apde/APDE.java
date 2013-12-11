@@ -1,6 +1,9 @@
 package com.calsignlabs.apde;
 
+import java.io.File;
+
 import android.app.Application;
+import android.os.Environment;
 
 public class APDE extends Application {
 	private String sketchName;
@@ -45,5 +48,12 @@ public class APDE extends Application {
 
 	public void setSelectedSketch(int selectedSketch) {
 		this.selectedSketch = selectedSketch;
+	}
+	
+	/**
+	 * @return the location of the Sketchbook folder on the external storage
+	 */
+	public File getSketchbookFolder() {
+		return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), "Sketchbook");
 	}
 }

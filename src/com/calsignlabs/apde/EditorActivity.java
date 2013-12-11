@@ -2,17 +2,21 @@ package com.calsignlabs.apde;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.graphics.Point;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.ActionBarDrawerToggle;
@@ -20,6 +24,8 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.DrawerLayout;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.TypedValue;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AbsListView;
@@ -49,13 +55,20 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	private final static int RENAME_TAB = 0;
 	private final static int NEW_TAB = 1;
 	
+	private MessageTouchListener messageListener;
+	
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
         
-        ((TextView) findViewById(R.id.code)).setHorizontallyScrolling(true);
-        //((TextView) findViewById(R.id.code)).setHorizontalScrollBarEnabled(true);
+        //((TextView) findViewById(R.id.code)).setHorizontallyScrolling(true);
+        //((ScrollView) findViewById(R.id.console_scroller)).setHorizontalScrollBarEnabled(true);
+        
+        messageListener = new MessageTouchListener();
+        
+        findViewById(R.id.message).setOnLongClickListener(messageListener);
+        findViewById(R.id.message).setOnTouchListener(messageListener);
         
         tabs = new HashMap<Tab, FileMeta>();
         setSaved(false);
@@ -158,11 +171,34 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     }
     
+	@SuppressLint("NewApi")
+	@SuppressWarnings("deprecation")
+	@Override
+    public void onResume() { //TODO this isn't called on screen rotations?
+    	super.onResume();
+    	
+    	int minWidth;
+    	
+    	//Let's try and do things correctly for once
+    	if(android.os.Build.VERSION.SDK_INT >= 13) {
+	    	Point point = new Point();
+	    	getWindowManager().getDefaultDisplay().getSize(point);
+	    	minWidth = point.x;
+    	} else {
+    		minWidth = getWindowManager().getDefaultDisplay().getWidth();
+    	}
+    	
+    	//Remove padding
+    	minWidth -= TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
+    	
+    	//Make sure that the EditText is wide enough
+    	((TextView) findViewById(R.id.code)).setMinimumWidth(minWidth);
+    	((TextView) findViewById(R.id.console)).setMinimumWidth(minWidth);
+    }
+    
     protected void populateWithSketches(ArrayAdapter<String> items) {
-    	//The public directory
-    	File publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
     	//The location of the sketchbook
-    	File sketchbookLoc = new File(publicDir, "Sketchbook");
+    	File sketchbookLoc = getGlobalState().getSketchbookFolder();
     	
     	if(sketchbookLoc.exists()) {
 	    	File[] folders = sketchbookLoc.listFiles();
@@ -522,10 +558,9 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     }
     
     public File getSketchLoc(String sketchName) {
-    	//The public directory
-    	File publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
     	//The location of the sketchbook
-    	File sketchbookLoc = new File(publicDir, "Sketchbook");
+    	File sketchbookLoc = getGlobalState().getSketchbookFolder();
+    	
     	//The location of the sketch
     	return new File(sketchbookLoc, sketchName);
     }
@@ -637,9 +672,35 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     }
     
     private void runApplication() {
-    	//TODO work here going on (runApplication())
+    	try {
+			Runtime.getRuntime().exec("logcat -c");
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+    	
+    	//TODO work here - runApplication()
     	Build builder = new Build(getGlobalState());
     	builder.build("debug");
+    	
+    	try {
+    		Process process = Runtime.getRuntime().exec("logcat -d *:I");
+    		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+    		
+    		StringBuilder log = new StringBuilder();
+    		String line = "";
+    		while(line != null) {
+    			int index = line.indexOf(':');
+    			line = line.substring(index != -1 ? index + 2 : 0);
+    			log.append(line + "\n");
+    			
+    			line = bufferedReader.readLine();
+    		}
+    		
+    		TextView tv = (TextView) findViewById(R.id.console);
+    		tv.setText(log.toString());
+    	} catch (IOException e) {
+    		e.printStackTrace();
+    	}
     }
     
     private void stopApplication() {
@@ -726,12 +787,7 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     
     //Deletes a file in the sketch folder
     private boolean deleteLocalFile(String filename) {
-    	//The public directory
-    	File publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-    	//The location of the sketchbook
-    	File sketchbookLoc = new File(publicDir, "Sketchbook");
-    	//The location of the sketch
-    	File sketchLoc = new File(sketchbookLoc, getGlobalState().getSketchName());
+    	File sketchLoc = getSketchLoc(getGlobalState().getSketchName());
     	
     	File file = new File(sketchLoc + "/", filename);
     	if(file.exists()) {
@@ -927,5 +983,86 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	
 	public HashMap<Tab, FileMeta> getTabs() {
 		return tabs;
+	}
+	
+	//Listener class for managing message area drag events
+	public class MessageTouchListener implements android.view.View.OnLongClickListener, android.view.View.OnTouchListener {
+		private boolean pressed;
+		private int touchOff;
+		
+		private View code;
+		private View console;
+		private View content;
+		
+		private int message;
+		
+		public MessageTouchListener() {
+			super();
+			
+			pressed = false;
+			
+			//Store necessary views globally
+			code = findViewById(R.id.code_scroller);
+			console = findViewById(R.id.console_scroller);
+			content = findViewById(R.id.content);
+		}
+		
+		@SuppressWarnings("deprecation")
+		@Override
+		public boolean onTouch(View view, MotionEvent event) {
+			//Get the offset relative to the touch
+			if(event.getAction() == MotionEvent.ACTION_DOWN)
+				touchOff = (int) event.getY();
+			
+			if(pressed) {
+				switch(event.getAction()) {
+				case MotionEvent.ACTION_MOVE:
+					//This doesn't work in the constructor for some reason
+					if(message == 0)
+						message = findViewById(R.id.message).getHeight();
+					
+					//Calculate maximum possible code view height
+					int maxCode = content.getHeight() - message;
+					
+					//Find relative movement for this event
+					int y = (int) event.getY() - touchOff;
+					
+					//Calculate the new dimensions of the console
+					int consoleDim = console.getHeight() - y;
+					if(consoleDim < 0)
+						consoleDim = 0;
+					if(consoleDim > maxCode)
+						consoleDim = maxCode;
+					
+					//Calculate the new dimensions of the code view
+					int codeDim = maxCode - consoleDim;
+					
+					//Set the new dimensions
+					code.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim));
+					console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
+					
+					return true;
+				case MotionEvent.ACTION_UP:
+					pressed = false;
+					findViewById(R.id.message).setBackgroundDrawable(getResources().getDrawable(R.drawable.back)); //TODO this is deprecated...
+					
+					return true;
+				}
+			}
+			
+			return false;
+		}
+		
+		@SuppressWarnings("deprecation")
+		@Override
+		public boolean onLongClick(View view) {
+			pressed = true;
+			findViewById(R.id.message).setBackgroundDrawable(getResources().getDrawable(R.drawable.back_selected)); //TODO this is deprecated...
+			
+			//Provide haptic feedback
+			((android.os.Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(200); //200 millis
+			
+			return true;
+		}
 	}
 }
