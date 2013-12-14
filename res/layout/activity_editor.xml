@@ -23,27 +23,32 @@
 	        <HorizontalScrollView android:id="@+id/code_scroller_x"
 	            android:scrollbars="horizontal"
 	            android:layout_width="fill_parent"
-		        android:layout_height="wrap_content"
-		        android:paddingTop="10dp"
-				android:paddingBottom="10dp"
-				android:paddingLeft="10dp"
-				android:paddingRight="10dp" >
+		        android:layout_height="wrap_content" >
 				
-				<com.calsignlabs.apde.CodeEditText android:id="@+id/code"
-				    android:inputType="text|textNoSuggestions|textMultiLine"
-				    android:layout_width="wrap_content"
-				    android:layout_height="fill_parent"
-				   	android:gravity="top"
-				    android:typeface="monospace"
-				    android:textSize="14sp"
-				    android:textColor="#000000"
-				    android:paddingTop="0dp"
-					android:paddingBottom="0dp"
-					android:paddingLeft="0dp"
-					android:paddingRight="0dp"
-				    android:textCursorDrawable="@drawable/code_edit_text_cursor"
-				    android:background="#00000000" />
-				
+	            <LinearLayout
+	                android:layout_width="wrap_content"
+	                android:layout_height="match_parent"
+	                android:paddingTop="10dp"
+					android:paddingBottom="10dp"
+					android:paddingLeft="10dp"
+					android:paddingRight="10dp" >
+	            	
+					<com.calsignlabs.apde.CodeEditText android:id="@+id/code"
+					    android:inputType="text|textNoSuggestions|textMultiLine"
+					    android:layout_width="wrap_content"
+					    android:layout_height="fill_parent"
+					   	android:gravity="top"
+					    android:typeface="monospace"
+					    android:textSize="14sp"
+					    android:textColor="#000000"
+					    android:textCursorDrawable="@drawable/code_edit_text_cursor"
+					    android:background="#00000000"
+					    android:imeOptions="flagNoExtractUi"
+					    android:paddingTop="0dp"
+						android:paddingBottom="0dp"
+						android:paddingLeft="0dp"
+						android:paddingRight="0dp" />
+				</LinearLayout>
 			</HorizontalScrollView>
     	</ScrollView>
 	    

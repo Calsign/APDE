@@ -51,6 +51,16 @@
     <string name="tab_new_dialog_message">Enter the name for the new tab:</string>
     <string name="sketch_name_dialog_title">Change sketch name</string>
     <string name="sketch_name_dialog_message">Sketch must be renamed before it can be saved.</string>
+    <string name="save_sketch_before_run_dialog_title">Save Sketch</string>
+    <string name="save_sketch_before_run_dialog_message">You must save the sketch before you can run it.</string>
+    <string name="build_sketch_message">Building sketch…</string>
+    <string name="gen_project_message">Creating Android Project…</string>
+    <string name="run_aapt">Running AAPT…</string>
+    <string name="run_ecj">Compiling sketch with ECJ…</string>
+    <string name="run_dx">Dexing compiled files…</string>
+    <string name="run_apkbuilder">Running APKBuilder…</string>
+    <string name="run_zipsigner">Running ZipSigner…</string>
+    <string name="run_sketch">Running the sketch…</string>
     
 
 </resources>

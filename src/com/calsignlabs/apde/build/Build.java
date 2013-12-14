@@ -1,6 +1,9 @@
 /*
  * Seriously hacked from the Processing Project... it might still be recognizable
- * Code taken from JavaBuild, AndroidBuild, Base, probably others
+ * Code taken from JavaBuild, AndroidBuild, Base, AndroidPreprocessor, Preprocessor, probably others
+ * 
+ * Added some code as well, specifically: changed build sequence from ANT to ECJ and Java tools (as opposed to command line tools)
+ * Also used some ideas from the Java-IDE-Droid open-source project
  */
 
 package com.calsignlabs.apde.build;
@@ -54,6 +57,7 @@ public class Build {
 	private File assetsFolder;
 	private File binFolder;
 	private File tmpFolder;
+	private File dexedLibsFolder;
 	
 	private File buildFile;
 	
@@ -94,12 +98,15 @@ public class Build {
 	 * @param target either "release" or "debug"
 	 */
 	public void build(String target) {
+		editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
+		
 		buildFolder = getBuildFolder();
 		srcFolder = new File(buildFolder, "src");
 		genFolder = new File(buildFolder, "gen");
 		libsFolder = new File(buildFolder, "libs");
 		assetsFolder = new File(buildFolder, "assets");
 		binFolder = new File(buildFolder, "bin");
+		dexedLibsFolder = new File(binFolder, "dexedLibs");
 		
 		tmpFolder = getTempFolder();
 		
@@ -114,11 +121,14 @@ public class Build {
 		libsFolder.mkdir();
 		assetsFolder.mkdir();
 		binFolder.mkdir();
+		dexedLibsFolder.mkdir();
 		
 		tmpFolder.mkdir();
 		
 		Manifest manifest = null;
 		String sketchClassName = null;
+		
+		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
 		
 		try {
 			manifest = new Manifest(this);
@@ -144,9 +154,12 @@ public class Build {
 				final File libsFolder = mkdirs(buildFolder, "libs");
 				final File assetsFolder = mkdirs(buildFolder, "assets");
 				
-				AssetManager am = editor.getAssets(); //TODO copying processing-core.jar from assets folder
+				AssetManager am = editor.getAssets();
 				InputStream inputStream = am.open("processing-core.jar");
 				createFileFromInputStream(inputStream, new File(libsFolder, "processing-core.jar"));
+				
+				InputStream dexInputStream = am.open("processing-core-dex.jar");
+				createFileFromInputStream(dexInputStream, new File(dexedLibsFolder, "processing-core-dex.jar"));
 				
 				// Copy any imported libraries (their libs and assets),
 				// and anything in the code folder contents to the project.
@@ -197,6 +210,8 @@ public class Build {
 		// NOTE: make sure that all places where build folders are specfied
 		// (e.g. "buildFolder") it is followed by ".getAbsolutePath()"!!!!!
 		
+		editor.messageExt(editor.getResources().getString(R.string.run_aapt));
+		
 		//Run AAPT
 		try {
 			System.out.println("Running AAPT...");
@@ -225,6 +240,8 @@ public class Build {
 			return;
 		}
 		
+		editor.messageExt(editor.getResources().getString(R.string.run_ecj));
+		
 		//Run ECJ
 		{
 			System.out.println("Running ECJ...");
@@ -252,14 +269,17 @@ public class Build {
 			}
 		}
 		
+		editor.messageExt(editor.getResources().getString(R.string.run_dx));
+		
 		//Run DX
-		try {
+		try { //TODO dex non-processing libraries
 			System.out.println("Running DX...");
 			
 			String[] args = {
 				"--dex",
 				"--output=" + binFolder.getAbsolutePath() + "/classes.dex", //The location of the output DEX class file
-				binFolder.getAbsolutePath() + "/classes/" //add "/classes/" to get DX to work properly
+				binFolder.getAbsolutePath() + "/classes/", //add "/classes/" to get DX to work properly
+				dexedLibsFolder.getAbsolutePath() + "/"
 			};
 			
 			com.android.dx.command.Main.main(args);
@@ -271,6 +291,8 @@ public class Build {
 			
 			return;
 		}
+		
+		editor.messageExt(editor.getResources().getString(R.string.run_apkbuilder));
 		
 		//Run APKBuilder
 		try {
@@ -294,12 +316,16 @@ public class Build {
 			return;
 		}
 		
+		editor.messageExt(editor.getResources().getString(R.string.run_zipsigner));
+		
 		//Sign the APK using ZipSigner
 		signApk();
 		
 		//TODO this writes AAPT error logs, is it necessary?
 		System.out.println("AAPT logs:");
 		copyStream(aaptProc.getErrorStream(), System.err);
+		
+		editor.messageExt(editor.getResources().getString(R.string.run_sketch));
 		
 		//Prompt the user to install the APK file
 		Intent promptInstall = new Intent(Intent.ACTION_VIEW)

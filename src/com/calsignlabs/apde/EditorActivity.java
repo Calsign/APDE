@@ -17,6 +17,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.ActionBarDrawerToggle;
@@ -26,7 +27,9 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.MotionEvent;
+import android.view.OrientationEventListener;
 import android.view.View;
+import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
@@ -52,6 +55,12 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	private ActionBarDrawerToggle drawerToggle;
 	private boolean drawerOpen;
 	
+	private boolean keyboardVisible;
+	private boolean firstResize = true; //this is a makeshift arrangement
+	private int oldCodeHeight = -1;
+	
+	private int message;
+	
 	private final static int RENAME_TAB = 0;
 	private final static int NEW_TAB = 1;
 	
@@ -61,9 +70,6 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
-        
-        //((TextView) findViewById(R.id.code)).setHorizontallyScrolling(true);
-        //((ScrollView) findViewById(R.id.console_scroller)).setHorizontalScrollBarEnabled(true);
         
         messageListener = new MessageTouchListener();
         
@@ -169,31 +175,95 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-    }
-    
-	@SuppressLint("NewApi")
-	@SuppressWarnings("deprecation")
-	@Override
-    public void onResume() { //TODO this isn't called on screen rotations?
-    	super.onResume();
-    	
-    	int minWidth;
-    	
-    	//Let's try and do things correctly for once
-    	if(android.os.Build.VERSION.SDK_INT >= 13) {
-	    	Point point = new Point();
-	    	getWindowManager().getDefaultDisplay().getSize(point);
-	    	minWidth = point.x;
-    	} else {
-    		minWidth = getWindowManager().getDefaultDisplay().getWidth();
-    	}
-    	
-    	//Remove padding
-    	minWidth -= TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
-    	
-    	//Make sure that the EditText is wide enough
-    	((TextView) findViewById(R.id.code)).setMinimumWidth(minWidth);
-    	((TextView) findViewById(R.id.console)).setMinimumWidth(minWidth);
+        
+        //Detect software keyboard open / close events
+        //StackOverflow: http://stackoverflow.com/questions/2150078/how-to-check-visibility-of-software-keyboard-in-android
+        final View activityRootView = findViewById(R.id.content);
+        activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
+        	@SuppressWarnings("deprecation")
+			@Override
+        	public void onGlobalLayout() {
+        		Rect r = new Rect();
+        		activityRootView.getWindowVisibleDisplayFrame(r);
+        		int heightDiff = activityRootView.getRootView().getHeight() - (r.bottom - r.top);
+        		
+        		if(oldCodeHeight == -1)
+        			oldCodeHeight = findViewById(R.id.code_scroller).getHeight();
+        		
+        		if(heightDiff > 100) { //If the difference is bigger than 100, it's probably the keyboard
+        			if(!keyboardVisible) {
+	        			keyboardVisible = true;
+	        			
+	        			if(message == 0)
+							message = findViewById(R.id.message).getHeight();
+	        			
+	        			//Configure layout for keyboard
+	        			
+	        			View code = findViewById(R.id.code_scroller);
+	        			View content = findViewById(R.id.content);
+	        			
+	        			if(firstResize)
+	        				firstResize = false;
+	        			else
+	        				oldCodeHeight = code.getHeight();
+	        			
+	        			//Remove the console
+	        			findViewById(R.id.console_scroller).setVisibility(View.GONE);
+	        			//Resize the code area accordingly
+	        			code.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, content.getHeight() - message));
+	        			
+	        			//Remove the focus from the Message slider if it has it
+	        			findViewById(R.id.message).setBackgroundDrawable(getResources().getDrawable(R.drawable.back)); //TODO this is deprecated...
+        			}
+        		} else {
+        			if(keyboardVisible) {
+	        			keyboardVisible = false;
+	        			
+	        			//Reset layout
+	        			
+	        			//Make the console visible again
+	        			findViewById(R.id.console_scroller).setVisibility(View.VISIBLE);
+	        			//Reset the code area height
+	        			findViewById(R.id.code_scroller).setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, oldCodeHeight));
+	        			
+	        			//Remove any unnecessary focus from the code area
+	        			findViewById(R.id.code).clearFocus();
+        			}
+        		}
+        	}
+        });
+        
+        //Detect orientation changes
+        (new OrientationEventListener(this) { //TODO make rotation changes prettier
+	        @SuppressLint("NewApi")
+	    	@SuppressWarnings("deprecation")
+	        public void onOrientationChanged(int orientation) {
+	        	//If we don't know what this is, bail out
+	        	if(orientation == ORIENTATION_UNKNOWN)
+	        		return;
+	        	
+	        	int minWidth;
+	        	int maxWidth;
+	        	
+	        	//Let's try and do things correctly for once
+	        	if(android.os.Build.VERSION.SDK_INT >= 13) {
+	    	    	Point point = new Point();
+	    	    	getWindowManager().getDefaultDisplay().getSize(point);
+	    	    	maxWidth = point.x;
+	        	} else {
+	        		maxWidth = getWindowManager().getDefaultDisplay().getWidth();
+	        	}
+	        	
+	        	//Remove padding
+	        	minWidth = maxWidth - (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
+	        	
+	        	//Make sure that the EditText is wide enough
+	        	findViewById(R.id.code).setMinimumWidth(minWidth);
+	        	findViewById(R.id.console).setMinimumWidth(minWidth);
+	        	
+	        	findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
+	        	findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
+	        }}).enable();
     }
     
     protected void populateWithSketches(ArrayAdapter<String> items) {
@@ -227,14 +297,18 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	}
 	
 	public boolean loadSketchStart() {
-		String sketchName = readTempFile("sketchName.txt");
-		int selectedSketch = Integer.parseInt(readTempFile("sketchNum.txt"));
-		
-		if(getSketchLoc(sketchName).exists()) {
-			getGlobalState().setSelectedSketch(selectedSketch);
-			return loadSketch(sketchName);
-		} else {
-			return loadSketchTemp();
+		try {
+			String sketchName = readTempFile("sketchName.txt");
+			int selectedSketch = Integer.parseInt(readTempFile("sketchNum.txt"));
+			
+			if(getSketchLoc(sketchName).exists()) {
+				getGlobalState().setSelectedSketch(selectedSketch);
+				return loadSketch(sketchName);
+			} else {
+				return loadSketchTemp();
+			}
+		} catch(Exception e) {
+			return false;
 		}
 	}
 	
@@ -614,13 +688,12 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         super.onPostCreate(savedInstanceState);
         drawerToggle.syncState();
     }
-
+    
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         drawerToggle.onConfigurationChanged(newConfig);
     }
-
     
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -672,16 +745,38 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     }
     
     private void runApplication() {
+    	if(getSketchLoc(getSupportActionBar().getTitle().toString()).exists())
+    		saveSketch();
+    	else {
+    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle(getResources().getText(R.string.save_sketch_before_run_dialog_title))
+            	.setMessage(getResources().getText(R.string.save_sketch_before_run_dialog_message)).setCancelable(false)
+            	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+            	
+            	@Override
+                public void onClick(DialogInterface dialog, int which) {}
+            }).show();
+            
+            return;
+    	}
+    	
     	try {
 			Runtime.getRuntime().exec("logcat -c");
 		} catch(IOException e) {
 			e.printStackTrace();
 		}
     	
-    	//TODO work here - runApplication()
-    	Build builder = new Build(getGlobalState());
-    	builder.build("debug");
+    	final Build builder = new Build(getGlobalState());
     	
+    	//Build the sketch in a separate thread
+    	Thread buildThread = new Thread(new Runnable() {
+    		@Override
+    		public void run() {
+    			builder.build("debug");
+    	}});
+    	buildThread.start();
+    	
+    	//TODO make the console work properly
     	try {
     		Process process = Runtime.getRuntime().exec("logcat -d *:I");
     		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -711,6 +806,16 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	((TextView) findViewById(R.id.message)).setText(msg);
     	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.message_back));
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
+    }
+    
+    public void messageExt(final String msg) {
+    	runOnUiThread(new Runnable() {
+    		public void run() {
+    			((TextView) findViewById(R.id.message)).setText(msg);
+    			((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.message_back));
+    			((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
+    		}
+    	});
     }
     
     public void message(CharSequence msg) {
@@ -994,8 +1099,6 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 		private View console;
 		private View content;
 		
-		private int message;
-		
 		public MessageTouchListener() {
 			super();
 			
@@ -1010,6 +1113,10 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 		@SuppressWarnings("deprecation")
 		@Override
 		public boolean onTouch(View view, MotionEvent event) {
+			//Don't resize the console if there is no console to speak of
+			if(keyboardVisible)
+				return false;
+			
 			//Get the offset relative to the touch
 			if(event.getAction() == MotionEvent.ACTION_DOWN)
 				touchOff = (int) event.getY();
@@ -1056,6 +1163,10 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 		@SuppressWarnings("deprecation")
 		@Override
 		public boolean onLongClick(View view) {
+			//Don't resize the console if there is no console to speak of
+			if(keyboardVisible)
+				return false;
+			
 			pressed = true;
 			findViewById(R.id.message).setBackgroundDrawable(getResources().getDrawable(R.drawable.back_selected)); //TODO this is deprecated...
 			
