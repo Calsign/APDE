@@ -74,13 +74,14 @@
 	            android:layout_width="fill_parent"
 		        android:layout_height="wrap_content" >
 				
+	            <!-- TODO make text selectable... disabled it because it was causing some problems -->
 		        <TextView android:id="@+id/console"
 		            android:layout_width="wrap_content"
 		            android:layout_height="wrap_content"
 		            android:gravity="bottom"
 		            android:padding="10dp"
 		            android:textColor="#FFFFFF"
-		            android:textIsSelectable="true"
+		            android:textIsSelectable="false"
 		            android:textSize="14sp"
 		            android:typeface="monospace" />
 	        </HorizontalScrollView>
