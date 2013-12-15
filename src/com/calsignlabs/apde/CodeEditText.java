@@ -127,13 +127,18 @@ public class CodeEditText extends EditText {
 		
 		//Get the indentation of the previous line
 		String[] lines = getText().toString().split("\n");
-		String lastLine = lines[Math.min(lastLineNum, lines.length - 1)];
+		String lastLine = "";
 		String lastIndent = "";
-		for(int i = 0; i < lastLine.length(); i ++) {
-			if(lastLine.charAt(i) == ' ')
-				lastIndent += ' ';
-			else
-				break;
+		
+		if(lines.length > 0) {
+			lastLine = lines[Math.min(lastLineNum, lines.length - 1)];
+			
+			for(int i = 0; i < lastLine.length(); i ++) {
+				if(lastLine.charAt(i) == ' ')
+					lastIndent += ' ';
+				else
+					break;
+			}
 		}
 		
 		//Determine the last character of the previous line
