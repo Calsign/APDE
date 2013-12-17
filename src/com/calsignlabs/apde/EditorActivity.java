@@ -2,11 +2,11 @@ package com.calsignlabs.apde;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -18,6 +18,7 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.ActionBarDrawerToggle;
@@ -26,6 +27,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
@@ -65,6 +67,9 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	private final static int NEW_TAB = 1;
 	
 	private MessageTouchListener messageListener;
+	
+	private PrintStream outStream;
+	private PrintStream errStream;
 	
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -235,35 +240,42 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         
         //Detect orientation changes
         (new OrientationEventListener(this) { //TODO make rotation changes prettier
-	        @SuppressLint("NewApi")
-	    	@SuppressWarnings("deprecation")
-	        public void onOrientationChanged(int orientation) {
-	        	//If we don't know what this is, bail out
-	        	if(orientation == ORIENTATION_UNKNOWN)
-	        		return;
-	        	
-	        	int minWidth;
-	        	int maxWidth;
-	        	
-	        	//Let's try and do things correctly for once
-	        	if(android.os.Build.VERSION.SDK_INT >= 13) {
-	    	    	Point point = new Point();
-	    	    	getWindowManager().getDefaultDisplay().getSize(point);
-	    	    	maxWidth = point.x;
-	        	} else {
-	        		maxWidth = getWindowManager().getDefaultDisplay().getWidth();
-	        	}
-	        	
-	        	//Remove padding
-	        	minWidth = maxWidth - (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
-	        	
-	        	//Make sure that the EditText is wide enough
-	        	findViewById(R.id.code).setMinimumWidth(minWidth);
-	        	findViewById(R.id.console).setMinimumWidth(minWidth);
-	        	
-	        	findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
-	        	findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
-	        }}).enable();
+        	@SuppressLint("NewApi")
+        	@SuppressWarnings("deprecation")
+        	public void onOrientationChanged(int orientation) {
+        		//If we don't know what this is, bail out
+        		if(orientation == ORIENTATION_UNKNOWN)
+        			return;
+
+        		int minWidth;
+        		int maxWidth;
+
+        		//Let's try and do things correctly for once
+        		if(android.os.Build.VERSION.SDK_INT >= 13) {
+        			Point point = new Point();
+        			getWindowManager().getDefaultDisplay().getSize(point);
+        			maxWidth = point.x;
+        		} else {
+        			maxWidth = getWindowManager().getDefaultDisplay().getWidth();
+        		}
+
+        		//Remove padding
+        		minWidth = maxWidth - (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
+
+        		//Make sure that the EditText is wide enough
+        		findViewById(R.id.code).setMinimumWidth(minWidth);
+        		findViewById(R.id.console).setMinimumWidth(minWidth);
+
+        		findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
+        		findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
+        }}).enable();
+        
+        //Create output streams for the console
+        outStream = new PrintStream(new ConsoleStream());
+        errStream = new PrintStream(new ConsoleStream());
+        
+        System.setOut(outStream);
+        System.setErr(errStream);
     }
     
     protected void populateWithSketches(ArrayAdapter<String> items) {
@@ -745,9 +757,11 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     }
     
     private void runApplication() {
+    	//Save the sketch
     	if(getSketchLoc(getSupportActionBar().getTitle().toString()).exists())
     		saveSketch();
     	else {
+    		//If the sketch has yet to be saved, inform the user
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(getResources().getText(R.string.save_sketch_before_run_dialog_title))
             	.setMessage(getResources().getText(R.string.save_sketch_before_run_dialog_message)).setCancelable(false)
@@ -760,11 +774,8 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
             return;
     	}
     	
-    	try {
-			Runtime.getRuntime().exec("logcat -c");
-		} catch(IOException e) {
-			e.printStackTrace();
-		}
+    	//Clear the console
+    	((TextView) findViewById(R.id.console)).setText("");
     	
     	final Build builder = new Build(getGlobalState());
     	
@@ -775,27 +786,6 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     			builder.build("debug");
     	}});
     	buildThread.start();
-    	
-    	//TODO make the console work properly
-    	try {
-    		Process process = Runtime.getRuntime().exec("logcat -d *:I");
-    		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-    		
-    		StringBuilder log = new StringBuilder();
-    		String line = "";
-    		while(line != null) {
-    			int index = line.indexOf(':');
-    			line = line.substring(index != -1 ? index + 2 : 0);
-    			log.append(line + "\n");
-    			
-    			line = bufferedReader.readLine();
-    		}
-    		
-    		TextView tv = (TextView) findViewById(R.id.console);
-    		tv.setText(log.toString());
-    	} catch (IOException e) {
-    		e.printStackTrace();
-    	}
     }
     
     private void stopApplication() {
@@ -830,10 +820,38 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
     }
     
+    public void errorExt(final String msg) {
+    	runOnUiThread(new Runnable() {
+    		public void run() {
+    			((TextView) findViewById(R.id.message)).setText(msg);
+    	    	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.error_back));
+    	    	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
+    		}
+    	});
+    }
+    
     public void error(CharSequence msg) {
     	((TextView) findViewById(R.id.message)).setText(msg);
     	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.error_back));
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
+    }
+    
+    public void highlightLineExt(final int line) {
+    	runOnUiThread(new Runnable() {
+    		public void run() {
+    			CodeEditText code = (CodeEditText) findViewById(R.id.code);
+    			
+    			int start = code.offsetForLine(line);
+    			int stop = code.offsetForLineEnd(line);
+    			
+    			//Hacky way of focusing the code area
+    			MotionEvent me = MotionEvent.obtain(100, 0, 0, 0, 0, 0);
+    			code.dispatchTouchEvent(me);
+    			me.recycle();
+    			
+    			code.setSelection(start, stop);
+    		}
+    	});
     }
     
     private void addTabWithDialog() {
@@ -847,6 +865,8 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	getSupportActionBar().addTab(tab);
     	
     	tabs.put(tab, new FileMeta(title, "", 0, 0));
+    	
+    	customizeTab(tab, title);
     }
     
 	private void addTab(String title) {
@@ -858,6 +878,31 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	tabs.put(tab, new FileMeta(title, "", 0, 0));
     	
     	getSupportActionBar().selectTab(tab);
+    	
+    	customizeTab(tab, title);
+	}
+	
+	//Hacky way of making the tabs lowercase and uppercase
+	//Theoretically, we could do some other stuff here, too...
+	private void customizeTab(Tab tab, String title) {
+    	TextView view = new TextView(this);
+    	view.setText(title);
+    	view.setTextColor(getResources().getColor(R.color.tab_text_color));
+    	view.setGravity(Gravity.CENTER);
+    	view.setTypeface(Typeface.DEFAULT_BOLD);
+    	view.setTextSize(12);
+    	view.setLines(2);
+    	view.setText("\n" + view.getText());
+    	view.setLongClickable(true);
+    	view.setOnLongClickListener(new android.view.View.OnLongClickListener() {
+			@Override
+			public boolean onLongClick(View clickedView) {
+				// TODO Auto-generated method stub
+				return false;
+			}
+    	});
+    	
+    	tab.setCustomView(view);
     }
 	
 	private void addTab(String title, FileMeta meta) {
@@ -867,6 +912,8 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	getSupportActionBar().addTab(tab, getSupportActionBar().getTabCount());
     	
     	tabs.put(tab, meta);
+    	
+    	customizeTab(tab, title);
     }
     
     private void renameTab() {
@@ -879,15 +926,15 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         builder.setTitle(R.string.delete_dialog_title)
         	.setMessage(R.string.delete_dialog_message)
         	.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
+        		@Override
+        		public void onClick(DialogInterface dialog, int which) {
         	}})
         	.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
         		@Override
         		public void onClick(DialogInterface dialog, int which) {
         			deleteTabContinue();
-        	}})
-        	.show();
+        		}})
+        .show();
     }
     
     //Deletes a file in the sketch folder
@@ -1174,6 +1221,38 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 			((android.os.Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(200); //200 millis
 			
 			return true;
+		}
+	}
+	
+	private class ConsoleStream extends OutputStream {
+		final byte single[] = new byte[1];
+		
+		public ConsoleStream() {
+		}
+		
+		public void close() { }
+		
+		public void flush() { }
+		
+		public void write(byte b[]) {
+			write(b, 0, b.length);
+		}
+		
+		public void write(byte b[], int offset, int length) {
+			final String value = new String(b, offset, length);
+			
+			//error(value);
+			
+			final TextView tv = (TextView) findViewById(R.id.console);
+			runOnUiThread(new Runnable() {
+				public void run() {
+					tv.append(value);
+			}});
+		}
+		
+		public void write(int b) {
+			single[0] = (byte) b;
+			write(single, 0, 1);
 		}
 	}
 }

@@ -7,4 +7,5 @@
     <color name="error_text">#FFFFFF</color>
     <color name="drawer_default_color">#EEEEEE</color>
     <color name="holo_select">#ff33b5e5</color>
+    <color name="tab_text_color">#EEEEEE</color>
 </resources>

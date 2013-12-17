@@ -165,6 +165,32 @@ public class CodeEditText extends EditText {
 		return -1;
 	}
 	
+	public int offsetForLine(int line) {
+		String[] lines = getText().toString().split("\n");
+		
+		int off = 0;
+		for(int i = 0; i < Math.min(lines.length, line); i ++)
+			off += lines[i].length() + 1;
+		
+		if(off >= getText().length())
+			off = getText().length() - 1;
+		
+		return off;
+	}
+	
+	public int offsetForLineEnd(int line) {
+		String[] lines = getText().toString().split("\n");
+		
+		int off = 0;
+		for(int i = 0; i < Math.min(lines.length, line + 1); i ++)
+			off += lines[i].length() + 1;
+		
+		if(off >= getText().length())
+			off = getText().length() - 1;
+		
+		return off;
+	}
+	
 	@Override
 	public void onDraw(Canvas canvas) {
 		int lineHeight = getLineHeight();

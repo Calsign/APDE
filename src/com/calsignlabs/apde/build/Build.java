@@ -181,6 +181,12 @@ public class Build {
 			e.printStackTrace();
 		} catch(SketchException e) {
 			e.printStackTrace();
+			
+			editor.errorExt(e.getMessage());
+			editor.highlightLineExt(e.getCodeLine());
+			
+			//Bail out
+			return;
 		}
 		
 		File aaptLoc = new File(tmpFolder, "aapt");
@@ -254,6 +260,8 @@ public class Build {
 				"-classpath", srcFolder.getAbsolutePath() //The location of the source folder
 				+ ":" + genFolder.getAbsolutePath() //The location of the generated folder
 				+ ":" + libsFolder.getAbsolutePath(), //The location of the library folder
+				"-1.5",
+				"-target", "1.5", //Target Java level
 				"-d", binFolder.getAbsolutePath() + "/classes/", //The location of the output folder
 				srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java" //The location of the main Activity
 			};
@@ -334,57 +342,6 @@ public class Build {
 				"application/vnd.android.package-archive"
 			);
 		editor.startActivity(promptInstall);
-		
-		//Onto the ANT build - CHANGED who needs ANT, anyway?
-		
-//		final Project p = new Project();
-//		
-//		String path = buildFile.getAbsolutePath();
-//		p.setUserProperty("ant.file", path);
-//		
-//		// deals with a problem where javac error messages weren't coming through
-//		//p.setUserProperty("build.compiler", "extJavac"); //TODO commented this out to use Eclipse's compiler
-//		
-//		// try to spew something useful to the console
-//		final DefaultLogger consoleLogger = new DefaultLogger();
-//		consoleLogger.setErrorPrintStream(System.err);
-//		consoleLogger.setOutputPrintStream(System.out);
-//		// WARN, INFO, VERBOSE, DEBUG
-//		consoleLogger.setMessageOutputLevel(Project.MSG_INFO);
-//		p.addBuildListener(consoleLogger);
-//		
-//		// This logger is used to pick up javac errors to be parsed into
-//		// SketchException objects. Note that most errors seem to show up on stdout
-//		// since that's where the [javac] prefixed lines are coming through.
-//		final DefaultLogger errorLogger = new DefaultLogger();
-//		final ByteArrayOutputStream errb = new ByteArrayOutputStream();
-//		final PrintStream errp = new PrintStream(errb);
-//		errorLogger.setErrorPrintStream(errp);
-//		final ByteArrayOutputStream outb = new ByteArrayOutputStream();
-//		final PrintStream outp = new PrintStream(outb);
-//		errorLogger.setOutputPrintStream(outp);
-//		errorLogger.setMessageOutputLevel(Project.MSG_INFO);
-//		p.addBuildListener(errorLogger);
-//		
-//		try {
-//			p.fireBuildStarted();
-//			p.init();
-//			final ProjectHelper helper = ProjectHelper.getProjectHelper();
-//			p.addReference("ant.projectHelper", helper);
-//			helper.parse(p, buildFile); //TODO maybe this?
-//			p.executeTarget(target);
-//		} catch(final BuildException e) {
-//			// Send a "build finished" event to the build listeners for this project.
-//			p.fireBuildFinished(e);
-//			
-//			try {
-//				antBuildProblems(new String(outb.toByteArray()), new String(errb.toByteArray()));
-//			} catch(SketchException se) {
-//				se.printStackTrace();
-//			}
-//			
-//			return;
-//		}
 	}
 	
 	//TODO implement private key signing
@@ -455,7 +412,7 @@ public class Build {
 		
 		// Couldn't parse the exception, so send something generic
 		SketchException skex = new SketchException("Error from inside the Android tools, check the console.");
-
+		
 		// Try to parse anything else we might know about
 		for(final String line : errLines) {
 			if(line.contains("Unable to resolve target '" + Manifest.MIN_SDK + "'")) {
