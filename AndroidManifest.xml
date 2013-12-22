@@ -1,44 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-	package="com.calsignlabs.apde" android:versionCode="1"
-	android:versionName="1.0">
+    package="com.calsignlabs.apde"
+    android:versionCode="1"
+    android:versionName="1.0" >
 
-	<uses-sdk android:minSdkVersion="10" android:targetSdkVersion="17" />
+    <uses-sdk
+        android:minSdkVersion="10"
+        android:targetSdkVersion="17" />
 
-	<!-- READ_EXTERNAL_STORAGE will be needed in future versions of Android -->
-	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-	<uses-permission android:name="android.permission.READ_LOGS"/>
-	<uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- READ_EXTERNAL_STORAGE will be needed in future versions of Android -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_LOGS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
-	<application android:name="com.calsignlabs.apde.APDE"
-		android:allowBackup="true" android:icon="@drawable/ic_launcher"
-		android:label="@string/app_name" android:theme="@style/AppTheme">
-		
-	    <!-- TODO Would like to get rid of android:configChanges, but it already works like this so... -->
-		<activity android:name="com.calsignlabs.apde.EditorActivity"
-			android:label="@string/app_name" android:theme="@style/FullscreenTheme"
-			android:configChanges="orientation|keyboardHidden|screenSize" >
-			
-			<intent-filter>
-				<action android:name="android.intent.action.MAIN" />
-				<category android:name="android.intent.category.LAUNCHER" />
-			</intent-filter>
-			
-			<!-- TODO implement correct handling for file intents -->
-			<intent-filter>
-				<action android:name="android.intent.action.VIEW" />
-				<category android:name="android.intent.category.DEFAULT" />
-				<data android:scheme="file" />
-				<data android:host="*" />
-				<data android:mimeType="*/*"  />
-				<data android:pathPattern=".*\\.pde" />
-			</intent-filter>
-		</activity>
-		
-		<activity android:name="com.calsignlabs.apde.SketchPropertiesActivity"
-			android:label="@string/title_activity_sketch_properties"
-			android:theme="@style/FullscreenTheme" android:icon="@drawable/ic_launcher"
-			android:allowBackup="true" />
-	</application>
+    <application
+        android:name="com.calsignlabs.apde.APDE"
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme" >
+
+        <!-- TODO Would like to get rid of android:configChanges, but it already works like this so... -->
+        <activity
+            android:name="com.calsignlabs.apde.EditorActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="@string/app_name"
+            android:theme="@style/FullscreenTheme" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- TODO implement correct handling for file intents -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.pde" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.calsignlabs.apde.SketchPropertiesActivity"
+            android:allowBackup="true"
+            android:icon="@drawable/ic_launcher"
+            android:label="@string/title_activity_sketch_properties"
+            android:theme="@style/FullscreenTheme" />
+        <activity
+            android:name="com.calsignlabs.apde.SettingsActivity"
+            android:label="@string/title_activity_settings"
+            android:theme="@style/PreferenceTheme" >
+        </activity>
+    </application>
+
 </manifest>

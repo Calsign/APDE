@@ -1,0 +1,18 @@
+<resources>
+
+    <string name="title_activity_settings">Settings</string>
+
+    <!-- Strings related to Settings -->
+
+
+    <!-- Example General settings -->
+
+    <!-- Example settings for Data & Sync -->
+
+    <!-- Example settings for Notifications -->
+    <string name="pref_textsize_default">14</string>
+    <string name="pref_textsize_title">Font Size</string>
+    <string name="pref_syntax_highlight">Syntax Highlighting</string>
+    <string name="pref_editor">Editor</string>
+
+</resources>

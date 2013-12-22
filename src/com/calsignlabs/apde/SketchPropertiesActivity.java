@@ -7,6 +7,7 @@ import com.calsignlabs.apde.R;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.ActionBarDrawerToggle;
@@ -140,8 +141,8 @@ public class SketchPropertiesActivity extends SherlockActivity {
             case R.id.menu_change_sketch_name:
             	changeSketchName();
             	return true;
-            case R.id.menu_settings:
-            	openSettings();
+            case R.id.action_settings:
+            	launchSettings();
             	return true;
             case R.id.menu_save:
             	saveSketch();
@@ -162,6 +163,11 @@ public class SketchPropertiesActivity extends SherlockActivity {
                 return super.onOptionsItemSelected(item);
         }
     }
+	
+	private void launchSettings() {
+		Intent intent = new Intent(this, SettingsActivity.class);
+		startActivity(intent);
+	}
 	
 	private void saveSketch() {
 		if(!externalStorageWritable()) {
@@ -198,10 +204,6 @@ public class SketchPropertiesActivity extends SherlockActivity {
 		String state = Environment.getExternalStorageState();
 		if (Environment.MEDIA_MOUNTED.equals(state)) return true;
 		else return false;
-	}
-	
-	private void openSettings() {
-		
 	}
 	
 	private void loadSketch() {

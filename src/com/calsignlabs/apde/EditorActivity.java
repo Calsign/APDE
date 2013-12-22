@@ -72,6 +72,8 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	private PrintStream outStream;
 	private PrintStream errStream;
 	
+	private boolean building;
+	
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -278,6 +280,13 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         
         System.setOut(outStream);
         System.setErr(errStream);
+    }
+    
+    public void onResume() {
+    	super.onResume();
+    	
+    	//Reference the SharedPreferences text size value
+    	((CodeEditText) findViewById(R.id.code)).refreshTextSize();
     }
     
     protected void populateWithSketches(ArrayAdapter<String> items) {
@@ -735,7 +744,7 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
             	saveSketch();
             	return true;
             case R.id.menu_settings:
-            	openSettings();
+            	launchSettings();
             	return true;
             case R.id.menu_tab_new:
             	addTabWithDialog();
@@ -752,10 +761,6 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
             default:
                 return super.onOptionsItemSelected(item);
         }
-    }
-    
-    private void openSettings() {
-    	
     }
     
     private void runApplication() {
@@ -776,6 +781,10 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
             return;
     	}
     	
+    	//In case the user presses the button twice, we don't want any errors
+    	if(building)
+    		return;
+    	
     	//Clear the console
     	((TextView) findViewById(R.id.console)).setText("");
     	
@@ -785,7 +794,9 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	Thread buildThread = new Thread(new Runnable() {
     		@Override
     		public void run() {
+    			building = true;
     			builder.build("debug");
+    			building = false;
     	}});
     	buildThread.start();
     }
@@ -1128,6 +1139,11 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 		Intent intent = new Intent(this, SketchPropertiesActivity.class);
 		startActivity(intent);
 	}
+	
+	private void launchSettings() {
+		Intent intent = new Intent(this, SettingsActivity.class);
+		startActivity(intent);
+	}
 
 	public boolean isSaved() {
 		return saved;
@@ -1236,6 +1252,8 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 					code.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim));
 					console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
 					
+					firstResize = false;
+					
 					return true;
 				case MotionEvent.ACTION_UP:
 					pressed = false;
@@ -1281,8 +1299,6 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 		
 		public void write(byte b[], int offset, int length) {
 			final String value = new String(b, offset, length);
-			
-			//error(value);
 			
 			final TextView tv = (TextView) findViewById(R.id.console);
 			runOnUiThread(new Runnable() {

@@ -1,0 +1,22 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <PreferenceCategory 
+        android:title="@string/pref_editor"
+        android:key="pref_key_storage_settings">
+        
+	    <!-- maxLength sets the max number of characters... don't want font sizes of 1000!!! -->
+	    <EditTextPreference
+	        android:defaultValue="@string/pref_textsize_default"
+	        android:inputType="number"
+	        android:key="textsize"
+	        android:maxLines="1"
+	        android:selectAllOnFocus="true"
+	        android:singleLine="true"
+	        android:title="@string/pref_textsize_title"
+	        android:maxLength="2" />
+	    
+	    <CheckBoxPreference
+	        android:key="syntax_highlight"
+	        android:title="@string/pref_syntax_highlight"
+	        android:defaultValue="true" />
+	</PreferenceCategory>
+</PreferenceScreen>
