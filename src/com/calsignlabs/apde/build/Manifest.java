@@ -7,6 +7,7 @@ package com.calsignlabs.apde.build;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -16,7 +17,10 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
+import android.content.Context;
+
 import processing.app.*;
+import processing.core.PApplet;
 import processing.data.XML;
 
 public class Manifest {
@@ -36,6 +40,8 @@ public class Manifest {
 	
 	public static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd.HHmm", Locale.US);
 	
+	public static Permission[] permissions;
+	
 	private Build build;
 	
 	/** the manifest data read from the file */
@@ -44,6 +50,34 @@ public class Manifest {
 	public Manifest(Build build) {
 		this.build = build;
 		load();
+	}
+	
+	public static void loadPermissions(Context context) {
+		//TODO this is probably a grossly incorrect method of doing this...
+		
+		//Load the raw list of permissions
+		InputStream rawPermissionsStream = context.getResources().openRawResource(context.getResources().getIdentifier("raw/permissions_list", "raw", context.getPackageName()));
+		String[] rawPermissions = PApplet.loadStrings(rawPermissionsStream);
+		
+		permissions = new Permission[rawPermissions.length];
+		
+		//Add the permissions
+		for(int i = 0; i < rawPermissions.length; i ++) {
+			String raw = rawPermissions[i];
+			//Get the description from the String resources
+			String desc = context.getResources().getString(context.getResources().getIdentifier(raw, "string", context.getPackageName()));
+			//Add the permission
+			permissions[i] = new Permission(raw, desc);
+		}
+	}
+	
+	//Get a working list of permission names
+	public static String[] getPermissionNames() {
+		String[] perms = new String[permissions.length];
+		for(int i = 0; i < perms.length; i ++)
+			perms[i] = permissions[i].name();
+		
+		return perms;
 	}
 	
 	private String defaultPackageName() {

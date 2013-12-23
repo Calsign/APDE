@@ -16,21 +16,9 @@
         <item name="buttonBarButtonStyle">?android:attr/buttonBarButtonStyle</item>
     </style>
     
-    <style name="PreferenceTheme" parent="Theme.Sherlock.Light.DarkActionBar">
-        <item name="android:actionBarStyle">@style/PreferenceActionBarStyle</item>
-        <item name="android:windowActionBarOverlay">false</item>
-        <item name="android:windowBackground">@color/bar_overlay</item>
-        <item name="buttonBarStyle">?android:attr/buttonBarStyle</item>
-        <item name="buttonBarButtonStyle">?android:attr/buttonBarButtonStyle</item>
-    </style>
-    
-    <style name="FullscreenActionBarStyle" parent="Widget.Sherlock.Light.ActionBar">
+    <style name="FullscreenActionBarStyle" parent="Widget.Sherlock.ActionBar">
         <item name="android:background">@color/bar_overlay</item>
-        <item name="backgroundStacked">@color/bar_overlay</item>
-    </style>
-    
-    <style name="PreferenceActionBarStyle" parent="Widget.Sherlock.Light.ActionBar.Solid.Inverse">
-        <item name="android:background">@color/bar_overlay</item>
+        <item name="background">@color/bar_overlay</item>
         <item name="backgroundStacked">@color/bar_overlay</item>
     </style>
 </resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="prop_manifest">Manifest</string>
+    <string name="prop_permissions">Sketch Permissions</string>
+    <string name="prop_permissions_desc">Required for specific functionality</string>
+    <string name="prop_min_sdk">Minimum SDK</string>
+    <string name="prop_min_sdk_default">10</string>
+    <string name="prop_target_sdk">Target SDK</string>
+    <string name="prop_target_sdk_default">10</string>
+</resources>

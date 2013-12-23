@@ -49,6 +49,7 @@ import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
 
 import com.calsignlabs.apde.build.Build;
+import com.calsignlabs.apde.build.Manifest;
 
 public class EditorActivity extends SherlockActivity implements ActionBar.TabListener {
 	private HashMap<Tab, FileMeta> tabs;
@@ -78,6 +79,8 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
+        
+        Manifest.loadPermissions(this);
         
         messageListener = new MessageTouchListener();
 //      tabListener = new TabActionListener();

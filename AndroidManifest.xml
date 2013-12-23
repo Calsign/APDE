@@ -54,8 +54,12 @@
         <activity
             android:name="com.calsignlabs.apde.SettingsActivity"
             android:label="@string/title_activity_settings"
-            android:theme="@style/PreferenceTheme" >
+            android:theme="@style/FullscreenTheme" >
+        </activity>
+        <activity
+            android:name="com.calsignlabs.apde.PermissionsActivity"
+            android:label="@string/title_activity_permissions"
+            android:theme="@style/FullscreenTheme" >
         </activity>
     </application>
-
 </manifest>

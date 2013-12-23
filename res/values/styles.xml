@@ -29,13 +29,6 @@
         <item name="buttonBarStyle">@style/ButtonBar</item>
         <item name="buttonBarButtonStyle">@style/ButtonBarButton</item>
     </style>
-    
-    <style name="PreferenceTheme" parent="Theme.Sherlock.Light">
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:windowBackground">@color/activity_background</item>
-        <item name="buttonBarStyle">@style/ButtonBar</item>
-        <item name="buttonBarButtonStyle">@style/ButtonBarButton</item>
-    </style>
 
     <style name="ButtonBar">
         <item name="android:paddingLeft">2dp</item>

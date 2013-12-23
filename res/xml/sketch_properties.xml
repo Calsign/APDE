@@ -1,0 +1,31 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <PreferenceCategory 
+        android:title="@string/prop_manifest"
+        android:key="prop_manifest">
+        
+        <Preference android:dialogTitle="@string/prop_permissions"
+        	android:key="prop_permissions"
+        	android:summary="@string/prop_permissions_desc"        
+        	android:title="@string/prop_permissions" />
+        
+        <EditTextPreference android:id="@+id/prop_min_sdk"
+            android:key="prop_min_sdk"
+            android:title="@string/prop_min_sdk"
+            android:defaultValue="@string/prop_min_sdk_default"
+            android:maxLines="1"
+	        android:selectAllOnFocus="true"
+	        android:singleLine="true"
+	        android:maxLength="2"
+	        android:inputType="number" />
+        
+        <EditTextPreference android:id="@+id/prop_target_sdk"
+            android:key="prop_target_sdk"
+            android:title="@string/prop_target_sdk"
+            android:defaultValue="@string/prop_target_sdk_default"
+            android:maxLines="1"
+	        android:selectAllOnFocus="true"
+	        android:singleLine="true"
+	        android:maxLength="2"
+	        android:inputType="number" />
+	</PreferenceCategory>
+</PreferenceScreen>

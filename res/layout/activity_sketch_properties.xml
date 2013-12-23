@@ -13,7 +13,14 @@
 	    android:paddingRight="@dimen/activity_horizontal_margin"
 	    android:paddingTop="@dimen/activity_vertical_margin"
 	    tools:context=".SketchPropertiesActivity"
-	    android:background="@color/activity_background" />
+	    android:background="@color/activity_background">
+	    
+	    <ListView android:id="@id/android:list"
+	        android:layout_width="match_parent"
+	        android:layout_height="match_parent">
+	        
+	    </ListView>
+	</RelativeLayout>
 	
 	<LinearLayout android:id="@+id/drawer_wrapper_sketch_properties"
 	    android:layout_width="260dp"
