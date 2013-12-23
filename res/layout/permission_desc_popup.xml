@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/permissions_desc_popup"
+    android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:padding="10dp" >
+    
+	<TextView android:id="@+id/permission_desc_popup_title"
+	    android:layout_width="fill_parent"
+	    android:layout_height="wrap_content"
+	    android:textIsSelectable="false"
+	    android:textSize="18sp"
+	    android:padding="5dp"
+	    android:gravity="center"
+	    android:singleLine="true" />
+	
+	<TextView android:id="@+id/permission_desc_popup_message"
+	    android:layout_width="fill_parent"
+	    android:layout_height="wrap_content"
+	    android:textIsSelectable="false"
+	    android:textSize="14sp"
+	    android:padding="5dp"
+	    android:gravity="center_horizontal" />
+</LinearLayout>

@@ -7,6 +7,7 @@ import com.actionbarsherlock.view.MenuItem;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.build.Permission;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -15,7 +16,9 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckedTextView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TextView;
 
 public class PermissionsActivity extends SherlockActivity {
 	private boolean[] checked;
@@ -33,7 +36,7 @@ public class PermissionsActivity extends SherlockActivity {
 	public void onResume() {
 		super.onResume();
 		
-		ListView permsList = (ListView) findViewById(R.id.permissions_list);
+		final ListView permsList = (ListView) findViewById(R.id.permissions_list);
 		
 		permsList.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
 		permsList.setItemsCanFocus(false);
@@ -66,8 +69,35 @@ public class PermissionsActivity extends SherlockActivity {
 				me.recycle();
 		}});
 		
+		permsList.setOnItemLongClickListener (new android.widget.AdapterView.OnItemLongClickListener() {
+			public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+				showPermissionDescDialog(position);
+				
+				return true;
+			}
+		});
+		
 		SharedPreferences prefs = getSharedPreferences(((APDE) getApplicationContext()).getSketchName(), MODE_PRIVATE);
 		setData(prefs.getString("permissions", ""));
+	}
+	
+	//Displays a permission description dialog
+	private void showPermissionDescDialog(int perm) {
+		//Inflate the layout
+		LinearLayout layout = (LinearLayout) getLayoutInflater().inflate(R.layout.permission_desc_popup, null);
+		
+		//Populate the layout with permission values
+		((TextView) layout.findViewById(R.id.permission_desc_popup_title)).setText(Manifest.permissions[perm].name());
+		((TextView) layout.findViewById(R.id.permission_desc_popup_message)).setText(Manifest.permissions[perm].desc());
+		
+		//Create the alert
+		AlertDialog.Builder build = new AlertDialog.Builder(this);
+		build.setView(layout);
+		
+		AlertDialog dialog = build.create();
+		dialog.setCanceledOnTouchOutside(true);
+		
+		dialog.show();
 	}
 	
 	@Override
@@ -88,7 +118,7 @@ public class PermissionsActivity extends SherlockActivity {
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		getSupportMenuInflater().inflate(R.menu.permissions, menu);
+		getSupportMenuInflater().inflate(R.menu.activity_permissions, menu);
 		return true;
 	}
 	
@@ -98,6 +128,9 @@ public class PermissionsActivity extends SherlockActivity {
             case android.R.id.home:
             	finish();
                 return true;
+            case R.id.menu_new_permission:
+            	newPermission();
+            	return true;
             case R.id.action_settings:
             	launchSettings();
             	return true;
@@ -109,6 +142,10 @@ public class PermissionsActivity extends SherlockActivity {
 	private void launchSettings() {
 		Intent intent = new Intent(this, SettingsActivity.class);
 		startActivity(intent);
+	}
+	
+	public void newPermission() {
+		
 	}
 	
 	public void setData(String data) {
