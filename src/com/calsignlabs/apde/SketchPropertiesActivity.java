@@ -281,9 +281,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
             builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
             	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
             	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-            	
-            	@Override
-                public void onClick(DialogInterface dialog, int which) {}
+            		@Override
+            		public void onClick(DialogInterface dialog, int which) {}
             }).show();
             
     		return;

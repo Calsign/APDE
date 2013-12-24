@@ -10,4 +10,5 @@
     android:drawableRight="@drawable/btn_check_holo_dark"
     android:clickable="false"
     android:gravity="center_vertical"
-    android:checked="false" />
+    android:checked="false"
+    android:singleLine="true" />

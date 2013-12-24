@@ -130,6 +130,13 @@ public class Build {
 		
 		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
 		
+		//Used to determine whether or not to build with ALL of the OpenGL libraries...
+		//...it takes a lot longer to run DEX if they're included
+		boolean isOpenGL = false;
+		//File glLibLoc = new File(binFolder, "libs.dex");
+		
+		File androidJarLoc = new File(tmpFolder, "android.jar");
+		
 		try {
 			manifest = new Manifest(this);
 			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
@@ -139,14 +146,27 @@ public class Build {
 			preproc.initSketchSize(tabs[0].getText());
 			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false);
 			
+			//Detect if the renderer is one of the OpenGL renderers
+			//TODO support custom renderers that require OpenGL or... other problems that may arise
+			String sketchRenderer = preproc.getSketchRenderer();
+			if(sketchRenderer != null)
+				isOpenGL = sketchRenderer.equals("OPENGL") || sketchRenderer.equals("P3D") || sketchRenderer.equals("P2D");
+			else
+				isOpenGL = false;
+			
+			if(isOpenGL)
+				System.out.println("Detected renderer " + sketchRenderer + "; including OpenGL libraries");
+			else
+				System.out.println("Detected renderer " + sketchRenderer + "; leaving out OpenGL libraries");
+			
 			if(sketchClassName != null) {
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
 				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
 				
-				writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
-				writeBuildXML(buildFile, sketchName);
-				writeProjectProps(new File(buildFolder, "project.properties"), Manifest.MIN_SDK);
-				writeLocalProps(new File(buildFolder, "local.properties"));
+				//writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
+				//writeBuildXML(buildFile, sketchName);
+				//writeProjectProps(new File(buildFolder, "project.properties"), Manifest.MIN_SDK);
+				//writeLocalProps(new File(buildFolder, "local.properties"));
 				
 				final File resFolder = new File(buildFolder, "res");
 				writeRes(resFolder, sketchClassName);
@@ -155,11 +175,38 @@ public class Build {
 				final File assetsFolder = mkdirs(buildFolder, "assets");
 				
 				AssetManager am = editor.getAssets();
-				InputStream inputStream = am.open("processing-core.jar");
-				createFileFromInputStream(inputStream, new File(libsFolder, "processing-core.jar"));
 				
-				InputStream dexInputStream = am.open("processing-core-dex.jar");
-				createFileFromInputStream(dexInputStream, new File(dexedLibsFolder, "processing-core-dex.jar"));
+				//Copy android.jar if it hasn't been done yet
+				if(!androidJarLoc.exists()) {
+					InputStream is = am.open("android.jar");
+					createFileFromInputStream(is, androidJarLoc);
+				}
+				
+				//Copy native libraries
+				
+				String[] libsToCopy = {"processing-core", "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
+				String prefix = "libs/";
+				String suffix = ".jar";
+				
+				//Copy for the compiler
+				for(String lib : libsToCopy) {
+					InputStream inputStream = am.open(prefix + lib + suffix);
+					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
+				}
+				
+				//Copy dexed versions to speed up the DEX process
+				
+				if(isOpenGL) {
+					//For OpenGL sketches (includes P2D and P3D)
+//					InputStream inputStream = am.open("libs-dex/" + "libs.dex");
+//					createFileFromInputStream(inputStream, glLibLoc);
+					InputStream inputStream = am.open("libs-dex/" + "libs.jar");
+					createFileFromInputStream(inputStream, new File(dexedLibsFolder, "libs.jar"));
+				} else {
+					//For non-OpenGL sketches
+					InputStream inputStream = am.open("libs-dex/" + "processing-core-dex.jar");
+					createFileFromInputStream(inputStream, new File(dexedLibsFolder, "processing-core-dex.jar"));
+				}
 				
 				// Copy any imported libraries (their libs and assets),
 				// and anything in the code folder contents to the project.
@@ -231,7 +278,7 @@ public class Build {
 				"-S", buildFolder.getAbsolutePath() + "/res/", //The location of the /res folder
 				"-J", genFolder.getAbsolutePath(), //The location of the /gen folder
 				"-M", buildFolder.getAbsolutePath() + "/AndroidManifest.xml", //The location of the AndroidManifest.xml file
-				"-I", buildFolder.getAbsolutePath() + "/sdk/platforms/" + androidVersion + "/android.jar", //The location of the android.jar resource
+				"-I", androidJarLoc.getAbsolutePath(), //buildFolder.getAbsolutePath() + "/sdk/platforms/" + androidVersion + "/android.jar", //The location of the android.jar resource
 				"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res" //The location of the output .apk.res file
 			};
 			
@@ -256,7 +303,7 @@ public class Build {
 			String[] args = {
 				"-verbose",
 				"-extdirs", libsFolder.getAbsolutePath(), //The location of the external libraries (Processing's core.jar and others)
-				"-bootclasspath", buildFolder.getAbsolutePath() + "/sdk/platforms/" + androidVersion + "/android.jar", //The location of android.jar
+				"-bootclasspath", androidJarLoc.getAbsolutePath(), //buildFolder.getAbsolutePath() + "/sdk/platforms/" + androidVersion + "/android.jar", //The location of android.jar
 				"-classpath", srcFolder.getAbsolutePath() //The location of the source folder
 				+ ":" + genFolder.getAbsolutePath() //The location of the generated folder
 				+ ":" + libsFolder.getAbsolutePath(), //The location of the library folder
@@ -269,9 +316,11 @@ public class Build {
 			System.out.println("ECJing: " + srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java");
 			
 			if(main.compile(args)) {
+				System.out.println();
 				System.out.println("ECJ compilation successful");
 			} else {
 				//We have some compilation errors
+				System.out.println();
 				System.out.println("ECJ compilation failed");
 				return;
 			}
@@ -280,14 +329,14 @@ public class Build {
 		editor.messageExt(editor.getResources().getString(R.string.run_dx));
 		
 		//Run DX
-		try { //TODO dex non-processing libraries
+		try { //TODO dex non-processing core libraries
 			System.out.println("Running DX...");
 			
-			String[] args = {
+			String[] args = new String[] {
 				"--dex",
 				"--output=" + binFolder.getAbsolutePath() + "/classes.dex", //The location of the output DEX class file
 				binFolder.getAbsolutePath() + "/classes/", //add "/classes/" to get DX to work properly
-				dexedLibsFolder.getAbsolutePath() + "/"
+				dexedLibsFolder.getAbsolutePath()
 			};
 			
 			com.android.dx.command.Main.main(args);

@@ -66,5 +66,7 @@
     <string-array name="empty"></string-array>
 
     <string name="title_activity_permissions">Sketch Permissions</string>
+    <string name="create">Create</string>
+    <string name="custom_perm">Custom Permission</string>
 
 </resources>

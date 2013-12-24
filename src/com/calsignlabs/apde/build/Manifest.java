@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
 
@@ -40,7 +42,7 @@ public class Manifest {
 	
 	public static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd.HHmm", Locale.US);
 	
-	public static Permission[] permissions;
+	public static ArrayList<Permission> permissions;
 	
 	private Build build;
 	
@@ -59,7 +61,7 @@ public class Manifest {
 		InputStream rawPermissionsStream = context.getResources().openRawResource(context.getResources().getIdentifier("raw/permissions_list", "raw", context.getPackageName()));
 		String[] rawPermissions = PApplet.loadStrings(rawPermissionsStream);
 		
-		permissions = new Permission[rawPermissions.length];
+		permissions = new ArrayList<Permission>(rawPermissions.length);
 		
 		//Add the permissions
 		for(int i = 0; i < rawPermissions.length; i ++) {
@@ -67,17 +69,34 @@ public class Manifest {
 			//Get the description from the String resources
 			String desc = context.getResources().getString(context.getResources().getIdentifier(raw, "string", context.getPackageName()));
 			//Add the permission
-			permissions[i] = new Permission(raw, desc);
+			permissions.add(new Permission(PERMISSION_PREFIX, raw, desc));
 		}
+		
+		//Permissions should be sorted already, so don't need to sort them...
+		//...but if the problem arises in the future, we can sort them
 	}
 	
 	//Get a working list of permission names
 	public static String[] getPermissionNames() {
-		String[] perms = new String[permissions.length];
+		String[] perms = new String[permissions.size()];
 		for(int i = 0; i < perms.length; i ++)
-			perms[i] = permissions[i].name();
+			perms[i] = permissions.get(i).name();
 		
 		return perms;
+	}
+	
+	public static void addCustomPermission(String name, String desc) {
+		addPermission(PERMISSION_PREFIX, name, desc, false);
+	}
+	
+	public static void addPermission(String prefix, String name, String desc, boolean custom) {
+		permissions.add(new Permission(prefix, name, desc, custom));
+	}
+	
+	public static void sortPermissions() {
+		Collections.sort(permissions);
+		//A sorted list is backwards
+		Collections.reverse(permissions);
 	}
 	
 	private String defaultPackageName() {
@@ -98,7 +117,7 @@ public class Manifest {
 		save();
 	}
 	
-	static final String PERMISSION_PREFIX = "android.permission.";
+	public static final String PERMISSION_PREFIX = "android.permission.";
 	
 	public String[] getPermissions() {
 		XML[] elements = xml.getChildren("uses-permission");

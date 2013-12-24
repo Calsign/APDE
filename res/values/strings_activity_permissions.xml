@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="menu_new_permission">Create Permission</string>
+    <string name="new_permission_dialog_title">Create Permission</string>
+    <string name="new_permission_dialog_message">Enter the permission value:</string>
 </resources>

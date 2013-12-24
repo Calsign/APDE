@@ -100,4 +100,12 @@ public class Preproc extends PdePreprocessor {
 			out.println("}");
 		}
 	}
+	
+	/**
+	 * Gets the renderer used by the sketch as defined in the size() command
+	 * @return the renderer
+	 */
+	public String getSketchRenderer() {
+		return sketchRenderer;
+	}
 }
