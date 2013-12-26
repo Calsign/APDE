@@ -12,6 +12,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -85,7 +86,7 @@ public class PermissionsActivity extends SherlockActivity {
 	}
 	
 	//Displays a permission description dialog
-	private void showPermissionDescDialog(int perm) {
+	private void showPermissionDescDialog(final int perm) {
 		//Inflate the layout
 		LinearLayout layout = (LinearLayout) getLayoutInflater().inflate(R.layout.permission_desc_popup, null);
 		
@@ -93,18 +94,27 @@ public class PermissionsActivity extends SherlockActivity {
 		((TextView) layout.findViewById(R.id.permission_desc_popup_title)).setText(Manifest.permissions.get(perm).name());
 		((TextView) layout.findViewById(R.id.permission_desc_popup_message)).setText(Manifest.permissions.get(perm).desc());
 		
-		if(Manifest.permissions.get(perm).custom()) {
-			Button delete = new Button(this);
-			
-			layout.addView(delete);
-		}
-		
 		//Create the alert
 		AlertDialog.Builder build = new AlertDialog.Builder(this);
 		build.setView(layout);
 		
-		AlertDialog dialog = build.create();
+		final AlertDialog dialog = build.create();
 		dialog.setCanceledOnTouchOutside(true);
+		
+		if(Manifest.permissions.get(perm).custom()) {
+			((TextView) layout.findViewById(R.id.permission_desc_popup_message)).setVisibility(TextView.GONE); //TODO custom descriptions
+			
+			Button delete = (Button) layout.findViewById(R.id.permissions_desc_popup_delete);
+			delete.setVisibility(Button.VISIBLE);
+			delete.setOnClickListener(new Button.OnClickListener() {
+				@Override
+				public void onClick(View view) {
+					Manifest.removeCustomPermission(perm, getApplicationContext());
+					refreshPermissions();
+					
+					dialog.dismiss();
+			}});
+		}
 		
 		dialog.show();
 	}
@@ -166,7 +176,7 @@ public class PermissionsActivity extends SherlockActivity {
 		build.setPositiveButton(R.string.create, new android.content.DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) { //TODO let the user customize the prefix and the description
-				Manifest.addCustomPermission(input.getText().toString(), getResources().getString(R.string.custom_perm));
+				Manifest.addCustomPermission(input.getText().toString(), getResources().getString(R.string.custom_perm), getApplicationContext());
 				Manifest.sortPermissions();
 				refreshPermissions();
 		}});
@@ -175,7 +185,8 @@ public class PermissionsActivity extends SherlockActivity {
     	}});
 		
 		AlertDialog alert = build.create();
-		alert.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+		if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+			alert.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
 		alert.show();
 	}
 	

@@ -22,4 +22,13 @@
 	    android:textSize="14sp"
 	    android:padding="5dp"
 	    android:gravity="center_horizontal" />
+	
+	<Button android:id="@+id/permissions_desc_popup_delete"
+    	android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:textSize="14sp"
+		android:text="@string/delete_perm"
+		android:visibility="gone"
+		android:layout_gravity="center_horizontal"
+		android:gravity="center" />
 </LinearLayout>

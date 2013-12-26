@@ -19,7 +19,11 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
+import com.calsignlabs.apde.R;
+
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 
 import processing.app.*;
 import processing.core.PApplet;
@@ -69,11 +73,21 @@ public class Manifest {
 			//Get the description from the String resources
 			String desc = context.getResources().getString(context.getResources().getIdentifier(raw, "string", context.getPackageName()));
 			//Add the permission
-			permissions.add(new Permission(PERMISSION_PREFIX, raw, desc));
+			addPermission(PERMISSION_PREFIX, raw, desc, false);
 		}
 		
-		//Permissions should be sorted already, so don't need to sort them...
-		//...but if the problem arises in the future, we can sort them
+		//Add user's custom permissions
+		
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		String perms = prefs.getString("user_perms", "");
+		String[] parts = perms.split(",");
+		
+		for(String part : parts)
+			if(part.length() > 0)
+				addPermission(PERMISSION_PREFIX, part, context.getResources().getString(R.string.custom_perm), true);
+		
+		//Sort the permissions (custom permissions are unsorted, even though the loaded ones are sorted)
+		sortPermissions();
 	}
 	
 	//Get a working list of permission names
@@ -85,12 +99,49 @@ public class Manifest {
 		return perms;
 	}
 	
-	public static void addCustomPermission(String name, String desc) {
-		addPermission(PERMISSION_PREFIX, name, desc, false);
+	public static void addCustomPermission(String name, String desc, Context context) {
+		addPermission(PERMISSION_PREFIX, name, desc, true);
+		
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		SharedPreferences.Editor edit = prefs.edit();
+		
+		//Append the permission to the list of user permissions
+		
+		String perms = prefs.getString("user_perms", "") + name + ",";
+		
+		edit.putString("user_perms", perms);
+		edit.commit();
 	}
 	
 	public static void addPermission(String prefix, String name, String desc, boolean custom) {
 		permissions.add(new Permission(prefix, name, desc, custom));
+	}
+	
+	public static void removeCustomPermission(int perm, Context context) {
+		String name = permissions.get(perm).name();
+		
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		SharedPreferences.Editor edit = prefs.edit();
+		
+		//Append the permission to the list of user permissions
+		
+		String oldPerms = prefs.getString("user_perms", "");
+		
+		String[] parts = oldPerms.split(name + ","); //TODO watch out for REGEX-injection... it's relatively sandboxed, though...
+		
+		String perms = "";
+		for(String part : parts)
+			perms += part;
+		
+		edit.putString("user_perms", perms);
+		edit.commit();
+		
+		//do this after so that the permission is still there...
+		removePermission(perm);
+	}
+	
+	public static void removePermission(int perm) {
+		permissions.remove(perm);
 	}
 	
 	public static void sortPermissions() {

@@ -1,5 +1,15 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
     <PreferenceCategory 
+        android:title="@string/pref_input"
+        android:key="pref_key_input">
+	    
+	    <CheckBoxPreference
+	        android:key="use_hardware_keyboard"
+	        android:title="@string/use_hardware_keyboard"
+	        android:defaultValue="false" />
+	</PreferenceCategory>
+    
+    <PreferenceCategory 
         android:title="@string/pref_editor"
         android:key="pref_key_storage_settings">
         
