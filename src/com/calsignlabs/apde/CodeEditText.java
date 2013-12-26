@@ -548,4 +548,16 @@ public class CodeEditText extends EditText {
 		for(TextPaint paint : syntaxList)
 			paint.setTextSize(scaledTextSize);
 	}
+	
+	public void commentSelection() {
+		//TODO
+	}
+	
+	public void shiftLeft() {
+		//TODO
+	}
+	
+	public void shiftRight() {
+		//TODO
+	}
 }

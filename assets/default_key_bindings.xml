@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<bindings>
+    <!-- this file defines the default key bindings -->
+    
+    <binding key="47" mod="ctrl">save_sketch</binding>
+    <binding key="42" mod="ctrl">new_sketch</binding>
+    <binding key="43" mod="ctrl">open_sketch</binding>
+    
+    <binding key="76" mod="ctrl">comment</binding>
+    <binding key="71" mod="ctrl">shift_left</binding>
+    <binding key="72" mod="ctrl">shift_right</binding>
+    
+    <binding key="42" mod="ctrl|shift">new_tab</binding>
+    <binding key="52" mod="ctrl|shift">delete_tab</binding>
+    <binding key="46" mod="ctrl|shift">rename_tab</binding>
+</bindings>

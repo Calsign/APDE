@@ -10,6 +10,12 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.SAXException;
+
+import processing.data.XML;
+
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -29,6 +35,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
@@ -54,6 +61,8 @@ import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.Manifest;
 
 public class EditorActivity extends SherlockActivity implements ActionBar.TabListener {
+	private HashMap<String, KeyBinding> keyBindings;
+	
 	private HashMap<Tab, FileMeta> tabs;
 	private boolean saved;
 	
@@ -274,10 +283,10 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         		//If we don't know what this is, bail out
         		if(orientation == ORIENTATION_UNKNOWN)
         			return;
-
+        		
         		int minWidth;
         		int maxWidth;
-
+        		
         		//Let's try and do things correctly for once
         		if(android.os.Build.VERSION.SDK_INT >= 13) {
         			Point point = new Point();
@@ -304,6 +313,22 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         
         System.setOut(outStream);
         System.setErr(errStream);
+        
+        //Load default key bindings TODO load user's custom key bindings
+        //Also, do this after we initialize the console so that we can get error reports
+        
+        keyBindings = new HashMap<String, KeyBinding>();
+        
+        try {
+        	//Use Processing's XML for simplicity
+			loadKeyBindings(new XML(getResources().getAssets().open("default_key_bindings.xml")));
+		} catch (IOException e) { //Errors... who cares, anyway?
+			e.printStackTrace();
+		} catch (ParserConfigurationException e) {
+			e.printStackTrace();
+		} catch (SAXException e) {
+			e.printStackTrace();
+		}
     }
     
     public void onResume() {
@@ -318,6 +343,197 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         else
         	getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
     }
+    
+    /**
+     * Load specified key bindings from the XML resource
+     * 
+     * @param xml
+     */
+    public void loadKeyBindings(XML xml) {
+    	XML[] bindings = xml.getChildren();
+    	for(XML binding : bindings) {
+    		//Make sure that this is a "binding" element
+    		if(!binding.getName().equals("binding"))
+    			continue;
+    		
+    		//Parse the key binding
+    		String name = binding.getContent();
+    		int key = binding.getInt("key");
+    		
+    		String modifiers = binding.getString("mod");
+    		String[] mods = modifiers.split("\\|"); // "|" is a REGEX keyword... need to escape it
+    		
+    		boolean ctrl = false;
+    		boolean meta = false;
+    		boolean func = false;
+    		
+    		boolean alt = false;
+    		boolean sym = false;
+    		boolean shift = false;
+    		
+    		//This isn't very elegant...
+    		for(String mod : mods) {
+    			if(mod.equals("ctrl")) ctrl = true;
+    			if(mod.equals("meta")) meta = true;
+    			if(mod.equals("func")) func = true;
+    			
+    			if(mod.equals("alt")) alt = true;
+    			if(mod.equals("sym")) sym = true;
+    			if(mod.equals("shift")) shift = true;
+    		}
+    		
+    		//Build the KeyBinding
+    		KeyBinding bind = new KeyBinding(name, key, ctrl, meta, func, alt, sym, shift);
+    		
+    		//Add the key binding
+    		keyBindings.put(name, bind);
+    	}
+    }
+    
+    @SuppressLint("NewApi")
+	@Override
+    public boolean onKeyDown(int key, KeyEvent event) {
+    	//Detect keyboard shortcuts
+    	
+    	// CTRL, META, and FUNCTION were added in Honeycomb...
+    	// ...so we can't use them in 2.3
+    	
+    	// On older devices, we'll map:
+    	//   CTRL      -->  ALT
+    	//   META      -->  SYMBOL
+    	//   FUNCTION  -->  SYMBOL
+    	// 
+    	// ...and yes, I know that META and FUNCTION map to the same value...
+    	// ...but we can't exactly map CTRL+S to SHIFT+S, now can we?
+    	
+    	boolean ctrl;
+		boolean meta;
+		boolean func;
+		
+		boolean alt = event.isAltPressed();
+    	boolean sym = event.isSymPressed();
+    	boolean shift = event.isShiftPressed();
+		
+    	if(android.os.Build.VERSION.SDK_INT >= 11) {
+    		//Read these values on API 11+
+    		
+    		ctrl = event.isCtrlPressed();
+    		meta = event.isMetaPressed();
+    		func = event.isFunctionPressed();
+    	} else {
+    		//Map these values to other ones on API 10 (app minimum)
+    		
+    		ctrl = alt;
+    		meta = sym;
+    		func = sym;
+    	}
+    	
+    	//Check for the key bindings
+    	//...this is where functional programming would come in handy
+    	
+    	if(keyBindings.get("save_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		saveSketch();
+    		return true;
+    	}
+    	if(keyBindings.get("new_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		createNewSketch();
+    		return true;
+    	}
+    	if(keyBindings.get("open_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		loadSketch();
+    		return true;
+    	}
+    	
+    	//TODO implement these functions... they're place-holders for now
+    	//TODO are these actually getting picked up?
+    	if(keyBindings.get("comment").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		((CodeEditText) findViewById(R.id.code)).commentSelection();
+    		return true;
+    	}
+    	if(keyBindings.get("shift_left").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		((CodeEditText) findViewById(R.id.code)).shiftLeft();
+    		return true;
+    	}
+    	if(keyBindings.get("shift_right").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		((CodeEditText) findViewById(R.id.code)).shiftRight();
+    		return true;
+    	}
+    	
+    	if(keyBindings.get("new_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		addTabWithDialog();
+    		return true;
+    	}
+    	if(keyBindings.get("delete_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		deleteTab();
+    		return true;
+    	}
+    	if(keyBindings.get("rename_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		renameTab();
+    		return true;
+    	}
+    	
+		return false;
+    }
+    
+    public void createNewSketch() {
+    	if(getGlobalState().getSketchName().equals("sketch")) {
+			AlertDialog.Builder alert = new AlertDialog.Builder(this);
+	    	
+	    	alert.setTitle(R.string.save_sketch_dialog_title);
+	    	alert.setMessage(R.string.save_sketch_dialog_message);
+	    	
+	    	alert.setPositiveButton(R.string.save_sketch, new DialogInterface.OnClickListener() {
+	    		public void onClick(DialogInterface dialog, int whichButton) {
+	    			//Save the sketch
+	    			autoSave();
+	    			
+	    			getGlobalState().setSketchName("sketch");
+	    			getGlobalState().setSelectedSketch(-1);
+	    			newSketch();
+	    			forceDrawerReload();
+	    			
+	    			getSupportActionBar().setTitle(getGlobalState().getSketchName());
+	    	}});
+	    	
+	    	//TODO neutral and negative seem mixed up, uncertain of correct implementation - current set up is for looks
+	    	alert.setNeutralButton(R.string.dont_save_sketch, new DialogInterface.OnClickListener() {
+	    		public void onClick(DialogInterface dialog, int whichButton) {
+	    			getGlobalState().setSketchName("sketch");
+	    			getGlobalState().setSelectedSketch(-1);
+	    			getGlobalState().getEditor().newSketch();
+	    			forceDrawerReload();
+	    			
+	    			getSupportActionBar().setTitle(getGlobalState().getSketchName());
+	    	}});
+	    	
+	    	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+	    		public void onClick(DialogInterface dialog, int whichButton) {
+	    	}});
+	    	
+	    	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
+	    	AlertDialog dialog = alert.create();
+	    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+	    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+	    	dialog.show();
+		} else {
+			//Save the sketch
+			autoSave();
+			
+			getGlobalState().setSketchName("sketch");
+			getGlobalState().setSelectedSketch(-1);
+			newSketch();
+			forceDrawerReload();
+			
+			getSupportActionBar().setTitle(getGlobalState().getSketchName());
+		}
+    }
+    
+    private void loadSketch() {
+		DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer);
+		LinearLayout drawerLayout = (LinearLayout) findViewById(R.id.drawer_wrapper);
+		
+		drawer.openDrawer(drawerLayout);
+	}
     
     protected void populateWithSketches(ArrayAdapter<String> items) {
     	//The location of the sketchbook
