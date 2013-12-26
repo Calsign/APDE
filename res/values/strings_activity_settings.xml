@@ -14,5 +14,7 @@
     <string name="pref_textsize_title">Font Size</string>
     <string name="pref_syntax_highlight">Syntax Highlighting</string>
     <string name="pref_editor">Editor</string>
+    <string name="use_hardware_keyboard">Use Hardware Keyboard</string>
+    <string name="pref_input">Input</string>
 
 </resources>

@@ -21,6 +21,7 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.DrawerLayout;
@@ -33,6 +34,7 @@ import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -107,6 +109,18 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
             }
             public void beforeTextChanged(CharSequence s, int start, int count, int after){}
             public void onTextChanged(CharSequence s, int start, int before, int count){}
+        });
+        
+        ((EditText) findViewById(R.id.code)).setOnTouchListener(new EditText.OnTouchListener() {
+        	@Override
+        	public boolean onTouch(View v, MotionEvent event) {
+        		//Disable the soft keyboard
+        		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+        			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+        		
+        		return false;
+
+        	}
         });
         
         final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer);
@@ -199,6 +213,13 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         		activityRootView.getWindowVisibleDisplayFrame(r);
         		int heightDiff = activityRootView.getRootView().getHeight() - (r.bottom - r.top);
         		
+        		//This is hacky...
+        		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+        			InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        			imm.hideSoftInputFromWindow(activityRootView.getWindowToken(), 0);
+        			return;
+        		}
+        		
         		if(oldCodeHeight == -1)
         			oldCodeHeight = findViewById(R.id.code_scroller).getHeight();
         		
@@ -290,6 +311,12 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	
     	//Reference the SharedPreferences text size value
     	((CodeEditText) findViewById(R.id.code)).refreshTextSize();
+    	
+    	//Disable / enable the soft keyboard
+        if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+        	getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+        else
+        	getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
     }
     
     protected void populateWithSketches(ArrayAdapter<String> items) {
@@ -860,10 +887,12 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     			int start = code.offsetForLine(line);
     			int stop = code.offsetForLineEnd(line);
     			
+    			if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
     			//Hacky way of focusing the code area
-    			MotionEvent me = MotionEvent.obtain(100, 0, 0, 0, 0, 0);
-    			code.dispatchTouchEvent(me);
-    			me.recycle();
+    				MotionEvent me = MotionEvent.obtain(100, 0, 0, 0, 0, 0);
+    				code.dispatchTouchEvent(me);
+    				me.recycle();
+    			}
     			
     			code.setSelection(start, stop);
     		}
@@ -1041,7 +1070,8 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	
     	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
     	AlertDialog dialog = alert.create();
-    	dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
     	dialog.show();
     }
     
@@ -1300,6 +1330,7 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 			write(b, 0, b.length);
 		}
 		
+		@Override
 		public void write(byte b[], int offset, int length) {
 			final String value = new String(b, offset, length);
 			

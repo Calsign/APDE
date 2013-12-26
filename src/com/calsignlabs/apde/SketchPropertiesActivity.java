@@ -359,7 +359,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 	    	
 	    	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
 	    	AlertDialog dialog = alert.create();
-	    	dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+	    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+	    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
 	    	dialog.show();
 		} else {
 			//Save the sketch
@@ -406,7 +407,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
     	
     	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
     	AlertDialog dialog = alert.create();
-    	dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+    	if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
     	dialog.show();
 	}
 	
@@ -445,7 +447,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
     	
     	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
     	AlertDialog dialog = alert.create();
-    	dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
     	dialog.show();
     }
 	
