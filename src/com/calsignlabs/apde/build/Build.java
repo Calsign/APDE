@@ -246,7 +246,7 @@ public class Build {
 			createFileFromInputStream(inputStream, aaptLoc);
 			
 			//Run "chmod" on aapt so that we can execute it
-			String[] chmod = {"/system/bin/chmod", "744", aaptLoc.getAbsolutePath()};
+			String[] chmod = {"chmod", "744", aaptLoc.getAbsolutePath()};
 			Runtime.getRuntime().exec(chmod);
 		} catch (IOException e) {
 			System.out.println("Unable to make AAPT executable");
