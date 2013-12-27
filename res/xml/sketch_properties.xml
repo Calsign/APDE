@@ -3,29 +3,56 @@
         android:title="@string/prop_manifest"
         android:key="prop_manifest">
         
-        <Preference android:dialogTitle="@string/prop_permissions"
-        	android:key="prop_permissions"
-        	android:summary="@string/prop_permissions_desc"        
-        	android:title="@string/prop_permissions" />
+        <CheckBoxPreference android:key="prop_use_custom_manifest"
+            android:title="@string/use_custom_manifest"
+            android:summary="@string/use_custom_manifest_desc"
+            android:defaultValue="false"
+            android:disableDependentsState="true" />
         
-        <EditTextPreference android:id="@+id/prop_min_sdk"
-            android:key="prop_min_sdk"
+        <!-- TODO Implement the Pretty Name field...
+                  ...we only really need this for advanced and / or release sketches,
+                  so this should be OK for now -->
+        
+        <!-- <EditTextPreference android:key="prop_pretty_name"
+            android:title="@string/prop_pretty_name"
+            android:maxLines="1"
+	        android:selectAllOnFocus="true"
+	        android:singleLine="true"
+	        android:inputType="text"
+	        android:dependency="prop_use_custom_manifest" /> -->
+        
+        <Preference android:key="prop_permissions"
+            android:dialogTitle="@string/prop_permissions"
+        	android:summary="@string/prop_permissions_desc"        
+        	android:title="@string/prop_permissions"
+        	android:dependency="prop_use_custom_manifest" />
+        
+        <!-- This is disabled... for now -->
+        <!-- <EditTextPreference android:key="prop_min_sdk"
             android:title="@string/prop_min_sdk"
             android:defaultValue="@string/prop_min_sdk_default"
             android:maxLines="1"
 	        android:selectAllOnFocus="true"
 	        android:singleLine="true"
 	        android:maxLength="2"
-	        android:inputType="number" />
+	        android:inputType="number"
+	        android:dependency="prop_use_custom_manifest" /> -->
         
-        <EditTextPreference android:id="@+id/prop_target_sdk"
-            android:key="prop_target_sdk"
+        <EditTextPreference android:key="prop_target_sdk"
             android:title="@string/prop_target_sdk"
             android:defaultValue="@string/prop_target_sdk_default"
             android:maxLines="1"
 	        android:selectAllOnFocus="true"
 	        android:singleLine="true"
 	        android:maxLength="2"
-	        android:inputType="number" />
+	        android:inputType="number"
+	        android:dependency="prop_use_custom_manifest" />
+        
+        <ListPreference android:key="prop_orientation"
+	        android:title="@string/prop_orientation"
+	        android:entries="@array/orientations"
+	        android:entryValues="@array/orientation_values"
+	        android:defaultValue="@string/prop_orientation_default"
+	        android:dependency="prop_use_custom_manifest" />
 	</PreferenceCategory>
 </PreferenceScreen>

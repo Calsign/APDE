@@ -15,6 +15,7 @@ import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceManager;
@@ -154,19 +155,20 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 		// In the simplified UI, fragments are not used at all and we instead
 		// use the older PreferenceActivity APIs.
 		
-		// Add 'general' preferences.
+		// Add preferences.
 		addPreferencesFromResource(R.xml.sketch_properties);
 		
 		// Bind the summaries of EditText/List/Dialog/Ringtone preferences to
 		// their values. When their values change, their summaries are updated
 		// to reflect the new value, per the Android Design guidelines.
-		
-		bindPreferenceSummaryToValue(findPreference("prop_min_sdk"));
+//		bindPreferenceSummaryToValue(findPreference("prop_min_sdk"));
 		bindPreferenceSummaryToValue(findPreference("prop_target_sdk"));
+		bindPreferenceSummaryToValue(findPreference("prop_orientation"));
 		
 		//Hacky way of setting up the summaries initially
-		findPreference("prop_min_sdk").setSummary(getPreferenceManager().getSharedPreferences().getString("prop_min_sdk", getResources().getString(R.string.prop_min_sdk_default)));
-		findPreference("prop_target_sdk").setSummary(getPreferenceManager().getSharedPreferences().getString("prop_target_sdk", getResources().getString(R.string.prop_target_sdk_default)));
+//		findPreference("prop_min_sdk").setSummary(((EditTextPreference) findPreference("prop_min_sdk")).getText());
+		findPreference("prop_target_sdk").setSummary(((EditTextPreference) findPreference("prop_target_sdk")).getText());
+		findPreference("prop_orientation").setSummary(((ListPreference) findPreference("prop_orientation")).getEntry());
 		
 		Preference launchPermissions = (Preference) findPreference("prop_permissions");
 		launchPermissions.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
@@ -182,7 +184,7 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 		@Override
 		public boolean onPreferenceChange(Preference preference, Object value) {
 			String stringValue = value.toString();
-
+			
 			if (preference instanceof ListPreference) {
 				// For list preferences, look up the correct display value in
 				// the preference's 'entries' list.

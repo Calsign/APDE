@@ -3,17 +3,17 @@
     package="com.calsignlabs.apde"
     android:versionCode="1"
     android:versionName="1.0" >
-
+    
     <uses-sdk
         android:minSdkVersion="10"
         android:targetSdkVersion="17" />
-
+    
     <!-- READ_EXTERNAL_STORAGE will be needed in future versions of Android -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_LOGS" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-
+    <uses-permission android:name="android.permission.READ_LOGS" /> <!-- For reading app logs... doesn't work for sketches on 4.1+, though -->
+    <uses-permission android:name="android.permission.VIBRATE" /> <!-- For the drag'n'drop Message area's haptic feedback -->
+    
     <application
         android:name="com.calsignlabs.apde.APDE"
         android:allowBackup="true"
@@ -27,18 +27,17 @@
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/app_name"
             android:theme="@style/FullscreenTheme" >
+            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
+            
             <!-- TODO implement correct handling for file intents -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
-
+                
                 <data android:scheme="file" />
                 <data android:host="*" />
                 <data android:mimeType="*/*" />

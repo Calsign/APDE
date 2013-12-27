@@ -7,4 +7,21 @@
     <string name="prop_min_sdk_default">10</string>
     <string name="prop_target_sdk">Target SDK</string>
     <string name="prop_target_sdk_default">10</string>
+    <string-array name="orientations">
+        <item>None</item>
+        <item>Portrait</item>
+        <item>Landscape</item>
+        <item>Reverse Landscape</item>
+    </string-array>
+    <string-array name="orientation_values">
+        <item>unspecified</item>
+        <item>portrait</item>
+        <item>landscape</item>
+        <item>reverseLandscape</item>
+    </string-array>
+    <string name="prop_orientation">Locked Orientation</string>
+    <string name="prop_orientation_default">unspecified</string>
+    <string name="use_custom_manifest">Use Custom Manifest</string>
+    <string name="use_custom_manifest_desc">Located in sketch folder</string>
+    <string name="prop_pretty_name">Sketch Display Name</string>
 </resources>

@@ -264,7 +264,7 @@ public class Manifest {
 	 * Save a new version of the manifest info to the build location.
 	 * Also fill in any missing attributes that aren't yet set properly.
 	 */
-	protected void writeBuild(File file, String className, boolean debug) throws IOException {
+	protected void writeBuild(File file, String className, boolean debug, boolean customManifest, String[] perms, int targetSdk, String orientation) throws IOException {
 		// write a copy to the build location
 		save(file);
 		
@@ -291,6 +291,24 @@ public class Manifest {
 			// the '.' prefix is just an alias for the full package name
 			// http://developer.android.com/guide/topics/manifest/activity-element.html#name
 			activity.setString("android:name", "." + className); // this has to be right
+			
+			if(!customManifest) {
+				//Add the values specified in the Sketch Properties activity
+				
+				//Add the permissions
+				for(String perm : perms) {
+					XML permXML = new XML("uses-permission");
+					permXML.setString("android:name", perm);
+					mf.addChild(permXML);
+				}
+				
+				//Set the target SDK and min SDK
+				mf.getChild("uses-sdk").setInt("android:targetSdkVersion", targetSdk);
+//				mf.getChild("uses-sdk").setInt("android:minSdkVersion", minSdk);
+				
+				//Set the orientation
+				activity.setString("android:screenOrientation", orientation);
+			}
 			
 			PrintWriter writer = new PrintWriter(file);
 			writer.print(mf.toString());
