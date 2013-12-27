@@ -18,13 +18,16 @@ public class Permission implements Comparable<Permission> {
 		custom = false;
 	}
 	
-	
 	public Permission(String prefix, String name, String desc, boolean custom) {
 		this.prefix = prefix;
 		this.name = name;
 		this.desc = desc;
 		
 		this.custom = custom;
+	}
+	
+	public String consumableValue() {
+		return prefix + name;
 	}
 	
 	public String prefix() {

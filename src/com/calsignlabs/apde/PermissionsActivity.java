@@ -205,8 +205,10 @@ public class PermissionsActivity extends SherlockActivity {
 			return;
 		
 		String[] tokens = data.split(",");
-		for(String token : tokens)
-			checkItem(token, true);
+		for(String token : tokens) {
+			int index = token.lastIndexOf(".");
+			checkItem(token.substring(index != -1 ? index + 1 : 0), true);
+		}
 	}
 	
 	/**
@@ -217,7 +219,7 @@ public class PermissionsActivity extends SherlockActivity {
 		String out = "";
 		for(int i = 0; i < checked.length; i ++)
 			if(checked[i])
-				out += (Manifest.permissions.get(i)).name() + ",";
+				out += (Manifest.permissions.get(i)).consumableValue() + ",";
 		
 		return out;
 	}
