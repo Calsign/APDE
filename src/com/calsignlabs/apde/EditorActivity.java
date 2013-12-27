@@ -481,7 +481,7 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     		return true;
     	}
     	
-		return false;
+		return super.onKeyDown(key, event);
     }
     
     public void createNewSketch() {
