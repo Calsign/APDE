@@ -444,6 +444,15 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     		return true;
     	}
     	
+    	if(keyBindings.get("run_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		runApplication();
+    		return true;
+    	}
+    	if(keyBindings.get("stop_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		stopApplication();
+    		return true;
+    	}
+    	
     	//TODO implement these functions... they're place-holders for now
     	//TODO are these actually getting picked up?
     	if(keyBindings.get("comment").matches(key, ctrl, meta, func, alt, sym, shift)) {
@@ -1048,7 +1057,12 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     }
     
     private void stopApplication() {
+    	//This will stop the current build process
+    	//I don't think we can stop a running app...
+    	//...that's what the BACK button is for
     	
+    	if(building)
+    		Build.halt();
     }
     
     public void message(String msg) {

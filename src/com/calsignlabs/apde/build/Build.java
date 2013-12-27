@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -59,17 +60,19 @@ public class Build {
 	private File tmpFolder;
 	private File dexedLibsFolder;
 	
-	private File buildFile;
+//	private File buildFile;
 	
 	protected String classPath;
 	protected String javaLibraryPath;
 	
 	protected boolean foundMain;
 	
-	static final String ICON_96 = "icon-96.png";
-	static final String ICON_72 = "icon-72.png";
-	static final String ICON_48 = "icon-48.png";
-	static final String ICON_36 = "icon-36.png";
+	private static final String ICON_96 = "icon-96.png";
+	private static final String ICON_72 = "icon-72.png";
+	private static final String ICON_48 = "icon-48.png";
+	private static final String ICON_36 = "icon-36.png";
+	
+	private static AtomicBoolean running;
 	
 	public Build(APDE global) {
 		this.editor = global.getEditor();
@@ -82,6 +85,33 @@ public class Build {
 			tabs[i] = meta;
 			i ++;
 		}
+		
+		running = new AtomicBoolean(true);
+	}
+	
+	/**
+	 * Stops the build process, after finishing the current step in the sequence
+	 */
+	public static void halt() {
+		if(!running.compareAndSet(true, false)) {
+			//Something went wrong...
+			//...but it doesn't matter because this is what we want, anyway
+		}
+	}
+	
+	private void cleanUpError() {
+		cleanUp();
+		editor.errorExt(editor.getResources().getString(R.string.build_failed));
+	}
+	
+	private void cleanUpHalt() {
+		cleanUp();
+		editor.messageExt(editor.getResources().getString(R.string.build_halted));
+	}
+	
+	private void cleanUp() {
+		//TODO erase build folder after the build...
+		//...leaving it here for debugging
 	}
 	
 	//Recursive file deletion
@@ -98,7 +128,16 @@ public class Build {
 	 * @param target either "release" or "debug"
 	 */
 	public void build(String target) {
+		running.set(true);
+		
+		//Throughout this function, perform periodic checks to see if the user has cancelled the build
+		
 		editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
+		
+		if(!running.get()) { //CHECK
+			cleanUpHalt();
+			return;
+		}
 		
 		buildFolder = getBuildFolder();
 		srcFolder = new File(buildFolder, "src");
@@ -110,7 +149,7 @@ public class Build {
 		
 		tmpFolder = getTempFolder();
 		
-		buildFile = new File(buildFolder, "build.xml");
+//		buildFile = new File(buildFolder, "build.xml");
 		
 		//Wipe the old build folder
 		if(buildFolder.exists())
@@ -129,6 +168,11 @@ public class Build {
 		String sketchClassName = null;
 		
 		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
+		
+		if(!running.get()) { //CHECK
+			cleanUpHalt();
+			return;
+		}
 		
 		//Used to determine whether or not to build with ALL of the OpenGL libraries...
 		//...it takes a lot longer to run DEX if they're included
@@ -159,9 +203,19 @@ public class Build {
 			else
 				System.out.println("Detected renderer " + sketchRenderer + "; leaving out OpenGL libraries");
 			
+			if(!running.get()) { //CHECK
+				cleanUpHalt();
+				return;
+			}
+			
 			if(sketchClassName != null) {
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
 				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
+				
+				if(!running.get()) { //CHECK
+					cleanUpHalt();
+					return;
+				}
 				
 				//writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
 				//writeBuildXML(buildFile, sketchName);
@@ -223,6 +277,11 @@ public class Build {
 				final File sketchResFolder = new File(getSketchFolder(), "res");
 				if(sketchResFolder.exists())
 					copyDir(sketchResFolder, resFolder);
+				
+				if(!running.get()) { //CHECK
+					cleanUpHalt();
+					return;
+				}
 			}
 		} catch(IOException e) {
 			e.printStackTrace();
@@ -233,6 +292,7 @@ public class Build {
 			editor.highlightLineExt(e.getCodeLine());
 			
 			//Bail out
+			cleanUpError();
 			return;
 		}
 		
@@ -253,9 +313,14 @@ public class Build {
 			e.printStackTrace();
 		}
 		
+		if(!running.get()) { //CHECK
+			cleanUpHalt();
+			return;
+		}
+		
 		//Let's try a different method - who needs ANT, anyway?
 		
-		String androidVersion = "android-10";
+//		String androidVersion = "android-10";
 		String mainActivityLoc = manifest.getPackageName().replace(".", "/");
 		
 		Process aaptProc = null;
@@ -290,6 +355,12 @@ public class Build {
 			System.out.println("AAPT failed");
 			e.printStackTrace();
 			
+			cleanUpError();
+			return;
+		}
+		
+		if(!running.get()) { //CHECK
+			cleanUpHalt();
 			return;
 		}
 		
@@ -322,8 +393,15 @@ public class Build {
 				//We have some compilation errors
 				System.out.println();
 				System.out.println("ECJ compilation failed");
+				
+				cleanUpError();
 				return;
 			}
+		}
+		
+		if(!running.get()) { //CHECK
+			cleanUpHalt();
+			return;
 		}
 		
 		editor.messageExt(editor.getResources().getString(R.string.run_dx));
@@ -346,6 +424,12 @@ public class Build {
 			System.out.println("DX failed");
 			e.printStackTrace();
 			
+			cleanUpError();
+			return;
+		}
+		
+		if(!running.get()) { //CHECK
+			cleanUpHalt();
 			return;
 		}
 		
@@ -370,6 +454,12 @@ public class Build {
 			System.out.println("APKBuilder failed");
 			e.printStackTrace();
 			
+			cleanUpError();
+			return;
+		}
+		
+		if(!running.get()) { //CHECK
+			cleanUpHalt();
 			return;
 		}
 		
@@ -382,6 +472,11 @@ public class Build {
 		System.out.println("AAPT logs:");
 		copyStream(aaptProc.getErrorStream(), System.err);
 		
+		if(!running.get()) { //CHECK
+			cleanUpError();
+			return;
+		}
+		
 		editor.messageExt(editor.getResources().getString(R.string.run_sketch));
 		
 		//Prompt the user to install the APK file
@@ -391,6 +486,8 @@ public class Build {
 				"application/vnd.android.package-archive"
 			);
 		editor.startActivity(promptInstall);
+		
+		cleanUp();
 	}
 	
 	//TODO implement private key signing
@@ -799,86 +896,86 @@ public class Build {
 		return 0; // i give up
 	}
 
-	private void writeAntProps(final File file, String packageName) {
-		try {
-			PrintWriter writer = new PrintWriter(file);
-			writer.println("application-package=" + packageName);
-			writer.flush();
-			writer.close();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-	}
+//	private void writeAntProps(final File file, String packageName) {
+//		try {
+//			PrintWriter writer = new PrintWriter(file);
+//			writer.println("application-package=" + packageName);
+//			writer.flush();
+//			writer.close();
+//		} catch (FileNotFoundException e) {
+//			e.printStackTrace();
+//		}
+//	}
 	
-	private void writeBuildXML(final File file, final String projectName) {
-		try {
-			final PrintWriter writer = new PrintWriter(file);
-			writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-			
-			writer.println(" <project name=\"" + projectName + "\" default=\"help\">");
+//	private void writeBuildXML(final File file, final String projectName) {
+//		try {
+//			final PrintWriter writer = new PrintWriter(file);
+//			writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+//			
+//			writer.println(" <project name=\"" + projectName + "\" default=\"help\">");
+//	
+//			writer.println(" <property file=\"local.properties\" />");
+//			writer.println(" <property file=\"ant.properties\" />");
+//			
+//			//TODO added this to use Eclipse's compiler istead of javac
+//			writer.println("<property name=\"build.compiler\" value=\"org.eclipse.jdt.core.JDTCompilerAdapter\"/>");
+//			
+//			writer.println(" <property environment=\"env\" />");
+//			writer.println(" <condition property=\"sdk.dir\" value=\"${env.ANDROID_HOME}\">");
+//			writer.println(" <isset property=\"env.ANDROID_HOME\" />");
+//			writer.println(" </condition>");
+//	
+//			writer.println(" <loadproperties srcFile=\"project.properties\" />");
+//	
+//			writer.println(" <fail message=\"sdk.dir is missing. Make sure to generate local.properties using 'android update project'\" unless=\"sdk.dir\" />");
+//	
+//			writer.println(" <import file=\"custom_rules.xml\" optional=\"true\" />");
+//	
+//			writer.println(" <!-- version-tag: 1 -->"); // should this be 'custom' instead of 1?
+//			writer.println(" <import file=\"${sdk.dir}/tools/ant/build.xml\" />");
+//	
+//			writer.println("</project>");
+//			writer.flush();
+//			writer.close();
+//		} catch(FileNotFoundException e) {
+//			e.printStackTrace();
+//		}
+//	}
 	
-			writer.println(" <property file=\"local.properties\" />");
-			writer.println(" <property file=\"ant.properties\" />");
-			
-			//TODO added this to use Eclipse's compiler istead of javac
-			writer.println("<property name=\"build.compiler\" value=\"org.eclipse.jdt.core.JDTCompilerAdapter\"/>");
-			
-			writer.println(" <property environment=\"env\" />");
-			writer.println(" <condition property=\"sdk.dir\" value=\"${env.ANDROID_HOME}\">");
-			writer.println(" <isset property=\"env.ANDROID_HOME\" />");
-			writer.println(" </condition>");
+//	private void writeProjectProps(final File file, String sdkVersion) {
+//		try {
+//			final PrintWriter writer = new PrintWriter(file);
+//			writer.println("target=" + "android-" + sdkVersion);
+//			writer.println();
+//			// http://stackoverflow.com/questions/4821043/includeantruntime-was-not-set-for-android-ant-script
+//			writer.println("# Suppress the javac task warnings about \"includeAntRuntime\"");
+//			writer.println("build.sysclasspath=last");
+//			writer.flush();
+//			writer.close();
+//		} catch(FileNotFoundException e) {
+//			e.printStackTrace();
+//		}
+//	}
 	
-			writer.println(" <loadproperties srcFile=\"project.properties\" />");
-	
-			writer.println(" <fail message=\"sdk.dir is missing. Make sure to generate local.properties using 'android update project'\" unless=\"sdk.dir\" />");
-	
-			writer.println(" <import file=\"custom_rules.xml\" optional=\"true\" />");
-	
-			writer.println(" <!-- version-tag: 1 -->"); // should this be 'custom' instead of 1?
-			writer.println(" <import file=\"${sdk.dir}/tools/ant/build.xml\" />");
-	
-			writer.println("</project>");
-			writer.flush();
-			writer.close();
-		} catch(FileNotFoundException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	private void writeProjectProps(final File file, String sdkVersion) {
-		try {
-			final PrintWriter writer = new PrintWriter(file);
-			writer.println("target=" + "android-" + sdkVersion);
-			writer.println();
-			// http://stackoverflow.com/questions/4821043/includeantruntime-was-not-set-for-android-ant-script
-			writer.println("# Suppress the javac task warnings about \"includeAntRuntime\"");
-			writer.println("build.sysclasspath=last");
-			writer.flush();
-			writer.close();
-		} catch(FileNotFoundException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	private void writeLocalProps(final File file) {
-		try {
-			final PrintWriter writer = new PrintWriter(file);
-			
-			File destSdk = new File(getBuildFolder(), "sdk");
-			AssetManager am = editor.getAssets();
-			//InputStream inputStream = am.open("sdk");
-			//createFileFromInputStream(inputStream, destSdk);
-			//createFolderFromInputStream(inputStream, destSdk);
-			copyAssetFolder(am, "sdk", destSdk.getAbsolutePath());
-			
-			final String sdkPath = destSdk.getAbsolutePath(); //TODO is this considered a valid SDK directory?
-			writer.println("sdk.dir=" + sdkPath);
-			writer.flush();
-			writer.close();
-		} catch(FileNotFoundException e) {
-			e.printStackTrace();
-		}
-	}
+//	private void writeLocalProps(final File file) {
+//		try {
+//			final PrintWriter writer = new PrintWriter(file);
+//			
+//			File destSdk = new File(getBuildFolder(), "sdk");
+//			AssetManager am = editor.getAssets();
+//			//InputStream inputStream = am.open("sdk");
+//			//createFileFromInputStream(inputStream, destSdk);
+//			//createFolderFromInputStream(inputStream, destSdk);
+//			copyAssetFolder(am, "sdk", destSdk.getAbsolutePath());
+//			
+//			final String sdkPath = destSdk.getAbsolutePath(); //TODO is this considered a valid SDK directory?
+//			writer.println("sdk.dir=" + sdkPath);
+//			writer.flush();
+//			writer.close();
+//		} catch(FileNotFoundException e) {
+//			e.printStackTrace();
+//		}
+//	}
 	
 	private void writeRes(File resFolder, String className) throws SketchException {
 		File layoutFolder = mkdirs(resFolder, "layout");
@@ -1052,44 +1149,44 @@ public class Build {
 	}
 	
 	//http://stackoverflow.com/questions/16983989/copy-directory-from-assets-to-data-folder
-	private static boolean copyAssetFolder(AssetManager assetManager, String fromAssetPath, String toPath) {
-		try {
-			String[] files = assetManager.list(fromAssetPath);
-			new File(toPath).mkdirs();
-			boolean res = true;
-			for(String file : files)
-				if((file.contains(".") && !file.equals("android-4.4")) || file.equals("aapt") || file.equals("aidl")) //TODO changed this, it's awfully hard-coded now
-					res &= copyAsset(assetManager, fromAssetPath + "/" + file, toPath + "/" + file);
-				else 
-					res &= copyAssetFolder(assetManager, fromAssetPath + "/" + file, toPath + "/" + file);
-			
-			return res;
-		} catch (Exception e) {
-			e.printStackTrace();
-			return false;
-		}
-	}
+//	private static boolean copyAssetFolder(AssetManager assetManager, String fromAssetPath, String toPath) {
+//		try {
+//			String[] files = assetManager.list(fromAssetPath);
+//			new File(toPath).mkdirs();
+//			boolean res = true;
+//			for(String file : files)
+//				if((file.contains(".") && !file.equals("android-4.4")) || file.equals("aapt") || file.equals("aidl")) //TODO changed this, it's awfully hard-coded now
+//					res &= copyAsset(assetManager, fromAssetPath + "/" + file, toPath + "/" + file);
+//				else 
+//					res &= copyAssetFolder(assetManager, fromAssetPath + "/" + file, toPath + "/" + file);
+//			
+//			return res;
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			return false;
+//		}
+//	}
 
-	private static boolean copyAsset(AssetManager assetManager, String fromAssetPath, String toPath) {
-		InputStream in = null;
-		OutputStream out = null;
-		try {
-			in = assetManager.open(fromAssetPath);
-			new File(toPath).createNewFile();
-			out = new FileOutputStream(toPath);
-			copyFile(in, out);
-			in.close();
-			in = null;
-			out.flush();
-			out.close();
-			out = null;
-			
-			return true;
-		} catch(Exception e) {
-			e.printStackTrace();
-			return false;
-		}
-	}
+//	private static boolean copyAsset(AssetManager assetManager, String fromAssetPath, String toPath) {
+//		InputStream in = null;
+//		OutputStream out = null;
+//		try {
+//			in = assetManager.open(fromAssetPath);
+//			new File(toPath).createNewFile();
+//			out = new FileOutputStream(toPath);
+//			copyFile(in, out);
+//			in.close();
+//			in = null;
+//			out.flush();
+//			out.close();
+//			out = null;
+//			
+//			return true;
+//		} catch(Exception e) {
+//			e.printStackTrace();
+//			return false;
+//		}
+//	}
 	
 	static public File mkdirs(final File parent, final String name) {
 		final File result = new File(parent, name);
@@ -1119,12 +1216,12 @@ public class Build {
 		targetFile.setExecutable(sourceFile.canExecute());
 	}
 	
-	private static void copyFile(InputStream in, OutputStream out) throws IOException {
-		byte[] buffer = new byte[1024];
-		int read;
-		while((read = in.read(buffer)) != -1)
-			out.write(buffer, 0, read);
-	}
+//	private static void copyFile(InputStream in, OutputStream out) throws IOException {
+//		byte[] buffer = new byte[1024];
+//		int read;
+//		while((read = in.read(buffer)) != -1)
+//			out.write(buffer, 0, read);
+//	}
 	
 	static public void copyDir(File sourceDir, File targetDir) throws IOException {
 		if(sourceDir.equals(targetDir)) {
