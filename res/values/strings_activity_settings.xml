@@ -16,5 +16,7 @@
     <string name="pref_editor">Editor</string>
     <string name="use_hardware_keyboard">Use Hardware Keyboard</string>
     <string name="pref_input">Input</string>
+    <string name="pref_vibrate">Enable Vibration</string>
+    <string name="pref_general">General</string>
 
 </resources>

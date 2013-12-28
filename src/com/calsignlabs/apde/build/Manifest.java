@@ -303,7 +303,8 @@ public class Manifest {
 				}
 				
 				//Set the pretty name
-				app.setString("android:label", prettyName);
+				if(!prettyName.equals(".")) //Don't want the default "." sketch!
+					app.setString("android:label", prettyName);
 				
 				//Set the target SDK and min SDK
 				mf.getChild("uses-sdk").setInt("android:targetSdkVersion", targetSdk);

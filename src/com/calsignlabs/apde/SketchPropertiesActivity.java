@@ -173,6 +173,10 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 		findPreference("prop_target_sdk").setSummary(((EditTextPreference) findPreference("prop_target_sdk")).getText());
 		findPreference("prop_orientation").setSummary(((ListPreference) findPreference("prop_orientation")).getEntry());
 		
+		//Get rid of the default "." (hopefully no one decides to name their sketch "."...)
+		if(prettyName.equals("."))
+			((EditTextPreference) findPreference("prop_pretty_name")).setText(getGlobalState().getSketchName());
+		
 		Preference launchPermissions = (Preference) findPreference("prop_permissions");
 		launchPermissions.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
 			@Override

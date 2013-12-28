@@ -1556,8 +1556,9 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 			pressed = true;
 			findViewById(R.id.message).setBackgroundDrawable(getResources().getDrawable(R.drawable.back_selected)); //TODO this is deprecated...
 			
-			//Provide haptic feedback
-			((android.os.Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(200); //200 millis
+			//Provide haptic feedback (if the user has vibrations enabled)
+			if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_vibrate", true))
+				((android.os.Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(200); //200 millis
 			
 			return true;
 		}

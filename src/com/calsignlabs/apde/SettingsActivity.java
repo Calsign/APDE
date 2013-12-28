@@ -1,10 +1,12 @@
 package com.calsignlabs.apde;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.preference.ListPreference;
 import android.preference.CheckBoxPreference;
 import android.preference.Preference;
@@ -51,7 +53,8 @@ public class SettingsActivity extends SherlockPreferenceActivity {
 	 * device configuration dictates that a simplified, single-pane UI should be
 	 * shown.
 	 */
-	@SuppressWarnings("deprecation")
+	@SuppressLint("NewApi")
+	@SuppressWarnings({ "deprecation", "unused" })
 	private void setupSimplePreferencesScreen() {
 		if(!isSimplePreferences(this))
 			return;
@@ -61,7 +64,7 @@ public class SettingsActivity extends SherlockPreferenceActivity {
 
 		// Add 'general' preferences.
 		addPreferencesFromResource(R.xml.pref_general);
-
+		
 		// Bind the summaries of EditText/List/Dialog/Ringtone preferences to
 		// their values. When their values change, their summaries are updated
 		// to reflect the new value, per the Android Design guidelines.
@@ -78,6 +81,19 @@ public class SettingsActivity extends SherlockPreferenceActivity {
 				return true;
 			}
 		});
+		
+		//Hide the "Enable Vibration" preference if the vibrator isn't available
+		
+		Vibrator vibrate = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+		if(Build.VERSION.SDK_INT >= 11)
+			//This only works on API >= 11
+			if(!vibrate.hasVibrator())
+				getPreferenceScreen().removePreference(findPreference("pref_general"));
+		else
+			// getSystemService(VIBRATOR_SERVICE) on API < 11 returns null if the vibrator isn't available
+			//...maybe this doesn't work...
+			if(vibrate == null)
+				getPreferenceScreen().removePreference(findPreference("pref_general"));
 	}
 
 	/** {@inheritDoc} */
@@ -169,8 +185,6 @@ public class SettingsActivity extends SherlockPreferenceActivity {
 			// to their values. When their values change, their summaries are
 			// updated to reflect the new value, per the Android Design
 			// guidelines.
-			bindPreferenceSummaryToValue(findPreference("example_text"));
-			bindPreferenceSummaryToValue(findPreference("example_list"));
 		}
 	}
 	
