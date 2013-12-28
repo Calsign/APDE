@@ -6,9 +6,10 @@
         android:key="pref_general" >
         
         <CheckBoxPreference
+            android:defaultValue="true"
             android:key="pref_vibrate"
-	        android:title="@string/pref_vibrate"
-	        android:defaultValue="true" />
+            android:title="@string/pref_vibrate" />
+
     </PreferenceCategory>
     
     <PreferenceCategory 

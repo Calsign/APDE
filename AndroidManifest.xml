@@ -6,12 +6,10 @@
     
     <uses-sdk
         android:minSdkVersion="10"
-        android:targetSdkVersion="17" />
+        android:targetSdkVersion="19" />
     
-    <!-- READ_EXTERNAL_STORAGE will be needed in future versions of Android -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_LOGS" /> <!-- For reading app logs... doesn't work for sketches on 4.1+, though -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> <!-- Will be needed in future versions of Android -->
     <uses-permission android:name="android.permission.VIBRATE" /> <!-- For the drag'n'drop Message area's haptic feedback -->
     
     <application
