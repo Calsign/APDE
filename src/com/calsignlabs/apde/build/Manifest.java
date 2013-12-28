@@ -264,7 +264,7 @@ public class Manifest {
 	 * Save a new version of the manifest info to the build location.
 	 * Also fill in any missing attributes that aren't yet set properly.
 	 */
-	protected void writeBuild(File file, String className, boolean debug, boolean customManifest, String[] perms, int targetSdk, String orientation) throws IOException {
+	protected void writeBuild(File file, String className, boolean debug, boolean customManifest, String prettyName, String[] perms, int targetSdk, String orientation) throws IOException {
 		// write a copy to the build location
 		save(file);
 		
@@ -301,6 +301,9 @@ public class Manifest {
 					permXML.setString("android:name", perm);
 					mf.addChild(permXML);
 				}
+				
+				//Set the pretty name
+				app.setString("android:label", prettyName);
 				
 				//Set the target SDK and min SDK
 				mf.getChild("uses-sdk").setInt("android:targetSdkVersion", targetSdk);

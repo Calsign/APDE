@@ -1052,6 +1052,7 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	
     	final Build builder = new Build(getGlobalState());
     	Build.customManifest = new AtomicBoolean(prefs.getBoolean("use_custom_manifest", false));
+    	Build.prettyName = new AtomicReference<String>(prefs.getString("prop_pretty_name", getGlobalState().getSketchName()));
     	
     	String[] perms = prefs.getString("permissions", "").split(",");
     	Build.perms = new AtomicReferenceArray<String>(perms.length);

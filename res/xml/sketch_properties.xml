@@ -9,17 +9,15 @@
             android:defaultValue="false"
             android:disableDependentsState="true" />
         
-        <!-- TODO Implement the Pretty Name field...
-                  ...we only really need this for advanced and / or release sketches,
-                  so this should be OK for now -->
-        
-        <!-- <EditTextPreference android:key="prop_pretty_name"
+        <!-- Default value "." is read by the code and changed to the name of the sketch -->
+        <EditTextPreference android:key="prop_pretty_name"
             android:title="@string/prop_pretty_name"
+            android:defaultValue="."
             android:maxLines="1"
 	        android:selectAllOnFocus="true"
 	        android:singleLine="true"
 	        android:inputType="text"
-	        android:dependency="prop_use_custom_manifest" /> -->
+	        android:dependency="prop_use_custom_manifest" />
         
         <Preference android:key="prop_permissions"
             android:dialogTitle="@string/prop_permissions"

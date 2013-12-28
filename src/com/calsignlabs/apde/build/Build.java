@@ -78,6 +78,7 @@ public class Build {
 	private static AtomicBoolean running;
 	
 	public static AtomicBoolean customManifest;
+	public static AtomicReference<String> prettyName;
 	public static AtomicReferenceArray<String> perms;
 	public static AtomicInteger targetSdk;
 	public static AtomicReference<String> orientation;
@@ -222,7 +223,7 @@ public class Build {
 					permsList[i] = perms.get(i);
 				
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
-				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"), customManifest.get(), permsList, targetSdk.get(), orientation.get());
+				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"), customManifest.get(), prettyName.get(), permsList, targetSdk.get(), orientation.get());
 				
 				if(!running.get()) { //CHECK
 					cleanUpHalt();

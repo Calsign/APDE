@@ -161,11 +161,14 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 		// Bind the summaries of EditText/List/Dialog/Ringtone preferences to
 		// their values. When their values change, their summaries are updated
 		// to reflect the new value, per the Android Design guidelines.
+		bindPreferenceSummaryToValue(findPreference("prop_pretty_name"));
 //		bindPreferenceSummaryToValue(findPreference("prop_min_sdk"));
 		bindPreferenceSummaryToValue(findPreference("prop_target_sdk"));
 		bindPreferenceSummaryToValue(findPreference("prop_orientation"));
 		
 		//Hacky way of setting up the summaries initially
+		String prettyName = ((EditTextPreference) findPreference("prop_pretty_name")).getText(); //We check this to initialize the default value with the name of the sketch
+		findPreference("prop_pretty_name").setSummary(prettyName.equals(".") ? getGlobalState().getSketchName() : prettyName); //The "." default is because we can't reference this value from XML
 //		findPreference("prop_min_sdk").setSummary(((EditTextPreference) findPreference("prop_min_sdk")).getText());
 		findPreference("prop_target_sdk").setSummary(((EditTextPreference) findPreference("prop_target_sdk")).getText());
 		findPreference("prop_orientation").setSummary(((ListPreference) findPreference("prop_orientation")).getEntry());
@@ -435,6 +438,12 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
     				getGlobalState().setSketchName(after);
     				getGlobalState().getEditor().getSketchLoc(before).renameTo(getGlobalState().getEditor().getSketchLoc(after));
     				getGlobalState().getEditor().forceDrawerReload();
+    				
+    				//If the user has set the pretty name to the name of their sketch, they probably want to change the pretty name too
+    				@SuppressWarnings("deprecation")
+					EditTextPreference pref = ((EditTextPreference) findPreference("prop_pretty_name"));
+    				if(pref.getText().equals(before))
+    					pref.setText(after);
     				
     				copyPrefs(before, after);
     				
