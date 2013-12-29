@@ -53,4 +53,14 @@
 	        android:defaultValue="@string/prop_orientation_default"
 	        android:dependency="prop_use_custom_manifest" />
 	</PreferenceCategory>
+	
+    <PreferenceCategory 
+        android:title="@string/prop_sketch_folder"
+        android:key="prop_sketch_folder">
+        
+    	<Preference android:key="prop_add_file"
+            android:dialogTitle="@string/prop_add_file"
+        	android:summary="@string/prop_add_file_desc"        
+        	android:title="@string/prop_add_file" />
+    </PreferenceCategory>
 </PreferenceScreen>

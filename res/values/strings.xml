@@ -70,5 +70,6 @@
     <string name="custom_perm">Custom Permission</string>
     <string name="build_failed">Build failed, check the console for more information.</string>
     <string name="build_halted">Build stopped before sketch was launched.</string>
+    <string name="chooser_label">Select File</string>
 
 </resources>

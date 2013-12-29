@@ -1,10 +1,16 @@
 package com.calsignlabs.apde;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.util.Map.Entry;
 
 import com.actionbarsherlock.app.SherlockPreferenceActivity;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
+import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -12,6 +18,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -33,6 +40,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 public class SketchPropertiesActivity extends SherlockPreferenceActivity {
+	//This is a number, that's all that matters
+	private static final int REQUEST_CHOOSER = 6283;
+	
 	private static final boolean ALWAYS_SIMPLE_PREFS = false;
 	
 	private ActionBarDrawerToggle drawerToggle;
@@ -144,6 +154,61 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
     	super.onStop();
     }
 	
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		switch(requestCode) {
+		case REQUEST_CHOOSER:
+			if(resultCode == RESULT_OK) {
+				final Uri uri = data.getData();
+				
+				// Get the File path from the Uri
+				String path = FileUtils.getPath(this, uri);
+				
+				if(path != null && FileUtils.isLocal(path)) {
+					File file = new File(path);
+					if(file.exists())
+						addFile(file);
+				}
+			}
+			break;
+		}
+	}
+	
+	public void addFile(File source) {
+		//Get the location of this sketch's data folder
+		File dataFolder = new File(getGlobalState().getSketchbookFolder().getAbsolutePath() + "/" + getGlobalState().getSketchName() + "/data/");
+		dataFolder.mkdir();
+		
+		File dest = new File(dataFolder, source.getName());
+		
+		try {
+			copyFile(source, dest);
+		} catch (IOException e) {
+			//Something bad happened
+			System.err.println("Failed to add file to sketch, error output:");
+			e.printStackTrace();
+		}
+	}
+	
+	public static void copyFile(File sourceFile, File destFile) throws IOException {
+		if(!destFile.exists())
+			destFile.createNewFile();
+		
+		FileChannel source = null;
+		FileChannel destination = null;
+		
+		try {
+			source = new FileInputStream(sourceFile).getChannel();
+			destination = new FileOutputStream(destFile).getChannel();
+			destination.transferFrom(source, 0, source.size());
+		} finally {
+			if(source != null)
+				source.close();
+			if(destination != null)
+				destination.close();
+		}
+	}
+	
 	@SuppressWarnings("deprecation")
 	private void setupSimplePreferencesScreen() {
 		if(!isSimplePreferences(this))
@@ -182,6 +247,15 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 			@Override
 			public boolean onPreferenceClick(Preference preference) { 
 				launchPermissions();
+				return true;
+			}
+		});
+		
+		Preference launchAddFile = (Preference) findPreference("prop_add_file");
+		launchAddFile.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+			@Override
+			public boolean onPreferenceClick(Preference preference) { 
+				launchAddFile();
 				return true;
 			}
 		});
@@ -282,6 +356,13 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 	private void launchPermissions() {
 		Intent intent = new Intent(this, PermissionsActivity.class);
 		startActivity(intent);
+	}
+	
+	private void launchAddFile() {
+		//Launch file selection intent (includes AFileChooser's custom file chooser implementation)
+		
+		Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), "Select a file");
+	    startActivityForResult(intent, REQUEST_CHOOSER);
 	}
 	
 	private void saveSketch() {

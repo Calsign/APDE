@@ -24,4 +24,7 @@
     <string name="use_custom_manifest">Use Custom Manifest</string>
     <string name="use_custom_manifest_desc">Located in sketch folder</string>
     <string name="prop_pretty_name">Sketch Display Name</string>
+    <string name="prop_sketch_folder">Sketch Folder</string>
+    <string name="prop_add_file">Add File</string>
+    <string name="prop_add_file_desc">Add a file to the sketch\'s data folder</string>
 </resources>

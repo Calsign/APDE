@@ -42,21 +42,41 @@
                 <data android:pathPattern=".*\\.pde" />
             </intent-filter>
         </activity>
+        
         <activity
             android:name="com.calsignlabs.apde.SketchPropertiesActivity"
             android:allowBackup="true"
             android:icon="@drawable/ic_launcher"
             android:label="@string/title_activity_sketch_properties"
             android:theme="@style/FullscreenTheme" />
+        
         <activity
             android:name="com.calsignlabs.apde.SettingsActivity"
             android:label="@string/title_activity_settings"
-            android:theme="@style/FullscreenTheme" >
-        </activity>
+            android:theme="@style/FullscreenTheme" />
+        
         <activity
             android:name="com.calsignlabs.apde.PermissionsActivity"
             android:label="@string/title_activity_permissions"
-            android:theme="@style/FullscreenTheme" >
+            android:theme="@style/FullscreenTheme" />
+        
+        <!-- This is a hook into the AFileChooser library's custom file chooser activity -->
+        <activity
+            android:name="com.ipaulpro.afilechooser.FileChooserActivity"
+            android:enabled="@bool/use_activity"
+            android:exported="true"
+            android:icon="@drawable/ic_chooser"
+            android:label="@string/chooser_label" >
+            
+            <intent-filter>
+                <action android:name="android.intent.action.GET_CONTENT" />
+                
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                
+                <data android:mimeType="*/*" />
+            </intent-filter>
         </activity>
+
     </application>
 </manifest>
