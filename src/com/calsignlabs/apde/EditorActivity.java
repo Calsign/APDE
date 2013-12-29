@@ -246,7 +246,9 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	        			
 	        			//Configure layout for keyboard
 	        			
-	        			View code = findViewById(R.id.code_scroller);
+	        			View messageArea = findViewById(R.id.message);
+        				View console = findViewById(R.id.console_scroller);
+        				View code = findViewById(R.id.code_scroller);
 	        			View content = findViewById(R.id.content);
 	        			
 	        			if(firstResize)
@@ -254,24 +256,22 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	        			else
 	        				oldCodeHeight = code.getHeight();
 	        			
-	        			//Remove the console
-	        			findViewById(R.id.console_scroller).setVisibility(View.GONE);
-	        			//Resize the code area accordingly
-	        			code.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, content.getHeight() - message));
+	        			//Start the custom animation TODO make the keyboard appearance prettier
+	        			messageArea.startAnimation(new MessageAreaAnimation(code, console, messageArea, oldCodeHeight, content.getHeight() - message, content.getHeight()));
 	        			
 	        			//Remove the focus from the Message slider if it has it
-	        			findViewById(R.id.message).setBackgroundDrawable(getResources().getDrawable(R.drawable.back)); //TODO this is deprecated...
+	        			messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back)); //TODO this is deprecated...
         			}
         		} else {
         			if(keyboardVisible) {
+        				View messageArea = findViewById(R.id.message);
+        				View codeArea = findViewById(R.id.code_scroller);
+        				View consoleArea = findViewById(R.id.console_scroller);
+        				
+        				//Start the custom animation TODO make the keyboard appearance prettier
+        				messageArea.startAnimation(new MessageAreaAnimation(codeArea, consoleArea, messageArea, codeArea.getLayoutParams().height, oldCodeHeight, findViewById(R.id.content).getHeight()));
+        				
 	        			keyboardVisible = false;
-	        			
-	        			//Reset layout
-	        			
-	        			//Make the console visible again
-	        			findViewById(R.id.console_scroller).setVisibility(View.VISIBLE);
-	        			//Reset the code area height
-	        			findViewById(R.id.code_scroller).setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, oldCodeHeight));
 	        			
 	        			//Remove any unnecessary focus from the code area
 	        			findViewById(R.id.code).clearFocus();
