@@ -69,6 +69,7 @@ public class SettingsActivity extends SherlockPreferenceActivity {
 		// their values. When their values change, their summaries are updated
 		// to reflect the new value, per the Android Design guidelines.
 		bindPreferenceSummaryToValue(findPreference("textsize"));
+		bindPreferenceSummaryToValue(findPreference("textsize_console"));
 		
 		((CheckBoxPreference) findPreference("use_hardware_keyboard")).setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
 			@Override

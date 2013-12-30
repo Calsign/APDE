@@ -53,6 +53,7 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.AbsListView.OnScrollListener;
 
@@ -343,6 +344,7 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	
     	//Reference the SharedPreferences text size value
     	((CodeEditText) findViewById(R.id.code)).refreshTextSize();
+		((TextView) findViewById(R.id.console)).setTextSize(Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(this).getString("textsize_console", "14")));
     	
     	//Disable / enable the soft keyboard
         if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
@@ -1442,6 +1444,28 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 		return tabs;
 	}
 	
+	/**
+	 * Add a message to the console and automatically scroll to the bottom (if the user has this feature turned on)
+	 * 
+	 * @param msg
+	 */
+	public void postConsole(String msg) {
+		final TextView tv = (TextView) findViewById(R.id.console);
+		
+		//Add the text
+		tv.append(msg);
+		
+		final ScrollView scroll = ((ScrollView) findViewById(R.id.console_scroller));
+		
+		//Scroll to the bottom (if the user has this feature enabled)
+		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_scroll_lock", true))
+			scroll.post(new Runnable() {
+				@Override
+				public void run() {
+					scroll.fullScroll(ScrollView.FOCUS_DOWN);
+			}});
+	}
+	
 	//Listener class for the tab dropdown menu
 //	public class TabActionListener implements android.view.View.OnLongClickListener {
 //		@Override
@@ -1587,10 +1611,10 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 		public void write(byte b[], int offset, int length) {
 			final String value = new String(b, offset, length);
 			
-			final TextView tv = (TextView) findViewById(R.id.console);
 			runOnUiThread(new Runnable() {
 				public void run() {
-					tv.append(value);
+					//Write the value to the console
+					postConsole(value);
 			}});
 		}
 		

@@ -18,5 +18,8 @@
     <string name="pref_input">Input</string>
     <string name="pref_vibrate">Enable Vibration</string>
     <string name="pref_general">General</string>
+    <string name="pref_console">Console</string>
+    <string name="pref_scroll_lock">Automatically Scroll</string>
+    <string name="pref_scroll_lock_desc">When the console is updated</string>
 
 </resources>

@@ -42,4 +42,26 @@
 	        android:title="@string/pref_syntax_highlight"
 	        android:defaultValue="true" />
 	</PreferenceCategory>
+	
+    <PreferenceCategory 
+        android:title="@string/pref_console"
+        android:key="pref_console" >
+	    
+        <!-- maxLength sets the max number of characters... don't want font sizes of 1000!!! -->
+	    <EditTextPreference
+	        android:defaultValue="@string/pref_textsize_default"
+	        android:inputType="number"
+	        android:key="textsize_console"
+	        android:maxLines="1"
+	        android:selectAllOnFocus="true"
+	        android:singleLine="true"
+	        android:title="@string/pref_textsize_title"
+	        android:maxLength="2" />
+	    
+	    <CheckBoxPreference
+	        android:key="pref_scroll_lock"
+	        android:title="@string/pref_scroll_lock"
+	        android:summary="@string/pref_scroll_lock_desc"
+	        android:defaultValue="true" />
+    </PreferenceCategory>
 </PreferenceScreen>
