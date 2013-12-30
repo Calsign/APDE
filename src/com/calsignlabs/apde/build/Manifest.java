@@ -118,12 +118,10 @@ public class Manifest {
 	}
 	
 	public static void removeCustomPermission(int perm, Context context) {
-		String name = permissions.get(perm).consumableValue();
+		String name = permissions.get(perm).name();
 		
 		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		SharedPreferences.Editor edit = prefs.edit();
-		
-		//Append the permission to the list of user permissions
 		
 		String oldPerms = prefs.getString("user_perms", "");
 		

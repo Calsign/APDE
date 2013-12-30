@@ -81,8 +81,7 @@ public class PermissionsActivity extends SherlockActivity {
 			}
 		});
 		
-		SharedPreferences prefs = getSharedPreferences(((APDE) getApplicationContext()).getSketchName(), MODE_PRIVATE);
-		setData(prefs.getString("permissions", ""));
+		loadData();
 	}
 	
 	//Displays a permission description dialog
@@ -109,10 +108,14 @@ public class PermissionsActivity extends SherlockActivity {
 			delete.setOnClickListener(new Button.OnClickListener() {
 				@Override
 				public void onClick(View view) {
+					saveData();
+					
 					Manifest.removeCustomPermission(perm, getApplicationContext());
 					refreshPermissions();
 					
 					dialog.dismiss();
+					
+					loadData();
 			}});
 		}
 		
@@ -133,6 +136,11 @@ public class PermissionsActivity extends SherlockActivity {
 		editor.putString("permissions", getData());
 		
 		editor.commit();
+	}
+	
+	public void loadData() {
+		SharedPreferences prefs = getSharedPreferences(((APDE) getApplicationContext()).getSketchName(), MODE_PRIVATE);
+		setData(prefs.getString("permissions", ""));
 	}
 	
 	@Override
@@ -176,9 +184,13 @@ public class PermissionsActivity extends SherlockActivity {
 		build.setPositiveButton(R.string.create, new android.content.DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) { //TODO let the user customize the prefix and the description
+				saveData();
+				
 				Manifest.addCustomPermission(input.getText().toString(), getResources().getString(R.string.custom_perm), getApplicationContext());
 				Manifest.sortPermissions();
 				refreshPermissions();
+				
+				loadData();
 		}});
 		build.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {
@@ -201,6 +213,8 @@ public class PermissionsActivity extends SherlockActivity {
 	}
 	
 	public void setData(String data) {
+		clearChecks();
+		
 		if(data.length() <= 0)
 			return;
 		
@@ -222,6 +236,14 @@ public class PermissionsActivity extends SherlockActivity {
 				out += (Manifest.permissions.get(i)).consumableValue() + ",";
 		
 		return out;
+	}
+	
+	public void clearChecks() {
+		ListView permsList = (ListView) findViewById(R.id.permissions_list);
+		permsList.clearChoices();
+		permsList.requestLayout();
+		
+		checked = new boolean[permsList.getCount()];
 	}
 	
 	public void checkItem(String value, boolean ck) {
