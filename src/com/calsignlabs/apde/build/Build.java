@@ -302,10 +302,10 @@ public class Build {
 			e.printStackTrace();
 			
 			editor.errorExt(e.getMessage());
-			editor.highlightLineExt(e.getCodeLine());
+			editor.highlightLineExt(e.getCodeIndex(), e.getCodeLine());
 			
 			//Bail out
-			cleanUpError();
+			cleanUp();
 			return;
 		}
 		

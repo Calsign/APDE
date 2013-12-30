@@ -1126,9 +1126,12 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
     }
     
-    public void highlightLineExt(final int line) {
+    public void highlightLineExt(final int tab, final int line) {
     	runOnUiThread(new Runnable() {
     		public void run() {
+    			//Switch to the tab with the error
+    			getSupportActionBar().selectTab(getSupportActionBar().getTabAt(tab));
+    			
     			CodeEditText code = (CodeEditText) findViewById(R.id.code);
     			
     			int start = code.offsetForLine(line);
