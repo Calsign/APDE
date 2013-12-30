@@ -27,4 +27,7 @@
     <string name="prop_sketch_folder">Sketch Folder</string>
     <string name="prop_add_file">Add File</string>
     <string name="prop_add_file_desc">Add a file to the sketch\'s data folder</string>
+    <string name="prop_show_sketch_folder">Show Sketch Folder</string>
+    <string name="select_file">Select File</string>
+    <string name="show_sketch_folder">Show Sketch Folder</string>
 </resources>

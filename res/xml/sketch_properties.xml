@@ -58,6 +58,10 @@
         android:title="@string/prop_sketch_folder"
         android:key="prop_sketch_folder">
         
+        <Preference android:key="prop_show_sketch_folder"
+            android:dialogTitle="@string/prop_show_sketch_folder"     
+        	android:title="@string/prop_show_sketch_folder" />
+        
     	<Preference android:key="prop_add_file"
             android:dialogTitle="@string/prop_add_file"
         	android:summary="@string/prop_add_file_desc"        

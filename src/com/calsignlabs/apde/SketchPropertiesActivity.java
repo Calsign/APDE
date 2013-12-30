@@ -259,6 +259,15 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 				return true;
 			}
 		});
+		
+		Preference launchSketchFolder = (Preference) findPreference("prop_show_sketch_folder");
+		launchSketchFolder.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+			@Override
+			public boolean onPreferenceClick(Preference preference) { 
+				launchSketchFolder();
+				return true;
+			}
+		});
 	}
 	
 	private static Preference.OnPreferenceChangeListener sBindPreferenceSummaryToValueListener = new Preference.OnPreferenceChangeListener() {
@@ -358,11 +367,23 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 		startActivity(intent);
 	}
 	
-	private void launchAddFile() {
+	public void launchAddFile() {
 		//Launch file selection intent (includes AFileChooser's custom file chooser implementation)
 		
-		Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), "Select a file");
+		Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.select_file));
 	    startActivityForResult(intent, REQUEST_CHOOSER);
+	}
+	
+	public void launchSketchFolder() {
+		//TODO make this browse, not request a file...
+		//TODO also, get rid of Google Drive and such - only allow local file browsers (that support the external storage)
+		
+		File sketchFolder = new File(getGlobalState().getSketchbookFolder(), getGlobalState().getSketchName());
+		
+		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+		intent.setDataAndType(Uri.fromFile(sketchFolder), "*/*");
+		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //Start this in a separate task
+		startActivity(Intent.createChooser(intent, getResources().getString(R.string.show_sketch_folder)));
 	}
 	
 	private void saveSketch() {
