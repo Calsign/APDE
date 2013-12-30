@@ -3,8 +3,11 @@
     <item
         android:state_pressed="true"
         android:drawable="@color/holo_select" />
-    <item 
+    <item
         android:state_selected="true"
+        android:drawable="@color/holo_select" />
+    <item
+        android:state_checked="true"
         android:drawable="@color/holo_select" />
     <item
         android:drawable="@color/drawer_default_color" />

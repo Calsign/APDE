@@ -154,9 +154,10 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 				if(scrollState == SCROLL_STATE_IDLE) {
 					//Select the current sketch TODO this isn't working yet
                     if(getGlobalState().getSelectedSketch() < drawerList.getCount() && getGlobalState().getSelectedSketch() >= 0) {
-                    	View view = listView.getChildAt(getGlobalState().getSelectedSketch());
-                    	if(view != null)
-                    		view.setSelected(true);
+//                    	View view = listView.getChildAt(getGlobalState().getSelectedSketch());
+//                    	if(view != null)
+//                    		view.setSelected(true);
+                    	drawerList.setItemChecked(getGlobalState().getSelectedSketch(), true);
                     }
 				}
         }});
@@ -206,7 +207,8 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 				
 				String sketchName = ((TextView) view).getText().toString();
 				loadSketch(sketchName);
-				view.setSelected(true);
+				//view.setSelected(true);
+				drawerList.setItemChecked(position, true);
 				
 				getGlobalState().setSelectedSketch(position);
 				
