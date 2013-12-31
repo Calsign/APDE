@@ -65,6 +65,7 @@ import com.actionbarsherlock.view.MenuItem;
 
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.support.PopupMenu;
 
 public class EditorActivity extends SherlockActivity implements ActionBar.TabListener {
 	private HashMap<String, KeyBinding> keyBindings;
@@ -85,7 +86,6 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	private final static int NEW_TAB = 1;
 	
 	private MessageTouchListener messageListener;
-//	private TabActionListener tabListener;
 	
 	private PrintStream outStream;
 	private PrintStream errStream;
@@ -100,7 +100,6 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         Manifest.loadPermissions(this);
         
         messageListener = new MessageTouchListener();
-//      tabListener = new TabActionListener();
         
         findViewById(R.id.message).setOnLongClickListener(messageListener);
         findViewById(R.id.message).setOnTouchListener(messageListener);
@@ -967,6 +966,12 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         	menu.findItem(R.id.menu_sketch_properties).setVisible(true);
         }
         
+        //Disable these buttons because they appear when the tab is pressed
+        //Not getting rid of them completely in case we want to change things in the future
+        menu.findItem(R.id.menu_tab_new).setVisible(false);
+        menu.findItem(R.id.menu_tab_delete).setVisible(false);
+    	menu.findItem(R.id.menu_tab_rename).setVisible(false);
+        
         return true;
     }
     
@@ -1193,15 +1198,7 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     	view.setLines(2);
     	view.setText("\n" + view.getText());
     	
-    	/* 
-    	 * TODO make long clicks work
-    	 * might have to rethink the way we're doing things...
-    	 * ...such as changing things over to use a TabHost instead of ActionBar's tabs...
-    	 * ...and that would be a royal pain given all of this code
-    	 */
-    	
-//    	view.setLongClickable(true);
-//    	view.setOnLongClickListener(tabListener);
+    	//Long clicks aren't detected; instead, we use onTabReselected() to detect the selection of an already-selected tab
     	
     	tab.setCustomView(view);
     }
@@ -1378,7 +1375,38 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	}
 	
 	@Override
-	public void onTabReselected(Tab tab, FragmentTransaction ft) {}
+	public void onTabReselected(Tab tab, FragmentTransaction ft) {
+		View anchorView = findViewById(R.id.tab_buffer);
+		
+		//Create a PopupMenu anchored to a 0dp height "fake" view at the top if the display
+		//This is a custom implementation, designed to support API level 10+ (Android's PopupMenu is 11+)
+		PopupMenu popup = new PopupMenu(getGlobalState().getEditor(), anchorView);
+
+		//Populate the actions
+		com.actionbarsherlock.view.MenuInflater inflater = popup.getMenuInflater();
+		inflater.inflate(R.menu.tab_actions, popup.getMenu());
+
+		//Detect presses
+		popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+			@Override
+			public boolean onMenuItemClick(MenuItem item) {
+				switch(item.getItemId()) {
+				case R.id.menu_tab_new:
+					addTabWithDialog();
+					return true;
+				case R.id.menu_tab_rename:
+					renameTab();
+					return true;
+				case R.id.menu_tab_delete:
+					deleteTab();
+					return true;
+				}
+
+				return false;
+			}
+		});
+		popup.show();
+	}
 	
 	private boolean externalStorageWritable() {
 		String state = Environment.getExternalStorageState();
@@ -1465,43 +1493,6 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 					scroll.fullScroll(ScrollView.FOCUS_DOWN);
 			}});
 	}
-	
-	//Listener class for the tab dropdown menu
-//	public class TabActionListener implements android.view.View.OnLongClickListener {
-//		@Override
-//		public boolean onLongClick(View clickedView) { //TODO maybe want to do drag + drop instead?
-//			System.out.println("long click!!!");
-//			
-//			//TODO should be we using a floating contextual action menu here instead of a popup menu?
-//			
-//			//Create a PopupMenu - this is a custom implementation designed to work with the ABS library
-//			PopupMenu popup = new PopupMenu(getGlobalState().getEditor(), clickedView);
-//			
-//			//Populate the actions
-//			MenuInflater inflater = popup.getMenuInflater();
-//			inflater.inflate(R.menu.tab_actions, popup.getMenu());
-//			
-//			//Detect presses
-//			popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-//				@Override
-//				public boolean onMenuItemClick(MenuItem item) {
-//					switch(item.getItemId()) {
-//					case R.id.menu_tab_rename:
-//						renameTab();
-//						return true;
-//					case R.id.menu_tab_delete:
-//						deleteTab();
-//						return true;
-//					}
-//					
-//					return false;
-//				}
-//			});
-//			popup.show();
-//			
-//			return true;
-//		}
-//	}
 	
 	//Listener class for managing message area drag events
 	public class MessageTouchListener implements android.view.View.OnLongClickListener, android.view.View.OnTouchListener {
