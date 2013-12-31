@@ -251,7 +251,7 @@ public class Build {
 				
 				//Copy native libraries
 				
-				String[] libsToCopy = {"processing-core", "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
+				String[] libsToCopy = {"processing-core"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
 				String prefix = "libs/";
 				String suffix = ".jar";
 				
@@ -263,16 +263,29 @@ public class Build {
 				
 				//Copy dexed versions to speed up the DEX process
 				
-				if(isOpenGL) {
-					//For OpenGL sketches (includes P2D and P3D)
-//					InputStream inputStream = am.open("libs-dex/" + "libs.dex");
-//					createFileFromInputStream(inputStream, glLibLoc);
-					InputStream inputStream = am.open("libs-dex/" + "libs.jar");
-					createFileFromInputStream(inputStream, new File(dexedLibsFolder, "libs.jar"));
-				} else {
-					//For non-OpenGL sketches
-					InputStream inputStream = am.open("libs-dex/" + "processing-core-dex.jar");
-					createFileFromInputStream(inputStream, new File(dexedLibsFolder, "processing-core-dex.jar"));
+//				if(isOpenGL) {
+//					//For OpenGL sketches (includes P2D and P3D)
+////					InputStream inputStream = am.open("libs-dex/" + "libs.dex");
+////					createFileFromInputStream(inputStream, glLibLoc);
+//					InputStream inputStream = am.open("libs-dex/" + "libs.jar");
+//					createFileFromInputStream(inputStream, new File(dexedLibsFolder, "libs.jar"));
+//				} else {
+//					//For non-OpenGL sketches
+//					InputStream inputStream = am.open("libs-dex/" + "processing-core-dex.jar");
+//					createFileFromInputStream(inputStream, new File(dexedLibsFolder, "processing-core-dex.jar"));
+//				}
+				
+				String[] dexLibsToCopy = {"processing-core-dex", "annotations-dex"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
+				String dexPrefix = "libs-dex/";
+				String dexSuffix = ".jar";
+				
+//				InputStream inputStream = am.open("libs-dex/" + "processing-core-dex.jar");
+//				createFileFromInputStream(inputStream, new File(dexedLibsFolder, "processing-core-dex.jar"));
+				
+				//Copy for the compiler
+				for(String lib : dexLibsToCopy) {
+					InputStream inputStream = am.open(dexPrefix + lib + dexSuffix);
+					createFileFromInputStream(inputStream, new File(dexedLibsFolder, lib + dexSuffix));
 				}
 				
 				// Copy any imported libraries (their libs and assets),
