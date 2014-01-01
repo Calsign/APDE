@@ -946,8 +946,12 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
         	menu.findItem(R.id.menu_tab_delete).setVisible(false);
         	menu.findItem(R.id.menu_tab_rename).setVisible(false);
         	menu.findItem(R.id.menu_save).setVisible(false);
+        	menu.findItem(R.id.menu_new).setVisible(false);
+        	menu.findItem(R.id.menu_load).setVisible(false);
         	menu.findItem(R.id.menu_tab_new).setVisible(false);
         	menu.findItem(R.id.menu_sketch_properties).setVisible(false);
+        	
+        	getSupportActionBar().setTitle(R.string.app_name);
         } else {
         	if(getSupportActionBar().getTabCount() > 0) {
             	menu.findItem(R.id.menu_run).setVisible(true);
@@ -962,8 +966,12 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
             }
         	
         	menu.findItem(R.id.menu_save).setVisible(true);
+        	menu.findItem(R.id.menu_new).setVisible(true);
+        	menu.findItem(R.id.menu_load).setVisible(true);
         	menu.findItem(R.id.menu_tab_new).setVisible(true);
         	menu.findItem(R.id.menu_sketch_properties).setVisible(true);
+        	
+        	getSupportActionBar().setTitle(getGlobalState().getSketchName());
         }
         
         //Disable these buttons because they appear when the tab is pressed
@@ -1011,6 +1019,12 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
             	return true;
             case R.id.menu_save:
             	saveSketch();
+            	return true;
+            case R.id.menu_new:
+            	createNewSketch();
+            	return true;
+            case R.id.menu_load:
+            	loadSketch();
             	return true;
             case R.id.menu_settings:
             	launchSettings();
@@ -1376,36 +1390,38 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 	
 	@Override
 	public void onTabReselected(Tab tab, FragmentTransaction ft) {
-		View anchorView = findViewById(R.id.tab_buffer);
-		
-		//Create a PopupMenu anchored to a 0dp height "fake" view at the top if the display
-		//This is a custom implementation, designed to support API level 10+ (Android's PopupMenu is 11+)
-		PopupMenu popup = new PopupMenu(getGlobalState().getEditor(), anchorView);
+		if(!drawerOpen) {
+			View anchorView = findViewById(R.id.tab_buffer);
 
-		//Populate the actions
-		com.actionbarsherlock.view.MenuInflater inflater = popup.getMenuInflater();
-		inflater.inflate(R.menu.tab_actions, popup.getMenu());
+			//Create a PopupMenu anchored to a 0dp height "fake" view at the top if the display
+			//This is a custom implementation, designed to support API level 10+ (Android's PopupMenu is 11+)
+			PopupMenu popup = new PopupMenu(getGlobalState().getEditor(), anchorView);
 
-		//Detect presses
-		popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-			@Override
-			public boolean onMenuItemClick(MenuItem item) {
-				switch(item.getItemId()) {
-				case R.id.menu_tab_new:
-					addTabWithDialog();
-					return true;
-				case R.id.menu_tab_rename:
-					renameTab();
-					return true;
-				case R.id.menu_tab_delete:
-					deleteTab();
-					return true;
+			//Populate the actions
+			com.actionbarsherlock.view.MenuInflater inflater = popup.getMenuInflater();
+			inflater.inflate(R.menu.tab_actions, popup.getMenu());
+
+			//Detect presses
+			popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+				@Override
+				public boolean onMenuItemClick(MenuItem item) {
+					switch(item.getItemId()) {
+					case R.id.menu_tab_new:
+						addTabWithDialog();
+						return true;
+					case R.id.menu_tab_rename:
+						renameTab();
+						return true;
+					case R.id.menu_tab_delete:
+						deleteTab();
+						return true;
+					}
+
+					return false;
 				}
-
-				return false;
-			}
-		});
-		popup.show();
+			});
+			popup.show();
+		}
 	}
 	
 	private boolean externalStorageWritable() {

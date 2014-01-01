@@ -25,6 +25,14 @@
         android:showAsAction="never"
         android:title="@string/menu_save"/>
     <item
+        android:id="@+id/menu_new"
+        android:showAsAction="never"
+        android:title="@string/menu_new"/>
+    <item
+        android:id="@+id/menu_load"
+        android:showAsAction="never"
+        android:title="@string/menu_open"/>
+    <item
         android:id="@+id/menu_tab_new"
         android:showAsAction="never"
         android:title="@string/menu_tab_new"/>
