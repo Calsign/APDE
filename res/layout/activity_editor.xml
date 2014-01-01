@@ -23,10 +23,10 @@
 	        android:layout_height="0dp"
 	        android:layout_weight="3"
 	        android:scrollbars="vertical"
-			android:background="#FFFFFFFF" >
+			android:background="#FFFFFFFF"
+			android:fadeScrollbars="false" >
 			
 	        <HorizontalScrollView android:id="@+id/code_scroller_x"
-	            android:scrollbars="horizontal"
 	            android:layout_width="fill_parent"
 		        android:layout_height="wrap_content" >
 				
@@ -73,10 +73,10 @@
 	        android:background="@drawable/back_console"
 	        android:layout_width="fill_parent"
 	        android:layout_height="0dp"
-	        android:scrollbars="vertical" >
+	        android:scrollbars="vertical"
+	        android:fadeScrollbars="false" >
 			
 	        <HorizontalScrollView android:id="@+id/console_scroller_x"
-	            android:scrollbars="horizontal"
 	            android:layout_width="fill_parent"
 		        android:layout_height="wrap_content" >
 				
