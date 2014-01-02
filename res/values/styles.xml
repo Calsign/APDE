@@ -5,7 +5,7 @@
         by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
     -->
     
-    <style name="AppBaseTheme" parent="Theme.Sherlock">
+    <style name="AppBaseTheme" parent="Theme.AppCompat">
         <!--
             Theme customizations available in newer API levels can go in
             res/values-vXX/styles.xml, while customizations related to
@@ -18,12 +18,12 @@
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
     </style>
     
-    <style name="ActionBar.Style" parent="@style/Widget.Sherlock.ActionBar.Solid">
+    <style name="ActionBar.Style" parent="@style/Widget.AppCompat.ActionBar.Solid">
 	    <item name="background">@color/bar_overlay</item>
 	    <item name="backgroundStacked">@color/bar_overlay</item>
 	</style>
 	
-    <style name="FullscreenTheme" parent="Theme.Sherlock">
+    <style name="FullscreenTheme" parent="Theme.AppCompat">
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowBackground">@color/activity_background</item>
         <item name="buttonBarStyle">@style/ButtonBar</item>

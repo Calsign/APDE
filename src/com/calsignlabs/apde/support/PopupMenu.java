@@ -17,15 +17,11 @@
 package com.calsignlabs.apde.support;
 
 import android.content.Context;
+import android.support.v7.internal.view.menu.*;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
-
-import com.actionbarsherlock.internal.view.menu.MenuBuilder;
-import com.actionbarsherlock.internal.view.menu.MenuPopupHelper;
-import com.actionbarsherlock.internal.view.menu.MenuPresenter;
-import com.actionbarsherlock.internal.view.menu.SubMenuBuilder;
-import com.actionbarsherlock.view.Menu;
-import com.actionbarsherlock.view.MenuInflater;
-import com.actionbarsherlock.view.MenuItem;
 
 /**
  * A PopupMenu displays a {@link Menu} in a modal popup window anchored to a {@link View}.

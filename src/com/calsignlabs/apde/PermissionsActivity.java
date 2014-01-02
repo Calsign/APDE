@@ -1,9 +1,5 @@
 package com.calsignlabs.apde;
 
-import com.actionbarsherlock.app.SherlockActivity;
-import com.actionbarsherlock.view.Menu;
-import com.actionbarsherlock.view.MenuItem;
-
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.build.Permission;
 
@@ -13,6 +9,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v7.app.ActionBarActivity;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -25,7 +24,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-public class PermissionsActivity extends SherlockActivity {
+public class PermissionsActivity extends ActionBarActivity {
 	private boolean[] checked;
 	
 	@Override
@@ -145,7 +144,7 @@ public class PermissionsActivity extends SherlockActivity {
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		getSupportMenuInflater().inflate(R.menu.activity_permissions, menu);
+		getMenuInflater().inflate(R.menu.activity_permissions, menu);
 		return true;
 	}
 	

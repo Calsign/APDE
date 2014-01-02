@@ -4,11 +4,11 @@
         Base application theme for API 11+. This theme completely replaces
         AppBaseTheme from res/values/styles.xml on API 11+ devices.
     -->
-    <style name="AppBaseTheme" parent="Theme.Sherlock">
+    <style name="AppBaseTheme" parent="Theme.AppCompat">
         <!-- API 11 theme customizations can go here. -->
     </style>
     
-    <style name="FullscreenTheme" parent="Theme.Sherlock">
+    <style name="FullscreenTheme" parent="Theme.AppCompat">
         <item name="android:actionBarStyle">@style/FullscreenActionBarStyle</item>
         <item name="android:windowActionBarOverlay">false</item>
         <item name="android:windowBackground">@color/bar_overlay</item>
@@ -16,7 +16,7 @@
         <item name="buttonBarButtonStyle">?android:attr/buttonBarButtonStyle</item>
     </style>
     
-    <style name="FullscreenActionBarStyle" parent="Widget.Sherlock.ActionBar">
+    <style name="FullscreenActionBarStyle" parent="Widget.AppCompat.ActionBar">
         <item name="android:background">@color/bar_overlay</item>
         <item name="background">@color/bar_overlay</item>
         <item name="backgroundStacked">@color/bar_overlay</item>

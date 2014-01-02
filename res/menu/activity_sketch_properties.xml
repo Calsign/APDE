@@ -1,33 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" >
     <item
         android:id="@+id/menu_change_sketch_name"
         android:icon="@drawable/ic_action_edit"
-        android:showAsAction="ifRoom"
+        app:showAsAction="ifRoom"
         android:title="@string/menu_change_sketch_name"/>
     <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/action_settings"/>
     <item
         android:id="@+id/menu_save"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/menu_save"/>
     <item
         android:id="@+id/menu_new"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/menu_new"/>
     <item
         android:id="@+id/menu_load"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/menu_open"/>
     <item
         android:id="@+id/menu_delete"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/menu_delete"/>
     <item
         android:id="@+id/menu_export"
-        android:showAsAction="never"
+        app:showAsAction="never"
         android:title="@string/menu_export"/>
 </menu>

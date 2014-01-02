@@ -36,11 +36,17 @@ import android.preference.PreferenceManager;
 import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.ActionBar.Tab;
+import android.support.v7.app.ActionBarActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
@@ -57,17 +63,11 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.AbsListView.OnScrollListener;
 
-import com.actionbarsherlock.app.SherlockActivity;
-import com.actionbarsherlock.app.ActionBar;
-import com.actionbarsherlock.app.ActionBar.Tab;
-import com.actionbarsherlock.view.Menu;
-import com.actionbarsherlock.view.MenuItem;
-
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.support.PopupMenu;
 
-public class EditorActivity extends SherlockActivity implements ActionBar.TabListener {
+public class EditorActivity extends ActionBarActivity implements ActionBar.TabListener {
 	private HashMap<String, KeyBinding> keyBindings;
 	
 	private HashMap<Tab, FileMeta> tabs;
@@ -938,7 +938,7 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
     
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getSupportMenuInflater().inflate(R.menu.activity_editor, menu);
+        getMenuInflater().inflate(R.menu.activity_editor, menu);
         
         if(drawerOpen) {
         	menu.findItem(R.id.menu_run).setVisible(false);
@@ -1398,9 +1398,9 @@ public class EditorActivity extends SherlockActivity implements ActionBar.TabLis
 			PopupMenu popup = new PopupMenu(getGlobalState().getEditor(), anchorView);
 
 			//Populate the actions
-			com.actionbarsherlock.view.MenuInflater inflater = popup.getMenuInflater();
+			MenuInflater inflater = getMenuInflater(); //TODO mixed some things up when switching to AppCompat?
 			inflater.inflate(R.menu.tab_actions, popup.getMenu());
-
+			
 			//Detect presses
 			popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
 				@Override

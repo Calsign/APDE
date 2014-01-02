@@ -2,6 +2,7 @@ package com.calsignlabs.apde;
 
 import java.io.File;
 
+import android.annotation.SuppressLint;
 import android.app.Application;
 import android.os.Environment;
 
@@ -12,6 +13,7 @@ public class APDE extends Application {
 	private EditorActivity editor;
 	private SketchPropertiesActivity properties;
 	
+	@SuppressLint("NewApi")
 	public void setSketchName(String sketchName) {
 		this.sketchName = sketchName;
 		
@@ -19,7 +21,9 @@ public class APDE extends Application {
 			editor.getSupportActionBar().setTitle(sketchName);
 			editor.setSaved(false);
 		}
-		if(properties != null) properties.getSupportActionBar().setTitle(sketchName);
+		//Yet another unfortunate casualty of AppCompat
+		if(properties != null && android.os.Build.VERSION.SDK_INT >= 11)
+			properties.getActionBar().setTitle(sketchName);
 	}
 	
 	public String getSketchName() {

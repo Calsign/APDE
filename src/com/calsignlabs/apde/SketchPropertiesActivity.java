@@ -7,11 +7,9 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.Map.Entry;
 
-import com.actionbarsherlock.app.SherlockPreferenceActivity;
-import com.actionbarsherlock.view.Menu;
-import com.actionbarsherlock.view.MenuItem;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -25,9 +23,12 @@ import android.os.Environment;
 import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
+import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.widget.DrawerLayout;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AbsListView;
@@ -39,7 +40,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-public class SketchPropertiesActivity extends SherlockPreferenceActivity {
+public class SketchPropertiesActivity extends PreferenceActivity {
 	//This is a number, that's all that matters
 	private static final int REQUEST_CHOOSER = 6283;
 	
@@ -49,13 +50,16 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 	@SuppressWarnings("unused")
 	private boolean drawerOpen;
 	
+	@SuppressLint("NewApi")
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_sketch_properties);
 		
-		getSupportActionBar().setTitle(getGlobalState().getSketchName());
-		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+		if(android.os.Build.VERSION.SDK_INT >= 11) { //Yet another unfortunate casualty of AppCompat
+			getActionBar().setTitle(getGlobalState().getSketchName());
+			getActionBar().setDisplayHomeAsUpEnabled(true);
+		}
 		
 		getGlobalState().setProperties(this);
 		
@@ -86,7 +90,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 		drawerToggle = new ActionBarDrawerToggle(this, drawer, R.drawable.ic_navigation_drawer, R.string.nav_drawer_open, R.string.nav_drawer_close) {
             @Override
         	public void onDrawerClosed(View view) {
-                supportInvalidateOptionsMenu();
+            	if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
+            		invalidateOptionsMenu();
             }
             
             @Override
@@ -95,7 +100,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
             	
             	//Detect an initial open event
             	if(slide > 0) {
-            		supportInvalidateOptionsMenu();
+            		if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
+            			invalidateOptionsMenu();
                     drawerOpen = true;
                     
                     //Select the current sketch
@@ -106,14 +112,16 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
                     		view.setSelected(true);
                     }
             	} else {
-            		supportInvalidateOptionsMenu();
+            		if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
+            			invalidateOptionsMenu();
                     drawerOpen = false;
             	}
             }
             
             @Override
             public void onDrawerOpened(View drawerView) {
-                supportInvalidateOptionsMenu();
+            	if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
+            		invalidateOptionsMenu();
         }};
         drawer.setDrawerListener(drawerToggle);
         
@@ -128,8 +136,10 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 				
 				getGlobalState().setSelectedSketch(position);
 				
-				getSupportActionBar().setTitle(getGlobalState().getSketchName());
-				supportInvalidateOptionsMenu();
+				if(android.os.Build.VERSION.SDK_INT >= 11) { //Yet another unfortunate casualty of AppCompat
+					getActionBar().setTitle(getGlobalState().getSketchName());
+					invalidateOptionsMenu();
+				}
 				
 				drawer.closeDrawers();
 				
@@ -320,7 +330,7 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 	
 	@Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getSupportMenuInflater().inflate(R.menu.activity_sketch_properties, menu);
+        getMenuInflater().inflate(R.menu.activity_sketch_properties, menu);
         
         return true;
     }
@@ -429,6 +439,7 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 		drawer.openDrawer(drawerLayout);
 	}
 	
+	@SuppressLint("NewApi")
 	private void newSketch() {
 		if(getGlobalState().getSketchName().equals("sketch")) {
 			AlertDialog.Builder alert = new AlertDialog.Builder(this);
@@ -446,7 +457,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 	    			getGlobalState().getEditor().newSketch();
 	    			forceDrawerReload();
 	    			
-	    			getSupportActionBar().setTitle(getGlobalState().getSketchName());
+	    			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
+	    				getActionBar().setTitle(getGlobalState().getSketchName());
 	    			
 	    			finish();
 	    	}});
@@ -459,7 +471,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 	    			getGlobalState().getEditor().newSketch();
 	    			forceDrawerReload();
 	    			
-	    			getSupportActionBar().setTitle(getGlobalState().getSketchName());
+	    			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
+	    				getActionBar().setTitle(getGlobalState().getSketchName());
 	    			
 	    			finish();
 	    	}});
@@ -482,7 +495,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
 			getGlobalState().getEditor().newSketch();
 			forceDrawerReload();
 			
-			getSupportActionBar().setTitle(getGlobalState().getSketchName());
+			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
+				getActionBar().setTitle(getGlobalState().getSketchName());
 			
 			finish();
 		}
@@ -499,7 +513,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
     	alert.setMessage(R.string.delete_sketch_dialog_message);
     	
     	alert.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
-    		public void onClick(DialogInterface dialog, int whichButton) {
+    		@SuppressLint("NewApi")
+			public void onClick(DialogInterface dialog, int whichButton) {
     			getGlobalState().getEditor().deleteSketch();
     			
     			getGlobalState().setSketchName("sketch");
@@ -507,7 +522,8 @@ public class SketchPropertiesActivity extends SherlockPreferenceActivity {
     			getGlobalState().getEditor().newSketch();
     			forceDrawerReload();
     			
-    			getSupportActionBar().setTitle(getGlobalState().getSketchName());
+    			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
+    				getActionBar().setTitle(getGlobalState().getSketchName());
     			
     			finish();
     	}});
