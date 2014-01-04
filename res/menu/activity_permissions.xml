@@ -1,7 +1,10 @@
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto" >
+    
     <item
         android:id="@+id/menu_new_permission"
         android:icon="@drawable/ic_action_name"
+        app:showAsAction="ifRoom"
         android:showAsAction="ifRoom"
         android:title="@string/menu_new_permission" />
     <item

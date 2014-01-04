@@ -34,11 +34,11 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActionBarDrawerToggle;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBar.Tab;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.internal.widget.ScrollingTabContainerView.TabView;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
@@ -50,6 +50,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
+import android.view.ViewGroup.LayoutParams;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
@@ -66,9 +67,12 @@ import android.widget.AbsListView.OnScrollListener;
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.support.PopupMenu;
+import com.calsignlabs.apde.support.ScrollingTabContainerView;
 
-public class EditorActivity extends ActionBarActivity implements ActionBar.TabListener {
+public class EditorActivity extends ActionBarActivity implements ScrollingTabContainerView.TabListener {
 	private HashMap<String, KeyBinding> keyBindings;
+	
+	public ScrollingTabContainerView tabBar;
 	
 	private HashMap<Tab, FileMeta> tabs;
 	private boolean saved;
@@ -97,6 +101,18 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
         
+        tabBar = new ScrollingTabContainerView(getSupportActionBar().getThemedContext(), this);
+        
+        TypedValue tv = new TypedValue();
+        getTheme().resolveAttribute(android.support.v7.appcompat.R.attr.actionBarSize, tv, true);
+        int actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data, getResources().getDisplayMetrics());
+        tabBar.setContentHeight(actionBarHeight);
+        
+        ((LinearLayout) findViewById(R.id.content)).addView(tabBar, 0, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        tabBar.setAllowCollapse(false);
+        
+        tabBar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
+        
         Manifest.loadPermissions(this);
         
         messageListener = new MessageTouchListener();
@@ -112,7 +128,7 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
         getGlobalState().setSelectedSketch(-1);
         
         getSupportActionBar().setTitle(getGlobalState().getSketchName());
-        getSupportActionBar().setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
+//        getSupportActionBar().setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
         
         if(!loadSketchStart())
         	addDefaultTab(getGlobalState().getSketchName());
@@ -152,13 +168,8 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
 			@Override
 			public void onScrollStateChanged(AbsListView listView, int scrollState) {
 				if(scrollState == SCROLL_STATE_IDLE) {
-					//Select the current sketch TODO this isn't working yet
-                    if(getGlobalState().getSelectedSketch() < drawerList.getCount() && getGlobalState().getSelectedSketch() >= 0) {
-//                    	View view = listView.getChildAt(getGlobalState().getSelectedSketch());
-//                    	if(view != null)
-//                    		view.setSelected(true);
+                    if(getGlobalState().getSelectedSketch() < drawerList.getCount() && getGlobalState().getSelectedSketch() >= 0)
                     	drawerList.setItemChecked(getGlobalState().getSelectedSketch(), true);
-                    }
 				}
         }});
         
@@ -259,7 +270,7 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
 	        				oldCodeHeight = code.getHeight();
 	        			
 	        			//Start the custom animation TODO make the keyboard appearance prettier
-	        			messageArea.startAnimation(new MessageAreaAnimation(code, console, messageArea, oldCodeHeight, content.getHeight() - message, content.getHeight()));
+	        			messageArea.startAnimation(new MessageAreaAnimation(code, console, messageArea, oldCodeHeight, content.getHeight() - message  - tabBar.getHeight(), content.getHeight()));
 	        			
 	        			//Remove the focus from the Message slider if it has it
 	        			messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back)); //TODO this is deprecated...
@@ -271,7 +282,7 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
         				View consoleArea = findViewById(R.id.console_scroller);
         				
         				//Start the custom animation TODO make the keyboard appearance prettier
-        				messageArea.startAnimation(new MessageAreaAnimation(codeArea, consoleArea, messageArea, codeArea.getLayoutParams().height, oldCodeHeight, findViewById(R.id.content).getHeight()));
+        				messageArea.startAnimation(new MessageAreaAnimation(codeArea, consoleArea, messageArea, codeArea.getLayoutParams().height, oldCodeHeight, findViewById(R.id.content).getHeight()  - tabBar.getHeight()));
         				
 	        			keyboardVisible = false;
 	        			
@@ -594,6 +605,7 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
 				return loadSketchTemp();
 			}
 		} catch(Exception e) {
+			e.printStackTrace();
 			return false;
 		}
 	}
@@ -610,10 +622,13 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
 		supportInvalidateOptionsMenu();
 		forceDrawerReload();
 		
-		getSupportActionBar().removeAllTabs();
+//		getSupportActionBar().removeAllTabs();
+		tabBar.removeAllTabs();
 		tabs.clear();
 		
 		addDefaultTab("sketch");
+		
+		tabBar.selectTab(0);
 		
 		EditText code = ((EditText) findViewById(R.id.code));
 		code.setText("");
@@ -636,7 +651,8 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     		
     		//Get rid of any tabs
     		tabs.clear();
-    		getSupportActionBar().removeAllTabs();
+//    		getSupportActionBar().removeAllTabs();
+    		tabBar.removeAllTabs();
     		//This method is necessary, too
     		removeAllTabs();
     		
@@ -667,11 +683,14 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     		
     		//Update the code-view
     		if(getSupportActionBar().getTabCount() > 0)
-    			((EditText) findViewById(R.id.code)).setText(tabs.get(getSupportActionBar().getSelectedTab()).getText());
+//    			((EditText) findViewById(R.id.code)).setText(tabs.get(getSupportActionBar().getSelectedTab()).getText());
+    			((EditText) findViewById(R.id.code)).setText(tabs.get(tabBar.getSelectedTab()).getText());
     		else
     			((EditText) findViewById(R.id.code)).setText("");
     		
     		success = true;
+    		
+    		tabBar.selectLoadDefaultTab();
     	} else {
     		success = false;
     	}
@@ -711,10 +730,12 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     	
     	sketchLoc.mkdirs();
     	
-	    if(getSupportActionBar().getTabCount() > 0) {
+//	    if(getSupportActionBar().getTabCount() > 0) {
+    	if(tabBar.getTabCount() > 0) {
 	    	//Update the current tab
 	    	EditText code = (EditText) findViewById(R.id.code);
-	    	tabs.put(getSupportActionBar().getSelectedTab(), new FileMeta(getSupportActionBar().getSelectedTab().getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
+//	    	tabs.put(getSupportActionBar().getSelectedTab(), new FileMeta(getSupportActionBar().getSelectedTab().getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
+	    	tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
 	    	
 	    	//Iterate through FileMeta
 	    	for(FileMeta meta : tabs.values()) {
@@ -789,8 +810,10 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     	
     	//Preserve tab order upon re-launch
     	String tabList = "";
-    	for(int i = 0; i < getSupportActionBar().getTabCount(); i ++) {
-    		String tabName = getSupportActionBar().getTabAt(i).getText().toString();
+//    	for(int i = 0; i < getSupportActionBar().getTabCount(); i ++) {
+    	for(int i = 0; i < tabBar.getTabCount(); i ++) {
+//    		String tabName = getSupportActionBar().getTabAt(i).getText().toString();
+    		String tabName = ((TextView) tabBar.getTabView(i).getChildAt(0)).getText().toString();
     		//If it's a .PDE file, make sure to add the suffix
     		if(tabName.split(".").length <= 1)
     			tabName += ".pde";
@@ -798,11 +821,13 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     	}
     	writeTempFile("sketchFileNames", tabList);
     	
-    	if(getSupportActionBar().getTabCount() > 0) {
+//    	if(getSupportActionBar().getTabCount() > 0) {
+    	if(tabBar.getTabCount() > 0) {
     		//Update the current tab
     		EditText code = (EditText) findViewById(R.id.code);
-    		Tab tab = getSupportActionBar().getSelectedTab();
-    		tabs.put(tab, new FileMeta(tab.getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
+//    		Tab tab = getSupportActionBar().getSelectedTab();
+//    		tabs.put(tab, new FileMeta(tab.getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
+    		tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
     	}
     	
     	//Iterate through FileMeta
@@ -849,8 +874,12 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     			}
     		}
     		
-    		if(getSupportActionBar().getTabCount() > 0)
-    			((EditText) findViewById(R.id.code)).setText(tabs.get(getSupportActionBar().getSelectedTab()).getText());
+//    		if(getSupportActionBar().getTabCount() > 0)
+//    		if(tabBar.getTabCount() > 0)
+//    			((EditText) findViewById(R.id.code)).setText(tabs.get(getSupportActionBar().getSelectedTab()).getText());
+//    			((EditText) findViewById(R.id.code)).setText(tabs.get(tabBar.getSelectedTab()).getText());
+    		
+    		tabBar.selectLoadDefaultTab();
     		
     		success = true;
     	} catch(Exception e) {
@@ -953,7 +982,8 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
         	
         	getSupportActionBar().setTitle(R.string.app_name);
         } else {
-        	if(getSupportActionBar().getTabCount() > 0) {
+//        	if(getSupportActionBar().getTabCount() > 0) {
+        	if(tabBar.getTabCount() > 0) {
             	menu.findItem(R.id.menu_run).setVisible(true);
             	menu.findItem(R.id.menu_stop).setVisible(true);
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
@@ -979,6 +1009,10 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
         menu.findItem(R.id.menu_tab_new).setVisible(false);
         menu.findItem(R.id.menu_tab_delete).setVisible(false);
     	menu.findItem(R.id.menu_tab_rename).setVisible(false);
+    	
+    	//So that the user can add a tab if there are none
+    	if(tabBar.getTabCount() <= 0)
+    		menu.findItem(R.id.menu_tab_new).setVisible(true);
         
         return true;
     }
@@ -1153,7 +1187,8 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     	runOnUiThread(new Runnable() {
     		public void run() {
     			//Switch to the tab with the error
-    			getSupportActionBar().selectTab(getSupportActionBar().getTabAt(tab));
+//    			getSupportActionBar().selectTab(getSupportActionBar().getTabAt(tab));
+    			tabBar.selectTab(tab);
     			
     			CodeEditText code = (CodeEditText) findViewById(R.id.code);
     			
@@ -1176,11 +1211,16 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     	createInputDialog(getResources().getString(R.string.tab_new_dialog_title), getResources().getString(R.string.tab_new_dialog_message), "", NEW_TAB);
     }
     
+    //TODO in the process of doing some fancy shmancy stuff
+    
     private void addDefaultTab(String title) {
     	ActionBar.Tab tab = getSupportActionBar().newTab();
     	tab.setText(title);
-    	tab.setTabListener(this);
-    	getSupportActionBar().addTab(tab);
+//    	tab.setTabListener(this);
+//    	getSupportActionBar().addTab(tab);
+    	tabBar.addTab(tab);
+    	
+//    	tabBar.selectTab(tab);
     	
     	tabs.put(tab, new FileMeta(title, "", 0, 0));
     	
@@ -1190,38 +1230,58 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
 	private void addTab(String title) {
     	ActionBar.Tab tab = getSupportActionBar().newTab();
     	tab.setText(title);
-    	tab.setTabListener(this);
-    	getSupportActionBar().addTab(tab, getSupportActionBar().getTabCount());
+//    	tab.setTabListener(this);
+//    	getSupportActionBar().addTab(tab, getSupportActionBar().getTabCount());
+    	tabBar.addSelectTab(tab);
     	
     	tabs.put(tab, new FileMeta(title, "", 0, 0));
     	
-    	getSupportActionBar().selectTab(tab);
+//    	getSupportActionBar().selectTab(tab);
+//    	tabBar.selectTab(tab);
     	
     	customizeTab(tab, title);
 	}
 	
-	//Hacky way of making the tabs lowercase and uppercase
+	//Hacky way of making the tabs non-all-caps
 	//Theoretically, we could do some other stuff here, too...
+	@SuppressWarnings("deprecation")
 	private void customizeTab(Tab tab, String title) {
-    	TextView view = new TextView(this);
-    	view.setText(title);
-    	view.setTextColor(getResources().getColor(R.color.tab_text_color));
-    	view.setGravity(Gravity.CENTER);
-    	view.setTypeface(Typeface.DEFAULT_BOLD);
-    	view.setTextSize(12);
-    	view.setLines(2);
-    	view.setText("\n" + view.getText());
+//    	TextView view = new TextView(this);
+//    	view.setText(title);
+//    	view.setTextColor(getResources().getColor(R.color.tab_text_color));
+//    	view.setGravity(Gravity.CENTER);
+//    	view.setTypeface(Typeface.DEFAULT_BOLD);
+//    	view.setTextSize(12);
+//    	view.setLines(2);
+//    	view.setText("\n" + view.getText());
     	
     	//Long clicks aren't detected; instead, we use onTabReselected() to detect the selection of an already-selected tab
     	
-    	tab.setCustomView(view);
+//    	tab.setCustomView(view);
+    	
+    	TabView view = tabBar.getNewTabView();
+    	view.setGravity(Gravity.CENTER);
+    	view.setBackgroundColor(getResources().getColor(R.color.activity_background));
+    	view.setBackgroundDrawable(getResources().getDrawable(R.drawable.tab_indicator_ab_holo));
+    	
+    	TextView textView = (TextView) view.getChildAt(0);
+    	textView.setText(title);
+    	textView.setTextColor(getResources().getColor(R.color.tab_text_color));
+    	textView.setTypeface(Typeface.DEFAULT_BOLD);
+    	textView.setTextSize(12);
+    	
+    	//Ensure that the tabs automatically scroll at some point
+    	view.setMinimumWidth((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80, getResources().getDisplayMetrics()));
+    	
+    	view.setOnClickListener(tabBar.getTabClickListener());
     }
 	
 	private void addTab(String title, FileMeta meta) {
     	ActionBar.Tab tab = getSupportActionBar().newTab();
     	tab.setText(title);
-    	tab.setTabListener(this);
-    	getSupportActionBar().addTab(tab, getSupportActionBar().getTabCount());
+//    	tab.setTabListener(this);
+//    	getSupportActionBar().addTab(tab, getSupportActionBar().getTabCount());
+    	tabBar.addTab(tab);
     	
     	tabs.put(tab, meta);
     	
@@ -1230,7 +1290,8 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     
     private void renameTab() {
     	if(tabs.size() > 0)
-    		createInputDialog(getResources().getString(R.string.tab_rename_dialog_title), getResources().getString(R.string.tab_rename_dialog_message), getSupportActionBar().getSelectedTab().getText().toString(), RENAME_TAB);
+//    		createInputDialog(getResources().getString(R.string.tab_rename_dialog_title), getResources().getString(R.string.tab_rename_dialog_message), getSupportActionBar().getSelectedTab().getText().toString(), RENAME_TAB);
+    		createInputDialog(getResources().getString(R.string.tab_rename_dialog_title), getResources().getString(R.string.tab_rename_dialog_message), tabBar.getSelectedTab().getText().toString(), RENAME_TAB);
     }
     
     private void deleteTab() {
@@ -1266,17 +1327,20 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     private void deleteTabContinue() {
     	if(tabs.size() > 0) {
     		//Get the tab
-    		Tab cur = getSupportActionBar().getSelectedTab();
+//    		Tab cur = getSupportActionBar().getSelectedTab();
+    		Tab cur = tabBar.getSelectedTab(); //TODO they'll be problems here for sure
     		//Delete the tab from the sketch folder
     		deleteLocalFile(tabs.get(cur).getFilename());
     		//Disable the tab
     		tabs.get(cur).disable();
     		//Remove the tab
-	    	getSupportActionBar().removeTab(cur);
+//	    	getSupportActionBar().removeTab(cur);
+    		tabBar.removeSelectedTab();
 	    	tabs.remove(cur);
 	    	
 	    	//If there are no more tabs
-	    	if(getSupportActionBar().getTabCount() <= 0) {
+//	    	if(getSupportActionBar().getTabCount() <= 0) {
+	    	if(tabBar.getTabCount() <= 0) {
 	    		//Clear the code text area
 		    	EditText code = ((EditText) findViewById(R.id.code));
 		    	code.setText("");
@@ -1286,7 +1350,8 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
 	    		code.setEnabled(false);
 	    		
 	    		//Force remove all tabs
-	    		getSupportActionBar().removeAllTabs();
+//	    		getSupportActionBar().removeAllTabs();
+	    		tabBar.removeAllTabs();
 	    		tabs.clear();
 	    		
 	    		//Force ActionBar refresh
@@ -1349,15 +1414,24 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     		switch(key) {
     		case RENAME_TAB:
     	    	//Get the tab
-    	    	Tab cur = getSupportActionBar().getSelectedTab();
+//    	    	Tab cur = getSupportActionBar().getSelectedTab();
+    			Tab cur = tabBar.getSelectedTab();
     	    	//Delete the tab from the sketch folder
     	    	deleteLocalFile(tabs.get(cur).getFilename());
     			
-    			getSupportActionBar().getSelectedTab().setText(value);
+//    			getSupportActionBar().getSelectedTab().setText(value);
+    	    	((TextView) tabBar.getTabView(tabBar.getSelectedTab()).getChildAt(0)).setText(value); //This seems more complicated... but it's necessary to change the appearance of the tab name
     			message(getResources().getText(R.string.tab_renamed));
     			break;
     		case NEW_TAB:
     			addTab(value);
+    			tabBar.selectLastTab();
+    			onTabSelected(tabBar.getSelectedTab());
+    			
+    			//Refresh options menu to remove "New Tab" button
+    			if(tabBar.getTabCount() == 1)
+    				supportInvalidateOptionsMenu();
+    			
     			message(getResources().getText(R.string.tab_created));
     			break;
     		}
@@ -1365,12 +1439,15 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
     }
     
 	@Override
-	public void onTabSelected(Tab tab, FragmentTransaction ft) {
+//	public void onTabSelected(Tab tab, FragmentTransaction ft) {
+	public void onTabSelected(Tab tab) {
 		EditText code = ((EditText) findViewById(R.id.code));
 		
-		FileMeta meta = tabs.get(getSupportActionBar().getSelectedTab());
+//		FileMeta meta = tabs.get(getSupportActionBar().getSelectedTab());
+		FileMeta meta = tabs.get(tab);
 		
-		if(getSupportActionBar().getTabCount() > 0 && meta != null) {
+//		if(getSupportActionBar().getTabCount() > 0 && meta != null) {
+		if(tabBar.getTabCount() > 0 && meta != null) {
 			code.setText(meta.getText());
 			code.setSelection(meta.getSelectionStart(), meta.getSelectionEnd());
 		} else {
@@ -1383,22 +1460,24 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
 	}
 	
 	@Override
-	public void onTabUnselected(Tab tab, FragmentTransaction ft) {
+//	public void onTabUnselected(Tab tab, FragmentTransaction ft) {
+	public void onTabUnselected(Tab tab) {
 		EditText code = ((EditText) findViewById(R.id.code));
 		tabs.put(tab, new FileMeta(tab.getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
 	}
 	
 	@Override
-	public void onTabReselected(Tab tab, FragmentTransaction ft) {
+//	public void onTabReselected(Tab tab, FragmentTransaction ft) {
+	public void onTabReselected(Tab tab) {
 		if(!drawerOpen) {
-			View anchorView = findViewById(R.id.tab_buffer);
+			View anchorView = tabBar.getTabView(tabBar.getSelectedTab());
 
 			//Create a PopupMenu anchored to a 0dp height "fake" view at the top if the display
 			//This is a custom implementation, designed to support API level 10+ (Android's PopupMenu is 11+)
 			PopupMenu popup = new PopupMenu(getGlobalState().getEditor(), anchorView);
-
+			
 			//Populate the actions
-			MenuInflater inflater = getMenuInflater(); //TODO mixed some things up when switching to AppCompat?
+			MenuInflater inflater = getMenuInflater();
 			inflater.inflate(R.menu.tab_actions, popup.getMenu());
 			
 			//Detect presses
@@ -1549,7 +1628,7 @@ public class EditorActivity extends ActionBarActivity implements ActionBar.TabLi
 						message = findViewById(R.id.message).getHeight();
 					
 					//Calculate maximum possible code view height
-					int maxCode = content.getHeight() - message;
+					int maxCode = content.getHeight() - message - tabBar.getHeight();
 					
 					//Find relative movement for this event
 					int y = (int) event.getY() - touchOff;

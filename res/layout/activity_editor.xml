@@ -12,11 +12,6 @@
 	    tools:context=".APDE"
 	    android:orientation="vertical" >
 	    
-	    <!-- This is a hack... it lets us display a PopupMenu from the tabs (these views are in the window decoration) -->
-	    <View android:id="@+id/tab_buffer"
-	        android:layout_width="match_parent"
-	        android:layout_height="0dp" />
-	    
         <!-- Use ScrollView(s) for smooth scrolling -->
 	    <ScrollView android:id="@+id/code_scroller"
 	        android:layout_width="match_parent"

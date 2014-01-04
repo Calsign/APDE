@@ -18,11 +18,11 @@
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
-
-        <!-- TODO Would like to get rid of android:configChanges, but it already works like this so... -->
+		
+        <!-- Got rid of configChanges to solve problems... it's here if we need it, though:
+             android:configChanges="orientation|keyboardHidden|screenSize" -->
         <activity
             android:name="com.calsignlabs.apde.EditorActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/app_name"
             android:theme="@style/FullscreenTheme" >
             

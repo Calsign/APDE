@@ -87,7 +87,7 @@ public class Build {
 		this.editor = global.getEditor();
 		
 		sketchName = global.getSketchName();
-		tabs = new FileMeta[editor.getSupportActionBar().getTabCount()];
+		tabs = new FileMeta[editor.tabBar.getTabCount()];
 		Collection<FileMeta> metas = editor.getTabs().values();
 		int i = 0;
 		for(FileMeta meta : metas) {

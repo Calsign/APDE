@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto" >
+    
     <item
         android:id="@+id/menu_change_sketch_name"
         android:icon="@drawable/ic_action_edit"
         app:showAsAction="ifRoom"
+        android:showAsAction="ifRoom"
         android:title="@string/menu_change_sketch_name"/>
     <item
         android:id="@+id/action_settings"

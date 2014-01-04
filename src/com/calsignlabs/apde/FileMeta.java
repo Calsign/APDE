@@ -8,7 +8,10 @@ import java.io.IOException;
 
 import android.content.Context;
 
-//Utility class for storing information about files
+/*
+ * Utility class for storing information about files
+ * This started out as a meta... but is has grown to incorporate far more information than that
+ */
 public class FileMeta {
 	private String title;
 	private String suffix;
