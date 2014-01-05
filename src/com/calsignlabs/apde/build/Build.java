@@ -1400,8 +1400,9 @@ public class Build {
 	}
 	
 	public File getBuildFolder() {
-		//TODO revert this
-		return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "build");
+		//TODO revert this to internal storage
+		//We're using a file on the external storage for debugging
+		return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), "build");
 		//return new File(editor.getFilesDir(), "build");
 	}
 	
