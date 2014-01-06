@@ -73,15 +73,24 @@ Many of the menu items are duplicated in the Sketch Properties view, although th
 
 Renaming the sketch (from Sketch Properties) will also rename the sketch as it is saved in the Sketchbook folder. This differs from the PDE's "Save As".
 
-To run the sketch, select the "Run" button (a symbol similar to that found in the PDE). The build process will occur. Lots of technical details will get spit out in the console, while general updates will appear in the message area.
-If there is a basic sketch error, the message area will likely inform you about this, while the caret will jump to the offending line (in a similar fashion to the PDE).
-If a more advanced error is detected by ECJ, then the the message area will say something like "Build failed, check the console". In this case, you must read through the console log. ECJ's output will tell you everything that is wrong all at once... it is a good idea to learn how to interpret it.
-Once all of the errors have been ironed out, the sketch should run smoothly, resulting in a pop-up window detailing the sketch as an application to be installed.
-You may need to enable "Installation from Unknown Sources" (location varies, typically something like Settings > Applications > Development). Once the sketch is installed, you can open it.
-You need not build the sketch every time you wish to run it, unless you have made changes. The sketch is installed on the device like any other app.
-Build times vary based on your device and the size of your sketch, and are typically around five to ten seconds for me. At any point in the build, you can press the "Stop" button (next to "Run") to halt the process.
-
 To increase the size of the console, you can long-press the message area. After the device-specfied amount of time, the message area will appear selected (and there will be a vibration, if your device has a vibrator and vibrations are enabled). At this point, you can drag the message area, resizing the code area and the console accordingly.
+
+Running the Sketch
+------------------
+
+To run the sketch, select the "Run" button (a symbol similar to that found in the PDE). The build process will occur. Lots of technical details will get spit out in the console, while general updates will appear in the message area.
+
+If there is a basic sketch error, the message area will likely inform you about this, while the caret will jump to the offending line (in a similar fashion to the PDE).
+
+If a more advanced error is detected by ECJ, then the the message area will say something like "Build failed, check the console". In this case, you must read through the console log. ECJ's output will tell you everything that is wrong all at once... it is a good idea to learn how to interpret it.
+
+Once all of the errors have been ironed out, the sketch should run smoothly, resulting in a pop-up window detailing the sketch as an application to be installed.
+
+You may need to enable "Installation from Unknown Sources" (location varies, typically something like Settings > Applications > Development). Once the sketch is installed, you can open it.
+
+You need not build the sketch every time you wish to run it, unless you have made changes. The sketch is installed on the device like any other app.
+
+Build times vary based on your device and the size of your sketch, and are typically around five to ten seconds for me. At any point in the build, you can press the "Stop" button (next to "Run") to halt the process.
 
 Technical Information
 ---------------------
