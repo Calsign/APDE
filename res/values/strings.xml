@@ -51,7 +51,7 @@
     <string name="tab_new_dialog_title">New tab</string>
     <string name="tab_new_dialog_message">Enter the name for the new tab:</string>
     <string name="sketch_name_dialog_title">Save Sketch</string>
-    <string name="sketch_name_dialog_message">Enter the name for the sketch:</string>
+    <string name="sketch_name_dialog_message">Enter the name for the sketch (cannot be \"sketch\"):</string>
     <string name="save_sketch_before_run_dialog_title">Save Sketch</string>
     <string name="save_sketch_before_run_dialog_message">You must save the sketch before you can run it.</string>
     <string name="build_sketch_message">Building sketch…</string>
