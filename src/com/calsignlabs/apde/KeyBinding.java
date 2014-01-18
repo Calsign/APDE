@@ -9,6 +9,7 @@ public class KeyBinding {
 	private boolean meta;
 	private boolean func;
 	
+	//These are available on all API levels
 	private boolean alt;
 	private boolean sym;
 	private boolean shift;
@@ -67,7 +68,7 @@ public class KeyBinding {
 	 * @param alt
 	 * @param sym
 	 * @param shift
-	 * @return
+	 * @return whether or not the keystrokes match
 	 */
 	public boolean matches(int key, boolean ctrl, boolean meta, boolean func, boolean alt, boolean sym, boolean shift) {
 		return key() == key && ctrl() == ctrl && meta() == meta && func() == func && alt() == alt() && sym() == sym && shift() == shift;

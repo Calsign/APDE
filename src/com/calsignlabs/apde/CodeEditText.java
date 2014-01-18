@@ -21,16 +21,18 @@ import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.widget.EditText;
 
-/*
- * Custom EditText for syntax highlighting and some other stuff
+/**
+ * Custom EditText for syntax highlighting, auto-indent, etc.
  */
 public class CodeEditText extends EditText {
 	private Context context;
 	private float textSize = 14;
 	
+	//Paints that will always be used
 	private static Paint lineHighlight;
 	private static Paint whitePaint;
 	
+	//Lists of styles
 	public static HashMap<String, TextPaint> styles;
 	public static HashMap<String, TextPaint> syntax;
 	
@@ -79,7 +81,7 @@ public class CodeEditText extends EditText {
 		try {
 			//Processing's XML is easier to work with... TODO maybe implement native XML?
 			loadSyntax(new XML(getResources().getAssets().open("default_syntax_colors.xml")));
-		} catch (IOException e) {
+		} catch (IOException e) { //And here come the exceptions...
 			e.printStackTrace();
 		} catch (ParserConfigurationException e) {
 			e.printStackTrace();
@@ -88,6 +90,11 @@ public class CodeEditText extends EditText {
 		}
 	}
 	
+	/**
+	 * Loads the syntax as specified in the XML
+	 * 
+	 * @param xml
+	 */
 	public void loadSyntax(XML xml) {
 		//Get the list of defined styles
 		XML[] styleList = xml.getChild("styles").getChildren();
@@ -135,6 +142,7 @@ public class CodeEditText extends EditText {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
 		int lastLineNum = getCurrentLine();
 		
+		//Make sure to forward the result of what would normally happen
 		boolean result = super.onKeyDown(keyCode, event);
 		
 		//Get the indentation of the previous line
@@ -142,6 +150,7 @@ public class CodeEditText extends EditText {
 		String lastLine = "";
 		String lastIndent = "";
 		
+		//Calculate the indentation of the previous line
 		if(lines.length > 0) {
 			lastLine = lines[Math.min(lastLineNum, lines.length - 1)];
 			
@@ -169,34 +178,58 @@ public class CodeEditText extends EditText {
     	return result;
     }
 	
-	//Get the current line
-	public int getCurrentLine() {    
+	/**
+	 * @return the number of the currently selected line
+	 */
+	public int getCurrentLine() {
 		if(getSelectionStart() > -1)
 			return getLayout().getLineForOffset(getSelectionStart());
 		
 		return -1;
 	}
 	
+	/**
+	 * Returns the character offset for the specified line.
+	 * This is related to offsetForLineEnd(int)
+	 * 
+	 * @param line
+	 * @return
+	 */
 	public int offsetForLine(int line) {
+		//Get a list of lines
 		String[] lines = getText().toString().split("\n");
 		
+		//Count up to the specified line
 		int off = 0;
 		for(int i = 0; i < Math.min(lines.length, line); i ++)
+			//Add the length of each line
 			off += lines[i].length() + 1;
 		
+		//We don't want to return values that are too big
 		if(off >= getText().length())
 			off = getText().length() - 1;
 		
 		return off;
 	}
 	
+	/**
+	 * Returns the character offset for the end of the specified line.
+	 * This is related to offsetForLine(int)
+	 * 
+	 * @param line
+	 * @return
+	 */
 	public int offsetForLineEnd(int line) {
+		//Get a list of lines
 		String[] lines = getText().toString().split("\n");
 		
+		//Count up to the specified line, including the specified line
 		int off = 0;
 		for(int i = 0; i < Math.min(lines.length, line + 1); i ++)
+			//Add the length of each line
 			off += lines[i].length() + 1;
 		
+		//We don't want to return values that are too big
 		if(off >= getText().length())
 			off = getText().length() - 1;
 		
@@ -208,7 +241,7 @@ public class CodeEditText extends EditText {
 		int lineHeight = getLineHeight();
 		int lineOffset = getCompoundPaddingTop() + 6; //TODO this hard-coded offset shouldn't be here, but we need it for some reason
 		int currentLine = getCurrentLine();
-		int xOffset = getCompoundPaddingLeft(); // TODO hopefully no one uses Arabic (right-aligned localities)
+		int xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)... because the preferred method was introduced in a later API level
 		
 		//Get the width of the widest character ("m")... but this is monospace, anyway...
 		float charWidth = this.getPaint().measureText("m");
@@ -220,6 +253,7 @@ public class CodeEditText extends EditText {
 		//Draw the base text
 		super.onDraw(canvas);
 		
+		//Syntax highlight TODO this is still very buggy
 		if(PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
 			//Split the text into lines
 			String[] lines = getText().toString().split("\n");
@@ -466,6 +500,14 @@ public class CodeEditText extends EditText {
 		}
 	}
 	
+	/**
+	 * Utility function, highlights a specific line with all matches of all keywords
+	 * 
+	 * @param line
+	 * @param lineNum
+	 * @param items
+	 * @param canvas
+	 */
 	private void syntaxHighlightForKeywords(String line, int lineNum, String[] items, Canvas canvas) {
 		int lineHeight = getLineHeight();
 		int lineOffset = Math.round(PApplet.map(textSize, 14, 32, 6, 0)); //TODO why does this work?

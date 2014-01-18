@@ -282,7 +282,7 @@ public class Build {
 //				InputStream inputStream = am.open("libs-dex/" + "processing-core-dex.jar");
 //				createFileFromInputStream(inputStream, new File(dexedLibsFolder, "processing-core-dex.jar"));
 				
-				//Copy for the compiler
+				//Copy for the dexer
 				for(String lib : dexLibsToCopy) {
 					InputStream inputStream = am.open(dexPrefix + lib + dexSuffix);
 					createFileFromInputStream(inputStream, new File(dexedLibsFolder, lib + dexSuffix));
