@@ -10,6 +10,7 @@
         <style color="#FFD693B2">keyword_processing_variable</style>
         
         <!-- required styles -->
+        <style color="#FF000000">base</style>
         <style color="#FF999999">comment_single</style>
         <style color="#FF999999">comment_multi</style>
         <style color="#FFD693B2" bold="true">literal_incomplete</style>

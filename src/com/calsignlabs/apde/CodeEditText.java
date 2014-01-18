@@ -14,7 +14,9 @@ import processing.data.XML;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Paint.Style;
 import android.preference.PreferenceManager;
+import android.text.Layout;
 import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -30,6 +32,7 @@ public class CodeEditText extends EditText {
 	
 	//Paints that will always be used
 	private static Paint lineHighlight;
+	private static Paint blackPaint;
 	private static Paint whitePaint;
 	
 	//Lists of styles
@@ -65,6 +68,11 @@ public class CodeEditText extends EditText {
 		lineHighlight = new Paint();
 		lineHighlight.setStyle(Paint.Style.FILL);
 		lineHighlight.setColor(0x66AACCFF);
+		
+		//Create the black (default text) paint
+		blackPaint = new Paint();
+		blackPaint.setStyle(Paint.Style.FILL);
+		blackPaint.setColor(0xFF000000);
 		
 		//Create the white (cleared) paint
 		whitePaint = new Paint();
@@ -106,7 +114,7 @@ public class CodeEditText extends EditText {
 			//Parse the style
 			TextPaint paint = new TextPaint(getPaint());
 			String name = style.getContent();
-			String hex = style.getString("color", "#00000000").substring(1);
+			String hex = style.getString("color", "#FF000000").substring(1);
 			boolean bold = style.getString("bold", "false").equals("true") ? true : false;
 			
 			//Build the TextPaint
@@ -240,6 +248,7 @@ public class CodeEditText extends EditText {
 	public void onDraw(Canvas canvas) {
 		int lineHeight = getLineHeight();
 		int lineOffset = getCompoundPaddingTop() + 6; //TODO this hard-coded offset shouldn't be here, but we need it for some reason
+//		int lineOffset = getExtendedPaddingTop();
 		int currentLine = getCurrentLine();
 		int xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)... because the preferred method was introduced in a later API level
 		
@@ -250,11 +259,31 @@ public class CodeEditText extends EditText {
 			//Draw line highlight around the line that the cursor is on
 			canvas.drawRect(getScrollX(), lineOffset + currentLine * lineHeight, canvas.getWidth() + getScrollX(), lineOffset + (currentLine + 1) * lineHeight, lineHighlight);
 		
-		//Draw the base text
+		//Draw base text
 		super.onDraw(canvas);
 		
+		//TODO implement new syntax highlighter
+		boolean newSyntaxHighlighter = false;
+		
+		if(newSyntaxHighlighter && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
+			//Split the text into lines
+			String[] lines = getText().toString().split("\n");
+			
+			int topVis = (int) Math.floor(getScrollY() / getLineHeight()); //inclusive
+			int bottomVis = (int) Math.floor(Math.min((getScrollY() + getHeight()) / getLineHeight() + 1, lines.length)); //exclusive
+			
+			for(int i = topVis; i < bottomVis; i ++) {
+				//Split the line into tokens
+				Token[] tokens = splitTokens(lines[i], new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' '});
+				
+				for(Token token : tokens) {
+					highlightToken(token, lineOffset + lineHeight * (i + 1), canvas);
+				}
+			}
+		}
+		
 		//Syntax highlight TODO this is still very buggy
-		if(PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
+		if(!newSyntaxHighlighter && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
 			//Split the text into lines
 			String[] lines = getText().toString().split("\n");
 			int topVis = (int) Math.floor(getScrollY() / getLineHeight()); //inclusive
@@ -498,6 +527,80 @@ public class CodeEditText extends EditText {
 				}
 			}
 		}
+	}
+	
+	//Called internally to get a list of all tokens in an input String, such that each token may be syntax highlighted with a different color
+	//NOTE: This is not the same as PApplet.splitTokens()
+	private Token[] splitTokens(String input, char[] tokens) {
+		//Create the output list
+		ArrayList<Token> output = new ArrayList<Token>();
+		output.add(new Token("", 0));
+		
+		boolean wasToken = false;
+		
+		//Read each char in the input String
+		for(int i = 0; i < input.length(); i ++) {
+			char c = input.charAt(i);
+			
+			//If it is a token, split into a new String
+			if(isToken(c, tokens)) {
+				output.add(new Token("", i));
+				wasToken = true;
+			} else if(wasToken) {
+				output.add(new Token("", i));
+				wasToken = false;
+			}
+			
+			//Append the char
+			output.get(output.size() - 1).text += c;
+		}
+		
+		//Convert to an array
+		Token[] array = output.toArray(new Token[output.size()]);
+		return array;
+	}
+	
+	//Called internally from splitTokens()
+	//Determines whether or not the specified char is in the array of chars
+	private boolean isToken(char token, char[] tokens) {
+		for(char c : tokens)
+			if(c == token)
+				return true;
+		
+		return false;
+	}
+	
+	//Used internally for the syntax highlighter
+	protected class Token {
+		protected String text;
+		protected int offset;
+		
+		protected Token(String text, int offset) {
+			this.text = text;
+			this.offset = offset;
+		}
+	}
+	
+	private void highlightToken(Token token, int offsetY, Canvas canvas) {
+		int xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)
+		float charWidth = this.getPaint().measureText("m");
+		
+		//Set default paint
+		TextPaint paint;
+		
+		//Load custom paint
+		TextPaint highlightPaint = syntax.get(token.text);
+		if(highlightPaint != null)
+			paint = highlightPaint;
+		else
+			paint = styles.get("base");
+		
+		//Calculate coordinates
+		float x = (xOffset + token.offset * charWidth);
+		float y = offsetY;
+		
+		//Draw highlighted text
+		canvas.drawText(token.text, x, y, paint);
 	}
 	
 	/**
