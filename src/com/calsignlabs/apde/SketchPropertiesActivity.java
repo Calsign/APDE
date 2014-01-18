@@ -616,15 +616,15 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	
 	//Copy all of the old preferences over to the new SharedPreferences and delete the old ones
 	@SuppressWarnings("deprecation")
-	private void copyPrefs(String before, String after) {
+	public void copyPrefs(String before, String after) {
 		SharedPreferences old = getPreferenceManager().getSharedPreferences();
 		getPreferenceManager().setSharedPreferencesName(getGlobalState().getSketchName());
 		SharedPreferences.Editor ed = getPreferenceManager().getSharedPreferences().edit();
-		
+
 		for(Entry<String,?> entry : old.getAll().entrySet()){ 
 			Object v = entry.getValue(); 
 			String key = entry.getKey();
-			
+
 			if(v instanceof Boolean)
 				ed.putBoolean(key, ((Boolean) v).booleanValue());
 			else if(v instanceof Float)
@@ -636,8 +636,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 			else if(v instanceof String)
 				ed.putString(key, ((String) v));         
 		}
-		
+
 		ed.commit();
-		old.edit().clear();
+		old.edit().clear().commit();
 	}
 }

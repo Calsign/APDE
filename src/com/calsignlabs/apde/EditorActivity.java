@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -857,18 +858,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		return;
     	}
     	
-    	//Make sure that the sketch's name isn't "sketch"... and if it is, let the user know
+    	//Make sure that the sketch's name isn't "sketch"... and if it is, let the user change it
     	if(getGlobalState().getSketchName().equals("sketch")) {
-    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getResources().getText(R.string.sketch_name_dialog_title))
-            	.setMessage(getResources().getText(R.string.sketch_name_dialog_message)).setCancelable(false)
-            	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-            	
-            	@Override
-                public void onClick(DialogInterface dialog, int which) {}
-            }).show();
-            
-            return;
+    		changeSketchNameForSave();
+    		return;
     	}
     	
     	
@@ -928,6 +921,90 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		setSaved(true);
     	}
     }
+    
+    private void changeSketchNameForSave() {
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+    	
+    	alert.setTitle(R.string.sketch_name_dialog_title);
+    	alert.setMessage(R.string.sketch_name_dialog_message);
+    	
+    	final EditText input = new EditText(this);
+    	input.setSingleLine();
+    	input.setText(getGlobalState().getSketchName());
+    	input.selectAll();
+    	alert.setView(input);
+    	
+    	alert.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+    		public void onClick(DialogInterface dialog, int whichButton) {
+    			String before = getGlobalState().getSketchName();
+    			String after = input.getText().toString();
+    			
+    			if(validateSketchName(after)) {
+    				getGlobalState().setSketchName(after);
+    				getSketchLoc(before).renameTo(getGlobalState().getEditor().getSketchLoc(after));
+    				forceDrawerReload();
+    				
+    				//If the user has set the pretty name to the name of their sketch, they probably want to change the pretty name too
+    				SharedPreferences prefs = getSharedPreferences(after, 0);
+    		  		SharedPreferences.Editor ed = prefs.edit();
+    		  		
+    				if(prefs.getString("prop_pretty_name", "").equals(before))
+    					ed.putString("prop_pretty_name", after);
+    				
+    				ed.commit();
+    				
+    				copyPrefs(before, after);
+    				
+    				saveSketch();
+    			}
+    	}});
+    	
+    	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+    		public void onClick(DialogInterface dialog, int whichButton) {
+    	}});
+    	
+    	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
+    	AlertDialog dialog = alert.create();
+    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+    	dialog.show();
+    }
+    
+    //Copy all of the old preferences over to the new SharedPreferences and delete the old ones
+  	public void copyPrefs(String before, String after) {
+  		SharedPreferences old = getSharedPreferences(getGlobalState().getSketchName(), 0);
+  		SharedPreferences prefs = getSharedPreferences(after, 0);
+  		SharedPreferences.Editor ed = prefs.edit();
+  		
+  		for(Entry<String,?> entry : old.getAll().entrySet()){ 
+  			Object v = entry.getValue(); 
+  			String key = entry.getKey();
+
+  			if(v instanceof Boolean)
+  				ed.putBoolean(key, ((Boolean) v).booleanValue());
+  			else if(v instanceof Float)
+  				ed.putFloat(key, ((Float) v).floatValue());
+  			else if(v instanceof Integer)
+  				ed.putInt(key, ((Integer) v).intValue());
+  			else if(v instanceof Long)
+  				ed.putLong(key, ((Long) v).longValue());
+  			else if(v instanceof String)
+  				ed.putString(key, ((String) v));         
+  		}
+  		
+  		ed.commit();
+  		old.edit().clear().commit();
+  	}
+    
+    private boolean validateSketchName(String name) {
+		if(name.length() <= 0)
+			return false;
+		
+		if(name.equals("sketch"))
+			return false;
+		
+		return true;
+	}
     
     /**
      * Deletes the current sketch

@@ -65,7 +65,7 @@ APDE doesn't use ANT to build sketches - instead, it uses a custom build chain. 
 Basic Use
 ---------
 
-When you first open APDE, it is possible to start coding right away. However, before you can run it, you must save the sketch: Open Sketch Properties (Menu > Sketch Properties). Select the "pencil" icon in the top right corner (located in the menu on 2.3). Change your sketch name to something else. Return to the sketch with the "back" button. Save the sketch (Menu > Save Sketch). You can now run the sketch. You do not need to save the sketch again (it will save automatically), but you can always invoke the save command to manually save.
+When you first open APDE, it is possible to start coding right away. However, before you can run it, you must save the sketch. You do not need to save the sketch again (it will save automatically), but you can always invoke the save command to manually save.
 
 To access a list of all of sketches, either press the APDE icon in the top left corner, swipe in from the left side of the screen, or select "Load Sketch" from the menu. You can select a sketch to open it. The previously open sketch will be automatically saved (unless it has not been saved yet, when you will be prompted with a dialog).
 
