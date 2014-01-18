@@ -22,13 +22,13 @@
 			android:fadeScrollbars="false" >
 			
 	        <HorizontalScrollView android:id="@+id/code_scroller_x"
-	            android:layout_width="fill_parent"
+	            android:layout_width="wrap_content"
 		        android:layout_height="wrap_content" >
 				
 	            <!-- Padding for the code area -->
-	            <LinearLayout
+	            <LinearLayout android:id="@+id/code_padding"
 	                android:layout_width="wrap_content"
-	                android:layout_height="match_parent"
+	                android:layout_height="wrap_content"
 	                android:paddingTop="10dp"
 					android:paddingBottom="10dp"
 					android:paddingLeft="10dp"
@@ -37,7 +37,7 @@
 					<com.calsignlabs.apde.CodeEditText android:id="@+id/code"
 					    android:inputType="text|textNoSuggestions|textMultiLine"
 					    android:layout_width="wrap_content"
-					    android:layout_height="fill_parent"
+					    android:layout_height="wrap_content"
 					   	android:gravity="top"
 					    android:typeface="monospace"
 					    android:textSize="14sp"

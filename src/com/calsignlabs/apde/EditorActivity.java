@@ -58,6 +58,7 @@ import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ScrollView;
@@ -267,9 +268,41 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         
+        final ScrollView codeScroller = (ScrollView) findViewById(R.id.code_scroller);
+        final EditText code = (EditText) findViewById(R.id.code);
+        
+        //Forward touch events to the code area so that the user can select anywhere
+        codeScroller.setOnTouchListener(new View.OnTouchListener() {
+			@Override
+			public boolean onTouch(View v, MotionEvent event) {
+				HorizontalScrollView codeScrollerX = (HorizontalScrollView) findViewById(R.id.code_scroller_x);
+				LinearLayout padding = (LinearLayout) findViewById(R.id.code_padding);
+				
+				if(code.getHeight() < codeScroller.getHeight() - padding.getPaddingBottom() + padding.getPaddingTop()) {
+					//Hacky - dispatches a touch event to the code area
+					
+					MotionEvent me = MotionEvent.obtain(event);
+					//Accommodate for scrolling
+					me.setLocation(me.getX() + codeScrollerX.getScrollX(), me.getY());
+					code.dispatchTouchEvent(me);
+					me.recycle();
+
+					code.requestFocus();
+				}
+				
+				//Make sure that the scroll area can still scroll
+				return false;
+		}});
+        
+        //Obtain the root view
+        final View activityRootView = findViewById(R.id.content);
+        
+        //Make the code area fill the width of the screen
+        code.setMinimumWidth(activityRootView.getWidth());
+        code.setMinWidth(activityRootView.getWidth());
+        
         //Detect software keyboard open / close events
         //StackOverflow: http://stackoverflow.com/questions/2150078/how-to-check-visibility-of-software-keyboard-in-android
-        final View activityRootView = findViewById(R.id.content);
         activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
         	@SuppressWarnings("deprecation")
 			@Override
