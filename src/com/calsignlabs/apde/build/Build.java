@@ -129,7 +129,12 @@ public class Build {
     		for(File c : f.listFiles())
     			deleteFile(c);
     	
-    	if(!f.delete())
+    	//Renaming solution for the file system lock with EBUSY errors
+		//StackOverflow: http://stackoverflow.com/questions/11539657/open-failed-ebusy-device-or-resource-busy
+		final File to = new File(f.getAbsolutePath() + System.currentTimeMillis());
+		f.renameTo(to);
+    	
+    	if(!to.delete())
     		System.err.println("Failed to delete file: " + f);
     }
 	
@@ -142,6 +147,7 @@ public class Build {
 		//Throughout this function, perform periodic checks to see if the user has cancelled the build
 		
 		editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
+		System.out.println("Initializing build sequence...");
 		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
@@ -161,8 +167,11 @@ public class Build {
 //		buildFile = new File(buildFolder, "build.xml");
 		
 		//Wipe the old build folder
-		if(buildFolder.exists())
+		if(buildFolder.exists()) {
+			System.out.println("Deleting old build folder...");
 			deleteFile(buildFolder);
+			System.out.println("Successfully deleted old build folder");
+		}
 		
 		buildFolder.mkdir();
 		srcFolder.mkdir();
