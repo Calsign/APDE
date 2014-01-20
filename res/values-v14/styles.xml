@@ -8,4 +8,6 @@
     <style name="AppBaseTheme" parent="android:Theme.Holo">
         <!-- API 14 theme customizations can go here. -->
     </style>
+    
+    <style name="PreferencesTheme" parent="@style/FullscreenTheme" />
 </resources>

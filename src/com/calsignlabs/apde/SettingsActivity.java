@@ -34,7 +34,19 @@ public class SettingsActivity extends PreferenceActivity {
 	 * as a master/detail two-pane view on tablets. When true, a single pane is
 	 * shown on tablets.
 	 */
-	private static final boolean ALWAYS_SIMPLE_PREFS = false;
+	private static final boolean ALWAYS_SIMPLE_PREFS = true;
+	
+	@SuppressLint("NewApi")
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		
+		setContentView(R.layout.activity_settings);
+		
+		if(android.os.Build.VERSION.SDK_INT >= 11) { //Yet another unfortunate casualty of AppCompat
+			getActionBar().setDisplayHomeAsUpEnabled(true);
+		}
+	}
 	
 	@SuppressLint("NewApi")
 	@Override

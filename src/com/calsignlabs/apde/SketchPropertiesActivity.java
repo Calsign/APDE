@@ -10,6 +10,7 @@ import java.util.Map.Entry;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -44,16 +45,17 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	//This is a number, that's all that matters
 	private static final int REQUEST_CHOOSER = 6283;
 	
-	private static final boolean ALWAYS_SIMPLE_PREFS = false;
+	private static final boolean ALWAYS_SIMPLE_PREFS = true;
 	
 	private ActionBarDrawerToggle drawerToggle;
 	@SuppressWarnings("unused")
 	private boolean drawerOpen;
 	
-	@SuppressLint("NewApi")
+	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
 		setContentView(R.layout.activity_sketch_properties);
 		
 		if(android.os.Build.VERSION.SDK_INT >= 11) { //Yet another unfortunate casualty of AppCompat

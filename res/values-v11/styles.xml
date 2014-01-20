@@ -16,7 +16,20 @@
         <item name="buttonBarButtonStyle">?android:attr/buttonBarButtonStyle</item>
     </style>
     
+    <style name="PreferencesTheme" parent="android:Theme.Holo">
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowBackground">@color/activity_background</item>
+        <item name="android:windowActionBar">true</item>
+        <item name="android:actionBarStyle">@style/PreferencesActionBarStyle</item>
+    </style>
+    
     <style name="FullscreenActionBarStyle" parent="Widget.AppCompat.ActionBar">
+        <item name="android:background">@color/bar_overlay</item>
+        <item name="background">@color/bar_overlay</item>
+        <item name="backgroundStacked">@color/bar_overlay</item>
+    </style>
+    
+    <style name="PreferencesActionBarStyle" parent="android:style/Widget.Holo.ActionBar">
         <item name="android:background">@color/bar_overlay</item>
         <item name="background">@color/bar_overlay</item>
         <item name="backgroundStacked">@color/bar_overlay</item>

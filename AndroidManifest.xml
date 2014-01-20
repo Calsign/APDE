@@ -45,15 +45,15 @@
         
         <activity
             android:name="com.calsignlabs.apde.SketchPropertiesActivity"
-            android:allowBackup="true"
             android:icon="@drawable/ic_launcher"
             android:label="@string/title_activity_sketch_properties"
-            android:theme="@style/FullscreenTheme" />
+            android:theme="@style/PreferencesTheme" />
         
         <activity
             android:name="com.calsignlabs.apde.SettingsActivity"
+            android:icon="@drawable/ic_launcher"
             android:label="@string/title_activity_settings"
-            android:theme="@style/FullscreenTheme" />
+            android:theme="@style/PreferencesTheme" />
         
         <activity
             android:name="com.calsignlabs.apde.PermissionsActivity"
@@ -77,6 +77,5 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
-
     </application>
 </manifest>

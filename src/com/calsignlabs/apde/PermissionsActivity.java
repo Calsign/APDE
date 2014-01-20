@@ -32,7 +32,9 @@ public class PermissionsActivity extends ActionBarActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_permissions);
 		
+		getSupportActionBar().setHomeButtonEnabled(true);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+		
 		getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
 	}
 	
