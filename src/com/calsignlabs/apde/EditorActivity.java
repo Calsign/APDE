@@ -162,6 +162,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         if(!loadSketchStart())
         	addDefaultTab(getGlobalState().getSketchName());
         
+        //Make the code area able to detect its own text changing
+        ((CodeEditText) findViewById(R.id.code)).setupTextListener();
+        
         //Detect text changes for determining whether or not the sketch has been saved
         ((EditText) findViewById(R.id.code)).addTextChangedListener(new TextWatcher(){
             public void afterTextChanged(Editable s) {
@@ -439,6 +442,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         else
         	getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
+        
+        //Update the syntax highlighter
+        ((CodeEditText) findViewById(R.id.code)).updateTokens();
     }
     
     /**
@@ -767,8 +773,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		tabBar.selectTab(0);
 		
 		//Clear the code area
-		EditText code = ((EditText) findViewById(R.id.code));
-		code.setText("");
+		CodeEditText code = ((CodeEditText) findViewById(R.id.code));
+		code.setUpdateText("");
 	}
     
 	/**
@@ -826,10 +832,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		
     		//Update the code-view
     		if(getSupportActionBar().getTabCount() > 0)
-//    			((EditText) findViewById(R.id.code)).setText(tabs.get(getSupportActionBar().getSelectedTab()).getText());
-    			((EditText) findViewById(R.id.code)).setText(tabs.get(tabBar.getSelectedTab()).getText());
+    			((CodeEditText) findViewById(R.id.code)).setUpdateText(tabs.get(tabBar.getSelectedTab()).getText());
     		else
-    			((EditText) findViewById(R.id.code)).setText("");
+    			((CodeEditText) findViewById(R.id.code)).setUpdateText("");
     		
     		success = true;
     		
@@ -1721,8 +1726,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    	//If there are no more tabs
 	    	if(tabBar.getTabCount() <= 0) {
 	    		//Clear the code text area
-		    	EditText code = ((EditText) findViewById(R.id.code));
-		    	code.setText("");
+		    	CodeEditText code = ((CodeEditText) findViewById(R.id.code));
+		    	code.setUpdateText("");
 		    	code.setSelection(0);
 	    		
 	    		//Disable the code text area if there is no selected tab
@@ -1838,7 +1843,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	@Override
 	public void onTabSelected(Tab tab) {
 		//Get a reference to the code area
-		EditText code = ((EditText) findViewById(R.id.code));
+		CodeEditText code = ((CodeEditText) findViewById(R.id.code));
 		//Get a reference to the current tab's meta
 		FileMeta meta = tabs.get(tab);
 		
@@ -1846,7 +1851,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			//If there are already tabs
 			
 			//Update the code area text
-			code.setText(meta.getText());
+			code.setUpdateText(meta.getText());
 			//Update the code area selection
 			code.setSelection(meta.getSelectionStart(), meta.getSelectionEnd());
 		} else {

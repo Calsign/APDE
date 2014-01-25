@@ -38,6 +38,19 @@ public class ScrollingTabContainerView extends android.support.v7.internal.widge
 	/*
 	 * To appease the Android Tools gods.
 	 */
+	public ScrollingTabContainerView(Context context) {
+		super(context);
+		
+		tabs = new ArrayList<Tab>();
+		selectedTab = -1;
+		
+		clickListener = new TabClickListener();
+		this.tabListener = null;
+	}
+	
+	/*
+	 * To appease the Android Tools gods.
+	 */
 	public ScrollingTabContainerView(Context context, AttributeSet attributes) {
 		super(context);
 		
