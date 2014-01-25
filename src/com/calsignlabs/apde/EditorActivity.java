@@ -743,7 +743,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	 */
 	public void autoSave() {
 		//If the sketch exists in the sketchbook
-		if(getSketchLoc(getSupportActionBar().getTitle().toString()).exists())
+		if(getSketchLoc(getGlobalState().getSketchName()).exists())
 			//Save it to the sketchbook
 			saveSketch();
 		else
