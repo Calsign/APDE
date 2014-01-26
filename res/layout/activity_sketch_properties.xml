@@ -27,28 +27,7 @@
 	    android:layout_gravity="start"
 	    android:orientation="vertical" >
 	    
-	    <!-- Cheating here, making a fake title for the ListView... it still works the same, though -->
-	    <TextView android:id="@+id/drawer_list_title_sketch_properties"
-		    android:layout_width="fill_parent"
-		    android:layout_height="wrap_content"
-		    android:textIsSelectable="false"
-		    android:textSize="12sp"
-		    android:paddingTop="12dp"
-		    android:paddingBottom="4dp"
-		    android:paddingStart="16dp"
-		    android:paddingEnd="56dp"
-		    android:textColor="#222222"
-		    android:text="@string/drawer_list_title"
-		    android:textAllCaps="true"
-		    android:background="#EEEEEE"
-		    android:textStyle="bold" />
-	    
-	    <View 
-  			android:layout_width="fill_parent"
-  			android:layout_height="2dp"       
-   			android:background="#AAAAAA" />
-	    
-		<ListView android:id="@+id/drawer_list_sketch_properties"
+		<ListView android:id="@+id/drawer_list"
 	        android:layout_width="match_parent"
 	        android:layout_height="match_parent"
 	        android:choiceMode="singleChoice"

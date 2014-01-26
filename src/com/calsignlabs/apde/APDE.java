@@ -4,6 +4,8 @@ import java.io.File;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Environment;
 
 /**
@@ -13,6 +15,7 @@ import android.os.Environment;
 public class APDE extends Application {
 	private String sketchName;
 	private int selectedSketch;
+	private boolean example;
 	
 	private EditorActivity editor;
 	private SketchPropertiesActivity properties;
@@ -81,5 +84,51 @@ public class APDE extends Application {
 	 */
 	public File getSketchbookFolder() {
 		return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), "Sketchbook");
+	}
+	
+	/**
+	 * @return the location of the examples folder on the private internal storage
+	 */
+	public File getExamplesFolder() {
+		/* 
+		 * We're using the internal private storage directory for now
+		 * Benefits:
+		 *  - Available on all devices
+		 *  - Users can't mess with it
+		 * Downsides:
+		 *  - Adds to the app's apparent required storage
+		 *  - Will fail if the internal storage is full
+		 */
+		
+		return getDir("examples", 0);
+	}
+	
+	/**
+	 * @return the current version code of APDE
+	 */
+	public int appVersionCode() {
+		try {
+			//http://stackoverflow.com/questions/6593592/get-application-version-programatically-in-android
+			PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+			return pInfo.versionCode;
+		} catch (NameNotFoundException e) {
+			e.printStackTrace();
+		}
+		
+		return -1;
+	}
+	
+	/**
+	 * @return whether or not the current sketch is an example
+	 */
+	public boolean isExample() {
+		return example;
+	}
+	
+	/**
+	 * @param example whether or not the current sketch is an example
+	 */
+	public void setExample(boolean example) {
+		this.example = example;
 	}
 }

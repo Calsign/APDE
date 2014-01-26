@@ -50,6 +50,7 @@ public class Build {
 	public static final String PACKAGE_REGEX ="(?:^|\\s|;)package\\s+(\\S+)\\;";
 	
 	private EditorActivity editor;
+	private boolean isExample;
 	
 	public String sketchName;
 	private FileMeta[] tabs;
@@ -85,6 +86,7 @@ public class Build {
 	
 	public Build(APDE global) {
 		this.editor = global.getEditor();
+		isExample = global.isExample();
 		
 		sketchName = global.getSketchName();
 		tabs = new FileMeta[editor.tabBar.getTabCount()];
@@ -201,11 +203,23 @@ public class Build {
 		
 		try {
 			manifest = new Manifest(this);
+			
 			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
+			
+			//Enable all of the fancy preprocessor stuff
+			Preferences.setBoolean("preproc.enhanced_casting", true);
+			Preferences.setBoolean("preproc.web_colors", true);
+			Preferences.setBoolean("preproc.color_datatype", true);
+			Preferences.setBoolean("preproc.substitute_floats", true);
+			Preferences.setBoolean("preproc.substitute_unicode", true);
+			
 			Preproc preproc = new Preproc(sketchName, manifest.getPackageName());
 			
-			//TODO what if the tab containing "size()" isn't the first tab?
-			preproc.initSketchSize(tabs[0].getText());
+			//Combine all of the tabs to check for size
+			String combinedText = "";
+			for(FileMeta tab : tabs)
+				combinedText += tab.getText();
+			preproc.initSketchSize(combinedText);
 			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false);
 			
 			//Detect if the renderer is one of the OpenGL renderers
@@ -1420,7 +1434,10 @@ public class Build {
 	}
 	
 	public File getSketchFolder() {
-		return editor.getSketchLoc(sketchName);
+		if(isExample)
+			return editor.getExampleLoc(sketchName);
+		else
+			return editor.getSketchLoc(sketchName);
 	}
 	
 	public File getSketchDataFolder() {

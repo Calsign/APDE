@@ -4,7 +4,9 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.HashMap;
@@ -27,6 +29,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -187,16 +190,29 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	}
         });
         
+        //Check for an app update
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        int oldVersionNum = prefs.getInt("version_num", -1);
+        int realVersionNum = getGlobalState().appVersionCode();
+        
+        if(realVersionNum > oldVersionNum) {
+        	//We need to update the examples (in case the new release has added more)
+        	//This is some serious future-proofing... boy am I paranoid...
+        	
+        	copyAssetFolder(getAssets(), "examples", getGlobalState().getExamplesFolder().getAbsolutePath());
+        	
+        	//Make sure to update the value so we don't do this again
+        	SharedPreferences.Editor edit = prefs.edit();
+        	edit.putInt("version_num", realVersionNum);
+        	edit.commit();
+        }
+        
         //Initialize the navigation drawer
         final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer);
         final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
-        //Create an ArrayAdapter to populate the drawer's list of sketches
-        ArrayAdapter<String> items = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
-        populateWithSketches(items);
         
-        //Load the list of sketches into the drawer
-        drawerList.setAdapter(items);
-        drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        //Populate the drawer
+        forceDrawerReload();
         
         //Detect drawer sliding events
         drawerList.setOnScrollListener(new OnScrollListener() {
@@ -259,9 +275,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				
 				//Load the selected sketch
 				String sketchName = ((TextView) view).getText().toString();
-				loadSketch(sketchName);
-				drawerList.setItemChecked(position, true);
 				
+				//If it is further down on the list, it must be an example
+				if(position > getSketchCount() + 1)
+					loadExample(sketchName);
+				else
+					loadSketch(sketchName);
+				
+				drawerList.setItemChecked(position, true);
 				getGlobalState().setSelectedSketch(position);
 				
 				//Close the drawer
@@ -666,6 +687,25 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		drawer.openDrawer(drawerLayout);
 	}
     
+    public int getSketchCount() {
+    	//Get the location of the sketchbook
+    	File sketchbookLoc = getGlobalState().getSketchbookFolder();
+    	
+    	int count = 0;
+    	
+    	//If the sketchbook exists
+    	if(sketchbookLoc.exists()) {
+    		//Get a list of sketches
+	    	File[] folders = sketchbookLoc.listFiles();
+	    	for(File folder : folders)
+	    		if(folder.isDirectory())
+	    			//Count this sketch
+	    			count ++;
+    	}
+    	
+    	return count;
+    }
+    
     /**
      * Fills an ArrayAdapter with the names of sketches found in the sketchbook folder
      * 
@@ -679,6 +719,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	if(sketchbookLoc.exists()) {
     		//Get a list of sketches
 	    	File[] folders = sketchbookLoc.listFiles();
+	    	
 	    	for(File folder : folders)
 	    		if(folder.isDirectory())
 	    			//Add the sketch to the ArrayAdapter
@@ -686,6 +727,74 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
 	}
     
+    /**
+     * Fills an ArrayAdapter with the names of examples found in the examples folder (in assets)
+     * 
+     * @param items
+     */
+    protected void populateWithExamples(ArrayAdapter<String> items) {
+    	//Get the location of the examples directory
+    	File examplesLoc = getGlobalState().getExamplesFolder();
+    	
+    	//If the examples directory exists
+    	if(examplesLoc.exists()) {
+    		//Get a list of sketches
+	    	File[] folders = examplesLoc.listFiles();
+	    	
+	    	for(File folder : folders)
+	    		if(folder.isDirectory())
+	    			//Add the sketch to the ArrayAdapter
+	    			items.add(folder.getName());
+    	}
+	}
+    
+	//http://stackoverflow.com/questions/16983989/copy-directory-from-assets-to-data-folder
+    private static boolean copyAssetFolder(AssetManager assetManager, String fromAssetPath, String toPath) {
+    	try {
+    		String[] files = assetManager.list(fromAssetPath);
+    		new File(toPath).mkdirs();
+    		boolean res = true;
+    		for(String file : files)
+    			if(file.contains("."))
+    				res &= copyAsset(assetManager, fromAssetPath + "/" + file, toPath + "/" + file);
+    			else 
+    				res &= copyAssetFolder(assetManager, fromAssetPath + "/" + file, toPath + "/" + file);
+
+    		return res;
+    	} catch (Exception e) {
+    		e.printStackTrace();
+    		return false;
+    	}
+    }
+    
+	private static boolean copyAsset(AssetManager assetManager, String fromAssetPath, String toPath) {
+		InputStream in = null;
+		OutputStream out = null;
+		try {
+			in = assetManager.open(fromAssetPath);
+			new File(toPath).createNewFile();
+			out = new FileOutputStream(toPath);
+			copyFile(in, out);
+			in.close();
+			in = null;
+			out.flush();
+			out.close();
+			out = null;
+
+			return true;
+		} catch(Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+	
+	private static void copyFile(InputStream in, OutputStream out) throws IOException {
+		byte[] buffer = new byte[1024];
+		int read;
+		while((read = in.read(buffer)) != -1)
+			out.write(buffer, 0, read);
+	}
+	
 	@Override
     public void onStop() {
 		//Make sure to save the sketch
@@ -723,14 +832,31 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			String sketchName = readTempFile("sketchName.txt");
 			int selectedSketch = Integer.parseInt(readTempFile("sketchNum.txt"));
 			
-			//If the sketch is in the sketchbook folder...
-			if(getSketchLoc(sketchName).exists()) {
-				//...load it
-				getGlobalState().setSelectedSketch(selectedSketch);
-				return loadSketch(sketchName);
+			//How's this for some nested if statements?
+			
+			//Check to see if this is a sketch or an example
+			if(selectedSketch > getSketchCount() + 1) {
+				//If the sketch is in the examples folder...
+				if(getExampleLoc(sketchName).exists()) {
+					//...load it
+					getGlobalState().setSelectedSketch(selectedSketch);
+					
+					return loadExample(sketchName);
+				} else {
+					//Otherwise, load the sketch from the temp folder
+					return loadSketchTemp();
+				}
 			} else {
-				//Otherwise, load the sketch from the temp folder
-				return loadSketchTemp();
+				//If the sketch is in the sketchbook folder...
+				if(getSketchLoc(sketchName).exists()) {
+					//...load it
+					getGlobalState().setSelectedSketch(selectedSketch);
+					
+					return loadSketch(sketchName);
+				} else {
+					//Otherwise, load the sketch from the temp folder
+					return loadSketchTemp();
+				}
 			}
 		} catch(Exception e) { //Meh...
 			e.printStackTrace();
@@ -742,6 +868,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	 * Automatically save the sketch, whether it is to the sketchbook folder or to the temp folder
 	 */
 	public void autoSave() {
+		//No need to save if this is an example
+		if(getGlobalState().isExample())
+			return;
+		
 		//If the sketch exists in the sketchbook
 		if(getSketchLoc(getGlobalState().getSketchName()).exists())
 			//Save it to the sketchbook
@@ -843,6 +973,93 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	} else
     		success = false;
     	
+    	if(success) {
+    		getGlobalState().setExample(false);
+    		//Make sure the code area is editable
+//    		((CodeEditText) findViewById(R.id.code)).setEnabled(true);
+    		((CodeEditText) findViewById(R.id.code)).setFocusable(true);
+    		((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
+//    		((CodeEditText) findViewById(R.id.code)).setClickable(true);
+    	}
+    	
+    	return success;
+    }
+    
+    /**
+	 * Loads an example from the examples folder
+	 * 
+	 * @param sketchName
+	 * @return success
+	 */
+    public boolean loadExample(String sketchName) {
+    	//Get the sketch in the examples folder
+    	File sketchLoc = getExampleLoc(sketchName);
+    	boolean success;
+    	
+    	//Ensure that the sketch folder exists and is a directory
+    	if(sketchLoc.exists() && sketchLoc.isDirectory()) {
+    		getGlobalState().setSketchName(sketchName);
+    		
+    		//Get all the files in the directory
+    		File[] files = sketchLoc.listFiles();
+    		
+    		//Why do we need this...?
+    		for(FileMeta meta : tabs.values())
+    			meta.disable();
+    		
+    		//Get rid of any tabs
+    		tabs.clear();
+    		tabBar.removeAllTabs();
+    		//This method is necessary, too
+    		removeAllTabs();
+    		
+    		//Cycle through the files
+    		for(File file : files) {
+    			//Split the filename into prefix and suffix
+    			String[] folders = file.getPath().split("/");
+    			String[] parts = folders[folders.length - 1].split("\\.");
+    			//If the filename isn't formatted properly, skip this file
+    			if(parts.length != 2)
+    				continue;
+    			
+    			//Retrieve the prefix and suffix
+    			String prefix = parts[parts.length - 2];
+    			String suffix = parts[parts.length - 1];
+    			
+    			//Check to see if it's a .PDE file
+    			if(suffix.equals("pde")) {
+    				//Build a Tab Meta object
+    				FileMeta meta = new FileMeta("", "", 0, 0);
+    				meta.readData(this, file.getAbsolutePath());
+    				meta.setTitle(prefix);
+    				
+    				//Add the tab
+    				addTab(prefix, meta);
+    			}
+    		}
+    		
+    		//Update the code-view
+    		if(getSupportActionBar().getTabCount() > 0)
+    			((CodeEditText) findViewById(R.id.code)).setUpdateText(tabs.get(tabBar.getSelectedTab()).getText());
+    		else
+    			((CodeEditText) findViewById(R.id.code)).setUpdateText("");
+    		
+    		success = true;
+    		
+    		//Automatically selects and loads the new tab
+    		tabBar.selectLoadDefaultTab();
+    	} else
+    		success = false;
+    	
+    	if(success) {
+    		getGlobalState().setExample(true);
+    		//Make sure the code area isn't editable
+//    		((CodeEditText) findViewById(R.id.code)).setEnabled(false);
+    		((CodeEditText) findViewById(R.id.code)).setFocusable(false);
+    		((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
+//    		((CodeEditText) findViewById(R.id.code)).setClickable(false);
+    	}
+    	
     	return success;
     }
     
@@ -893,14 +1110,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    	//Notify the user whether or not the sketch has been saved properly
 	    	if(success) {
 	    		//Force the drawer to reload
-	    		ListView drawerList = (ListView) findViewById(R.id.drawer_list);
-	            ArrayAdapter<String> items = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
-	            populateWithSketches(items);
-	            drawerList.setAdapter(items);
+	    		forceDrawerReload();
 	            
 	            //Select the new sketch
 	            if(getGlobalState().getSelectedSketch() < 0)
-	            	getGlobalState().setSelectedSketch(drawerList.getCount() - 1);
+	            	getGlobalState().setSelectedSketch(((ListView) findViewById(R.id.drawer_list)).getCount() - 1);
 	            
 	            //Inform the user of success
 	    		message(getResources().getText(R.string.sketch_saved));
@@ -913,10 +1127,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		//TODO is this right?
     		
     		//Force the drawer to reload
-    		ListView drawerList = (ListView) findViewById(R.id.drawer_list);
-            ArrayAdapter<String> items = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
-            populateWithSketches(items);
-            drawerList.setAdapter(items);
+    		forceDrawerReload();
     		
             //Select the first sketch
             getGlobalState().setSelectedSketch(0);
@@ -1225,16 +1436,38 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     }
     
     /**
+     * @param exampleName
+     * @return the File corresponding to the sketch folder of the specified example
+     */
+    public File getExampleLoc(String exampleName) {
+    	//The location of the sketchbook
+    	File examplesLoc = getGlobalState().getExamplesFolder();
+    	
+    	//The location of the sketch
+    	return new File(examplesLoc, exampleName);
+    }
+    
+    /**
      * Reloads the navigation drawer
      */
     public void forceDrawerReload() {
-    	//Get a reference to the drawer views
-    	ListView drawerList = (ListView) findViewById(R.id.drawer_list);
-        ArrayAdapter<String> items = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
-        //Load the list of sketches into the list
-        populateWithSketches(items);
-        //Add the adapter
-        drawerList.setAdapter(items);
+        final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
+
+        //Create an ArrayAdapter to populate the drawer's list of sketches
+        SectionedListAdapter sections = new SectionedListAdapter(this);
+        
+        ArrayAdapter<String> sketches = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
+        populateWithSketches(sketches);
+        
+        ArrayAdapter<String> examples = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
+        populateWithExamples(examples);
+        
+        sections.addSection(getResources().getString(R.string.drawer_list_title_sketchbook), sketches);
+        sections.addSection(getResources().getString(R.string.drawer_list_title_examples), examples);
+
+        //Load the list of sketches into the drawer
+        drawerList.setAdapter(sections);
+        drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
     }
     
     /**
@@ -1383,21 +1616,23 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      * This CAN be called multiple times without breaking anything
      */
     private void runApplication() {
-    	//Save the sketch
-    	if(getSketchLoc(getSupportActionBar().getTitle().toString()).exists())
-    		saveSketch();
-    	else {
-    		//If the sketch has yet to be saved, inform the user
-    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getResources().getText(R.string.save_sketch_before_run_dialog_title))
-            	.setMessage(getResources().getText(R.string.save_sketch_before_run_dialog_message)).setCancelable(false)
-            	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-            	
-            	@Override
-                public void onClick(DialogInterface dialog, int which) {}
-            }).show();
-            
-            return;
+    	//No need to save an example...
+    	if(!getGlobalState().isExample()) {
+    		//Save the sketch
+    		if(getSketchLoc(getSupportActionBar().getTitle().toString()).exists())
+    			saveSketch();
+    		else {
+    			//If the sketch has yet to be saved, inform the user
+    			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    			builder.setTitle(getResources().getText(R.string.save_sketch_before_run_dialog_title))
+    			.setMessage(getResources().getText(R.string.save_sketch_before_run_dialog_message)).setCancelable(false)
+    			.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+    				@Override
+    				public void onClick(DialogInterface dialog, int which) {}
+    			}).show();
+    			
+    			return;
+    		}
     	}
     	
     	//In case the user presses the button twice, we don't want any errors

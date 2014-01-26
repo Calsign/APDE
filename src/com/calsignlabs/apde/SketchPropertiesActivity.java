@@ -51,6 +51,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	@SuppressWarnings("unused")
 	private boolean drawerOpen;
 	
+	@SuppressWarnings("deprecation")
 	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -66,12 +67,9 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		getGlobalState().setProperties(this);
 		
 		final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_sketch_properties);
-        final ListView drawerList = (ListView) findViewById(R.id.drawer_list_sketch_properties);
-        ArrayAdapter<String> items = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
-        getGlobalState().getEditor().populateWithSketches(items);
+        final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
         
-        drawerList.setAdapter(items);
-        drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        forceDrawerReload();
         
         drawerList.setOnScrollListener(new OnScrollListener() {
 			@Override
@@ -108,7 +106,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
                     
                     //Select the current sketch
                     if(getGlobalState().getSelectedSketch() < drawerList.getCount() && getGlobalState().getSelectedSketch() >= 0) {
-                    	ListView drawerList = (ListView) findViewById(R.id.drawer_list_sketch_properties);
+                    	ListView drawerList = (ListView) findViewById(R.id.drawer_list);
                     	View view = drawerList.getChildAt(getGlobalState().getSelectedSketch());
                     	if(view != null)
                     		view.setSelected(true);
@@ -133,9 +131,14 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 				getGlobalState().getEditor().autoSave();
 				
 				String sketchName = ((TextView) view).getText().toString();
-				getGlobalState().getEditor().loadSketch(sketchName);
-				view.setSelected(true);
 				
+				//If it is further down on the list, it must be an example
+				if(position > getGlobalState().getEditor().getSketchCount() + 1)
+					getGlobalState().getEditor().loadExample(sketchName);
+				else
+					getGlobalState().getEditor().loadSketch(sketchName);
+				
+				view.setSelected(true);
 				getGlobalState().setSelectedSketch(position);
 				
 				if(android.os.Build.VERSION.SDK_INT >= 11) { //Yet another unfortunate casualty of AppCompat
@@ -280,6 +283,13 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 				return true;
 			}
 		});
+		
+		//If this is an example...
+		if(getGlobalState().isExample()) {
+        	//...disable all of the preferences
+        	findPreference("prop_manifest").setEnabled(false);
+        	findPreference("prop_sketch_folder").setEnabled(false);
+        }
 	}
 	
 	private static Preference.OnPreferenceChangeListener sBindPreferenceSummaryToValueListener = new Preference.OnPreferenceChangeListener() {
@@ -588,10 +598,23 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     }
 	
 	protected void forceDrawerReload() {
-		ListView drawerList = (ListView) findViewById(R.id.drawer_list_sketch_properties);
-		ArrayAdapter<String> items = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
-        getGlobalState().getEditor().populateWithSketches(items);
-        drawerList.setAdapter(items);
+		final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
+
+        //Create an ArrayAdapter to populate the drawer's list of sketches
+        SectionedListAdapter sections = new SectionedListAdapter(this);
+        
+        ArrayAdapter<String> sketches = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
+        getGlobalState().getEditor().populateWithSketches(sketches);
+        
+        ArrayAdapter<String> examples = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
+        getGlobalState().getEditor().populateWithExamples(examples);
+        
+        sections.addSection(getResources().getString(R.string.drawer_list_title_sketchbook), sketches);
+        sections.addSection(getResources().getString(R.string.drawer_list_title_examples), examples);
+
+        //Load the list of sketches into the drawer
+        drawerList.setAdapter(sections);
+        drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
 	}
     
 	//Restart the activity with no animation

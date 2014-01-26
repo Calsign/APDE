@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/drawer_list_title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/drawer_list_header_back"
+    android:paddingBottom="6dp"
+    android:paddingEnd="56dp"
+    android:paddingStart="16dp"
+    android:paddingTop="16dp"
+    android:textAllCaps="true"
+    android:textColor="#222222"
+    android:textIsSelectable="false"
+    android:textSize="12sp"
+    android:textStyle="bold" />
