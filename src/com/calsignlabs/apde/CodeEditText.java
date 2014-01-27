@@ -273,12 +273,7 @@ public class CodeEditText extends EditText {
 	@Override
 	public void onDraw(Canvas canvas) {
 		float lineHeight = getLineHeight();
-//		float lineOffset = -getLayout().getLineDescent(0); //AH-HA! This is the metric that we need...
 		int currentLine = getCurrentLine();
-//		float xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)... because getCompoundPaddingStart() was introduced in a later API level
-		
-		//Get the width of the widest character ("m")... but this is monospace, anyway...
-//		float charWidth = this.getPaint().measureText("m");
 		
 		if(isFocused())
 			//Draw line highlight around the line that the cursor is on
@@ -292,83 +287,23 @@ public class CodeEditText extends EditText {
 		if(newSyntaxHighlighter && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
 			ScrollView scroller = (ScrollView) ((APDE) context.getApplicationContext()).getEditor().findViewById(R.id.code_scroller);
 			int topVis = (int) Math.max(scroller.getScrollY() / getLineHeight() - 1, 0); //inclusive
-			int bottomVis = (int) Math.floor(Math.min((scroller.getScrollY() + getHeight()) / getLineHeight() + 1, getLineCount())); //exclusive
-			
-			boolean multiLineComment = false;
-			boolean singleLineComment = false;
-			boolean stringLiteral = false;
-			boolean charLiteral = false;
-			
-			int startLiteral = -1;
-			
-			String prev;
-			String next;
+			int bottomVis = (int) Math.floor(Math.min((scroller.getScrollY() + scroller.getHeight()) / getLineHeight() + 1, getLineCount())); //exclusive
 			
 			for(int i = 0; i < tokens.length; i ++) {
-				Token token = tokens[i];
-				prev = (i > 0 ? tokens[i - 1].text : "");
-				next = (i < tokens.length - 1 ? tokens[i + 1].text : "");
-				
-				//Don't draw unnecessary lines
-				if(token.lineNum > bottomVis)
+				//Only draw this if we need to
+				if(tokens[i].lineNum >= topVis && tokens[i].isCustomPaint)
+					tokens[i].display(canvas);
+				else if(tokens[i].lineNum > bottomVis)
 					break;
-				
-				if(token.text.equals("\n")) {
-					singleLineComment = false;
-					stringLiteral = false;
-					charLiteral = false;
-					
-					continue;
-				}
-				
-				if(stringLiteral && prev.equals("\"") && i > startLiteral + 1)
-					stringLiteral = false;
-				
-				if(charLiteral && prev.equals("'") && i > startLiteral + 1)
-					charLiteral = false;
-				
-				if(!multiLineComment && !singleLineComment && !stringLiteral && !charLiteral) {
-					//Test for single-line comments
-					if(token.text.equals("/") && next.equals("/"))
-						singleLineComment = true;
-					//Test for multi-line comments
-					else if(token.text.equals("/") && next.equals("*"))
-						multiLineComment = true;
-				}
-				
-				//Test for String literals
-				if(!stringLiteral && !multiLineComment && !singleLineComment && !charLiteral && token.text.equals("\"")) {
-					stringLiteral = true;
-					startLiteral = i;
-				}
-				
-				//Test for char literals
-				if(!charLiteral && !multiLineComment && !singleLineComment && !stringLiteral && token.text.equals("'")) {
-					charLiteral = true;
-					startLiteral = i;
-				}
-				
-				if(i >= topVis) {
-					//Highlight comments or regular text
-					if(singleLineComment)
-						token.display(canvas, styles.get("comment_single"));
-					else if(multiLineComment)
-						token.display(canvas, styles.get("comment_multi"));
-					else if(stringLiteral)
-						token.display(canvas, styles.get("literal_string"));
-					else if(charLiteral)
-						token.display(canvas, styles.get("literal_char"));
-					else
-						token.display(canvas);
-				}
-				
-				//Test for end multi-line comments
-				if(multiLineComment)
-					if(prev.equals("*") && token.text.equals("/"))
-						multiLineComment = false;
-					
 			}
 		}
+		
+		//Below, commented out, is the old (broken in spots, but faster) syntax highlighter
+		
+//		float xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)... because getCompoundPaddingStart() was introduced in a later API level
+//		float lineOffset = -getLayout().getLineDescent(0); //AH-HA! This is the metric that we need...
+		//Get the width of the widest character ("m")... but this is monospace, anyway...
+//		float charWidth = this.getPaint().measureText("m");
 		
 //		//Syntax highlight TODO this is still very buggy
 //		if(!newSyntaxHighlighter && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
@@ -637,9 +572,84 @@ public class CodeEditText extends EditText {
 						
 			tokens[i].updatePaint(nextNonSpace);
 		}
+		
+		boolean multiLineComment = false;
+		boolean singleLineComment = false;
+		boolean stringLiteral = false;
+		boolean charLiteral = false;
+		
+		int startLiteral = -1;
+		
+		String prev = "";
+		String next;
+		
+		for(int i = 0; i < tokens.length; i ++) {
+			Token token = tokens[i];
+			next = (i < tokens.length - 1 ? tokens[i + 1].text : "");
+			
+			if(token.text.equals("\n")) {
+				singleLineComment = false;
+				stringLiteral = false;
+				charLiteral = false;
+				
+				continue;
+			}
+			
+			if(stringLiteral && prev.equals("\"") && i > startLiteral + 1)
+				stringLiteral = false;
+			
+			if(charLiteral && prev.equals("'") && i > startLiteral + 1)
+				charLiteral = false;
+			
+			if(!multiLineComment && !singleLineComment && !stringLiteral && !charLiteral) {
+				//Test for single-line comments
+				if(token.text.equals("/") && next.equals("/"))
+					singleLineComment = true;
+				//Test for multi-line comments
+				else if(token.text.equals("/") && next.equals("*"))
+					multiLineComment = true;
+			}
+			
+			//TODO Implement incomplete / invalid literals
+			
+			//Test for String literals
+			if(!stringLiteral && !multiLineComment && !singleLineComment && !charLiteral && token.text.equals("\"")) {
+				stringLiteral = true;
+				startLiteral = i;
+			}
+			
+			//Test for char literals
+			if(!charLiteral && !multiLineComment && !singleLineComment && !stringLiteral && token.text.equals("'")) {
+				charLiteral = true;
+				startLiteral = i;
+			}
+			
+			//Change paint for comments and literals
+			if(singleLineComment) {
+				token.paint = styles.get("comment_single");
+				token.isCustomPaint = true;
+			} else if(multiLineComment) {
+				token.paint = styles.get("comment_multi");
+				token.isCustomPaint = true;
+			} else if(stringLiteral) {
+				token.paint = styles.get("literal_string");
+				token.isCustomPaint = true;
+			} else if(charLiteral) {
+				token.paint = styles.get("literal_char");
+				token.isCustomPaint = true;
+			}
+			
+			//Test for end multi-line comments
+			if(multiLineComment)
+				if(prev.equals("*") && token.text.equals("/"))
+					multiLineComment = false;
+			
+			prev = token.text;
+		}
 	}
 	
 	//Unfortunately, I don't think this can work...
+	//...but I seem to be leaving a lot of old code around, so what the heck
 //	public void updateTokens(int start, int before, int count) {
 //		if(!PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true))
 //			return;
@@ -771,6 +781,8 @@ public class CodeEditText extends EditText {
 		protected int lineNum;
 		
 		protected TextPaint paint;
+		//Do we actually we need to draw this over the default text?
+		protected boolean isCustomPaint;
 		
 		protected Token(String text, int offset, int lineNum) {
 			this.text = text;
@@ -778,13 +790,15 @@ public class CodeEditText extends EditText {
 			this.lineNum = lineNum;
 			
 			paint = styles.get("base");
+			isCustomPaint = false;
 		}
 		
 		protected void updatePaint(String nextNonSpace) {
 			Keyword keyword = getKeyword(text, nextNonSpace.equals("("));
-			if(keyword != null)
+			if(keyword != null) {
 				paint = keyword.paint();
-			else
+				isCustomPaint = true;
+			} else
 				paint = styles.get("base");
 		}
 		
