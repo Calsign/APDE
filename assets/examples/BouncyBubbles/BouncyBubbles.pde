@@ -1,3 +1,9 @@
+/*
+ * [CalsignLabs]
+ * This example taken from the Processing distribution.
+ * This example has been scaled up to fill the entire display.
+ */
+
 /**
  * Bouncy Bubbles. 
  * Based on code from Keith Peters (www.bit-101.com). 

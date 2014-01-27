@@ -1,3 +1,9 @@
+/*
+ * [CalsignLabs]
+ * This example taken from the Processing distribution.
+ * This example has been scaled up to fill the entire display.
+ */
+
 /**
  * Sine Wave
  * by Daniel Shiffman.  
