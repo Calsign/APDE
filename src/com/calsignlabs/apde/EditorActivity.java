@@ -388,7 +388,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	        			keyboardVisible = false;
 	        			
 	        			//Remove any unnecessary focus from the code area
-	        			findViewById(R.id.code).clearFocus();
+	        			((CodeEditText) findViewById(R.id.code)).clearFocus();
+	        			((CodeEditText) findViewById(R.id.code)).matchingBracket = -1;
         			}
         		}
         	}

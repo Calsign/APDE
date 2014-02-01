@@ -33,6 +33,7 @@ public class CodeEditText extends EditText {
 	
 	//Paints that will always be used
 	private static Paint lineHighlight;
+	private static Paint bracketMatch;
 	private static Paint blackPaint;
 	private static Paint whitePaint;
 	
@@ -44,6 +45,7 @@ public class CodeEditText extends EditText {
 	public static final String indent = "  ";
 	
 	protected Token[] tokens;
+	protected int matchingBracket;
 	
 	public CodeEditText(Context context) {
 		super(context);
@@ -75,6 +77,11 @@ public class CodeEditText extends EditText {
 		lineHighlight.setStyle(Paint.Style.FILL);
 		lineHighlight.setColor(0x66AACCFF);
 		
+		//Create the bracket match Paint
+		bracketMatch = new Paint();
+		bracketMatch.setStyle(Paint.Style.STROKE);
+		bracketMatch.setColor(0xFF000000);
+		
 		//Create the black (default text) paint
 		blackPaint = new Paint();
 		blackPaint.setStyle(Paint.Style.FILL);
@@ -102,6 +109,8 @@ public class CodeEditText extends EditText {
 		} catch (SAXException e) {
 			e.printStackTrace();
 		}
+		
+		matchingBracket = -1;
 	}
 	
 	public void setupTextListener() {
@@ -212,6 +221,76 @@ public class CodeEditText extends EditText {
     	return result;
     }
 	
+	@Override 
+	protected void onSelectionChanged(int selStart, int selEnd) {
+		//"{}", "()", "[]" open / close matching
+		//This isn't necessarily optimized, but it doesn't seem to need it...
+		
+		int caret = getSelectionStart() - 1;
+		
+		//Make sure there is no text selection...
+		if(caret == getSelectionEnd() - 1 && caret > -1) {
+			//The character to the left of the cursor
+			char left = getText().charAt(caret);
+			//The character that we're searching for
+			char other;
+			//Up or down
+			int dir;
+			
+			//This isn't very elegant...
+			if(left == '{') {
+				other = '}';
+				dir = 1;
+			} else if(left == '}') {
+				other = '{';
+				dir = -1;
+			} else if(left == '(') {
+				other = ')';
+				dir = 1;
+			} else if(left == ')') {
+				other = '(';
+				dir = -1;
+			} else if(left == '[') {
+				other = ']';
+				dir = 1;
+			} else if(left == ']') {
+				other = '[';
+				dir = -1;
+			} else {
+				matchingBracket = -1;
+				
+				return;
+			}
+			
+			//Start on the right side (puns!)
+			if(dir == 1)
+				caret ++;
+			//Or the left...
+			if(dir == -1)
+				caret --;
+			
+			matchingBracket = -1;
+			
+			//The total opens / closes
+			int dif = 0;
+			while(caret < getText().length() && caret > -1) {
+				char next = getText().charAt(caret);
+				
+				if(next == other)
+					dif -= 1;
+				if(next == left)
+					dif += 1;
+				
+				if(dif < 0) {
+					matchingBracket = caret;
+					break;
+				}
+				
+				caret += dir;
+			}
+		}
+	}
+	
 	/**
 	 * @return the number of the currently selected line
 	 */
@@ -295,6 +374,18 @@ public class CodeEditText extends EditText {
 					tokens[i].display(canvas);
 				else if(tokens[i].lineNum > bottomVis)
 					break;
+			}
+			
+			//"{}", "()", "[]" open / close matching
+			if(matchingBracket != -1) {
+				float xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)... because getCompoundPaddingStart() was introduced in a later API level
+				float charWidth = getPaint().measureText("m");
+
+				//Calculate coordinates
+				float x = Math.max(xOffset + getLayout().getPrimaryHorizontal(matchingBracket), 1);
+				float y = lineHeight * getLayout().getLineForOffset(matchingBracket);
+
+				canvas.drawRect(x, y, x + charWidth, y + lineHeight, bracketMatch);
 			}
 		}
 		
