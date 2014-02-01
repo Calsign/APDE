@@ -373,6 +373,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	        			
 	        			//Remove the focus from the Message slider if it has it
 	        			messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back)); //TODO this is deprecated...
+	        			
+	        			((CodeEditText) findViewById(R.id.code)).updateBracketMatch();
         			}
         		} else {
         			if(keyboardVisible) {
@@ -2090,6 +2092,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			code.setUpdateText(meta.getText());
 			//Update the code area selection
 			code.setSelection(meta.getSelectionStart(), meta.getSelectionEnd());
+			code.updateBracketMatch();
 		} else {
 			//If this is selecting the first added tab
 			

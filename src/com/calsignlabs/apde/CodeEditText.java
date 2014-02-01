@@ -223,6 +223,10 @@ public class CodeEditText extends EditText {
 	
 	@Override 
 	protected void onSelectionChanged(int selStart, int selEnd) {
+		updateBracketMatch();
+	}
+	
+	public void updateBracketMatch() {
 		//"{}", "()", "[]" open / close matching
 		//This isn't necessarily optimized, but it doesn't seem to need it...
 		
