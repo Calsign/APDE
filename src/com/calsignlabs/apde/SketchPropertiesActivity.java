@@ -51,7 +51,6 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	@SuppressWarnings("unused")
 	private boolean drawerOpen;
 	
-	@SuppressWarnings("deprecation")
 	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -343,6 +342,16 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	@Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.activity_sketch_properties, menu);
+        
+        if(getGlobalState().isExample()) {
+        	//Don't let them mess with the examples!
+        	
+        	menu.findItem(R.id.menu_change_sketch_name).setVisible(false);
+        	menu.findItem(R.id.menu_delete).setVisible(false);
+        } else {
+        	menu.findItem(R.id.menu_change_sketch_name).setVisible(true);
+        	menu.findItem(R.id.menu_delete).setVisible(true);
+        }
         
         return true;
     }
