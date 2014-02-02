@@ -25,6 +25,7 @@ import processing.data.XML;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -56,6 +57,7 @@ import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
+import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
@@ -198,6 +200,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         if(realVersionNum > oldVersionNum) {
         	//We need to update the examples (in case the new release has added more)
         	//This is some serious future-proofing... boy am I paranoid...
+        	
+        	//TODO Show a loading dialog / spinner
         	
         	copyAssetFolder(getAssets(), "examples", getGlobalState().getExamplesFolder().getAbsolutePath());
         	
@@ -1537,7 +1541,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	menu.findItem(R.id.menu_tab_rename).setVisible(false);
     	
     	//So that the user can add a tab if there are none
-    	if(tabBar.getTabCount() <= 0)
+    	if(tabBar.getTabCount() <= 0 && !getGlobalState().isExample())
     		menu.findItem(R.id.menu_tab_new).setVisible(true);
         
         return true;
@@ -2114,7 +2118,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	
 	@Override
 	public void onTabReselected(Tab tab) {
-		if(!drawerOpen) {
+		if(!drawerOpen && !getGlobalState().isExample()) {
 			//Get a reference to the anchor view for the popup window
 			View anchorView = tabBar.getTabView(tabBar.getSelectedTab());
 			
