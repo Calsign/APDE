@@ -2,6 +2,8 @@ package com.calsignlabs.apde;
 
 import java.io.File;
 
+import com.calsignlabs.apde.build.Manifest;
+
 import android.annotation.SuppressLint;
 import android.app.Application;
 import android.content.pm.PackageInfo;
@@ -130,5 +132,18 @@ public class APDE extends Application {
 	 */
 	public void setExample(boolean example) {
 		this.example = example;
+	}
+	
+	/**
+	 * Note: This function loads the manifest as well.
+	 * For efficiency, call this function once and store a reference to it.
+	 * 
+	 * @return the manifest associated with the current sketch
+	 */
+	public Manifest getManifest() {
+		Manifest mf = new Manifest(new com.calsignlabs.apde.build.Build(this));
+		mf.load();
+		
+		return mf;
 	}
 }

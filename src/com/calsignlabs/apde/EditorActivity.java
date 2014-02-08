@@ -12,10 +12,6 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -1647,19 +1643,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Clear the console
     	((TextView) findViewById(R.id.console)).setText("");
     	
-    	SharedPreferences prefs = getSharedPreferences(getGlobalState().getSketchName(), 0);
-    	
     	final Build builder = new Build(getGlobalState());
-    	Build.customManifest = new AtomicBoolean(prefs.getBoolean("use_custom_manifest", false));
-    	Build.prettyName = new AtomicReference<String>(prefs.getString("prop_pretty_name", getGlobalState().getSketchName()));
-    	
-    	String[] perms = prefs.getString("permissions", "").split(",");
-    	Build.perms = new AtomicReferenceArray<String>(perms.length);
-    	for(int i = 0; i < perms.length; i ++)
-    		Build.perms.set(i, perms[i]);
-    	
-    	Build.targetSdk = new AtomicInteger(Integer.parseInt(prefs.getString("prop_target_sdk", getResources().getString(R.string.prop_target_sdk_default))));
-    	Build.orientation = new AtomicReference<String>(prefs.getString("prop_orientation", getResources().getString(R.string.prop_orientation_default)));
     	
     	//Build the sketch in a separate thread
     	Thread buildThread = new Thread(new Runnable() {

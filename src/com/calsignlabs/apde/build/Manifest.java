@@ -262,7 +262,7 @@ public class Manifest {
 	 * Save a new version of the manifest info to the build location.
 	 * Also fill in any missing attributes that aren't yet set properly.
 	 */
-	protected void writeBuild(File file, String className, boolean debug, boolean customManifest, String prettyName, String[] perms, int targetSdk, String orientation) throws IOException {
+	protected void writeBuild(File file, String className, boolean debug) throws IOException {
 		// write a copy to the build location
 		save(file);
 		
@@ -290,28 +290,6 @@ public class Manifest {
 			// http://developer.android.com/guide/topics/manifest/activity-element.html#name
 			activity.setString("android:name", "." + className); // this has to be right
 			
-			if(!customManifest) {
-				//Add the values specified in the Sketch Properties activity
-				
-				//Add the permissions
-				for(String perm : perms) {
-					XML permXML = new XML("uses-permission");
-					permXML.setString("android:name", perm);
-					mf.addChild(permXML);
-				}
-				
-				//Set the pretty name
-				if(!prettyName.equals(".")) //Don't want the default "." sketch!
-					app.setString("android:label", prettyName);
-				
-				//Set the target SDK and min SDK
-				mf.getChild("uses-sdk").setInt("android:targetSdkVersion", targetSdk);
-//				mf.getChild("uses-sdk").setInt("android:minSdkVersion", minSdk);
-				
-				//Set the orientation
-				activity.setString("android:screenOrientation", orientation);
-			}
-			
 			PrintWriter writer = new PrintWriter(file);
 			writer.print(mf.toString());
 			writer.flush();
@@ -321,7 +299,77 @@ public class Manifest {
 		}
 	}
 	
-	protected void load() {
+	//get/setCustomPermissions() - these names are misleading
+	//They refer to the permissions for this Manifest instance
+	
+	/**
+	 * @param perms
+	 */
+	public void setCustomPermissions(String[] perms) {
+		//Remove the old permissions
+		for(XML perm : xml.getChildren("uses-permission"))
+			xml.removeChild(perm);
+		
+		//Add the permissions
+		for(String perm : perms) {
+			XML permXML = new XML("uses-permission");
+			permXML.setString("android:name", perm);
+			xml.addChild(permXML);
+		}
+	}
+	
+	public String getCustomPermissions() {
+		String perms = "";
+		
+		XML[] children = xml.getChildren("uses-permission");
+		for(XML child : children)
+			perms += child.getString("android:name", "") + ",";
+		
+		return perms;
+	}
+	
+	/**
+	 * @param prettyName
+	 */
+	public void setPrettyName(String prettyName) {
+		if(!prettyName.equals(".")) //Don't want the default "." sketch!
+			xml.getChild("application").setString("android:label", prettyName);
+	}
+	
+	/**
+	 * @return
+	 */
+	public String getPrettyName() {
+		return xml.getChild("application").getString("android:label", ".");
+	}
+	
+	/**
+	 * @param targetSdk
+	 */
+	public void setTargetSdk(int targetSdk) {
+		xml.getChild("uses-sdk").setInt("android:targetSdkVersion", targetSdk);
+	}
+	
+	/**
+	 * @param context
+	 * @return
+	 */
+	public int getTargetSdk(Context context) {
+		return xml.getChild("uses-sdk").getInt("android:targetSdkVersion", Integer.parseInt(context.getResources().getString(R.string.prop_target_sdk_default)));
+	}
+	
+	/**
+	 * @param orientation
+	 */
+	public void setOrientation(String orientation) {
+		xml.getChild("application").getChild("activity").setString("android:screenOrientation", orientation);
+	}
+	
+	public String getOrientation(Context context) {
+		return xml.getChild("application").getChild("activity").getString("android:screenOrientation", context.getResources().getString(R.string.prop_orientation_default));
+	}
+	
+	public void load() {
 		File manifestFile = getManifestFile();
 		if (manifestFile.exists()) {
 			try {
@@ -362,7 +410,7 @@ public class Manifest {
 		}
 	}
 	
-	protected void save() {
+	public void save() {
 		save(getManifestFile());
 	}
 	

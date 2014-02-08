@@ -3,12 +3,6 @@
         android:title="@string/prop_manifest"
         android:key="prop_manifest">
         
-        <CheckBoxPreference android:key="prop_use_custom_manifest"
-            android:title="@string/use_custom_manifest"
-            android:summary="@string/use_custom_manifest_desc"
-            android:defaultValue="false"
-            android:disableDependentsState="true" />
-        
         <!-- Default value "." is read by the code and changed to the name of the sketch -->
         <EditTextPreference android:key="prop_pretty_name"
             android:title="@string/prop_pretty_name"
@@ -16,14 +10,12 @@
             android:maxLines="1"
 	        android:selectAllOnFocus="true"
 	        android:singleLine="true"
-	        android:inputType="text"
-	        android:dependency="prop_use_custom_manifest" />
+	        android:inputType="text" />
         
         <Preference android:key="prop_permissions"
             android:dialogTitle="@string/prop_permissions"
         	android:summary="@string/prop_permissions_desc"        
-        	android:title="@string/prop_permissions"
-        	android:dependency="prop_use_custom_manifest" />
+        	android:title="@string/prop_permissions" />
         
         <!-- This is disabled... for now -->
         <!-- <EditTextPreference android:key="prop_min_sdk"
@@ -33,8 +25,7 @@
 	        android:selectAllOnFocus="true"
 	        android:singleLine="true"
 	        android:maxLength="2"
-	        android:inputType="number"
-	        android:dependency="prop_use_custom_manifest" /> -->
+	        android:inputType="number" /> -->
         
         <EditTextPreference android:key="prop_target_sdk"
             android:title="@string/prop_target_sdk"
@@ -43,15 +34,13 @@
 	        android:selectAllOnFocus="true"
 	        android:singleLine="true"
 	        android:maxLength="2"
-	        android:inputType="number"
-	        android:dependency="prop_use_custom_manifest" />
+	        android:inputType="number" />
         
         <ListPreference android:key="prop_orientation"
 	        android:title="@string/prop_orientation"
 	        android:entries="@array/orientations"
 	        android:entryValues="@array/orientation_values"
-	        android:defaultValue="@string/prop_orientation_default"
-	        android:dependency="prop_use_custom_manifest" />
+	        android:defaultValue="@string/prop_orientation_default" />
 	</PreferenceCategory>
 	
     <PreferenceCategory 

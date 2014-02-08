@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.Map.Entry;
 
+import com.calsignlabs.apde.build.Manifest;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import android.annotation.SuppressLint;
@@ -16,6 +17,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
@@ -50,6 +52,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	private ActionBarDrawerToggle drawerToggle;
 	@SuppressWarnings("unused")
 	private boolean drawerOpen;
+	
+	private OnSharedPreferenceChangeListener prefListener;
 	
 	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 	@Override
@@ -223,6 +227,17 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		}
 	}
 	
+	public static void updatePrefs(APDE global) {
+		Manifest mf = global.getManifest();
+		
+		SharedPreferences.Editor edit = global.getSharedPreferences(global.getSketchName(), 0).edit();
+		edit.putString("prop_pretty_name", mf.getPrettyName());
+		edit.putString("permissions", mf.getCustomPermissions());
+		edit.putString("prop_target_sdk", Integer.toString(mf.getTargetSdk(global)));
+		edit.putString("prop_orientation", mf.getOrientation(global));
+		edit.commit();
+	}
+	
 	@SuppressWarnings("deprecation")
 	private void setupSimplePreferencesScreen() {
 		if(!isSimplePreferences(this))
@@ -230,6 +245,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		
 		//Switch to the preferences for the current sketch
 		getPreferenceManager().setSharedPreferencesName(getGlobalState().getSketchName());
+		
+		updatePrefs(getGlobalState());
 		
 		// In the simplified UI, fragments are not used at all and we instead
 		// use the older PreferenceActivity APIs.
@@ -289,6 +306,31 @@ public class SketchPropertiesActivity extends PreferenceActivity {
         	findPreference("prop_manifest").setEnabled(false);
         	findPreference("prop_sketch_folder").setEnabled(false);
         }
+		
+		//This can't be an anonymous class because SharedPreferences keeps listeners in a WeakHashMap...
+		//...or a local instance, for that matter
+		//StackOverflow: http://stackoverflow.com/questions/2542938/sharedpreferences-onsharedpreferencechangelistener-not-being-called-consistently
+		prefListener = new OnSharedPreferenceChangeListener() {
+			@Override
+			public void onSharedPreferenceChanged(SharedPreferences pref, String key) {
+				Manifest mf = getGlobalState().getManifest();
+				
+				if(key.equals("prop_pretty_name"))
+					mf.setPrettyName(pref.getString(key, "."));
+				if(key.equals("permissions"))
+					mf.setCustomPermissions(pref.getString(key, "").split(","));
+				if(key.equals("prop_target_sdk"))
+					mf.setTargetSdk(Integer.parseInt(pref.getString("prop_target_sdk", getResources().getString(R.string.prop_target_sdk_default))));
+				if(key.equals("prop_orientation"))
+					mf.setOrientation(pref.getString("prop_orientation", getResources().getString(R.string.prop_orientation_default)));
+				
+				mf.save();
+			}
+		};
+		
+		//Detect changes to the preferences so that we can save them to the manifest file directly
+		//TODO This isn't an optimal solution - we still use SharedPreferences
+		getSharedPreferences(getGlobalState().getSketchName(), 0).registerOnSharedPreferenceChangeListener(prefListener);
 	}
 	
 	private static Preference.OnPreferenceChangeListener sBindPreferenceSummaryToValueListener = new Preference.OnPreferenceChangeListener() {
@@ -329,6 +371,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		return (context.getResources().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_XLARGE;
 	}
 	
+	@SuppressWarnings("unused")
 	private static boolean isSimplePreferences(Context context) {
 		return ALWAYS_SIMPLE_PREFS
 				|| Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB

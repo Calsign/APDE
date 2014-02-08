@@ -24,9 +24,6 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -77,12 +74,6 @@ public class Build {
 	private static final String ICON_36 = "icon-36.png";
 	
 	private static AtomicBoolean running;
-	
-	public static AtomicBoolean customManifest;
-	public static AtomicReference<String> prettyName;
-	public static AtomicReferenceArray<String> perms;
-	public static AtomicInteger targetSdk;
-	public static AtomicReference<String> orientation;
 	
 	public Build(APDE global) {
 		this.editor = global.getEditor();
@@ -241,12 +232,8 @@ public class Build {
 			}
 			
 			if(sketchClassName != null) {
-				String[] permsList = new String[perms.length()];
-				for(int i = 0; i < permsList.length; i ++)
-					permsList[i] = perms.get(i);
-				
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
-				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"), customManifest.get(), prettyName.get(), permsList, targetSdk.get(), orientation.get());
+				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
 				
 				if(!running.get()) { //CHECK
 					cleanUpHalt();
