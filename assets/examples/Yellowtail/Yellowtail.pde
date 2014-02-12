@@ -2,9 +2,6 @@
  * [CalsignLabs]
  * This example taken from the Processing distribution.
  * This example has been scaled up to fill the entire display.
- * 
- * Yellowtail is currently broken. If you attempt to run it, it will crash.
- * This is a known bug (#1). It is being actively worked on.
  */
 
 /**
