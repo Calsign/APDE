@@ -517,6 +517,8 @@ public class Build {
 			return;
 		}
 		
+		//TODO Switch over to AAPT...
+		
 //		//Run AAPT
 //		try {
 //			System.out.println("Running AAPT...");
