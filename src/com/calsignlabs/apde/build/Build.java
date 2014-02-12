@@ -366,6 +366,28 @@ public class Build {
 		
 		editor.messageExt(editor.getResources().getString(R.string.run_aapt));
 		
+		//Copy GLSL shader files
+		
+		//GLSL files need to be placed in the root of the APK file
+		File glslFolder = new File(binFolder, "processing.zip");
+		
+		try {
+			//Copy the zip archive
+			InputStream inputStream = editor.getAssets().open("glsl/processing.zip");
+			createFileFromInputStream(inputStream, glslFolder);
+		} catch(IOException e) { //Uh-oh...
+			System.out.println("Failed to copy GLSL resources");
+			e.printStackTrace();
+			
+			cleanUpError();
+			return;
+		}
+		
+		if(!running.get()) { //CHECK
+			cleanUpHalt();
+			return;
+		}
+		
 		//Run AAPT
 		try {
 			System.out.println("Running AAPT...");
@@ -480,6 +502,7 @@ public class Build {
 				"-u",
 				"-z", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res", //The location of the output .apk.res file
 				"-f", binFolder.getAbsolutePath() + "/classes.dex", //The location of the DEX class file
+				"-z", glslFolder.getAbsolutePath(), //Location of GLSL files
 				"-rf", srcFolder.getAbsolutePath() //The location of the source folder
 			};
 			
@@ -493,6 +516,31 @@ public class Build {
 			cleanUpError();
 			return;
 		}
+		
+//		//Run AAPT
+//		try {
+//			System.out.println("Running AAPT...");
+//			
+//			String[] args = {
+//					aaptLoc.getAbsolutePath(), //The location of AAPT
+//					"package", "-v", "-f",
+//					"-S", buildFolder.getAbsolutePath() + "/res/", //The location of the /res folder
+//					"-J", genFolder.getAbsolutePath(), //The location of the /gen folder
+//					"-M", buildFolder.getAbsolutePath() + "/AndroidManifest.xml", //The location of the AndroidManifest.xml file
+//					"-I", androidJarLoc.getAbsolutePath(), //The location of the android.jar resource
+//					"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res" //The location of the output .apk.res file
+//			};
+//			
+//			aaptProc = Runtime.getRuntime().exec(args);
+//			
+//			System.out.println("Ran AAPT successfully");
+//		} catch(IOException e) {
+//			System.out.println("AAPT failed");
+//			e.printStackTrace();
+//			
+//			cleanUpError();
+//			return;
+//		}
 		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
@@ -813,7 +861,7 @@ public class Build {
 //			importedLibraries.add(core);
 //			classPath += core.getClassPath();
 //		}
-//		
+		
 //		for (String item : result.extraImports) {
 //			// remove things up to the last dot
 //			int dot = item.lastIndexOf('.');
@@ -920,6 +968,23 @@ public class Build {
 		foundMain = preprocessor.hasMethod("main");
 		return result.className;
 	}
+	
+	protected boolean ignorableImport(String pkg) {
+	    if (pkg.startsWith("android.")) return true;
+	    if (pkg.startsWith("java.")) return true;
+	    if (pkg.startsWith("javax.")) return true;
+	    if (pkg.startsWith("org.apache.http.")) return true;
+	    if (pkg.startsWith("org.json.")) return true;
+	    if (pkg.startsWith("org.w3c.dom.")) return true;
+	    if (pkg.startsWith("org.xml.sax.")) return true;
+
+	    if (pkg.startsWith("processing.core.")) return true;
+	    if (pkg.startsWith("processing.data.")) return true;
+	    if (pkg.startsWith("processing.event.")) return true;
+	    if (pkg.startsWith("processing.opengl.")) return true;
+
+	    return false;
+	  }
 
 	protected int findErrorFile(int errorLine) {
 		for (int i = tabs.length - 1; i > 0; i --) {
