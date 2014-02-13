@@ -597,15 +597,18 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     	
     	if(keyBindings.get("new_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		addTabWithDialog();
+    		if(!getGlobalState().isExample())
+    			addTabWithDialog();
     		return true;
     	}
     	if(keyBindings.get("delete_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		deleteTab();
+    		if(!getGlobalState().isExample())
+    			deleteTab();
     		return true;
     	}
     	if(keyBindings.get("rename_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		renameTab();
+    		if(!getGlobalState().isExample())
+    			renameTab();
     		return true;
     	}
     	
@@ -1890,7 +1893,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	 * Creates a user input dialog for renaming the current tab
 	 */
     private void renameTab() {
-    	if(tabs.size() > 0)
+    	if(tabs.size() > 0 && !getGlobalState().isExample())
     		createInputDialog(getResources().getString(R.string.tab_rename_dialog_title), getResources().getString(R.string.tab_rename_dialog_message), tabBar.getSelectedTab().getText().toString(), RENAME_TAB);
     }
     
@@ -1898,6 +1901,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      * Creates a user input dialog for deleting the current tab
      */
     private void deleteTab() {
+    	if(getGlobalState().isExample())
+    		return;
+    	
     	AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(R.string.delete_dialog_title)
         	.setMessage(R.string.delete_dialog_message)
