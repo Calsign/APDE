@@ -119,9 +119,7 @@ public class CodeEditText extends EditText {
 			public void afterTextChanged(Editable editable) {}
 			
 			@Override
-			public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-				
-			}
+			public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 			
 			@Override
 			public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -365,9 +363,15 @@ public class CodeEditText extends EditText {
 		//Draw base text
 		super.onDraw(canvas);
 		
-		boolean newSyntaxHighlighter = true;
+		//If the syntax highlighter hasn't run yet...
+		//Make sure this doesn't break
+		if(tokens == null) {
+			//Check again
+			invalidate();
+			return;
+		}
 		
-		if(newSyntaxHighlighter && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
+		if(PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
 			ScrollView scroller = (ScrollView) ((APDE) context.getApplicationContext()).getEditor().findViewById(R.id.code_scroller);
 			int topVis = (int) Math.max(scroller.getScrollY() / getLineHeight() - 1, 0); //inclusive
 			int bottomVis = (int) Math.floor(Math.min((scroller.getScrollY() + scroller.getHeight()) / getLineHeight() + 1, getLineCount())); //exclusive
@@ -393,426 +397,113 @@ public class CodeEditText extends EditText {
 			}
 		}
 		
-		//Below, commented out, is the old (broken in spots, but faster) syntax highlighter
-		
-//		float xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)... because getCompoundPaddingStart() was introduced in a later API level
-//		float lineOffset = -getLayout().getLineDescent(0); //AH-HA! This is the metric that we need...
-		//Get the width of the widest character ("m")... but this is monospace, anyway...
-//		float charWidth = this.getPaint().measureText("m");
-		
-//		//Syntax highlight TODO this is still very buggy
-//		if(!newSyntaxHighlighter && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
-//			//Split the text into lines
-//			String[] lines = getText().toString().split("\n");
-//			int topVis = (int) Math.floor(getScrollY() / getLineHeight()); //inclusive
-//			int bottomVis = (int) Math.floor(Math.min((getScrollY() + getHeight()) / getLineHeight() + 1, lines.length)); //exclusive
-//			
-//			//Only highlight the text that's visible
-//			boolean multilineComment = false;
-//			for(int i = 0; i < bottomVis; i ++) {
-//				if(i >= topVis) {
-//					//Get the list of highlight-able items
-//					String[] items = PApplet.splitTokens(lines[i], "()[]{}=+-/*%&|?:;<>,. "); //TODO is this all of them?
-//					
-//					//Highlight words
-//					syntaxHighlightForKeywords(lines[i], i, items, canvas);
-//					
-//					int commentStart = -1;
-//					
-//					//Test for comments
-//					if(lines[i].indexOf('/') != -1) {
-//						//Test for single-line ("//") comments
-//						{
-//							String test = lines[i];
-//							int offset = 0;
-//							while(commentStart == -1) {
-//								//Get the text to the right of the first slash ("/") character
-//								int first = test.indexOf("/");
-//								offset += first;
-//								test = test.substring(first + 1, test.length());
-//								
-//								//If there cannot be a comment in this line - breaks out of the loop
-//								if(test.length() == 0 || test.indexOf('/') == -1)
-//									break;
-//								
-//								//Test to see if the slashes are inside a String literal
-//								int numQuotesBefore = lines[i].substring(0, offset + 1).split("\"").length - 1;
-//								if(numQuotesBefore % 2 == 1)
-//									continue;
-//								
-//								//If the next character is also a slash - breaks out of the loop
-//								if(test.charAt(0) == '/')
-//									commentStart = offset;
-//							}
-//							
-//							//Highlight single-line comment
-//							if(commentStart != -1) {
-//								//Calculate coordinates
-//								float x = (xOffset + commentStart * charWidth);
-//								float y = lineOffset - 10 + (i + 1) * lineHeight;
-//								
-//								//TODO clear the original text... this is close enough for now
-//								
-//								//Draw highlighted text
-//								canvas.drawText(lines[i].substring(commentStart, lines[i].length()), x, y, styles.get("comment_single"));
-//							}
-//						}
-//						
-//						//Test for multi-line ("/*") comments //TODO multiple multi-line comments per line
-//						{
-//							int multilineCommentStart = -1;
-//							
-//							String test = lines[i];
-//							int offset = 0;
-//							while(multilineCommentStart == -1) {
-//								//If there cannot be a comment in this line - breaks out of the loop
-//								if(test.length() == 0 || test.indexOf("/*") == -1)
-//									break;
-//								
-//								//Get the text to the right of the first slash ("/") character
-//								int first = test.indexOf("/");
-//								offset += first;
-//								test = test.substring(first + 1, test.length());
-//								
-//								//Test to see if the slashes are inside a String literal
-//								int numQuotesBefore = lines[i].substring(0, offset + 1).split("\"").length - 1;
-//								if(numQuotesBefore % 2 == 1)
-//									continue;
-//								
-//								//If the next character is an asterisk - breaks out of the loop
-//								if(test.charAt(0) == '*')
-//									multilineCommentStart = offset;
-//							}
-//							
-//							//Highlight multi-line comment
-//							if(multilineCommentStart != -1 && (commentStart == -1 ? true : multilineCommentStart < commentStart)) {
-//								//Check to see if the multi-line comment ends on this line (kind an oxymoron, isn't it?)
-//								int commentEnd = test.indexOf("*/") + offset;
-//								
-//								//Calculate coordinates
-//								float x = (xOffset + multilineCommentStart * charWidth);
-//								float y = lineOffset - 10 + (i + 1) * lineHeight;
-//								
-//								//TODO clear the original text... this is close enough for now
-//								
-//								//Draw highlighted text
-//								canvas.drawText(lines[i].substring(multilineCommentStart, commentEnd == offset - 1 ? lines[i].length() : commentEnd + 3), x, y, styles.get("comment_multi"));
-//								
-//								if(commentEnd == offset - 1)
-//									multilineComment = true;
-//								
-//								commentStart = Math.min(commentStart, multilineCommentStart);
-//							}
-//						}
-//					}
-//					
-//					//Highlight all String literals
-//					if(lines[i].indexOf("\"") != -1) {
-//						String test = lines[i];
-//						int offset = 0;
-//						while(test.indexOf("\"") != -1) {
-//							//If there cannot be another String literal - breaks out of the loop
-//							if(test.length() == 0 || (commentStart != -1 && offset >= commentStart))
-//								break;
-//							
-//							//Get the text to the right of the first quote
-//							int first = test.indexOf("\"");
-//							int last = 0;
-//							if(test.length() > first + 1) {
-//								String rest = test.substring(first + 1, test.length());
-//								last = rest.indexOf("\"") + first + 1;
-//							}
-//							
-//							//If this String literal doesn't contain a closing quote
-//							boolean incomplete = false;
-//							
-//							if(last <= first) {
-//								 last = test.length();
-//								 incomplete = true;
-//							}
-//							
-//							if(last > test.length())
-//								last = test.length();
-//							
-//							//If this is in a comment, bail out
-//							if(commentStart != -1 && last + offset >= commentStart)
-//								break;
-//							
-//							//Calculate coordinates
-//							float x = (xOffset + (first + offset) * charWidth);
-//							float y = lineOffset - 10 + (i + 1) * lineHeight;
-//							
-//							//TODO clear the original text... this is close enough for now
-//							
-//							//Draw highlighted text
-//							canvas.drawText(lines[i].substring(first + offset, last + offset + (incomplete ? 0 : 1)), x, y, incomplete ? styles.get("literal_string_incomplete") : styles.get("literal_string"));
-//							
-//							//Get the remainder of the line
-//							if(test.length() > last + 1) {
-//								offset += last + 1;
-//								test = test.substring(last + 1, test.length());
-//							} else
-//								break;
-//						}
-//					}
-//					
-//					if(multilineComment) {
-//						//Get the end of the comment (if it's on this line)
-//						int commentEnd = lines[i].indexOf("*/");
-//						
-//						//Calculate coordinates
-//						float x = xOffset;
-//						float y = lineOffset - 10 + (i + 1) * lineHeight;
-//						
-//						//TODO clear the original text... this is close enough for now
-//						
-//						//Draw highlighted text
-//						canvas.drawText(lines[i].substring(0, commentEnd == -1 ? lines[i].length() : commentEnd + 2), x, y, styles.get("comment_multi"));
-//						
-//						if(commentEnd != -1)
-//							multilineComment = false;
-//					}
-//				} else { //This is for the lines that don't show on the screen but still need to be checked for multi-line comments that carry over
-//					int commentStart = -1;
-//					
-//					//Test for single-line comment
-//					{
-//						String test = lines[i];
-//						int offset = 0;
-//						while(commentStart == -1) {
-//							//Get the text to the right of the first slash ("/") character
-//							int first = test.indexOf("/");
-//							offset += first;
-//							test = test.substring(first + 1, test.length());
-//							
-//							//If there cannot be a comment in this line - breaks out of the loop
-//							if(test.length() == 0 || test.indexOf('/') == -1)
-//								break;
-//							
-//							//Test to see if the slashes are inside a String literal
-//							int numQuotesBefore = lines[i].substring(0, offset + 1).split("\"").length - 1;
-//							if(numQuotesBefore % 2 == 1)
-//								continue;
-//							
-//							//If the next character is also a slash - breaks out of the loop
-//							if(test.charAt(0) == '/')
-//								commentStart = offset;
-//						}
-//					}
-//					
-//					if(lines[i].indexOf("/*") != -1) {
-//						int multilineCommentStart = -1;
-//						
-//						String test = lines[i];
-//						int offset = 0;
-//						while(multilineCommentStart == -1) {
-//							//Get the text to the right of the first slash ("/") character
-//							int first = test.indexOf("/");
-//							offset += first;
-//							test = test.substring(first + 1, test.length());
-//							
-//							//If there cannot be a comment in this line - breaks out of the loop
-//							if(test.length() == 0 || (test.indexOf('/') == -1 && test.indexOf('*') == -1))
-//								break;
-//							
-//							//Test to see if the slashes are inside a String literal
-//							int numQuotesBefore = lines[i].substring(0, offset + 1).split("\"").length - 1;
-//							if(numQuotesBefore % 2 == 1)
-//								continue;
-//							
-//							//If the next character is an asterisk - breaks out of the loop
-//							if(test.charAt(0) == '*')
-//								multilineCommentStart = offset;
-//						}
-//						
-//						if(multilineCommentStart != -1 && (commentStart == -1 ? true : multilineCommentStart < commentStart)) {
-//							//Check to see if the multi-line comment ends on this line (kind an oxymoron, isn't it?)
-//							int commentEnd = test.indexOf("*/") + offset;
-//							
-//							if(commentEnd == offset - 1)
-//								multilineComment = true;
-//						}
-//					}
-//					
-//					//Check to see if the multi-line comment has ended
-//					if(multilineComment) {
-//						//Get the end of the comment (if it's on this line)
-//						int commentEnd = lines[i].indexOf("*/");
-//						
-//						if(commentEnd != -1)
-//							multilineComment = false;
-//					}
-//				}
-//			}
-//		}
+		//Now that we've multi-threaded the new syntax highlighter, we don't need the old one
+		//It's still here in memory...
 	}
 	
-	public void updateTokens() {
+	public synchronized void updateTokens() {
 		if(!PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true))
 			return;
 		
-		tokens = splitTokens(getText().toString(), 0, new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '"', '\'', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' '});
-		
-		for(int i = 0; i < tokens.length; i ++) {
-			String nextNonSpace = "";
-			for(int j = i + 1; j < tokens.length; j ++) {
-				String next = tokens[j].text;
+		new Thread(new Runnable() {
+			public void run() {
+				Token[] tempTokens = splitTokens(getText().toString(), 0, new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '"', '\'', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' '});
+
+				for(int i = 0; i < tempTokens.length; i ++) {
+					String nextNonSpace = "";
+					for(int j = i + 1; j < tempTokens.length; j ++) {
+						String next = tempTokens[j].text;
+
+						if(next.equals(" ") || next.equals("\n"))
+							continue;
+
+						nextNonSpace = next;
+						break;
+					}
+
+					tempTokens[i].updatePaint(nextNonSpace);
+				}
+
+				boolean multiLineComment = false;
+				boolean singleLineComment = false;
+				boolean stringLiteral = false;
+				boolean charLiteral = false;
+
+				int startLiteral = -1;
+
+				String prev = "";
+				String next;
+
+				for(int i = 0; i < tempTokens.length; i ++) {
+					Token token = tempTokens[i];
+					next = (i < tempTokens.length - 1 ? tempTokens[i + 1].text : "");
+
+					if(token.text.equals("\n")) {
+						singleLineComment = false;
+						stringLiteral = false;
+						charLiteral = false;
+
+						continue;
+					}
+
+					if(stringLiteral && prev.equals("\"") && i > startLiteral + 1)
+						stringLiteral = false;
+
+					if(charLiteral && prev.equals("'") && i > startLiteral + 1)
+						charLiteral = false;
+
+					if(!multiLineComment && !singleLineComment && !stringLiteral && !charLiteral) {
+						//Test for single-line comments
+						if(token.text.equals("/") && next.equals("/"))
+							singleLineComment = true;
+						//Test for multi-line comments
+						else if(token.text.equals("/") && next.equals("*"))
+							multiLineComment = true;
+					}
+
+					//TODO Implement incomplete / invalid literals
+
+					//Test for String literals
+					if(!stringLiteral && !multiLineComment && !singleLineComment && !charLiteral && token.text.equals("\"")) {
+						stringLiteral = true;
+						startLiteral = i;
+					}
+
+					//Test for char literals
+					if(!charLiteral && !multiLineComment && !singleLineComment && !stringLiteral && token.text.equals("'")) {
+						charLiteral = true;
+						startLiteral = i;
+					}
+
+					//Change paint for comments and literals
+					if(singleLineComment) {
+						token.paint = styles.get("comment_single");
+						token.isCustomPaint = true;
+					} else if(multiLineComment) {
+						token.paint = styles.get("comment_multi");
+						token.isCustomPaint = true;
+					} else if(stringLiteral) {
+						token.paint = styles.get("literal_string");
+						token.isCustomPaint = true;
+					} else if(charLiteral) {
+						token.paint = styles.get("literal_char");
+						token.isCustomPaint = true;
+					}
+
+					//Test for end multi-line comments
+					if(multiLineComment)
+						if(prev.equals("*") && token.text.equals("/"))
+							multiLineComment = false;
+
+					prev = token.text;
+				}
 				
-				if(next.equals(" ") || next.equals("\n"))
-					continue;
+				tokens = tempTokens;
 				
-				nextNonSpace = next;
-				break;
+				postInvalidate();
 			}
-						
-			tokens[i].updatePaint(nextNonSpace);
-		}
-		
-		boolean multiLineComment = false;
-		boolean singleLineComment = false;
-		boolean stringLiteral = false;
-		boolean charLiteral = false;
-		
-		int startLiteral = -1;
-		
-		String prev = "";
-		String next;
-		
-		for(int i = 0; i < tokens.length; i ++) {
-			Token token = tokens[i];
-			next = (i < tokens.length - 1 ? tokens[i + 1].text : "");
-			
-			if(token.text.equals("\n")) {
-				singleLineComment = false;
-				stringLiteral = false;
-				charLiteral = false;
-				
-				continue;
-			}
-			
-			if(stringLiteral && prev.equals("\"") && i > startLiteral + 1)
-				stringLiteral = false;
-			
-			if(charLiteral && prev.equals("'") && i > startLiteral + 1)
-				charLiteral = false;
-			
-			if(!multiLineComment && !singleLineComment && !stringLiteral && !charLiteral) {
-				//Test for single-line comments
-				if(token.text.equals("/") && next.equals("/"))
-					singleLineComment = true;
-				//Test for multi-line comments
-				else if(token.text.equals("/") && next.equals("*"))
-					multiLineComment = true;
-			}
-			
-			//TODO Implement incomplete / invalid literals
-			
-			//Test for String literals
-			if(!stringLiteral && !multiLineComment && !singleLineComment && !charLiteral && token.text.equals("\"")) {
-				stringLiteral = true;
-				startLiteral = i;
-			}
-			
-			//Test for char literals
-			if(!charLiteral && !multiLineComment && !singleLineComment && !stringLiteral && token.text.equals("'")) {
-				charLiteral = true;
-				startLiteral = i;
-			}
-			
-			//Change paint for comments and literals
-			if(singleLineComment) {
-				token.paint = styles.get("comment_single");
-				token.isCustomPaint = true;
-			} else if(multiLineComment) {
-				token.paint = styles.get("comment_multi");
-				token.isCustomPaint = true;
-			} else if(stringLiteral) {
-				token.paint = styles.get("literal_string");
-				token.isCustomPaint = true;
-			} else if(charLiteral) {
-				token.paint = styles.get("literal_char");
-				token.isCustomPaint = true;
-			}
-			
-			//Test for end multi-line comments
-			if(multiLineComment)
-				if(prev.equals("*") && token.text.equals("/"))
-					multiLineComment = false;
-			
-			prev = token.text;
-		}
+		}).start();
 	}
-	
-	//Unfortunately, I don't think this can work...
-	//...but I seem to be leaving a lot of old code around, so what the heck
-//	public void updateTokens(int start, int before, int count) {
-//		if(!PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true))
-//			return;
-//		
-//		int firstIndex = -1;
-//		int lastIndex = -1;
-//		
-//		//Update all affected lines TODO Theoretically, we can do better than this... but that's a challenge for later
-//		int firstPos = getText().toString().substring(0, start).lastIndexOf('\n') + 1;
-//		int lastPos = getText().toString().substring(start).indexOf('\n');
-//		
-//		if(firstPos < 0)
-//			firstPos = 0;
-//		if(lastPos < 0 || lastPos < firstPos)
-//			lastPos = getText().toString().length();
-//		
-//		int off = 0;
-//		for(int i = 0; i < tokens.length; i ++) {
-//			off += tokens[i].text.length();
-//			
-//			if(off >= firstPos && firstIndex < 0)
-//				firstIndex = i;
-//			if(off > lastPos) {
-//				lastIndex = i;
-//				break;
-//			}
-//		}
-//		
-//		if(firstIndex < 0)
-//			firstIndex = 0;
-//		if(lastIndex < 0)
-//			lastIndex = tokens.length - 1;
-//		
-//		String newText = getText().toString().substring(firstPos, lastPos);
-//		
-//		Token[] firstHalf = Arrays.copyOfRange(tokens, 0, firstIndex);
-//		Token[] newTokens = splitTokens(newText, tokens[firstIndex].lineNum, new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '"', '\'', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' '});
-//		Token[] lastHalf = Arrays.copyOfRange(tokens, lastIndex, tokens.length);
-//		
-//		for(int i = 0; i < newTokens.length; i ++) {
-//			String nextNonSpace = "";
-//			for(int j = i + 1; j < newTokens.length; j ++) {
-//				String next = newTokens[j].text;
-//				
-//				if(next.equals(" ") || next.equals("\n"))
-//					continue;
-//				
-//				nextNonSpace = next;
-//				break;
-//			}
-//						
-//			newTokens[i].updatePaint(nextNonSpace);
-//		}
-//		
-//		tokens = concat(concat(firstHalf, newTokens), lastHalf);
-//		
-//		System.out.println("Updated: " + firstPos + " to " + lastPos);
-//	}
-	
-	//Concatenate two Token arrays
-//	private Token[] concat(Token[] a, Token[] b) {
-//		int aLen = a.length;
-//		int bLen = b.length;
-//		Token[] c = new Token[aLen + bLen];
-//		System.arraycopy(a, 0, c, 0, aLen);
-//		System.arraycopy(b, 0, c, aLen, bLen);
-//		return c;
-//	}
 	
 	//Called internally to get a list of all tokens in an input String, such that each token may be syntax highlighted with a different color
 	//NOTE: This is not the same as PApplet.splitTokens()
@@ -925,115 +616,6 @@ public class CodeEditText extends EditText {
 			canvas.drawText(text, x, y, customPaint);
 		}
 	}
-	
-//	private void highlightToken(Token token, float offsetY, Canvas canvas) {
-//		int xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)
-//		float charWidth = getPaint().measureText("m");
-//		
-//		//Set default paint
-//		TextPaint paint;
-//		
-//		//Load custom paint
-//		TextPaint highlightPaint = syntax.get(token.text);
-//		if(highlightPaint != null)
-//			paint = highlightPaint;
-//		else
-//			paint = styles.get("base");
-//		
-//		//Calculate coordinates
-//		float x = (xOffset + token.offset * charWidth);
-//		float y = offsetY;
-//		
-//		//Draw highlighted text
-//		canvas.drawText(token.text, x, y, paint);
-//	}
-//	
-//	private void highlightToken(Token token, float offsetY, Canvas canvas, TextPaint paint) {
-//		int xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)
-//		float charWidth = this.getPaint().measureText("m");
-//		
-//		//Calculate coordinates
-//		float x = (xOffset + token.offset * charWidth);
-//		float y = offsetY;
-//		
-//		//Draw highlighted text
-//		canvas.drawText(token.text, x, y, paint);
-//	}
-	
-//	/**
-//	 * Utility function, highlights a specific line with all matches of all keywords
-//	 * 
-//	 * @param line
-//	 * @param lineNum
-//	 * @param items
-//	 * @param canvas
-//	 */
-//	private void syntaxHighlightForKeywords(String line, int lineNum, String[] items, Canvas canvas) {
-//		int lineHeight = getLineHeight();
-//		int lineOffset = Math.round(PApplet.map(textSize, 14, 32, 6, 0)); //TODO why does this work?
-//		int xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)
-//		
-//		//Get the width of the widest character ("m")... but this is monospace, anyway...
-//		float charWidth = this.getPaint().measureText("m");
-//		
-//		//Iterations of each keyword
-//		HashMap<String, Integer> iter = new HashMap<String, Integer>();
-//		
-//		for(int i = 0; i < items.length; i ++) {
-//			String item = items[i];
-//			
-//			if(syntax.containsKey(item)) {
-//				TextPaint paint;
-//				
-//				try {
-//					paint = syntax.get(item);
-//				} catch(Exception e) {
-//					//A custom syntax template is badly formed
-//					//TODO send message to user
-//					e.printStackTrace();
-//					continue;
-//				}
-//					
-//				int it;
-//				
-//				if(iter.containsKey(item))
-//					it = iter.get(item);
-//				else
-//					it = 0;
-//				
-//				//Get the offset of the keyword
-//				int pos = recursiveSubstringIndexOf(line, it, item);
-//				
-//				//Calculate coordinates
-//				float x = (xOffset + pos * charWidth);
-//				float y = lineOffset - 10 + (lineNum + 1) * lineHeight;
-//				
-//				//TODO clear the original text... this is close enough for now
-//				
-//				//Draw highlighted text
-//				canvas.drawText(item, x, y, paint);
-//				
-//				Integer num = Integer.valueOf(it + 1);
-//				iter.put(item, num);
-//			}
-//		}
-//	}
-	
-//	//Find the index of the given sequence "ind" in the String "string" at offset "iter"
-//	private int recursiveSubstringIndexOf(String string, int iter, String ind) {
-//		String str = string;
-//		int it = iter;
-//		
-//		int offset = 0;
-//		while(it > -1) {
-//			int pos = str.indexOf(ind) + 1;
-//			offset += pos;
-//			str = str.substring(pos);
-//			it --;
-//		}
-//		
-//		return offset - 1;
-//	}
 	
 	public void refreshTextSize() {
 		textSize = Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(context).getString("textsize", "14"));
