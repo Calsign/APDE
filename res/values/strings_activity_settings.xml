@@ -21,5 +21,6 @@
     <string name="pref_console">Console</string>
     <string name="pref_scroll_lock">Automatically Scroll</string>
     <string name="pref_scroll_lock_desc">When the console is updated</string>
+    <string name="override_tab">Use Tab for Indentation</string>
 
 </resources>

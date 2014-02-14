@@ -186,35 +186,42 @@ public class CodeEditText extends EditText {
 		//Make sure to forward the result of what would normally happen
 		boolean result = super.onKeyDown(keyCode, event);
 		
-		//Get the indentation of the previous line
-		String[] lines = getText().toString().split("\n");
-		String lastLine = "";
-		String lastIndent = "";
-		
-		//Calculate the indentation of the previous line
-		if(lines.length > 0) {
-			lastLine = lines[Math.min(lastLineNum, lines.length - 1)];
+		if(keyCode == KeyEvent.KEYCODE_ENTER) {
+			//Get the indentation of the previous line
+			String[] lines = getText().toString().split("\n");
+			String lastLine = "";
+			String lastIndent = "";
 			
-			for(int i = 0; i < lastLine.length(); i ++) {
-				if(lastLine.charAt(i) == ' ')
-					lastIndent += ' ';
-				else
-					break;
+			//Calculate the indentation of the previous line
+			if(lines.length > 0) {
+				lastLine = lines[Math.min(lastLineNum, lines.length - 1)];
+				
+				for(int i = 0; i < lastLine.length(); i ++) {
+					if(lastLine.charAt(i) == ' ')
+						lastIndent += ' ';
+					else
+						break;
+				}
 			}
+			
+			//Determine the last character of the previous line
+			char lastChar = ' ';
+			if(lastLine.length() > 0)
+				lastChar= lastLine.charAt(lastLine.length() - 1);
+			
+			//Automatically increase the indent if this is a new code block
+			if(lastChar == '{')
+				lastIndent += indent;
+			
+			//Automatically indent
+			getText().insert(getSelectionStart(), lastIndent);
 		}
 		
-		//Determine the last character of the previous line
-		char lastChar = ' ';
-		if(lastLine.length() > 0)
-			lastChar= lastLine.charAt(lastLine.length() - 1);
-		
-		//Automatically increase the indent if this is a new code block
-		if(lastChar == '{')
-			lastIndent += indent;
-		
-		//Automatically indent
-		if(keyCode == KeyEvent.KEYCODE_ENTER)
-			getText().insert(getSelectionStart(), lastIndent);
+		//Override default TAB key behavior
+		if(keyCode == KeyEvent.KEYCODE_TAB && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("override_tab", true)) {
+			getText().insert(getSelectionStart(), "  ");
+			return true;
+		}
 		
     	return result;
     }

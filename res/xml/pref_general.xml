@@ -20,6 +20,11 @@
 	        android:key="use_hardware_keyboard"
 	        android:title="@string/use_hardware_keyboard"
 	        android:defaultValue="false" />
+	    
+	    <CheckBoxPreference
+	        android:key="override_tab"
+	        android:title="@string/override_tab"
+	        android:defaultValue="true" />
 	</PreferenceCategory>
     
     <PreferenceCategory 
