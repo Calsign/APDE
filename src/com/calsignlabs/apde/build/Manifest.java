@@ -403,6 +403,10 @@ public class Manifest {
 				e.printStackTrace();
 			} catch (SAXException e) {
 				e.printStackTrace();
+			} catch (RuntimeException e) {
+				//Hopefully this solves some crashes from users doing things that they shouldn't be...
+				System.err.println("Could not read " + manifestFile.getAbsolutePath() + "\nThis might be because your sketch is named \"sketch\"\nor because your AndroidManifest.xml file is corrupted");
+				e.printStackTrace();
 			}
 		}
 		if (xml == null) {
