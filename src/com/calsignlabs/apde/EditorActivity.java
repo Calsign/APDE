@@ -50,6 +50,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
+import android.view.View.MeasureSpec;
 import android.view.ViewGroup.LayoutParams;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
@@ -95,15 +96,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	private boolean firstResize = true; //this is a makeshift arrangement (hopefully)
 	private int oldCodeHeight = -1;
 	
-	//The height of the message area TODO make this non-constant in case there's a two-line error message, for example
-	private int message;
-	
 	//Possible dialog results
 	private final static int RENAME_TAB = 0;
 	private final static int NEW_TAB = 1;
 	
 	//Listener for managing the sliding message area
 	private MessageTouchListener messageListener;
+	//The height of the message area...
+	private int message = -1;
 	
 	//Custom output / error streams for printing to the console
 	private PrintStream outStream;
@@ -111,6 +111,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	
 	//Whether or not we are currently building a sketch
 	private boolean building;
+	
+	//Whether or not the message area is currently displaying an error message
+	private boolean errorMessage = false;
 	
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -350,13 +353,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         			if(!keyboardVisible) {
 	        			keyboardVisible = true;
 	        			
-	        			//If the message height hasn't been retrieved yet, retrieve it
-	        			if(message == 0)
-							message = findViewById(R.id.message).getHeight();
+	        			if(message == -1)
+	        				message = findViewById(R.id.message).getHeight();
 	        			
 	        			//Configure the layout for the keyboard
 	        			
-	        			View messageArea = findViewById(R.id.message);
+	        			TextView messageArea = (TextView) findViewById(R.id.message);
         				View console = findViewById(R.id.console_scroller);
         				View code = findViewById(R.id.code_scroller);
 	        			View content = findViewById(R.id.content);
@@ -369,8 +371,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	        			//Start the custom animation TODO make the keyboard appearance prettier
 	        			messageArea.startAnimation(new MessageAreaAnimation(code, console, messageArea, oldCodeHeight, content.getHeight() - message  - tabBar.getHeight(), content.getHeight()));
 	        			
-	        			//Remove the focus from the Message slider if it has it
-	        			messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back)); //TODO this is deprecated...
+	        			//Remove the focus from the Message slider if it has it and maintain styling
+	        			if(errorMessage) {
+	        				messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
+	        				messageArea.setBackgroundColor(getResources().getColor(R.color.error_back));
+	        				messageArea.setTextColor(getResources().getColor(R.color.error_text));
+	        			} else {
+	        				messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
+	        				messageArea.setBackgroundColor(getResources().getColor(R.color.message_back));
+	        				messageArea.setTextColor(getResources().getColor(R.color.message_text));
+	        			}
 	        			
 	        			((CodeEditText) findViewById(R.id.code)).updateBracketMatch();
         			}
@@ -1678,11 +1688,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      * @param msg
      */
     public void message(String msg) {
-    	//Change the message area style
-    	((TextView) findViewById(R.id.message)).setText(msg);
-    	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.message_back));
     	//Write the message
+    	((TextView) findViewById(R.id.message)).setText(msg);
+    	//Change the message area style
+    	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.message_back));
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
+    	
+    	errorMessage = false;
+    	
+    	//Update message area height
+    	correctMessageAreaHeight();
     }
     
     /**
@@ -1694,11 +1709,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     public void messageExt(final String msg) {
     	runOnUiThread(new Runnable() {
     		public void run() {
-    			//Change the message area style
-    			((TextView) findViewById(R.id.message)).setText(msg);
-    			((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.message_back));
     			//Write the message
+    			((TextView) findViewById(R.id.message)).setText(msg);
+    			//Change the message area style
+    			((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.message_back));
     			((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
+    			
+    			errorMessage = false;
+    			
+    			//Update message area height
+    			correctMessageAreaHeight();
     		}
     	});
     }
@@ -1719,11 +1739,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      * @param msg
      */
     public void error(String msg) {
-    	//Change the message area style
-    	((TextView) findViewById(R.id.message)).setText(msg);
-    	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.error_back));
     	//Write the error message
+    	((TextView) findViewById(R.id.message)).setText(msg);
+    	//Change the message area style
+    	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.error_back));
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
+    	
+    	errorMessage = true;
+    	
+    	//Update message area height
+    	correctMessageAreaHeight();
     }
     
     /**
@@ -1735,11 +1760,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     public void errorExt(final String msg) {
     	runOnUiThread(new Runnable() {
     		public void run() {
-    			//Change the message area style
+    			//Write the error message
     			((TextView) findViewById(R.id.message)).setText(msg);
+    			//Change the message area style
     	    	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.error_back));
-    	    	//Write the error message
     	    	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
+    	    	
+    	    	errorMessage = true;
+    	    	
+    	    	//Update message area height
+    	    	correctMessageAreaHeight();
     		}
     	});
     }
@@ -1752,6 +1782,52 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      */
     public void error(CharSequence msg) {
     	error(msg.toString());
+    }
+    
+    //Called internally to correct issues with 2-line messages vs 1-line messages (and maybe some other issues)
+    protected void correctMessageAreaHeight() {
+    	final TextView messageArea = (TextView) findViewById(R.id.message);
+    	
+    	//Update the message area's height
+    	messageArea.requestLayout();
+    	
+    	//Check back in later when the height has updated...
+    	messageArea.post(new Runnable() {
+    		public void run() {
+    			//...and update the console's height...
+    			
+    			//We need to use this in case the message area is partially off the screen
+    			//This is the DESIRED height, not the ACTUAL height
+    			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
+    			
+    			//Obtain some references
+    			View console = findViewById(R.id.console_scroller);
+    			View code = findViewById(R.id.code_scroller);
+    			View content = findViewById(R.id.content);
+    			
+    			//We can't shrink the console if it's hidden (like when the keyboard is visible)...
+    			//...so shrink the code area instead
+    			if(console.getHeight() <= 0)
+    				code.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, content.getHeight() - tabBar.getHeight() - message));
+    			else
+    				console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, content.getHeight() - code.getHeight() - tabBar.getHeight() - message));
+    		}
+    	});
+    }
+    
+    //Calculates the height of a TextView
+    //StackOverflow: http://stackoverflow.com/questions/14276853/how-to-measure-textview-height-based-on-device-width-and-font-size
+    private static int getTextViewHeight(Context context, String text, float textSize, int deviceWidth, int padding) {
+    	TextView textView = new TextView(context);
+    	textView.setText(text);
+    	textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSize);
+    	textView.setPadding(padding, padding, padding, padding);
+    	
+    	int widthMeasureSpec = MeasureSpec.makeMeasureSpec(deviceWidth, MeasureSpec.AT_MOST);
+    	int heightMeasureSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+    	
+    	textView.measure(widthMeasureSpec, heightMeasureSpec);
+    	return textView.getMeasuredHeight();
     }
     
     /**
@@ -2284,8 +2360,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			if(pressed) {
 				switch(event.getAction()) {
 				case MotionEvent.ACTION_MOVE:
-					//This doesn't work in the constructor for some reason
-					if(message == 0)
+					if(message == -1)
 						message = findViewById(R.id.message).getHeight();
 					
 					//Calculate maximum possible code view height
@@ -2314,8 +2389,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				case MotionEvent.ACTION_UP:
 					pressed = false;
 					
-					//Change the message area drawable
-					findViewById(R.id.message).setBackgroundDrawable(getResources().getDrawable(R.drawable.back)); //TODO this is deprecated...
+					TextView messageArea = (TextView) findViewById(R.id.message);
+					
+					//Change the message area drawable and maintain styling
+					if(errorMessage) {
+						messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
+						messageArea.setTextColor(getResources().getColor(R.color.error_text));
+					} else {
+						messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
+						messageArea.setTextColor(getResources().getColor(R.color.message_text));
+					}
 					
 					return true;
 				}
@@ -2333,8 +2416,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			
 			pressed = true;
 			
-			//Change the message area drawable
-			findViewById(R.id.message).setBackgroundDrawable(getResources().getDrawable(R.drawable.back_selected)); //TODO this is deprecated...
+			TextView messageArea = (TextView) findViewById(R.id.message);
+			
+			//Change the message area drawable and maintain styling
+			if(errorMessage) {
+				messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error_selected));
+				messageArea.setTextColor(getResources().getColor(R.color.error_text));
+			} else {
+				messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_selected));
+				messageArea.setTextColor(getResources().getColor(R.color.message_text));
+			}
 			
 			//Provide haptic feedback (if the user has vibrations enabled)
 			if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_vibrate", true))
