@@ -392,7 +392,8 @@ public class CodeEditText extends EditText {
 			}
 			
 			//"{}", "()", "[]" open / close matching
-			if(matchingBracket != -1) {
+			//Make sure we don't crash if the bracket matcher hasn't updated yet and we are deleting a lot of text...
+			if(matchingBracket != -1 && matchingBracket < getText().length()) {
 				float xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)... because getCompoundPaddingStart() was introduced in a later API level
 				float charWidth = getPaint().measureText("m");
 
