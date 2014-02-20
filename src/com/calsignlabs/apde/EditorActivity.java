@@ -974,10 +974,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			}
     		}
     		
-    		//Update the code-view
-    		if(getSupportActionBar().getTabCount() > 0)
-    			((CodeEditText) findViewById(R.id.code)).setUpdateText(tabs.get(tabBar.getSelectedTab()).getText());
-    		else
+    		//Update the code area
+    		if(tabBar.getTabCount() > 0)
+    			((CodeEditText) findViewById(R.id.code)).setUpdateText(tabs.get(tabBar.getSelectedTab()).getText());else
     			((CodeEditText) findViewById(R.id.code)).setUpdateText("");
     		
     		success = true;
@@ -989,11 +988,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	if(success) {
     		getGlobalState().setExample(false);
-    		//Make sure the code area is editable
-//    		((CodeEditText) findViewById(R.id.code)).setEnabled(true);
-    		((CodeEditText) findViewById(R.id.code)).setFocusable(true);
-    		((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
-//    		((CodeEditText) findViewById(R.id.code)).setClickable(true);
+    		
+    		if(tabBar.getTabCount() > 0) {
+    			//Make sure the code area is editable
+    			((CodeEditText) findViewById(R.id.code)).setFocusable(true);
+    			((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
+    		} else {
+    			//Make sure that the code area isn't editable
+    	    	((CodeEditText) findViewById(R.id.code)).setFocusable(false);
+    			((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
+    		}
     	}
     	
     	return success;
@@ -1068,10 +1072,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	if(success) {
     		getGlobalState().setExample(true);
     		//Make sure the code area isn't editable
-//    		((CodeEditText) findViewById(R.id.code)).setEnabled(false);
     		((CodeEditText) findViewById(R.id.code)).setFocusable(false);
     		((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
-//    		((CodeEditText) findViewById(R.id.code)).setClickable(false);
     	}
     	
     	return success;
@@ -1100,7 +1102,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		return;
     	}
     	
-    	
     	boolean success = true;
     	//Obtain the location of the sketch
     	File sketchLoc = getSketchLoc(getGlobalState().getSketchName());
@@ -1128,7 +1129,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	            
 	            //Select the new sketch
 	            if(getGlobalState().getSelectedSketch() < 0)
-	            	getGlobalState().setSelectedSketch(((ListView) findViewById(R.id.drawer_list)).getCount() - 1);
+	            	getGlobalState().setSelectedSketch(getSketchCount());
 	            
 	            //Inform the user of success
 	    		message(getResources().getText(R.string.sketch_saved));
@@ -1143,9 +1144,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		//Force the drawer to reload
     		forceDrawerReload();
     		
-            //Select the first sketch
-            getGlobalState().setSelectedSketch(0);
-            
             //Inform the user
     		message(getResources().getText(R.string.sketch_saved));
     		setSaved(true);
@@ -2020,7 +2018,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     private void deleteTabContinue() {
     	if(tabs.size() > 0) {
     		//Get the tab
-    		Tab cur = tabBar.getSelectedTab(); //TODO they'll be problems here for sure
+    		Tab cur = tabBar.getSelectedTab(); //TODO there'll be problems here for sure
     		//Delete the tab from the sketch folder
     		deleteLocalFile(tabs.get(cur).getFilename());
     		//Disable the tab
@@ -2037,7 +2035,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		    	code.setSelection(0);
 	    		
 	    		//Disable the code text area if there is no selected tab
-	    		code.setEnabled(false);
+		    	code.setFocusable(false);
+	    		code.setFocusableInTouchMode(false);
 	    		
 	    		//Force remove all tabs
 	    		tabBar.removeAllTabs();
@@ -2121,6 +2120,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			
     	    	//Change the tab as it is displayed
     	    	((TextView) tabBar.getTabView(tabBar.getSelectedTab()).getChildAt(0)).setText(value); //This seems more complicated than it needs to be... but it's necessary to change the appearance of the tab name
+    	    	tabBar.getSelectedTab().setText(value);
+    	    	tabs.get(tabBar.getSelectedTab()).setTitle(value);
     	    	
     	    	//Notify the user of success
     			message(getResources().getText(R.string.tab_renamed));
@@ -2137,6 +2138,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			//Refresh options menu to remove "New Tab" button
     			if(tabBar.getTabCount() == 1)
     				supportInvalidateOptionsMenu();
+    			
+    			//Make sure that the code area is editable
+    	    	((CodeEditText) findViewById(R.id.code)).setFocusable(true);
+    			((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
     			
     			//Notify the user of success
     			message(getResources().getText(R.string.tab_created));
