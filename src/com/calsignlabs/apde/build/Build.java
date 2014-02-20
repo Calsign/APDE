@@ -400,8 +400,9 @@ public class Build {
 				"package", "-v", "-f", "-m",
 				"-S", buildFolder.getAbsolutePath() + "/res/", //The location of the /res folder
 				"-J", genFolder.getAbsolutePath(), //The location of the /gen folder
+				"-A", assetsFolder.getAbsolutePath(), //The location of the /assets folder
 				"-M", buildFolder.getAbsolutePath() + "/AndroidManifest.xml", //The location of the AndroidManifest.xml file
-				"-I", androidJarLoc.getAbsolutePath(), //buildFolder.getAbsolutePath() + "/sdk/platforms/" + androidVersion + "/android.jar", //The location of the android.jar resource
+				"-I", androidJarLoc.getAbsolutePath(), //The location of the android.jar resource
 				"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res" //The location of the output .apk.res file
 			};
 			
@@ -518,6 +519,7 @@ public class Build {
 		}
 		
 		//TODO Switch over to AAPT...
+		//This is seriously messed up right now...
 		
 //		//Run AAPT
 //		try {
@@ -526,11 +528,10 @@ public class Build {
 //			String[] args = {
 //					aaptLoc.getAbsolutePath(), //The location of AAPT
 //					"package", "-v", "-f",
-//					"-S", buildFolder.getAbsolutePath() + "/res/", //The location of the /res folder
-//					"-J", genFolder.getAbsolutePath(), //The location of the /gen folder
-//					"-M", buildFolder.getAbsolutePath() + "/AndroidManifest.xml", //The location of the AndroidManifest.xml file
-//					"-I", androidJarLoc.getAbsolutePath(), //The location of the android.jar resource
-//					"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res" //The location of the output .apk.res file
+//					"-j", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res",
+//					"-j", glslFolder.getAbsolutePath(),
+//					"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned",
+//					binFolder.getAbsolutePath()
 //			};
 //			
 //			aaptProc = Runtime.getRuntime().exec(args);
@@ -543,7 +544,7 @@ public class Build {
 //			cleanUpError();
 //			return;
 //		}
-		
+//		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
 			return;
