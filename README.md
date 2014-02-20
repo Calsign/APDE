@@ -35,19 +35,18 @@ APDE strives to be a fully-featured Processing editor, using the PDE as a model.
  - Multiple sketches accessible from the "sketchbook"
  - Internal Android Manifest file configuration (sketch permissions, orientation lock, etc.)
  - Add files to sketch's "data" folder
+ - A set of examples
  - Syntax highlighting
  - Automatic saving
 
 These are a few of the key features, but you will find that there are more in the app. There are also a couple of features that aren't yet working:
 
- - OpenGL... I've tried to implement this, but can't quite figure out which binaries I need to add, etc.
  - Sketch runtime console / exception error output (this is more complicated than you think it is!)... but AIDE has done it, so it must be possible...
 
 In addition to the above unimplemented features, I plan to add the following at some point in the future (some more distant than others!):
 
  - Support for contributed libraries, this includes a library manager and a pre-dexer for the library JARs
  - Tools (like the Color Selector), possibly even contributed tools
- - Examples
  - Internal Documentation
  - Building sketches for release (needs custom key signing)
  - Git integration, possibly even for synchronization across the PDE and APDE if a Git client for the PDE is created
