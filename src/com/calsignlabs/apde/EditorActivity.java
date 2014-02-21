@@ -297,31 +297,70 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         final ScrollView codeScroller = (ScrollView) findViewById(R.id.code_scroller);
         final EditText code = (EditText) findViewById(R.id.code);
         
+        //Obtain the root view
+        final View activityRootView = findViewById(R.id.content);
+        
         //Forward touch events to the code area so that the user can select anywhere
         codeScroller.setOnTouchListener(new View.OnTouchListener() {
+        	//Meta data from the current touch event
+        	private boolean dragged = false;
+        	private float startX, startY;
+        	private MotionEvent startEvent;
+        	
 			@Override
 			public boolean onTouch(View v, MotionEvent event) {
-				HorizontalScrollView codeScrollerX = (HorizontalScrollView) findViewById(R.id.code_scroller_x);
-				LinearLayout padding = (LinearLayout) findViewById(R.id.code_padding);
+				final HorizontalScrollView codeScrollerX = (HorizontalScrollView) findViewById(R.id.code_scroller_x);
+				final LinearLayout padding = (LinearLayout) findViewById(R.id.code_padding);
 				
-				if(code.getHeight() < codeScroller.getHeight() - padding.getPaddingBottom() + padding.getPaddingTop()) {
+				//Assign the starting pointer location
+				if(event.getAction() == MotionEvent.ACTION_DOWN) {
+					startX = event.getX();
+					startY = event.getY();
+					
+					startEvent = event;
+				}
+				
+				//Calculate change in the current motion event
+				float changeX = event.getX() - startX;
+				float changeY = event.getY() - startY;
+				
+				//The maximum change before the motion becomes a drag (20 DP)
+				float maxChange = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 20, getResources().getDisplayMetrics());
+				
+				//Calculate distance to see if we've moved too far
+				if(event.getAction() == MotionEvent.ACTION_MOVE && (changeX * changeX) + (changeY * changeY) > maxChange * maxChange)
+					dragged = true;
+				
+				//Only dispatch the touch event if this isn't a drag
+				if(code.getHeight() < codeScroller.getHeight() - padding.getPaddingBottom() + padding.getPaddingTop() && event.getAction() == MotionEvent.ACTION_UP && !dragged) {
 					//Hacky - dispatches a touch event to the code area
 					
-					MotionEvent me = MotionEvent.obtain(event);
-					//Accommodate for scrolling
-					me.setLocation(me.getX() + codeScrollerX.getScrollX(), me.getY());
-					code.dispatchTouchEvent(me);
-					me.recycle();
-
 					code.requestFocus();
+					
+					code.post(new Runnable() {
+						public void run() {
+							MotionEvent me = MotionEvent.obtain(startEvent);
+							//Accommodate for scrolling
+							me.setLocation(me.getX() + codeScrollerX.getScrollX(), me.getY());
+							me.setAction(MotionEvent.ACTION_UP);
+							code.dispatchTouchEvent(me);
+							me.recycle();
+						}
+					});
+					
+					//Make the keyboard visible (if the user doesn't have a hardware keyboard)
+					if(!keyboardVisible && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+						InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+						imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+					}
 				}
+				
+				if(event.getAction() == MotionEvent.ACTION_UP)
+					dragged = false;
 				
 				//Make sure that the scroll area can still scroll
 				return false;
 		}});
-        
-        //Obtain the root view
-        final View activityRootView = findViewById(R.id.content);
         
         //Make the code area fill the width of the screen
         code.setMinimumWidth(activityRootView.getWidth());
