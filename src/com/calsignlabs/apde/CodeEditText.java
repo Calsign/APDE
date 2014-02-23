@@ -656,6 +656,14 @@ public class CodeEditText extends EditText {
 		super.setText(text);
 	}
 	
+	/**
+	 * Clear the list of tokens for the syntax highlighter.
+	 * This function is used when tabs are switched so that the old syntax highlighting doesn't briefly show on top of the new code.
+	 */
+	public void clearTokens() {
+		tokens = new Token[0];
+	}
+	
 	public Keyword getKeyword(String text, boolean function) {
 		for(Keyword keyword : syntax)
 			if(keyword.name().equals(text) && keyword.function() == function)

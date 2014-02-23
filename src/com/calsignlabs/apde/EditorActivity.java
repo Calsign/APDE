@@ -958,6 +958,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		//Clear the code area
 		CodeEditText code = ((CodeEditText) findViewById(R.id.code));
 		code.setUpdateText("");
+		code.clearTokens();
+		
+		//Get rid of previous syntax highlighter data
+		code.clearTokens();
 	}
     
 	/**
@@ -1015,8 +1019,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		
     		//Update the code area
     		if(tabBar.getTabCount() > 0)
-    			((CodeEditText) findViewById(R.id.code)).setUpdateText(tabs.get(tabBar.getSelectedTab()).getText());else
+    			((CodeEditText) findViewById(R.id.code)).setUpdateText(tabs.get(tabBar.getSelectedTab()).getText());
+    		else
     			((CodeEditText) findViewById(R.id.code)).setUpdateText("");
+    		
+    		//Get rid of previous syntax highlighter data
+    		((CodeEditText) findViewById(R.id.code)).clearTokens();
     		
     		success = true;
     		
@@ -1100,6 +1108,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			((CodeEditText) findViewById(R.id.code)).setUpdateText(tabs.get(tabBar.getSelectedTab()).getText());
     		else
     			((CodeEditText) findViewById(R.id.code)).setUpdateText("");
+    		
+    		//Get rid of previous syntax highlighter data
+    		((CodeEditText) findViewById(R.id.code)).clearTokens();
     		
     		success = true;
     		
@@ -2072,6 +2083,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		    	CodeEditText code = ((CodeEditText) findViewById(R.id.code));
 		    	code.setUpdateText("");
 		    	code.setSelection(0);
+		    	
+		    	//Get rid of previous syntax highlighter data
+	    		code.clearTokens();
 	    		
 	    		//Disable the code text area if there is no selected tab
 		    	code.setFocusable(false);
@@ -2205,6 +2219,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			//Update the code area selection
 			code.setSelection(meta.getSelectionStart(), meta.getSelectionEnd());
 			code.updateBracketMatch();
+			
+			//Get rid of previous syntax highlighter data
+    		code.clearTokens();
 		} else {
 			//If this is selecting the first added tab
 			
