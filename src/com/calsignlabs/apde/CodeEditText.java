@@ -662,6 +662,9 @@ public class CodeEditText extends EditText {
 	 */
 	public void clearTokens() {
 		tokens = new Token[0];
+		
+		//Also clear the matching bracket
+		matchingBracket = -1;
 	}
 	
 	public Keyword getKeyword(String text, boolean function) {
