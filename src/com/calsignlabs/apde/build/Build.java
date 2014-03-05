@@ -187,7 +187,7 @@ public class Build {
 		
 		//Used to determine whether or not to build with ALL of the OpenGL libraries...
 		//...it takes a lot longer to run DEX if they're included
-		boolean isOpenGL = false;
+//		boolean isOpenGL = false;
 		//File glLibLoc = new File(binFolder, "libs.dex");
 		
 		File androidJarLoc = new File(tmpFolder, "android.jar");
@@ -210,21 +210,23 @@ public class Build {
 			String combinedText = "";
 			for(FileMeta tab : tabs)
 				combinedText += tab.getText();
-			preproc.initSketchSize(combinedText);
+			preproc.initSketchSize(combinedText, editor);
 			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false);
 			
 			//Detect if the renderer is one of the OpenGL renderers
-			//TODO support custom renderers that require OpenGL or... other problems that may arise
-			String sketchRenderer = preproc.getSketchRenderer();
-			if(sketchRenderer != null)
-				isOpenGL = sketchRenderer.equals("OPENGL") || sketchRenderer.equals("P3D") || sketchRenderer.equals("P2D");
-			else
-				isOpenGL = false;
+			//XTODO support custom renderers that require OpenGL or... other problems that may arise
+//			String sketchRenderer = preproc.getSketchRenderer();
+//			if(sketchRenderer != null)
+//				isOpenGL = sketchRenderer.equals("OPENGL") || sketchRenderer.equals("P3D") || sketchRenderer.equals("P2D");
+//			else
+//				isOpenGL = false;
 			
-			if(isOpenGL)
-				System.out.println("Detected renderer " + sketchRenderer + "; including OpenGL libraries");
-			else
-				System.out.println("Detected renderer " + sketchRenderer + "; leaving out OpenGL libraries");
+			//This OpenGL-checking isn't really useful anymore...
+			
+//			if(isOpenGL)
+//				System.out.println("Detected renderer " + sketchRenderer + "; including OpenGL libraries");
+//			else
+//				System.out.println("Detected renderer " + sketchRenderer + "; leaving out OpenGL libraries");
 			
 			if(!running.get()) { //CHECK
 				cleanUpHalt();
@@ -300,7 +302,7 @@ public class Build {
 				
 				// Copy any imported libraries (their libs and assets),
 				// and anything in the code folder contents to the project.
-				//copyLibraries(libsFolder, assetsFolder); TODO implement libraries
+				//copyLibraries(libsFolder, assetsFolder); //TODO implement libraries
 				copyCodeFolder(libsFolder);
 				
 				// Copy the data folder (if one exists) to the project's 'assets' folder
@@ -855,27 +857,25 @@ public class Build {
 			ex.printStackTrace();
 			throw new SketchException(ex.toString());
 		}
-
+		
 		// grab the imports from the code just preproc'd
-
+		
 //		ArrayList<Library> importedLibraries = new ArrayList<Library>(); //TODO implement libraries
 //		Library core = mode.getCoreLibrary();
 //		if (core != null) {
 //			importedLibraries.add(core);
 //			classPath += core.getClassPath();
 //		}
-		
-//		for (String item : result.extraImports) {
+//		
+//		for(String item : result.extraImports) {
 //			// remove things up to the last dot
 //			int dot = item.lastIndexOf('.');
 //			// http://dev.processing.org/bugs/show_bug.cgi?id=1145
 //			String entry = (dot == -1) ? item : item.substring(0, dot);
-//			//System.out.println("library searching for " + entry);
 //			Library library = mode.getLibrary(entry);
-//			//System.out.println(" found " + library);
-//
-//			if (library != null) {
-//				if (!importedLibraries.contains(library)) {
+//			
+//			if(library != null) {
+//				if(!importedLibraries.contains(library)) {
 //					importedLibraries.add(library);
 //					classPath += library.getClassPath();
 //					javaLibraryPath += File.pathSeparator + library.getNativePath();
@@ -884,19 +884,19 @@ public class Build {
 //				boolean found = false;
 //				// If someone insists on unnecessarily repeating the code folder
 //				// import, don't show an error for it.
-//				if (codeFolderPackages != null) {
+//				if(codeFolderPackages != null) {
 //					String itemPkg = item.substring(0, item.lastIndexOf('.'));
-//					for (String pkg : codeFolderPackages) {
-//						if (pkg.equals(itemPkg)) {
+//					for(String pkg : codeFolderPackages) {
+//						if(pkg.equals(itemPkg)) {
 //							found = true;
 //							break;
 //						}
 //					}
 //				}
-//				if (ignorableImport(item)) {
+//				if(ignorableImport(item)) {
 //					found = true;
 //				}
-//				if (!found) {
+//				if(!found) {
 //					System.err.println("No library found for " + entry);
 //				}
 //			}

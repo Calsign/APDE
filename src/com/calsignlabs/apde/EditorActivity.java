@@ -1888,8 +1888,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     public void highlightLineExt(final int tab, final int line) {
     	runOnUiThread(new Runnable() {
     		public void run() {
-    			//Switch to the tab with the error
-    			tabBar.selectTab(tab);
+    			//Switch to the tab with the error if we have one to switch to
+    			if(tab != -1)
+    				tabBar.selectTab(tab);
     			
     			//Get a reference to the code area
     			CodeEditText code = (CodeEditText) findViewById(R.id.code);

@@ -160,8 +160,13 @@ public class ScrollingTabContainerView extends android.support.v7.internal.widge
 	}
 	
 	public void selectTab(int tab) {
+		if(selectedTab != -1)
+			tabListener.onTabUnselected(getSelectedTab());
+		
 		super.setTabSelected(tab);
 		selectedTab = tab;
+		
+		tabListener.onTabSelected(getSelectedTab());
 	}
 	
 	public void selectLastTab() {

@@ -223,6 +223,9 @@ public class CodeEditText extends EditText {
 			return true;
 		}
 		
+		//TODO de-indent with "}" characters...
+		//...problem is that the keycodes for "}" and "]" are the same...
+		
     	return result;
     }
 	

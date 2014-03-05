@@ -24,6 +24,9 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.List;
 
+import com.calsignlabs.apde.EditorActivity;
+
+import processing.core.PApplet;
 import processing.mode.java.preproc.PdePreprocessor;
 import processing.mode.java.preproc.PreprocessorResult;
 import antlr.RecognitionException;
@@ -37,11 +40,13 @@ public class Preproc extends PdePreprocessor {
 		this.packageName = packageName;
 	}
 	
-	public String[] initSketchSize(String code) throws SketchException {
-		String[] info = parseSketchSize(code, true);
+	public String[] initSketchSize(String code, EditorActivity editor) throws SketchException {
+		String[] info = parseSketchSizeCustom(code, true, editor); //Use our own function to resolve some issues...
 		if (info == null) {
 			System.err.println("More about the size() command on Android can be");
 			System.err.println("found here: http://wiki.processing.org/w/Android");
+			System.err.println();
+			System.err.println();
 			throw new SketchException("Could not parse the size() command.");
 		}
 		sizeStatement = info[0];
@@ -49,6 +54,84 @@ public class Preproc extends PdePreprocessor {
 		sketchHeight = info[2];
 		sketchRenderer = info[3];
 		return info;
+	}
+	
+	/**
+	 * Parse a chunk of code and extract the size() command and its contents.
+	 * @param code Usually the code from the main tab in the sketch
+	 * @param fussy true if it should show an error message if bad size()
+	 * @return null if there was an error, otherwise an array (might contain some/all nulls)
+	 */
+	static public String[] parseSketchSizeCustom(String code, boolean fussy, EditorActivity editor) {
+		//Use our own function to solve some issues (e.g. java.lang.NoClassDefFoundError: java.awt.Frame)
+		
+		// This matches against any uses of the size() function, whether numbers
+		// or variables or whatever. This way, no warning is shown if size() isn't
+		// actually used in the applet, which is the case especially for anyone
+		// who is cutting/pasting from the reference.
+		
+		//	    String scrubbed = scrubComments(sketch.getCode(0).getProgram());
+		//	    String[] matches = PApplet.match(scrubbed, SIZE_REGEX);
+		String[] matches = PApplet.match(scrubComments(code), SIZE_REGEX);
+		
+		if (matches != null) {
+			boolean badSize = false;
+			
+			if (matches[1].equals("screenWidth") ||
+					matches[1].equals("screenHeight") ||
+					matches[2].equals("screenWidth") ||
+					matches[2].equals("screenHeight")) {
+				final String message =
+						"The screenWidth and screenHeight variables\n" +
+								"are named displayWidth and displayHeight\n" +
+								"in this release of Processing.";
+//				Base.showWarning("Time for a quick update", message, null);
+				System.err.println();
+				System.err.println();
+				editor.errorExt("Time for a quick update");
+				System.err.println("Time for a quick update:\n" + message);
+				System.err.println();
+				return null;
+			}
+			
+			if (!matches[1].equals("displayWidth") &&
+					!matches[1].equals("displayHeight") &&
+					PApplet.parseInt(matches[1], -1) == -1) {
+				badSize = true;
+			}
+			if (!matches[2].equals("displayWidth") &&
+					!matches[2].equals("displayHeight") &&
+					PApplet.parseInt(matches[2], -1) == -1) {
+				badSize = true;
+			}
+			
+			if (badSize && fussy) {
+				// found a reference to size, but it didn't seem to contain numbers
+				final String message =
+						"The size of this applet could not automatically\n" +
+								"be determined from your code. Use only numeric\n" +
+								"values (not variables) for the size() command.\n" +
+								"See the size() reference for an explanation.";
+//				Base.showWarning("Could not find sketch size", message, null);
+				System.err.println();
+				System.err.println();
+				editor.errorExt("Could not find sketch size");
+				System.err.println("Could not find sketch size:\n" + message);
+				System.err.println();
+				//	        new Exception().printStackTrace(System.out);
+				return null;
+			}
+			
+			// Remove additional space 'round the renderer
+			matches[3] = matches[3].trim();
+			
+			// if the renderer entry is empty, set it to null
+			if (matches[3].length() == 0) {
+				matches[3] = null;
+			}
+			return matches;
+		}
+		return new String[] { null, null, null, null };  // not an error, just empty
 	}
 	
 	public PreprocessorResult write(Writer out, String program, String[] codeFolderPackages) throws RecognitionException, TokenStreamException {
