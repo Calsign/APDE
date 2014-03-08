@@ -137,7 +137,7 @@ public class ScrollingTabContainerView extends android.support.v7.internal.widge
 		super.removeAllTabs();
 		tabs.clear();
 		
-		selectTab(-1);
+		selectedTab = -1;
 	}
 	
 	public void removeSelectedTab() {
@@ -148,7 +148,7 @@ public class ScrollingTabContainerView extends android.support.v7.internal.widge
 		if(getTabCount() <= 0)
 			return;
 		
-		selectTab(0);
+		selectedTab = 0;
 		tabListener.onTabSelected(getTab(0));
 	}
 	

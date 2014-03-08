@@ -125,7 +125,7 @@ public class Manifest {
 		
 		String oldPerms = prefs.getString("user_perms", "");
 		
-		String[] parts = oldPerms.split(name + ","); //TODO watch out for REGEX-injection... it's relatively sandboxed, though...
+		String[] parts = oldPerms.split(name + ","); //TODO watch out for REGEX-injection... it shouldn't really be much of a problem, though...
 		
 		String perms = "";
 		for(String part : parts)
@@ -208,7 +208,7 @@ public class Manifest {
 		}
 	}
 	
-	private void writeBlankManifest(final File file) {
+	public void writeBlankManifest(final File file) {
 		PrintWriter writer;
 		
 		try {
@@ -410,7 +410,9 @@ public class Manifest {
 			}
 		}
 		if (xml == null) {
-			Base.showWarning("Error handling " + MANIFEST_XML, WORLD_OF_HURT_COMING, null);
+			System.err.println();
+			System.err.println("Error handling " + MANIFEST_XML + " " +  WORLD_OF_HURT_COMING);
+			System.err.println();
 		}
 	}
 	
@@ -432,7 +434,7 @@ public class Manifest {
 		}
 	}
 	
-	private File getManifestFile() {
+	public File getManifestFile() {
 		return new File(build.getSketchFolder(), MANIFEST_XML);
 	}
 	

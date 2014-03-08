@@ -511,6 +511,11 @@ public class CodeEditText extends EditText {
 				
 				tokens = tempTokens;
 				
+				//If there is no text, wipe the tokens
+				//TODO ...why do we need this? It seems somewhat counterproductive...
+				if(getText().length() == 0)
+					clearTokens();
+				
 				postInvalidate();
 			}
 		}).start();

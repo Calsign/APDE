@@ -958,7 +958,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		//Clear the code area
 		CodeEditText code = ((CodeEditText) findViewById(R.id.code));
 		code.setUpdateText("");
-		code.clearTokens();
 		
 		//Get rid of previous syntax highlighter data
 		code.clearTokens();
@@ -1681,9 +1680,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//No need to save an example...
     	if(!getGlobalState().isExample()) {
     		//Save the sketch
-    		if(getSketchLoc(getSupportActionBar().getTitle().toString()).exists())
+    		if(getSketchLoc(getSupportActionBar().getTitle().toString()).exists()) {
     			saveSketch();
-    		else {
+    		} else {
     			//If the sketch has yet to be saved, inform the user
     			AlertDialog.Builder builder = new AlertDialog.Builder(this);
     			builder.setTitle(getResources().getText(R.string.save_sketch_before_run_dialog_title))

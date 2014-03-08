@@ -228,6 +228,11 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	}
 	
 	public static void updatePrefs(APDE global) {
+		//Don't try if the name is "sketch"... it will crash and burn
+		//Why? "sketch" isn't a valid sketch name - it's the name of the temporary sketch that isn't saved in the sketchbook folder
+		if(global.getSketchName().equals("sketch"))
+			return;
+		
 		Manifest mf = global.getManifest();
 		
 		SharedPreferences.Editor edit = global.getSharedPreferences(global.getSketchName(), 0).edit();
@@ -300,8 +305,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 			}
 		});
 		
-		//If this is an example...
-		if(getGlobalState().isExample()) {
+		//If this is an example... or if this is a temporary sketch...
+		if(getGlobalState().isExample() || getGlobalState().getSketchName().equals("sketch")) {
         	//...disable all of the preferences
         	findPreference("prop_manifest").setEnabled(false);
         	findPreference("prop_sketch_folder").setEnabled(false);
@@ -313,6 +318,10 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		prefListener = new OnSharedPreferenceChangeListener() {
 			@Override
 			public void onSharedPreferenceChanged(SharedPreferences pref, String key) {
+				//If this is the temporary sketch, bail out
+				if(getGlobalState().getSketchName().equals("sketch"))
+					return;
+				
 				Manifest mf = getGlobalState().getManifest();
 				
 				if(key.equals("prop_pretty_name"))
@@ -631,7 +640,12 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     				if(pref.getText().equals(before))
     					pref.setText(after);
     				
-    				copyPrefs(before, after);
+    				//Don't copy preferences from a temporary sketch - there aren't any!
+    				if(!before.equals("sketch"))
+    					copyPrefs(before, after);
+    				
+    				//Make sure we save...
+    				saveSketch();
     				
     				forceDrawerReload();
     				restartActivity();
