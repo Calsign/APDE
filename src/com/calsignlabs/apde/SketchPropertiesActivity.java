@@ -632,7 +632,6 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     			if(validateSketchName(after)) {
     				getGlobalState().setSketchName(after);
     				getGlobalState().getEditor().getSketchLoc(before).renameTo(getGlobalState().getEditor().getSketchLoc(after));
-    				getGlobalState().getEditor().forceDrawerReload();
     				
     				//If the user has set the pretty name to the name of their sketch, they probably want to change the pretty name too
     				@SuppressWarnings("deprecation")
@@ -647,7 +646,11 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     				//Make sure we save...
     				saveSketch();
     				
+    				//We have to save before we do this... because it reads from the file system
+    				getGlobalState().setSelectedSketch(getGlobalState().getEditor().drawerIndexOfSketch(after));
+    				getGlobalState().getEditor().forceDrawerReload();
     				forceDrawerReload();
+    				
     				restartActivity();
     			}
     	}});

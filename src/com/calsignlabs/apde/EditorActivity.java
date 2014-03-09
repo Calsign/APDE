@@ -767,6 +767,36 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	return count;
     }
     
+    protected int drawerIndexOfSketch(String name) {
+    	//Get the location of the sketchbook
+    	File sketchbookLoc = getGlobalState().getSketchbookFolder();
+    	
+    	int index = 1;
+    	
+    	//If the sketchbook exists
+    	if(sketchbookLoc.exists()) {
+    		//Get a list of sketches
+	    	File[] folders = sketchbookLoc.listFiles();
+	    	//Sort the list of sketches alphabetically
+	    	Arrays.sort(folders);
+	    	
+	    	for(File folder : folders) {
+	    		if(folder.isDirectory()) {
+	    			//Check to see if this is the sketch
+	    			if(folder.getName().equals(name))
+	    				return index;
+	    			
+	    			System.out.println(folder.getName() + " :: " + name);
+	    			
+	    			//Increment the counter
+	    			index ++;
+	    		}
+	    	}
+    	}
+    	
+    	return -1;
+    }
+    
     /**
      * Fills an ArrayAdapter with the names of sketches found in the sketchbook folder
      * 
@@ -1231,7 +1261,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			if(validateSketchName(after)) {
     				getGlobalState().setSketchName(after);
     				getSketchLoc(before).renameTo(getGlobalState().getEditor().getSketchLoc(after));
-    				forceDrawerReload();
     				
     				//If the user has set the pretty name to the name of their sketch, they probably want to change the pretty name too
     				SharedPreferences prefs = getSharedPreferences(after, 0);
@@ -1245,6 +1274,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     				copyPrefs(before, after);
     				
     				saveSketch();
+    				
+    				//We have to save before we do this... because it reads from the file system
+    				getGlobalState().setSelectedSketch(drawerIndexOfSketch(after));
+    				forceDrawerReload();
     			}
     	}});
     	
