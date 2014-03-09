@@ -633,8 +633,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     	
     	if(keyBindings.get("auto_format").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		((CodeEditText) findViewById(R.id.code)).autoFormat();
-    		message(getResources().getString(R.string.auto_formatter_complete));
+    		if(!getGlobalState().isExample()) {
+    			((CodeEditText) findViewById(R.id.code)).autoFormat();
+    			message(getResources().getString(R.string.auto_formatter_complete));
+    		}
     		return true;
     	}
     	
@@ -785,8 +787,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    			//Check to see if this is the sketch
 	    			if(folder.getName().equals(name))
 	    				return index;
-	    			
-	    			System.out.println(folder.getName() + " :: " + name);
 	    			
 	    			//Increment the counter
 	    			index ++;
@@ -1713,8 +1713,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	deleteTab();
             	return true;
             case R.id.menu_auto_format:
-            	((CodeEditText) findViewById(R.id.code)).autoFormat();
-        		message(getResources().getString(R.string.auto_formatter_complete));
+            	if(!getGlobalState().isExample()) {
+            		((CodeEditText) findViewById(R.id.code)).autoFormat();
+            		message(getResources().getString(R.string.auto_formatter_complete));
+            	}
         		return true;
             case R.id.menu_sketch_properties:
             	launchSketchProperties();
