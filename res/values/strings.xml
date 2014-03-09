@@ -72,5 +72,7 @@
     <string name="build_halted">Build stopped before sketch was launched.</string>
     <string name="chooser_label">Select File</string>
     <string name="drawer_list_title_examples">Examples</string>
+    <string name="auto_formatter_complete">Auto Format Completed</string>
+    <string name="auto_format">Auto Format</string>
 
 </resources>

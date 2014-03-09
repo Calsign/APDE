@@ -632,6 +632,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		return true;
     	}
     	
+    	if(keyBindings.get("auto_format").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		((CodeEditText) findViewById(R.id.code)).autoFormat();
+    		message(getResources().getString(R.string.auto_formatter_complete));
+    		return true;
+    	}
+    	
     	//TODO implement these functions... they're place-holders for now
     	//TODO are these actually getting picked up?
     	if(keyBindings.get("comment").matches(key, ctrl, meta, func, alt, sym, shift)) {
@@ -1560,6 +1566,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	menu.findItem(R.id.menu_new).setVisible(false);
         	menu.findItem(R.id.menu_load).setVisible(false);
         	menu.findItem(R.id.menu_tab_new).setVisible(false);
+        	menu.findItem(R.id.menu_auto_format).setVisible(false);
         	menu.findItem(R.id.menu_sketch_properties).setVisible(false);
         	
         	//Make sure to hide the sketch name
@@ -1573,6 +1580,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	menu.findItem(R.id.menu_stop).setVisible(true);
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
             	menu.findItem(R.id.menu_tab_rename).setVisible(true);
+            	menu.findItem(R.id.menu_auto_format).setVisible(true);
             } else {
             	//If the drawer is closed and there are no tabs
             	
@@ -1581,6 +1589,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	    	menu.findItem(R.id.menu_stop).setVisible(false);
     	    	menu.findItem(R.id.menu_tab_delete).setVisible(false);
             	menu.findItem(R.id.menu_tab_rename).setVisible(false);
+            	menu.findItem(R.id.menu_auto_format).setVisible(false);
             }
         	
         	//Make sure to make all of the sketch-specific actions visible
@@ -1670,6 +1679,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             case R.id.menu_tab_delete:
             	deleteTab();
             	return true;
+            case R.id.menu_auto_format:
+            	((CodeEditText) findViewById(R.id.code)).autoFormat();
+        		message(getResources().getString(R.string.auto_formatter_complete));
+        		return true;
             case R.id.menu_sketch_properties:
             	launchSketchProperties();
             	return true;

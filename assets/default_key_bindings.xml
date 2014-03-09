@@ -9,6 +9,8 @@
     <binding key="46" mod="ctrl">run_sketch</binding>
     <binding key="45" mod="ctrl">stop_sketch</binding>
     
+    <binding key="48" mod="ctrl">auto_format</binding>
+    
     <binding key="76" mod="ctrl">comment</binding>
     <binding key="71" mod="ctrl">shift_left</binding>
     <binding key="72" mod="ctrl">shift_right</binding>

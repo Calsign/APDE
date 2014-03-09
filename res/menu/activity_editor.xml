@@ -6,44 +6,48 @@
         android:id="@+id/menu_run"
         android:icon="@drawable/ic_action_run"
         app:showAsAction="ifRoom"
-        android:title="@string/menu_run"/>
+        android:title="@string/menu_run" />
     <item
         android:id="@+id/menu_stop"
         android:icon="@drawable/ic_action_stop"
         app:showAsAction="ifRoom"
-        android:title="@string/menu_stop"/>
+        android:title="@string/menu_stop" />
     <item
         android:id="@+id/menu_sketch_properties"
         app:showAsAction="never"
         android:orderInCategory="100"
-        android:title="@string/menu_sketch_properties"/>
+        android:title="@string/menu_sketch_properties" />
     <item
         android:id="@+id/menu_settings"
         android:orderInCategory="100"
         app:showAsAction="never"
-        android:title="@string/menu_settings"/>
+        android:title="@string/menu_settings" />
     <item
         android:id="@+id/menu_save"
         app:showAsAction="never"
-        android:title="@string/menu_save"/>
+        android:title="@string/menu_save" />
     <item
         android:id="@+id/menu_new"
         app:showAsAction="never"
-        android:title="@string/menu_new"/>
+        android:title="@string/menu_new" />
     <item
         android:id="@+id/menu_load"
         app:showAsAction="never"
-        android:title="@string/menu_open"/>
+        android:title="@string/menu_open" />
     <item
         android:id="@+id/menu_tab_new"
         app:showAsAction="never"
-        android:title="@string/menu_tab_new"/>
+        android:title="@string/menu_tab_new" />
     <item
         android:id="@+id/menu_tab_rename"
         app:showAsAction="never"
-        android:title="@string/menu_tab_rename"/>
+        android:title="@string/menu_tab_rename" />
     <item
         android:id="@+id/menu_tab_delete"
         app:showAsAction="never"
-        android:title="@string/menu_tab_delete"/>
+        android:title="@string/menu_tab_delete" />
+    <item
+        android:id="@+id/menu_auto_format"
+        app:showAsAction="never"
+        android:title="@string/auto_format" />
 </menu>
