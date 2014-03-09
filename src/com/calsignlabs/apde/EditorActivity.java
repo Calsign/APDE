@@ -1613,7 +1613,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	menu.findItem(R.id.menu_stop).setVisible(true);
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
             	menu.findItem(R.id.menu_tab_rename).setVisible(true);
-            	menu.findItem(R.id.menu_auto_format).setVisible(true);
+            	
+            	if(getGlobalState().isExample())
+            		menu.findItem(R.id.menu_auto_format).setVisible(false);
+            	else
+            		menu.findItem(R.id.menu_auto_format).setVisible(true);
             } else {
             	//If the drawer is closed and there are no tabs
             	
