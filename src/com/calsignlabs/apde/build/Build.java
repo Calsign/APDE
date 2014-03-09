@@ -19,7 +19,6 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Locale;
@@ -80,13 +79,7 @@ public class Build {
 		isExample = global.isExample();
 		
 		sketchName = global.getSketchName();
-		tabs = new FileMeta[editor.tabBar.getTabCount()];
-		Collection<FileMeta> metas = editor.getTabs().values();
-		int i = 0;
-		for(FileMeta meta : metas) {
-			tabs[i] = meta;
-			i ++;
-		}
+		tabs = editor.getTabMetas();
 		
 		running = new AtomicBoolean(true);
 	}
@@ -680,17 +673,17 @@ public class Build {
 				}
 			}
 		}
-
+		
 		// If not the preprocessed file at this point, then need to get out
 		if(!dotJavaFilename.equals(sketchName + ".java"))
 			return null;
-
+		
 		// if it's not a .java file, codeIndex will still be 0
 		// this section searches through the list of .pde files
 		codeIndex = 0;
 		for(int i = 0; i < tabs.length; i++) {
 			FileMeta meta = tabs[i];
-
+			
 			if(meta.getSuffix().equals("pde")) {
 				if(meta.getPreprocOffset() <= dotJavaLine) {
 					codeIndex = i;
@@ -731,14 +724,14 @@ public class Build {
 		// 1. concatenate all .pde files to the 'main' pde
 		// store line number for starting point of each code bit
 		
-		StringBuffer bigCode = new StringBuffer();
+		StringBuilder bigCode = new StringBuilder();
 		int bigCount = 0;
 		for(FileMeta meta : tabs) {
 			if(meta.getSuffix().equals(".pde")) {
 				meta.setPreprocOffset(bigCount);
 				bigCode.append(meta.getText());
-				bigCode.append('\n');
-				bigCount += meta.getText().split("\n").length;
+				bigCode.append("\n");
+				bigCount += numLines(meta.getText());
 			}
 		}
 		
@@ -972,23 +965,33 @@ public class Build {
 		return result.className;
 	}
 	
+	private int numLines(String input) {
+		int count = 1;
+		
+		for(int i = 0; i < input.length(); i ++)
+			if(input.charAt(i) == '\n')
+				count ++;
+		
+		return count;
+	}
+	
 	protected boolean ignorableImport(String pkg) {
-	    if (pkg.startsWith("android.")) return true;
-	    if (pkg.startsWith("java.")) return true;
-	    if (pkg.startsWith("javax.")) return true;
-	    if (pkg.startsWith("org.apache.http.")) return true;
-	    if (pkg.startsWith("org.json.")) return true;
-	    if (pkg.startsWith("org.w3c.dom.")) return true;
-	    if (pkg.startsWith("org.xml.sax.")) return true;
+		if (pkg.startsWith("android.")) return true;
+		if (pkg.startsWith("java.")) return true;
+		if (pkg.startsWith("javax.")) return true;
+		if (pkg.startsWith("org.apache.http.")) return true;
+		if (pkg.startsWith("org.json.")) return true;
+		if (pkg.startsWith("org.w3c.dom.")) return true;
+		if (pkg.startsWith("org.xml.sax.")) return true;
 
-	    if (pkg.startsWith("processing.core.")) return true;
-	    if (pkg.startsWith("processing.data.")) return true;
-	    if (pkg.startsWith("processing.event.")) return true;
-	    if (pkg.startsWith("processing.opengl.")) return true;
+		if (pkg.startsWith("processing.core.")) return true;
+		if (pkg.startsWith("processing.data.")) return true;
+		if (pkg.startsWith("processing.event.")) return true;
+		if (pkg.startsWith("processing.opengl.")) return true;
 
-	    return false;
-	  }
-
+		return false;
+	}
+	
 	protected int findErrorFile(int errorLine) {
 		for (int i = tabs.length - 1; i > 0; i --) {
 			FileMeta meta = tabs[i];

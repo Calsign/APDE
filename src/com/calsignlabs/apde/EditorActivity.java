@@ -2375,6 +2375,18 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	}
 	
 	/**
+	 * @return an array containing all of the tabs' FileMeta objects
+	 */
+	public FileMeta[] getTabMetas() {
+		FileMeta[] metas = new FileMeta[tabBar.getTabCount()];
+		
+		for(int i = 0; i < tabBar.getTabCount(); i ++)
+			metas[i] = tabs.get(tabBar.getTab(i));
+		
+		return metas;
+	}
+	
+	/**
 	 * Add a message to the console and automatically scroll to the bottom (if the user has this feature turned on)
 	 * 
 	 * @param msg

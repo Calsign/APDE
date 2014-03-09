@@ -330,9 +330,12 @@ public class CodeEditText extends EditText {
 			//Add the length of each line
 			off += lines[i].length() + 1;
 		
-		//We don't want to return values that are too big
-		if(off >= getText().length())
-			off = getText().length() - 1;
+		//We don't want to return values that are too big...
+		if(off > getText().length())
+			off = getText().length();
+		//...or to small
+		if(off < 0)
+			off = 0;
 		
 		return off;
 	}
@@ -355,8 +358,11 @@ public class CodeEditText extends EditText {
 			off += lines[i].length() + 1;
 		
 		//We don't want to return values that are too big
-		if(off >= getText().length())
-			off = getText().length() - 1;
+		if(off > getText().length())
+			off = getText().length();
+		//...or to small
+		if(off < 0)
+			off = 0;
 		
 		return off;
 	}
