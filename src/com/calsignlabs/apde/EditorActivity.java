@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -331,8 +332,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				if(event.getAction() == MotionEvent.ACTION_MOVE && (changeX * changeX) + (changeY * changeY) > maxChange * maxChange)
 					dragged = true;
 				
-				//Only dispatch the touch event if this isn't a drag
-				if(code.getHeight() < codeScroller.getHeight() - padding.getPaddingBottom() + padding.getPaddingTop() && event.getAction() == MotionEvent.ACTION_UP && !dragged) {
+				//Only dispatch the touch event if this isn't a drag and there are tabs
+				if(code.getHeight() < codeScroller.getHeight() - padding.getPaddingBottom() + padding.getPaddingTop() && event.getAction() == MotionEvent.ACTION_UP
+						&& !dragged && tabBar.getTabCount() > 0) {
 					//Hacky - dispatches a touch event to the code area
 					
 					code.requestFocus();
@@ -772,6 +774,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	if(sketchbookLoc.exists()) {
     		//Get a list of sketches
 	    	File[] folders = sketchbookLoc.listFiles();
+	    	//Sort the list of sketches alphabetically
+	    	Arrays.sort(folders);
 	    	
 	    	for(File folder : folders)
 	    		if(folder.isDirectory())
@@ -793,6 +797,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	if(examplesLoc.exists()) {
     		//Get a list of sketches
 	    	File[] folders = examplesLoc.listFiles();
+	    	//Sort the list of examples alphabetically
+	    	Arrays.sort(folders);
 	    	
 	    	for(File folder : folders)
 	    		if(folder.isDirectory())
@@ -1953,6 +1959,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Add the tab
     	tabBar.addSelectTab(tab);
     	tabs.put(tab, new FileMeta(title, "", 0, 0));
+    	
+    	//Clear the code area
+    	((CodeEditText) findViewById(R.id.code)).setUpdateText("");
+    	((CodeEditText) findViewById(R.id.code)).clearTokens();
     	
     	//Make the tab non-all-caps
     	customizeTab(tab, title);
