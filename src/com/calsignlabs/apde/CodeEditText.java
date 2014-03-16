@@ -422,9 +422,12 @@ public class CodeEditText extends EditText {
 		if(!PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true))
 			return;
 		
+		//Get the text now so that we don't experience any synchronization issues
+		final String text = getText().toString();
+		
 		new Thread(new Runnable() {
 			public void run() {
-				Token[] tempTokens = splitTokens(getText().toString(), 0, new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '"', '\'', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' '});
+				Token[] tempTokens = splitTokens(text, 0, new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '"', '\'', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' '});
 
 				for(int i = 0; i < tempTokens.length; i ++) {
 					String nextNonSpace = "";
