@@ -1,0 +1,49 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <CheckBoxPreference
+        android:defaultValue="true"
+        android:key="override_tab"
+        android:title="@string/override_tab" />
+
+    <PreferenceCategory
+        android:key="pref_key_storage_settings"
+        android:title="@string/pref_editor" >
+
+        <!-- maxLength sets the max number of characters... don't want font sizes of 1000!!! -->
+        <EditTextPreference
+            android:defaultValue="@string/pref_textsize_default"
+            android:inputType="number"
+            android:key="textsize"
+            android:maxLength="2"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_textsize_title" />
+
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="syntax_highlight"
+            android:title="@string/pref_syntax_highlight" />
+    </PreferenceCategory>
+    
+    <PreferenceCategory
+        android:key="pref_console"
+        android:title="@string/pref_console" >
+
+        <!-- maxLength sets the max number of characters... don't want font sizes of 1000!!! -->
+        <EditTextPreference
+            android:defaultValue="@string/pref_textsize_default"
+            android:inputType="number"
+            android:key="textsize_console"
+            android:maxLength="2"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_textsize_title" />
+
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="pref_scroll_lock"
+            android:summary="@string/pref_scroll_lock_desc"
+            android:title="@string/pref_scroll_lock" />
+    </PreferenceCategory>
+</PreferenceScreen>

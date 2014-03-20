@@ -22,5 +22,8 @@
     <string name="pref_scroll_lock">Automatically Scroll</string>
     <string name="pref_scroll_lock_desc">When the console is updated</string>
     <string name="override_tab">Use Tab for Indentation</string>
+    <string name="pref_sketchbook">Sketchbook</string>
+    <string name="internal_storage_sketchbook">Use Internal Storage</string>
+    <string name="pref_sketchbook_location">Location on External Storage</string>
 
 </resources>

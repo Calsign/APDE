@@ -441,8 +441,10 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     }
 	
 	private void launchSettings() {
-		Intent intent = new Intent(this, SettingsActivity.class);
-		startActivity(intent);
+		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
+			startActivity(new Intent(this, SettingsActivity.class));
+		else
+			startActivity(new Intent(this, SettingsActivityHC.class));
 	}
 	
 	private void launchPermissions() {

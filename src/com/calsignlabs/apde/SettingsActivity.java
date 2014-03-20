@@ -17,6 +17,10 @@ import android.view.MenuItem;
 import android.view.WindowManager;
 
 /**
+ * Settings activity for API level 10
+ */
+
+/**
  * A {@link PreferenceActivity} that presents a set of application settings. On
  * handset devices, settings are presented as a single list. On tablets,
  * settings are split by category, with category headers shown to the left of
@@ -76,14 +80,17 @@ public class SettingsActivity extends PreferenceActivity {
 		// In the simplified UI, fragments are not used at all and we instead
 		// use the older PreferenceActivity APIs.
 
-		// Add 'general' preferences.
+		// Add 'general' preferences
 		addPreferencesFromResource(R.xml.pref_general);
+		// Add 'editor' preferences
+		addPreferencesFromResource(R.xml.pref_editor);
 		
 		// Bind the summaries of EditText/List/Dialog/Ringtone preferences to
 		// their values. When their values change, their summaries are updated
 		// to reflect the new value, per the Android Design guidelines.
 		bindPreferenceSummaryToValue(findPreference("textsize"));
 		bindPreferenceSummaryToValue(findPreference("textsize_console"));
+		bindPreferenceSummaryToValue(findPreference("pref_sketchbook"));
 		
 		((CheckBoxPreference) findPreference("use_hardware_keyboard")).setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
 			@Override
@@ -103,12 +110,12 @@ public class SettingsActivity extends PreferenceActivity {
 		if(Build.VERSION.SDK_INT >= 11)
 			//This only works on API >= 11
 			if(!vibrate.hasVibrator())
-				getPreferenceScreen().removePreference(findPreference("pref_general"));
+				getPreferenceScreen().removePreference(findPreference("pref_vibrate"));
 		else
 			// getSystemService(VIBRATOR_SERVICE) on API < 11 returns null if the vibrator isn't available
 			//...maybe this doesn't work...
 			if(vibrate == null)
-				getPreferenceScreen().removePreference(findPreference("pref_general"));
+				getPreferenceScreen().removePreference(findPreference("pref_vibrate"));
 	}
 
 	/** {@inheritDoc} */
@@ -138,7 +145,7 @@ public class SettingsActivity extends PreferenceActivity {
 				|| Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB
 				|| !isXLargeTablet(context);
 	}
-
+	
 	/**
 	 * A preference value change listener that updates the preference's summary
 	 * to reflect its new value.

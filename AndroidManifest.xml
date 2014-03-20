@@ -56,6 +56,12 @@
             android:theme="@style/PreferencesTheme" />
         
         <activity
+            android:name="com.calsignlabs.apde.SettingsActivityHC"
+            android:icon="@drawable/ic_launcher"
+            android:label="@string/title_activity_settings"
+            android:theme="@style/PreferencesTheme" />
+        
+        <activity
             android:name="com.calsignlabs.apde.PermissionsActivity"
             android:label="@string/title_activity_permissions"
             android:theme="@style/FullscreenTheme" />

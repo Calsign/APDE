@@ -1,72 +1,32 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <!-- The entire GENERAL category is hidden when the vibrator isn't available...
-         ...change this if we add more preferences to GENERAL -->
+    <CheckBoxPreference
+        android:defaultValue="true"
+        android:key="pref_vibrate"
+        android:title="@string/pref_vibrate" />
+    
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="use_hardware_keyboard"
+        android:title="@string/use_hardware_keyboard" />
+    
     <PreferenceCategory
-        android:title="@string/pref_general"
-        android:key="pref_general" >
+        android:key="pref_sketchbook"
+        android:title="@string/pref_sketchbook" >
         
         <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="pref_vibrate"
-            android:title="@string/pref_vibrate" />
-
-    </PreferenceCategory>
-    
-    <PreferenceCategory 
-        android:title="@string/pref_input"
-        android:key="pref_key_input" >
-	    
-	    <CheckBoxPreference
-	        android:key="use_hardware_keyboard"
-	        android:title="@string/use_hardware_keyboard"
-	        android:defaultValue="false" />
-	    
-	    <CheckBoxPreference
-	        android:key="override_tab"
-	        android:title="@string/override_tab"
-	        android:defaultValue="true" />
-	</PreferenceCategory>
-    
-    <PreferenceCategory 
-        android:title="@string/pref_editor"
-        android:key="pref_key_storage_settings" >
-        
-	    <!-- maxLength sets the max number of characters... don't want font sizes of 1000!!! -->
-	    <EditTextPreference
-	        android:defaultValue="@string/pref_textsize_default"
-	        android:inputType="number"
-	        android:key="textsize"
-	        android:maxLines="1"
-	        android:selectAllOnFocus="true"
-	        android:singleLine="true"
-	        android:title="@string/pref_textsize_title"
-	        android:maxLength="2" />
-	    
-	    <CheckBoxPreference
-	        android:key="syntax_highlight"
-	        android:title="@string/pref_syntax_highlight"
-	        android:defaultValue="true" />
-	</PreferenceCategory>
-	
-    <PreferenceCategory 
-        android:title="@string/pref_console"
-        android:key="pref_console" >
-	    
-        <!-- maxLength sets the max number of characters... don't want font sizes of 1000!!! -->
-	    <EditTextPreference
-	        android:defaultValue="@string/pref_textsize_default"
-	        android:inputType="number"
-	        android:key="textsize_console"
-	        android:maxLines="1"
-	        android:selectAllOnFocus="true"
-	        android:singleLine="true"
-	        android:title="@string/pref_textsize_title"
-	        android:maxLength="2" />
-	    
-	    <CheckBoxPreference
-	        android:key="pref_scroll_lock"
-	        android:title="@string/pref_scroll_lock"
-	        android:summary="@string/pref_scroll_lock_desc"
-	        android:defaultValue="true" />
+            android:defaultValue="false"
+            android:disableDependentsState="true"
+            android:key="internal_storage_sketchbook"
+            android:title="@string/internal_storage_sketchbook" />
+		
+        <EditTextPreference
+            android:name="@string/pref_sketchbook_location"
+            android:defaultValue=""
+            android:dependency="internal_storage_sketchbook"
+            android:inputType="textNoSuggestions|textUri"
+            android:key="pref_sketchbook_location"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:title="@string/pref_sketchbook_location" />
     </PreferenceCategory>
 </PreferenceScreen>

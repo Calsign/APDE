@@ -33,5 +33,7 @@
         <item name="android:background">@color/bar_overlay</item>
         <item name="background">@color/bar_overlay</item>
         <item name="backgroundStacked">@color/bar_overlay</item>
+        <item name="android:displayOptions">showHome|homeAsUp|showTitle</item>
+        <item name="displayOptions">showHome|homeAsUp|showTitle</item>
     </style>
 </resources>

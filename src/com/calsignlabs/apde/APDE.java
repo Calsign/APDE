@@ -6,9 +6,11 @@ import com.calsignlabs.apde.build.Manifest;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 
 /**
  * This is the Application global state for APDE. It manages things like the
@@ -85,6 +87,32 @@ public class APDE extends Application {
 	 * @return the location of the Sketchbook folder on the external storage
 	 */
 	public File getSketchbookFolder() {
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		
+		if(prefs.getBoolean("internal_storage_sketchbook", false)) {
+			//The "sketchbook" directory on the internal storage
+			return getDir("sketchbook", 0);
+		} else {
+			//The user defined sketchbook location
+			String path = prefs.getString("pref_sketchbook_location", "");
+			File loc = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), path);
+			
+			//Only return this if the specified path is valid...
+			if(loc.exists() && path.length() > 0)
+				return loc;
+			else {
+				//Update the stored value
+				prefs.edit().putString("pref_sketchbook_location", "Sketchbook").commit();
+				
+				return getDefaultSketchbookFolder();
+			}
+		}
+	}
+	
+	/**
+	 * @return the default location of the Sketchbook folder (on the external storage)
+	 */
+	public File getDefaultSketchbookFolder() {
 		return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), "Sketchbook");
 	}
 	
