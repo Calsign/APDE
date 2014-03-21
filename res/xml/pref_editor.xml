@@ -1,9 +1,4 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <CheckBoxPreference
-        android:defaultValue="true"
-        android:key="override_tab"
-        android:title="@string/override_tab" />
-
     <PreferenceCategory
         android:key="pref_key_storage_settings"
         android:title="@string/pref_editor" >
@@ -23,6 +18,11 @@
             android:defaultValue="true"
             android:key="syntax_highlight"
             android:title="@string/pref_syntax_highlight" />
+        
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="override_tab"
+            android:title="@string/override_tab" />
     </PreferenceCategory>
     
     <PreferenceCategory
