@@ -118,17 +118,27 @@ public class ScrollingTabContainerView extends android.support.v7.internal.widge
 		if(tabs.size() <= 0 || tab >= tabs.size() || tab < 0)
 			return;
 		
+		if(selectedTab >= tabs.size()) {
+			selectTab(selectedTab - 1);
+		}
+		
+		if(selectedTab == tab && tabs.size() > 1) {
+			if(selectedTab == 0) {
+				selectTab(selectedTab + 1);
+			} else {
+				selectTab(selectedTab - 1);
+			}
+		}
+		
 		super.removeTabAt(tab);
 		tabs.remove(tab);
 		
-		if(selectedTab == tab || selectedTab >= tabs.size()) {
-			selectTab(selectedTab - 1);
-			tabListener.onTabSelected(getSelectedTab());
-		}
-		
-		if(selectedTab < 0 && getTabCount() > 0) {
-			selectTab(selectedTab + 1);
-			tabListener.onTabSelected(getSelectedTab());
+		if(selectedTab >= tabs.size()) {
+			if(tabs.size() > 0) {
+				selectTab(0);
+			} else {
+				selectedTab = -1;
+			}
 		}
 	}
 	

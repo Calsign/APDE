@@ -204,10 +204,12 @@ public class CodeEditText extends EditText {
 				}
 			}
 			
-			//Determine the last character of the previous line
+			//Determine the last character of the previous line (not counting whitespace)
 			char lastChar = ' ';
-			if(lastLine.length() > 0)
-				lastChar= lastLine.charAt(lastLine.length() - 1);
+			if(lastLine.length() > 0) {
+				String trimmedLastLine = lastLine.trim();
+				lastChar = trimmedLastLine.charAt(trimmedLastLine.length() - 1);
+			}
 			
 			//Automatically increase the indent if this is a new code block
 			if(lastChar == '{')
