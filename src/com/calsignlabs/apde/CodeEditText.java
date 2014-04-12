@@ -206,8 +206,8 @@ public class CodeEditText extends EditText {
 			
 			//Determine the last character of the previous line (not counting whitespace)
 			char lastChar = ' ';
-			if(lastLine.length() > 0) {
-				String trimmedLastLine = lastLine.trim();
+			String trimmedLastLine = lastLine.trim();
+			if(trimmedLastLine.length() > 0) {
 				lastChar = trimmedLastLine.charAt(trimmedLastLine.length() - 1);
 			}
 			

@@ -45,6 +45,7 @@ import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -52,6 +53,7 @@ import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.View.MeasureSpec;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
@@ -59,8 +61,10 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ScrollView;
@@ -116,6 +120,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	//Whether or not the message area is currently displaying an error message
 	private boolean errorMessage = false;
 	
+	//Whether or not the special character inserts tray is currently visible
+	private boolean charInserts = false;
+	//A reference to the toggle char inserts button... and why do we need this?
+	//It's because adding views to the char insert tray is somehow breaking the retrieval of this view by ID...
+	private ImageButton toggleCharInserts;
+	
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -144,8 +154,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         messageListener = new MessageTouchListener();
         
         //Enable the message area listener
-        findViewById(R.id.message).setOnLongClickListener(messageListener);
-        findViewById(R.id.message).setOnTouchListener(messageListener);
+        findViewById(R.id.buffer).setOnLongClickListener(messageListener);
+        findViewById(R.id.buffer).setOnTouchListener(messageListener);
         
         //Initialize the list of tabs
         tabs = new HashMap<Tab, FileMeta>();
@@ -399,6 +409,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	        			
 	        			//Configure the layout for the keyboard
 	        			
+	        			LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
 	        			TextView messageArea = (TextView) findViewById(R.id.message);
         				View console = findViewById(R.id.console_scroller);
         				View code = findViewById(R.id.code_scroller);
@@ -414,16 +425,28 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	        			
 	        			//Remove the focus from the Message slider if it has it and maintain styling
 	        			if(errorMessage) {
-	        				messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
-	        				messageArea.setBackgroundColor(getResources().getColor(R.color.error_back));
+	        				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
+	        				buffer.setBackgroundColor(getResources().getColor(R.color.error_back));
 	        				messageArea.setTextColor(getResources().getColor(R.color.error_text));
 	        			} else {
-	        				messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
-	        				messageArea.setBackgroundColor(getResources().getColor(R.color.message_back));
+	        				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
+	        				buffer.setBackgroundColor(getResources().getColor(R.color.message_back));
 	        				messageArea.setTextColor(getResources().getColor(R.color.message_text));
 	        			}
 	        			
 	        			((CodeEditText) findViewById(R.id.code)).updateBracketMatch();
+	        			
+	        			//Don't do anything if the user has disabled the character insert tray
+	        			if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true)) {
+	        				//Update the character insert tray
+	        				toggleCharInserts.setVisibility(View.VISIBLE);
+	        				findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.VISIBLE);
+	        				
+	        				if(charInserts) {
+	        					findViewById(R.id.message).setVisibility(View.GONE);
+	        					findViewById(R.id.char_insert_tray).setVisibility(View.VISIBLE);
+	        				}
+	        			}
         			}
         		} else {
         			if(keyboardVisible) {
@@ -441,6 +464,13 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	        			//Remove any unnecessary focus from the code area
 	        			((CodeEditText) findViewById(R.id.code)).clearFocus();
 	        			((CodeEditText) findViewById(R.id.code)).matchingBracket = -1;
+	        			
+	        			//Update the character insert tray
+	        			toggleCharInserts.setVisibility(View.GONE);
+	        			findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.GONE);
+	        			
+	        			findViewById(R.id.message).setVisibility(View.VISIBLE);
+	        			findViewById(R.id.char_insert_tray).setVisibility(View.GONE);
         			}
         		}
         	}
@@ -501,6 +531,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		} catch (SAXException e) {
 			e.printStackTrace();
 		}
+        
+        //Initialize the reference to the toggle char inserts button
+        toggleCharInserts = (ImageButton) findViewById(R.id.toggle_char_inserts);
     }
     
     public void onResume() {
@@ -518,6 +551,19 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         //Update the syntax highlighter
         ((CodeEditText) findViewById(R.id.code)).updateTokens();
+        
+		//Make the character insert toggle button square
+        final View charInsertToggle = findViewById(R.id.toggle_char_inserts);
+        charInsertToggle.setPadding(0, 0, 0, 0);
+        charInsertToggle.requestLayout();
+        charInsertToggle.post(new Runnable() {
+        	public void run() {
+        		charInsertToggle.setLayoutParams(new LinearLayout.LayoutParams(charInsertToggle.getHeight(), charInsertToggle.getHeight()));
+        		
+        		//Hide the button (default, keyboard not visible...)
+                charInsertToggle.setVisibility(View.GONE);
+        	}
+        });
     }
     
     /**
@@ -1731,6 +1777,99 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     }
     
     /**
+     * This function is called by the XML-defined special character insertion tray toggler.
+     * 
+     * @param view the button that was clicked
+     */
+    public void toggleCharInserts(View view) {
+    	//Don't do anything if the user has disabled the character insert tray
+		if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true))
+			return;
+    	
+    	if(!keyboardVisible)
+			return;
+    	
+    	charInserts = !charInserts;
+    	
+    	//Update the global reference
+    	toggleCharInserts = (ImageButton) view;
+    	
+    	if(charInserts) {
+    		//Build the character inserts tray
+            reloadCharInserts();
+    		
+    		((ImageButton) view).setImageResource(R.drawable.ic_caret_right);
+    		((TextView) findViewById(R.id.message)).setVisibility(View.GONE);
+    		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.VISIBLE);
+    	} else {
+    		((ImageButton) view).setImageResource(R.drawable.ic_caret_left);
+    		((TextView) findViewById(R.id.message)).setVisibility(View.VISIBLE);
+    		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.GONE);
+    	}
+    }
+    
+    /**
+     * Set up the character inserts tray.
+     */
+	public void reloadCharInserts() {
+		if(!keyboardVisible)
+			return;
+		
+    	if(message == -1)
+    		message = findViewById(R.id.message).getHeight();
+    	
+    	//Get a reference to the button container
+    	LinearLayout container = ((LinearLayout) findViewById(R.id.char_insert_tray_list));
+    	//Clear any buttons from before
+    	container.removeAllViews();
+    	
+    	//Get a reference to the code area
+    	final CodeEditText code = (CodeEditText) findViewById(R.id.code);
+    	
+    	//The (temporary) list of character inserts
+    	String[] chars = {"\u2192", ";", ".", ",", "{", "}", "(", ")", "[", "]", "=", "*", "/", "+", "-", "&", "|", "!", "<", ">", "\"", "'", "\\", "_", "?", ":", "@", "#"};
+    	
+    	//This works for now... as far as I can tell
+    	final int keyboardID = 0;
+    	
+//    	if(android.os.Build.VERSION.SDK_INT >= 11)
+//    		//Hopefully this is the right keyboard...
+//    		keyboardID = KeyCharacterMap.VIRTUAL_KEYBOARD;
+//    	else
+//    		//...and hopefully this will be sufficient for pre-Honeycomb devices
+//    		keyboardID = KeyCharacterMap.BUILT_IN_KEYBOARD;
+    	
+    	//Add each button to the container
+    	for(final String c : chars) {
+    		Button button = (Button) LayoutInflater.from(this).inflate(R.layout.char_insert_button, null);
+    		button.setText(c);
+    		button.setLayoutParams(new LinearLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 25, getResources().getDisplayMetrics()), message));
+    		button.setPadding(0, 0, 0, 0);
+    		
+    		//Maybe we'll want these at some point in time... but for now, they just cause more problems...
+    		//...and the user won't be dragging the divider around if the keyboard is open (which it really should be)
+//    		//Still let the user drag the message area
+//    		button.setOnLongClickListener(messageListener);
+//    		button.setOnTouchListener(messageListener);
+    		
+    		container.addView(button);
+    		
+    		button.setOnClickListener(new OnClickListener() {
+				@Override
+				public void onClick(View view) {
+					//A special check for the tab key... making special exceptions aren't exactly ideal, but this is probably the most concise solution (for now)...
+					code.dispatchKeyEvent(c.equals("\u2192") ? new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB) : new KeyEvent(android.os.SystemClock.uptimeMillis(), c, keyboardID, 0));
+					
+					//Provide haptic feedback (if the user has vibrations enabled)
+					if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_vibrate", true))
+						((android.os.Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(10); //10 millis
+				}
+    		});
+    		
+    	}
+    }
+    
+    /**
      * Builds and launches the current sketch
      * This CAN be called multiple times without breaking anything
      */
@@ -1796,7 +1935,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Write the message
     	((TextView) findViewById(R.id.message)).setText(msg);
     	//Change the message area style
-    	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.message_back));
+    	((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.message_back));
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
     	
     	errorMessage = false;
@@ -1817,7 +1956,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			//Write the message
     			((TextView) findViewById(R.id.message)).setText(msg);
     			//Change the message area style
-    			((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.message_back));
+    			((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.message_back));
     			((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
     			
     			errorMessage = false;
@@ -1847,7 +1986,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Write the error message
     	((TextView) findViewById(R.id.message)).setText(msg);
     	//Change the message area style
-    	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.error_back));
+    	((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.error_back));
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
     	
     	errorMessage = true;
@@ -1868,7 +2007,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			//Write the error message
     			((TextView) findViewById(R.id.message)).setText(msg);
     			//Change the message area style
-    	    	((TextView) findViewById(R.id.message)).setBackgroundColor(getResources().getColor(R.color.error_back));
+    	    	((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.error_back));
     	    	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
     	    	
     	    	errorMessage = true;
@@ -2526,14 +2665,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				case MotionEvent.ACTION_UP:
 					pressed = false;
 					
+					LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
 					TextView messageArea = (TextView) findViewById(R.id.message);
 					
 					//Change the message area drawable and maintain styling
 					if(errorMessage) {
-						messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
+						buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
 						messageArea.setTextColor(getResources().getColor(R.color.error_text));
 					} else {
-						messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
+						buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
 						messageArea.setTextColor(getResources().getColor(R.color.message_text));
 					}
 					
@@ -2553,14 +2693,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			
 			pressed = true;
 			
+			LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
 			TextView messageArea = (TextView) findViewById(R.id.message);
 			
 			//Change the message area drawable and maintain styling
 			if(errorMessage) {
-				messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error_selected));
+				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error_selected));
 				messageArea.setTextColor(getResources().getColor(R.color.error_text));
 			} else {
-				messageArea.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_selected));
+				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_selected));
 				messageArea.setTextColor(getResources().getColor(R.color.message_text));
 			}
 			

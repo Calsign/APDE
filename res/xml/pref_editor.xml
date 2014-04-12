@@ -23,6 +23,11 @@
             android:defaultValue="true"
             android:key="override_tab"
             android:title="@string/override_tab" />
+        
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="char_inserts"
+            android:title="@string/char_inserts" />
     </PreferenceCategory>
     
     <PreferenceCategory

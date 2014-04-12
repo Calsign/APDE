@@ -74,5 +74,6 @@
     <string name="drawer_list_title_examples">Examples</string>
     <string name="auto_formatter_complete">Auto Format Completed</string>
     <string name="auto_format">Auto Format</string>
+    <string name="toggle_char_inserts">Toggle Character Bar</string>
 
 </resources>

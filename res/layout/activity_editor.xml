@@ -53,14 +53,56 @@
 			</HorizontalScrollView>
     	</ScrollView>
 	    
-	    <TextView
-	        android:id="@+id/message"
+	    <LinearLayout
+	        android:id="@+id/buffer"
 	        android:layout_width="fill_parent"
 	        android:layout_height="wrap_content"
-	        android:background="@drawable/back"
-	        android:padding="10dp"
-	        android:text=""
-	        android:textColor="#000000" />
+	        android:orientation="horizontal"
+	        android:background="@drawable/back" >
+	        
+	        <TextView
+                android:id="@+id/message"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:padding="10dp"
+                android:text=""
+                android:textColor="#000000" />
+	        
+	        <HorizontalScrollView
+	            android:id="@+id/char_insert_tray"
+	            android:layout_width="0dp"
+	            android:layout_height="wrap_content"
+	            android:layout_weight="1"
+	            android:visibility="gone" >
+	            
+	            <LinearLayout
+	                android:id="@+id/char_insert_tray_list"
+	                android:layout_width="wrap_content"
+	                android:layout_height="wrap_content"
+	                android:orientation="horizontal" />
+	        </HorizontalScrollView>
+	        
+	        <View
+	            android:id="@+id/toggle_char_inserts_separator"
+                android:layout_width="1dp"
+                android:layout_height="fill_parent"
+                android:background="#666666"
+                android:layout_margin="3dp"
+                android:visibility="gone" />
+	        
+	        <ImageButton
+                android:id="@+id/toggle_char_inserts"
+                android:layout_width="wrap_content"
+                android:layout_height="fill_parent"
+                android:layout_gravity="center"
+                android:adjustViewBounds="true"
+        		android:scaleType="centerInside"
+                android:contentDescription="@string/toggle_char_inserts"
+                android:src="@drawable/ic_caret_left"
+                style="@style/Widget.AppCompat.ActionButton"
+                android:onClick="toggleCharInserts" />
+	    </LinearLayout>
 	    
 	    <!-- Use ScrollView(s) for smooth scrolling -->
 	    <ScrollView android:id="@+id/console_scroller"
