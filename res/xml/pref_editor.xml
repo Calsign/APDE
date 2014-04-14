@@ -27,7 +27,8 @@
         <CheckBoxPreference
             android:defaultValue="true"
             android:key="char_inserts"
-            android:title="@string/char_inserts" />
+            android:title="@string/char_inserts"
+            android:summary="@string/char_inserts_desc" />
     </PreferenceCategory>
     
     <PreferenceCategory

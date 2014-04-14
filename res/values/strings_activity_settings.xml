@@ -25,6 +25,11 @@
     <string name="pref_sketchbook">Sketchbook</string>
     <string name="internal_storage_sketchbook">Use Internal Storage</string>
     <string name="pref_sketchbook_location">Location on External Storage</string>
-    <string name="char_inserts">Enable Character Insert Tray</string>
+    <string name="char_inserts">Special Character Tray</string>
+    <string name="char_inserts_desc">Enable character insertion tray</string>
+    <string name="pref_code_assistance">Coding Assistance</string>
+    <string name="auto_indent">Auto Indentation</string>
+    <string name="curly_brace_insertion">Close Code Blocks</string>
+    <string name="curly_brace_insertion_desc">Assist in placement of curly braces</string>
 
 </resources>

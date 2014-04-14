@@ -84,6 +84,8 @@ public class SettingsActivity extends PreferenceActivity {
 		addPreferencesFromResource(R.xml.pref_general);
 		// Add 'editor' preferences
 		addPreferencesFromResource(R.xml.pref_editor);
+		// Add 'coding assistance' preferences
+		addPreferencesFromResource(R.xml.pref_code_assistance);
 		
 		// Bind the summaries of EditText/List/Dialog/Ringtone preferences to
 		// their values. When their values change, their summaries are updated

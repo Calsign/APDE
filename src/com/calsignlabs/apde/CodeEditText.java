@@ -290,14 +290,18 @@ public class CodeEditText extends EditText {
 		if(pressed.length() == 1 && pressed.charAt(0) == '\n')
 			pressEnter();
 		
-		//Automatically add a closing brace
-		if(pressed.charAt(0) == '{') {
+		//Automatically add a closing brace (if the user has enabled curly brace insertion)
+		if(pressed.charAt(0) == '{' && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("curly_brace_insertion", true)) {
 			getText().insert(getSelectionStart(), "}");
 			setSelection(getSelectionStart() - 1);
 		}
 	}
 	
 	public void pressEnter() {
+		//Make sure that the user has enabled auto indentation
+		if(!PreferenceManager.getDefaultSharedPreferences(context).getBoolean("auto_indent", true))
+			return;
+		
 		int lastLineNum = getCurrentLine() - 1;
 		
 		//Get the indentation of the previous line
@@ -330,7 +334,8 @@ public class CodeEditText extends EditText {
 			getText().insert(getSelectionStart(), lastIndent + indent);
 			
 			//Automatically press enter again so that everything lines up nicely.. This is incredibly hacky...
-			if(getText().length() > getSelectionStart() && getText().charAt(getSelectionStart()) == '}') {
+			//Also make sure that the user has enabled curly brace insertion
+			if(getText().length() > getSelectionStart() && getText().charAt(getSelectionStart()) == '}' && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("curly_brace_insertion", true)) {
 				//Add a newline (the extra space is so that we don't recursively detect a newline; adding at least two characters at once sidesteps this possibility)
 				getText().insert(getSelectionStart(), "\n" + lastIndent + " ");
 				//Move the cursor back (hacky...)

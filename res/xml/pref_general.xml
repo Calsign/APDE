@@ -1,13 +1,17 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <CheckBoxPreference
-        android:defaultValue="true"
-        android:key="pref_vibrate"
-        android:title="@string/pref_vibrate" />
-    
-    <CheckBoxPreference
-        android:defaultValue="false"
-        android:key="use_hardware_keyboard"
-        android:title="@string/use_hardware_keyboard" />
+    <PreferenceCategory
+        android:key="pref_general_settings"
+        android:title="@string/pref_general" >
+        
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="pref_vibrate"
+            android:title="@string/pref_vibrate" />
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="use_hardware_keyboard"
+            android:title="@string/use_hardware_keyboard" />
+    </PreferenceCategory>
     
     <PreferenceCategory
         android:key="pref_sketchbook"

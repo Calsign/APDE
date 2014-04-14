@@ -11,4 +11,10 @@
         
         <extra android:name="resource" android:value="pref_editor" />
     </header>
+    <header
+        android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment"
+        android:title="@string/pref_code_assistance" >
+        
+        <extra android:name="resource" android:value="pref_code_assistance" />
+    </header>
 </preference-headers>
