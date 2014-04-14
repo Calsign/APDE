@@ -1827,7 +1827,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	final CodeEditText code = (CodeEditText) findViewById(R.id.code);
     	
     	//The (temporary) list of character inserts
-    	String[] chars = {"\u2192", ";", ".", ",", "{", "}", "(", ")", "[", "]", "=", "*", "/", "+", "-", "&", "|", "!", "<", ">", "\"", "'", "\\", "_", "?", ":", "@", "#"};
+    	//"\u2192" is Unicode for the right arrow (like "->") - this is a graphical representation of the TAB key
+    	String[] chars = {"\u2192", ";", ".", ",", "{", "}", "(", ")", "=", "*", "/", "+", "-", "&", "|", "!", "[", "]", "<", ">", "\"", "'", "\\", "_", "?", ":", "@", "#"};
     	
     	//This works for now... as far as I can tell
     	final int keyboardID = 0;
@@ -1858,7 +1859,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				@Override
 				public void onClick(View view) {
 					//A special check for the tab key... making special exceptions aren't exactly ideal, but this is probably the most concise solution (for now)...
-					code.dispatchKeyEvent(c.equals("\u2192") ? new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB) : new KeyEvent(android.os.SystemClock.uptimeMillis(), c, keyboardID, 0));
+					KeyEvent event = c.equals("\u2192") ? new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB) : new KeyEvent(android.os.SystemClock.uptimeMillis(), c, keyboardID, 0);
+					code.dispatchKeyEvent(event);
 					
 					//Provide haptic feedback (if the user has vibrations enabled)
 					if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_vibrate", true))

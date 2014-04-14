@@ -21,6 +21,7 @@ import android.text.TextWatcher;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.KeyEvent;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.ScrollView;
 
@@ -115,15 +116,67 @@ public class CodeEditText extends EditText {
 	
 	public void setupTextListener() {
 		addTextChangedListener(new TextWatcher() {
-			@Override
-			public void afterTextChanged(Editable editable) {}
+			String oldText;
 			
 			@Override
-			public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+			public void afterTextChanged(Editable editable) {
+				//Unfortunately, this appears to be the only way to detect character presses in all situations: reading the text directly...
+				
+				String text = getText().toString();
+				
+				//Compare the old text and the new text
+				//TODO: Does this check fail in any corner cases (like mass-text insertion / deletion)?
+				if(text.length() == oldText.length() + 1 && getSelectionStart() > 0) {
+					char pressedChar = text.charAt(getSelectionStart() - 1);
+					
+					pressKeys(String.valueOf(pressedChar));
+				}
+			}
+			
+			@Override
+			public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+				oldText = getText().toString();
+			}
 			
 			@Override
 			public void onTextChanged(CharSequence s, int start, int before, int count) {
 				updateTokens();
+			}
+		});
+		
+		//Detect enter key presses... regardless of whether or not the user is using a hardware keyboard
+		setOnKeyListener(new OnKeyListener() {
+			@Override
+			public boolean onKey(View view, int keyCode, KeyEvent event) {
+				//We don't need this check now... but I'll leave it here just in case...
+//				//Retrieve the character that was pressed (hopefully...)
+//				//This doesn't work for all cases, though...
+//				char pressedChar = (char) event.getUnicodeChar(event.getMetaState());
+//				
+//				if(pressedChar != 0)
+//					pressKeys(String.valueOf(pressedChar));
+				
+				//We only want to check key down events...
+				//...otherwise we get two events for every press because we have down and up
+				if(event.getAction() != KeyEvent.ACTION_DOWN)
+					return false;
+				
+				//We don't need this check, either...
+//				if(keyCode == KeyEvent.KEYCODE_ENTER) {
+//					post(new Runnable() {
+//						public void run() {
+//							pressEnter();
+//						}
+//					});
+//				}
+				
+				//Override default TAB key behavior
+				if(keyCode == KeyEvent.KEYCODE_TAB && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("override_tab", true)) {
+					getText().insert(getSelectionStart(), "  ");
+					return true;
+				}
+				
+				return false;
 			}
 		});
 		
@@ -181,55 +234,115 @@ public class CodeEditText extends EditText {
 	
 	@Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-		int lastLineNum = getCurrentLine();
+//		int lastLineNum = getCurrentLine();
 		
 		//Make sure to forward the result of what would normally happen
 		boolean result = super.onKeyDown(keyCode, event);
 		
-		if(keyCode == KeyEvent.KEYCODE_ENTER) {
-			//Get the indentation of the previous line
-			String[] lines = getText().toString().split("\n");
-			String lastLine = "";
-			String lastIndent = "";
-			
-			//Calculate the indentation of the previous line
-			if(lines.length > 0) {
-				lastLine = lines[Math.min(lastLineNum, lines.length - 1)];
-				
-				for(int i = 0; i < lastLine.length(); i ++) {
-					if(lastLine.charAt(i) == ' ')
-						lastIndent += ' ';
-					else
-						break;
-				}
-			}
-			
-			//Determine the last character of the previous line (not counting whitespace)
-			char lastChar = ' ';
-			String trimmedLastLine = lastLine.trim();
-			if(trimmedLastLine.length() > 0) {
-				lastChar = trimmedLastLine.charAt(trimmedLastLine.length() - 1);
-			}
-			
-			//Automatically increase the indent if this is a new code block
-			if(lastChar == '{')
-				lastIndent += indent;
-			
-			//Automatically indent
-			getText().insert(getSelectionStart(), lastIndent);
-		}
-		
-		//Override default TAB key behavior
-		if(keyCode == KeyEvent.KEYCODE_TAB && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("override_tab", true)) {
-			getText().insert(getSelectionStart(), "  ");
-			return true;
-		}
-		
-		//TODO de-indent with "}" characters...
-		//...problem is that the keycodes for "}" and "]" are the same...
+//		if(keyCode == KeyEvent.KEYCODE_ENTER) {
+//			//Get the indentation of the previous line
+//			String[] lines = getText().toString().split("\n");
+//			String lastLine = "";
+//			String lastIndent = "";
+//			
+//			//Calculate the indentation of the previous line
+//			if(lines.length > 0) {
+//				lastLine = lines[Math.min(lastLineNum, lines.length - 1)];
+//				
+//				for(int i = 0; i < lastLine.length(); i ++) {
+//					if(lastLine.charAt(i) == ' ')
+//						lastIndent += ' ';
+//					else
+//						break;
+//				}
+//			}
+//			
+//			//Determine the last character of the previous line (not counting whitespace)
+//			char lastChar = ' ';
+//			String trimmedLastLine = lastLine.trim();
+//			if(trimmedLastLine.length() > 0) {
+//				lastChar = trimmedLastLine.charAt(trimmedLastLine.length() - 1);
+//			}
+//			
+//			//Automatically indent
+//			if(lastChar == '{') {
+//				//Automatically increase the indent if this is a new code block
+//				getText().insert(getSelectionStart(), lastIndent + indent);
+//				
+//				//Automatically press enter again so that everything lines up nicely.. This is incredibly hacky...
+//				if(getText().length() > getSelectionStart() && getText().charAt(getSelectionStart()) == '}') {
+//					//Add a newline
+//					getText().insert(getSelectionStart(), "\n" + lastIndent);
+//					//Move the cursor back (hacky...)
+//					setSelection(getSelectionStart() - (lastIndent.length() + 1));
+//				}
+//			} else {
+//				//Regular indentation
+//				getText().insert(getSelectionStart(), lastIndent);
+//			}
+//		}
 		
     	return result;
     }
+	
+	public void pressKeys(String pressed) {
+		//Detect the ENTER key
+		if(pressed.length() == 1 && pressed.charAt(0) == '\n')
+			pressEnter();
+		
+		//Automatically add a closing brace
+		if(pressed.charAt(0) == '{') {
+			getText().insert(getSelectionStart(), "}");
+			setSelection(getSelectionStart() - 1);
+		}
+	}
+	
+	public void pressEnter() {
+		int lastLineNum = getCurrentLine() - 1;
+		
+		//Get the indentation of the previous line
+		String[] lines = getText().toString().split("\n");
+		String lastLine = "";
+		String lastIndent = "";
+		
+		//Calculate the indentation of the previous line
+		if(lines.length > 0) {
+			lastLine = lines[Math.min(lastLineNum, lines.length - 1)];
+			
+			for(int i = 0; i < lastLine.length(); i ++) {
+				if(lastLine.charAt(i) == ' ')
+					lastIndent += ' ';
+				else
+					break;
+			}
+		}
+		
+		//Determine the last character of the previous line (not counting whitespace)
+		char lastChar = ' ';
+		String trimmedLastLine = lastLine.trim();
+		if(trimmedLastLine.length() > 0) {
+			lastChar = trimmedLastLine.charAt(trimmedLastLine.length() - 1);
+		}
+		
+		//Automatically indent
+		if(lastChar == '{') {
+			//Automatically increase the indent if this is a new code block
+			getText().insert(getSelectionStart(), lastIndent + indent);
+			
+			//Automatically press enter again so that everything lines up nicely.. This is incredibly hacky...
+			if(getText().length() > getSelectionStart() && getText().charAt(getSelectionStart()) == '}') {
+				//Add a newline (the extra space is so that we don't recursively detect a newline; adding at least two characters at once sidesteps this possibility)
+				getText().insert(getSelectionStart(), "\n" + lastIndent + " ");
+				//Move the cursor back (hacky...)
+				setSelection(getSelectionStart() - (lastIndent.length() + 2));
+				//Remove the extra space (see above)
+				getText().replace(getSelectionStart() + 1, getSelectionStart() + 2, "");
+			}
+		} else {
+			//Regular indentation
+			getText().insert(getSelectionStart(), lastIndent);
+		}
+	}
 	
 	@Override 
 	protected void onSelectionChanged(int selStart, int selEnd) {
