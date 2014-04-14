@@ -11,6 +11,7 @@ import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
+import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.view.MenuItem;
@@ -30,7 +31,6 @@ public class SettingsActivityHC extends PreferenceActivity {
 	}
 	
 	@SuppressLint("NewApi")
-	@SuppressWarnings("deprecation")
 	public void checkPreferences(PreferenceFragment frag) {
 		CheckBoxPreference hardwareKeyboard = ((CheckBoxPreference) frag.findPreference("use_hardware_keyboard"));
 		
@@ -54,7 +54,7 @@ public class SettingsActivityHC extends PreferenceActivity {
 			//Hide the "Enable Vibration" preference if the vibrator isn't available
 			Vibrator vibrate = (Vibrator) getSystemService(VIBRATOR_SERVICE);
 			if(!vibrate.hasVibrator())
-				getPreferenceScreen().removePreference(vibrator);
+				((PreferenceCategory) frag.findPreference("pref_general_settings")).removePreference(vibrator);
 		}
 		
 		bindPreferenceSummaryToValue(frag.findPreference("textsize"));
