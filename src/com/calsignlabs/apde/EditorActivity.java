@@ -50,7 +50,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
-import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.View.MeasureSpec;
 import android.view.View.OnClickListener;
@@ -476,38 +475,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	}
         });
         
-        //Detect orientation changes
-        (new OrientationEventListener(this) { //TODO make rotation changes prettier
-        	@SuppressLint("NewApi")
-        	@SuppressWarnings("deprecation")
-        	public void onOrientationChanged(int orientation) {
-        		//If we don't know what this is, bail out
-        		if(orientation == ORIENTATION_UNKNOWN)
-        			return;
-        		
-        		int minWidth;
-        		int maxWidth;
-        		
-        		//Let's try and do things correctly for once
-        		if(android.os.Build.VERSION.SDK_INT >= 13) {
-        			Point point = new Point();
-        			getWindowManager().getDefaultDisplay().getSize(point);
-        			maxWidth = point.x;
-        		} else {
-        			maxWidth = getWindowManager().getDefaultDisplay().getWidth();
-        		}
-
-        		//Remove padding
-        		minWidth = maxWidth - (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
-
-        		//Make sure that the EditText is wide enough
-        		findViewById(R.id.code).setMinimumWidth(minWidth);
-        		findViewById(R.id.console).setMinimumWidth(minWidth);
-
-        		findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
-        		findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
-        }}).enable();
-        
         //Create custom output / error streams for the console
         outStream = new PrintStream(new ConsoleStream());
         errStream = new PrintStream(new ConsoleStream());
@@ -536,7 +503,27 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         toggleCharInserts = (ImageButton) findViewById(R.id.toggle_char_inserts);
     }
     
-    public void onResume() {
+    @Override
+    protected void onSaveInstanceState(Bundle icicle) {
+    	//Save the selected tab
+    	icicle.putInt("selected_tab", tabBar.getSelectedTabIndex());
+    }
+    
+    @Override
+    protected void onRestoreInstanceState(Bundle icicle) {
+    	if(icicle != null) {
+    		//Restore the selected tab (this should only happen when the screen rotates)
+    		tabBar.selectTab(icicle.getInt("selected_tab"));
+    		
+    		//Refresh the syntax highlighter AGAIN so that it can take into account the restored selected tab
+    		//The tokens end up getting refreshed 3+ times on a rotation... but it doesn't seem to have much of an impact on performance, so it's fine for now
+    		((CodeEditText) findViewById(R.id.code)).flagRefreshTokens();
+    	}
+    }
+    
+    @SuppressWarnings("deprecation")
+	@SuppressLint("NewApi")
+	public void onResume() {
     	super.onResume();
     	
     	//Reference the SharedPreferences text size value
@@ -564,6 +551,30 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
                 charInsertToggle.setVisibility(View.GONE);
         	}
         });
+        
+        //Correctly size the code and console areas
+        
+        int minWidth;
+		int maxWidth;
+		
+		//Let's try and do things correctly for once
+		if(android.os.Build.VERSION.SDK_INT >= 13) {
+			Point point = new Point();
+			getWindowManager().getDefaultDisplay().getSize(point);
+			maxWidth = point.x;
+		} else {
+			maxWidth = getWindowManager().getDefaultDisplay().getWidth();
+		}
+		
+		//Remove padding
+		minWidth = maxWidth - (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
+		
+		//Make sure that the EditText is wide enough
+		findViewById(R.id.code).setMinimumWidth(minWidth);
+		findViewById(R.id.console).setMinimumWidth(minWidth);
+		
+		findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
+		findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
     }
     
     /**

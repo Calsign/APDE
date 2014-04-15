@@ -3,6 +3,7 @@ package com.calsignlabs.apde;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -23,7 +24,6 @@ import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.ScrollView;
 
 /**
  * Custom EditText for syntax highlighting, auto-indent, etc.
@@ -45,8 +45,12 @@ public class CodeEditText extends EditText {
 	//The default indentation (two spaces)
 	public static final String indent = "  ";
 	
+	//Syntax highlighter information
 	protected Token[] tokens;
 	protected int matchingBracket;
+	
+	//Whether or not we need to update the tokens AGAIN
+	private AtomicBoolean flagRefreshTokens;
 	
 	public CodeEditText(Context context) {
 		super(context);
@@ -70,6 +74,8 @@ public class CodeEditText extends EditText {
 	}
 	
 	private void init() {
+		flagRefreshTokens = new AtomicBoolean();
+		
 		//Get rid of extra spacing at the top and bottom
 		setIncludeFontPadding(false);
 		
@@ -508,9 +514,10 @@ public class CodeEditText extends EditText {
 		}
 		
 		if(PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
-			ScrollView scroller = (ScrollView) ((APDE) context.getApplicationContext()).getEditor().findViewById(R.id.code_scroller);
-			int topVis = (int) Math.max(scroller.getScrollY() / getLineHeight() - 1, 0); //inclusive
-			int bottomVis = (int) Math.floor(Math.min((scroller.getScrollY() + scroller.getHeight()) / getLineHeight() + 1, getLineCount())); //exclusive
+			//ScrollView doesn't like to let us know when it has scrolled...
+//			ScrollView scroller = (ScrollView) ((APDE) context.getApplicationContext()).getEditor().findViewById(R.id.code_scroller);
+			int topVis = 0;//(int) Math.max(scroller.getScrollY() / getLineHeight() - 1, 0); //inclusive
+			int bottomVis = getLineCount();//(int) Math.floor(Math.min((scroller.getScrollY() + scroller.getHeight()) / getLineHeight() + 1, getLineCount())); //exclusive
 			
 			for(int i = 0; i < tokens.length; i ++) {
 				//Only draw this if we need to
@@ -536,6 +543,13 @@ public class CodeEditText extends EditText {
 		
 		//Now that we've multi-threaded the new syntax highlighter, we don't need the old one
 		//It's still here in memory...
+	}
+	
+	/**
+	 * Call this function to force the tokens to update AGAIN after the current / next update cycle has completed
+	 */
+	public void flagRefreshTokens() {
+		flagRefreshTokens.set(true);
 	}
 	
 	public synchronized void updateTokens() {
@@ -646,6 +660,13 @@ public class CodeEditText extends EditText {
 					clearTokens();
 				
 				postInvalidate();
+				
+				//Check to see if we have updated the text AGAIN since starting this update
+				//We shouldn't get too much recursion...
+				if(flagRefreshTokens.get()) {
+					updateTokens();
+					flagRefreshTokens.set(false);
+				}
 			}
 		}).start();
 	}
