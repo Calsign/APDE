@@ -10,4 +10,8 @@
     <color name="tab_text_color">#EEEEEE</color>
     <!-- <color name="activity_background">#DDDDDD</color> -->
     <color name="activity_background">#222222</color>
+    <color name="toggle_char_inserts_separator">#666666</color>
+    <color name="toggle_char_inserts_separator_light">#CCCCCC</color>
+    <color name="char_insert_button">#222222</color>
+    <color name="char_insert_button_light">#CCCCCC</color>
 </resources>

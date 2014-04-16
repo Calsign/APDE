@@ -87,7 +87,7 @@
 	            android:id="@+id/toggle_char_inserts_separator"
                 android:layout_width="1dp"
                 android:layout_height="fill_parent"
-                android:background="#666666"
+                android:background="@color/toggle_char_inserts_separator"
                 android:layout_margin="3dp"
                 android:visibility="gone" />
 	        

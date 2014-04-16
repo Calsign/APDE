@@ -1809,14 +1809,26 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		//Build the character inserts tray
             reloadCharInserts();
     		
-    		((ImageButton) view).setImageResource(R.drawable.ic_caret_right);
-    		((TextView) findViewById(R.id.message)).setVisibility(View.GONE);
-    		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.VISIBLE);
+            showCharInserts();
     	} else {
-    		((ImageButton) view).setImageResource(R.drawable.ic_caret_left);
-    		((TextView) findViewById(R.id.message)).setVisibility(View.VISIBLE);
-    		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.GONE);
+            hideCharInserts();
     	}
+    }
+    
+    protected void showCharInserts() {
+    	((ImageButton) toggleCharInserts).setImageResource(errorMessage ? R.drawable.ic_caret_right_light : R.drawable.ic_caret_right);
+		((TextView) findViewById(R.id.message)).setVisibility(View.GONE);
+		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.VISIBLE);
+		
+		charInserts = true;
+    }
+    
+    protected void hideCharInserts() {
+    	((ImageButton) toggleCharInserts).setImageResource(errorMessage ? R.drawable.ic_caret_left_light : R.drawable.ic_caret_left);
+		((TextView) findViewById(R.id.message)).setVisibility(View.VISIBLE);
+		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.GONE);
+		
+		charInserts = false;
     }
     
     /**
@@ -1855,6 +1867,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	for(final String c : chars) {
     		Button button = (Button) LayoutInflater.from(this).inflate(R.layout.char_insert_button, null);
     		button.setText(c);
+    		button.setTextColor(getResources().getColor(errorMessage ? R.color.char_insert_button_light : R.color.char_insert_button));
     		button.setLayoutParams(new LinearLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 25, getResources().getDisplayMetrics()), message));
     		button.setPadding(0, 0, 0, 0);
     		
@@ -1947,14 +1960,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     public void message(String msg) {
     	//Write the message
     	((TextView) findViewById(R.id.message)).setText(msg);
-    	//Change the message area style
-    	((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.message_back));
-    	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
+    	
+    	colorMessageAreaMessage();
     	
     	errorMessage = false;
     	
     	//Update message area height
     	correctMessageAreaHeight();
+    	
+    	hideCharInserts();
     }
     
     /**
@@ -1968,14 +1982,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		public void run() {
     			//Write the message
     			((TextView) findViewById(R.id.message)).setText(msg);
-    			//Change the message area style
-    			((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.message_back));
-    			((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
+    			
+    			colorMessageAreaMessage();
     			
     			errorMessage = false;
     			
     			//Update message area height
     			correctMessageAreaHeight();
+    			
+    			hideCharInserts();
     		}
     	});
     }
@@ -1998,14 +2013,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     public void error(String msg) {
     	//Write the error message
     	((TextView) findViewById(R.id.message)).setText(msg);
-    	//Change the message area style
-    	((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.error_back));
-    	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
+    	
+    	colorMessageAreaError();
     	
     	errorMessage = true;
     	
     	//Update message area height
     	correctMessageAreaHeight();
+    	
+    	hideCharInserts();
     }
     
     /**
@@ -2019,14 +2035,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		public void run() {
     			//Write the error message
     			((TextView) findViewById(R.id.message)).setText(msg);
-    			//Change the message area style
-    	    	((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.error_back));
-    	    	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
+    			
+    			colorMessageAreaError();
     	    	
     	    	errorMessage = true;
     	    	
     	    	//Update message area height
     	    	correctMessageAreaHeight();
+    	    	
+    	    	hideCharInserts();
     		}
     	});
     }
@@ -2039,6 +2056,44 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      */
     public void error(CharSequence msg) {
     	error(msg.toString());
+    }
+    
+    //Utility function for switching to message-style message area
+	protected void colorMessageAreaMessage() {
+    	//Change the message area style
+    	((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.message_back));
+    	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
+    	
+    	//Update the toggle button
+    	toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right : R.drawable.ic_caret_left);
+    	
+    	//Update the separator line
+    	findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator));
+    	
+    	//Update the buttons in the character insert tray
+    	LinearLayout charInsertTrayList = (LinearLayout) findViewById(R.id.char_insert_tray_list);
+    	for(int i = 0; i < charInsertTrayList.getChildCount(); i ++) {
+    		((Button) charInsertTrayList.getChildAt(i)).setTextColor(getResources().getColor(R.color.char_insert_button));
+    	}
+    }
+    
+    //Utility function for switching to error-style message area
+	protected void colorMessageAreaError() {
+    	//Change the message area style
+    	((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.error_back));
+    	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
+    	
+    	//Update the toggle button
+    	toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_light : R.drawable.ic_caret_left_light);
+    	
+    	//Update the separator line
+    	findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator_light));
+    	
+    	//Update the buttons in the character insert tray
+    	LinearLayout charInsertTrayList = (LinearLayout) findViewById(R.id.char_insert_tray_list);
+    	for(int i = 0; i < charInsertTrayList.getChildCount(); i ++) {
+    		((Button) charInsertTrayList.getChildAt(i)).setTextColor(getResources().getColor(R.color.char_insert_button_light));
+    	}
     }
     
     //Called internally to correct issues with 2-line messages vs 1-line messages (and maybe some other issues)
