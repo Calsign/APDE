@@ -29,6 +29,13 @@
             android:key="char_inserts"
             android:title="@string/char_inserts"
             android:summary="@string/char_inserts_desc" />
+        
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="char_inserts_include_numbers"
+            android:title="@string/char_inserts_include_numbers"
+            android:summary="@string/char_inserts_include_numbers_desc"
+            android:dependency="char_inserts" />
     </PreferenceCategory>
     
     <PreferenceCategory

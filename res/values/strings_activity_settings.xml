@@ -31,5 +31,7 @@
     <string name="auto_indent">Auto Indentation</string>
     <string name="curly_brace_insertion">Close Code Blocks</string>
     <string name="curly_brace_insertion_desc">Assist in placement of curly braces</string>
+    <string name="char_inserts_include_numbers">Include Numbers</string>
+    <string name="char_inserts_include_numbers_desc">In special character insertion tray</string>
 
 </resources>

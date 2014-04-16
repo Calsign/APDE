@@ -1849,9 +1849,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Get a reference to the code area
     	final CodeEditText code = (CodeEditText) findViewById(R.id.code);
     	
-    	//The (temporary) list of character inserts
+    	//The (temporary) list of character inserts TODO make this list configurable
     	//"\u2192" is Unicode for the right arrow (like "->") - this is a graphical representation of the TAB key
-    	String[] chars = {"\u2192", ";", ".", ",", "{", "}", "(", ")", "=", "*", "/", "+", "-", "&", "|", "!", "[", "]", "<", ">", "\"", "'", "\\", "_", "?", ":", "@", "#"};
+    	String[] chars;
+    	//This branch isn't very elegant... but it will work for now...
+    	if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts_include_numbers", true))
+    		chars = new String[] {"\u2192", ";", ".", ",", "{", "}", "(", ")", "=", "*", "/", "+", "-", "&", "|", "!", "[", "]", "<", ">", "\"", "'", "\\", "_", "?", ":", "@", "#", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
+    	else
+    		chars = new String[] {"\u2192", ";", ".", ",", "{", "}", "(", ")", "=", "*", "/", "+", "-", "&", "|", "!", "[", "]", "<", ">", "\"", "'", "\\", "_", "?", ":", "@", "#"};
     	
     	//This works for now... as far as I can tell
     	final int keyboardID = 0;
