@@ -22,7 +22,8 @@
         <CheckBoxPreference
             android:defaultValue="true"
             android:key="override_tab"
-            android:title="@string/override_tab" />
+            android:title="@string/override_tab"
+            android:summary="@string/override_tab_desc" />
         
         <CheckBoxPreference
             android:defaultValue="true"

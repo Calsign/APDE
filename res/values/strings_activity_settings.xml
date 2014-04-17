@@ -38,5 +38,7 @@
     <string name="pref_build_internal_storage_desc">May consume additional internal storage space</string>
     <string name="pref_build_discard">Delete old Build Folder</string>
     <string name="pref_build_discard_desc">For debugging purposes</string>
+    <string name="pref_vibrate_desc">May consume battery</string>
+    <string name="override_tab_desc">Overrides tab for accessibility</string>
 
 </resources>
