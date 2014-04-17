@@ -35,10 +35,13 @@ import processing.core.PApplet;
 import processing.mode.java.preproc.PdePreprocessor;
 import processing.mode.java.preproc.PreprocessorResult;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 
 import com.calsignlabs.apde.*;
 
@@ -105,12 +108,28 @@ public class Build {
 	}
 	
 	private void cleanUp() {
-		//TODO erase build folder after the build...
-		//...leaving it here for debugging
+		//Anything we need to clean up now...
+	}
+	
+	public static void cleanUpPostLaunch(EditorActivity editor) {
+		if(PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_discard", true)) {
+			System.out.println("Deleting build folder...");
+			
+			//Delete the build folder
+			deleteFile((new Build(((APDE) editor.getApplicationContext())).getBuildFolder()));
+		}
+		
+		if(PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_internal_storage", true)) {
+			//If we built on the internal storage, we need to delete the copied APK file
+			//This is so that the package installer can still see it
+			
+			File destApkFile = new File(editor.getFilesDir(), ((APDE) editor.getApplicationContext()).getSketchName() + ".apk");
+			System.out.println(destApkFile.delete() ? "Successfully deleted old APK file" : "Failed to delete old APK file");
+		}
 	}
 	
 	//Recursive file deletion
-    void deleteFile(File f) {
+    public static void deleteFile(File f) {
     	if(f.isDirectory())
     		for(File c : f.listFiles())
     			deleteFile(c);
@@ -127,6 +146,8 @@ public class Build {
 	/**
 	 * @param target either "release" or "debug"
 	 */
+	@SuppressLint("WorldReadableFiles")
+	@SuppressWarnings("deprecation")
 	public void build(String target) {
 		running.set(true);
 		
@@ -561,13 +582,45 @@ public class Build {
 		
 		editor.messageExt(editor.getResources().getString(R.string.run_sketch));
 		
-		//Prompt the user to install the APK file
-		Intent promptInstall = new Intent(Intent.ACTION_VIEW)
-			.setDataAndType(Uri.parse(
-				"file:///" + binFolder.getAbsolutePath() + "/" + sketchName + ".apk"), //The location of the APK
-				"application/vnd.android.package-archive"
-			);
-		editor.startActivity(promptInstall);
+		//Copy the APK file to a new (and hopefully readable) location
+		
+		String apkName = sketchName + ".apk";
+		String apkLoc = binFolder.getAbsolutePath() + "/" + apkName;
+		File apkFile = new File(apkLoc);
+		File destApkFile = new File(editor.getFilesDir(), apkName);
+		
+		Intent promptInstall;
+		
+		//We only need to do our copying-voodoo if the user is crazy enough to want to build on the internal storage (or if they don't have an external storage...)
+		if(PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_internal_storage", true)) {
+			try {
+				//Yes, I know that MODE_WORLD_READABLE is risky...
+				//...this is the only way to get the package installer to be able to read the APK file from the internal storage
+				//It's not like there's any personal data in the sketch...
+				copyFileToOutputStream(apkFile, editor.openFileOutput(apkName, Context.MODE_WORLD_READABLE));
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			//Prompt the user to install the APK file
+			promptInstall = new Intent(Intent.ACTION_VIEW)
+			.setDataAndType(Uri.fromFile(
+					destApkFile), //The location of the APK
+					"application/vnd.android.package-archive"
+					);
+		} else {
+			//Prompt the user to install the APK file
+			promptInstall = new Intent(Intent.ACTION_VIEW)
+			.setDataAndType(Uri.parse("file:///" +
+					apkLoc), //The location of the APK
+					"application/vnd.android.package-archive"
+					);
+		}
+		
+		//Get a result so that we can delete the APK file
+		editor.startActivityForResult(promptInstall, EditorActivity.FLAG_DELETE_APK);
 		
 		cleanUp();
 	}
@@ -1305,6 +1358,20 @@ public class Build {
 		return result;
 	}
 	
+	static public void copyFileToOutputStream(File sourceFile, FileOutputStream targetFile) throws IOException {
+		BufferedInputStream from = new BufferedInputStream(new FileInputStream(sourceFile));
+		byte[] buffer = new byte[16 * 1024];
+		int bytesRead;
+		while((bytesRead = from.read(buffer)) != -1)
+			targetFile.write(buffer, 0, bytesRead);
+		from.close();
+		from = null;
+
+		targetFile.flush();
+		targetFile.close();
+		targetFile = null;
+	}
+	
 	static public void copyFile(File sourceFile, File targetFile) throws IOException {
 		BufferedInputStream from = new BufferedInputStream(new FileInputStream(sourceFile));
 		BufferedOutputStream to = new BufferedOutputStream(new FileOutputStream(targetFile));
@@ -1481,10 +1548,11 @@ public class Build {
 	}
 	
 	public File getBuildFolder() {
-		//TODO revert this to internal storage
-		//We're using a file on the external storage for debugging
-		return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), "build");
-		//return new File(editor.getFilesDir(), "build");
+		//Let the user pick where to build
+		if(PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_internal_storage", true))
+			return editor.getDir("build", 0);
+		else
+			return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), "build");
 	}
 	
 	public File getTempFolder() {

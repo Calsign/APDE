@@ -125,6 +125,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	//It's because adding views to the char insert tray is somehow breaking the retrieval of this view by ID...
 	private ImageButton toggleCharInserts;
 	
+	//Intent flag to delete the old just-installed APK file
+	public static final int FLAG_DELETE_APK = 5;
+	
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -518,6 +521,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		//Refresh the syntax highlighter AGAIN so that it can take into account the restored selected tab
     		//The tokens end up getting refreshed 3+ times on a rotation... but it doesn't seem to have much of an impact on performance, so it's fine for now
     		((CodeEditText) findViewById(R.id.code)).flagRefreshTokens();
+    	}
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    	//This is the code to delete the old APK file
+    	if(requestCode == FLAG_DELETE_APK) {
+    		Build.cleanUpPostLaunch(this);
     	}
     }
     
