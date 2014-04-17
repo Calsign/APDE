@@ -1242,8 +1242,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      * Saves the sketch to the sketchbook folder, creating a new subdirectory if necessary
      */
     public void saveSketch() {
-    	//If we cannot write to the external storage, make sure to inform the user
-    	if(!externalStorageWritable()) {
+    	//If we cannot write to the external storage (and the user wants to), make sure to inform the user
+    	if(!externalStorageWritable() && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("internal_storage_sketchbook", false)) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
             	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
