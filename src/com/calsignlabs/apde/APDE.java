@@ -1,8 +1,11 @@
 package com.calsignlabs.apde;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.contrib.Library;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
@@ -23,6 +26,9 @@ public class APDE extends Application {
 	
 	private EditorActivity editor;
 	private SketchPropertiesActivity properties;
+	
+	private HashMap<String, ArrayList<Library>> importToLibraryTable;
+	private ArrayList<Library> contributedLibraries;
 	
 	/**
 	 * Changes the name of the current sketch and updates the editor accordingly
@@ -110,6 +116,13 @@ public class APDE extends Application {
 	}
 	
 	/**
+	 * @return the location of the libraries folder within the Sketchbook
+	 */
+	public File getLibrariesFolder() {
+		return new File(getSketchbookFolder(), "libraries");
+	}
+	
+	/**
 	 * @return the default location of the Sketchbook folder (on the external storage)
 	 */
 	public File getDefaultSketchbookFolder() {
@@ -173,5 +186,28 @@ public class APDE extends Application {
 		mf.load();
 		
 		return mf;
+	}
+	
+	public void rebuildLibraryList() {
+		//Reset the table mapping imports to libraries
+		importToLibraryTable = new HashMap<String, ArrayList<Library>>();
+		
+		//Android mode has no core libraries - but we'll leave this here just in case
+//	    coreLibraries = Library.list(librariesFolder);
+//	    for (Library lib : coreLibraries) {
+//	      lib.addPackageList(importToLibraryTable);
+//	    }
+		
+		File contribLibrariesFolder = getLibrariesFolder();
+		if (contribLibrariesFolder != null) {
+			contributedLibraries = Library.list(contribLibrariesFolder);
+			for (Library lib : contributedLibraries) {
+				lib.addPackageList(importToLibraryTable, (APDE) editor.getApplicationContext());
+			}
+		}
+	}
+	
+	public HashMap<String, ArrayList<Library>> getImportToLibraryTable() {
+		return importToLibraryTable;
 	}
 }

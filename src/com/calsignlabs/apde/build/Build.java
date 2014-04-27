@@ -1,6 +1,6 @@
 /*
  * Seriously hacked from the Processing Project... it might still be recognizable
- * Code taken from JavaBuild, AndroidBuild, Base, AndroidPreprocessor, Preprocessor, probably others
+ * Code taken from JavaBuild, AndroidBuild, Base, AndroidPreprocessor, Preprocessor, Mode, Library, probably others
  * 
  * Added some code as well, specifically: changed build sequence from ANT to ECJ and Java tools (as opposed to command line tools)
  * Also used some ideas from the Java-IDE-Droid open-source project
@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Locale;
@@ -44,6 +45,7 @@ import android.os.Environment;
 import android.preference.PreferenceManager;
 
 import com.calsignlabs.apde.*;
+import com.calsignlabs.apde.contrib.Library;
 
 public class Build {
 	public static final String PACKAGE_REGEX ="(?:^|\\s|;)package\\s+(\\S+)\\;";
@@ -64,6 +66,8 @@ public class Build {
 	private File dexedLibsFolder;
 	
 //	private File buildFile;
+	
+	private ArrayList<Library> importedLibraries;
 	
 	protected String classPath;
 	protected String javaLibraryPath;
@@ -188,6 +192,9 @@ public class Build {
 		dexedLibsFolder.mkdir();
 		
 		tmpFolder.mkdir();
+		
+		//Make sure we have the latest version of the libraries folder
+		((APDE) editor.getApplicationContext()).rebuildLibraryList();
 		
 		Manifest manifest = null;
 		String sketchClassName = null;
@@ -316,8 +323,11 @@ public class Build {
 				
 				// Copy any imported libraries (their libs and assets),
 				// and anything in the code folder contents to the project.
-				//copyLibraries(libsFolder, assetsFolder); //TODO implement libraries
+				copyLibraries(libsFolder, dexedLibsFolder, assetsFolder);
 				copyCodeFolder(libsFolder);
+				
+				// Copy the dexed JARs from the code-dex folder
+				copyCodeDexFolder(dexedLibsFolder);
 				
 				// Copy the data folder (if one exists) to the project's 'assets' folder
 				final File sketchDataFolder = getSketchDataFolder();
@@ -666,91 +676,90 @@ public class Build {
 		}
 	}
 	
-	//TODO don't need this anymore, I guess...
-	public void antBuildProblems(String outPile, String errPile) throws SketchException {
-		final String[] outLines = outPile.split(System.getProperty("line.separator"));
-		final String[] errLines = errPile.split(System.getProperty("line.separator"));
-
-		for(final String line : outLines) {
-			final String javacPrefix = "[javac]";
-			final int javacIndex = line.indexOf(javacPrefix);
-			
-			if(javacIndex != -1) {
-				int offset = javacIndex + javacPrefix.length() + 1;
-				String[] pieces = PApplet.match(line.substring(offset), "^(.+):([0-9]+):\\s+(.+)$");
-				
-				if(pieces != null) {
-					String fileName = pieces[1];
-					// remove the path from the front of the filename
-					fileName = fileName.substring(fileName.lastIndexOf(File.separatorChar) + 1);
-					final int lineNumber = PApplet.parseInt(pieces[2]) - 1;
-					SketchException rex = placeException(pieces[3], fileName, lineNumber);
-					if(rex != null)
-						throw rex;
-				}
-			}
-		}
-		
-		// Couldn't parse the exception, so send something generic
-		SketchException skex = new SketchException("Error from inside the Android tools, check the console.");
-		
-		// Try to parse anything else we might know about
-		for(final String line : errLines) {
-			if(line.contains("Unable to resolve target '" + Manifest.MIN_SDK + "'")) {
-				System.err.println("Use the Android SDK Manager (under the Android");
-				System.err.println("menu) to install the SDK platform and ");
-				System.err.println("Google APIs for Android " + Manifest.MIN_SDK +
-						" (API " + Manifest.MIN_SDK + ")");
-				skex = new SketchException("Please install the SDK platform and " +
-						"Google APIs for API " + Manifest.MIN_SDK);
-			}
-		}
-		// Stack trace is not relevant, just the message.
-		skex.hideStackTrace();
-		throw skex;
-	}
+//	public void antBuildProblems(String outPile, String errPile) throws SketchException {
+//		final String[] outLines = outPile.split(System.getProperty("line.separator"));
+//		final String[] errLines = errPile.split(System.getProperty("line.separator"));
+//
+//		for(final String line : outLines) {
+//			final String javacPrefix = "[javac]";
+//			final int javacIndex = line.indexOf(javacPrefix);
+//			
+//			if(javacIndex != -1) {
+//				int offset = javacIndex + javacPrefix.length() + 1;
+//				String[] pieces = PApplet.match(line.substring(offset), "^(.+):([0-9]+):\\s+(.+)$");
+//				
+//				if(pieces != null) {
+//					String fileName = pieces[1];
+//					// remove the path from the front of the filename
+//					fileName = fileName.substring(fileName.lastIndexOf(File.separatorChar) + 1);
+//					final int lineNumber = PApplet.parseInt(pieces[2]) - 1;
+//					SketchException rex = placeException(pieces[3], fileName, lineNumber);
+//					if(rex != null)
+//						throw rex;
+//				}
+//			}
+//		}
+//		
+//		// Couldn't parse the exception, so send something generic
+//		SketchException skex = new SketchException("Error from inside the Android tools, check the console.");
+//		
+//		// Try to parse anything else we might know about
+//		for(final String line : errLines) {
+//			if(line.contains("Unable to resolve target '" + Manifest.MIN_SDK + "'")) {
+//				System.err.println("Use the Android SDK Manager (under the Android");
+//				System.err.println("menu) to install the SDK platform and ");
+//				System.err.println("Google APIs for Android " + Manifest.MIN_SDK +
+//						" (API " + Manifest.MIN_SDK + ")");
+//				skex = new SketchException("Please install the SDK platform and " +
+//						"Google APIs for API " + Manifest.MIN_SDK);
+//			}
+//		}
+//		// Stack trace is not relevant, just the message.
+//		skex.hideStackTrace();
+//		throw skex;
+//	}
 	
-	public SketchException placeException(String message, String dotJavaFilename, int dotJavaLine) {
-		int codeIndex = 0;
-		int codeLine = -1;
-		
-		// first check to see if it's a .java file
-		for(int i = 0; i < tabs.length; i++) {
-			FileMeta meta = tabs[i];
-			
-			if(meta.getSuffix().equals("java")) {
-				if(dotJavaFilename.equals(meta.getFilename())) {
-					codeIndex = i;
-					codeLine = dotJavaLine;
-					return new SketchException(message, codeIndex, codeLine);
-				}
-			}
-		}
-		
-		// If not the preprocessed file at this point, then need to get out
-		if(!dotJavaFilename.equals(sketchName + ".java"))
-			return null;
-		
-		// if it's not a .java file, codeIndex will still be 0
-		// this section searches through the list of .pde files
-		codeIndex = 0;
-		for(int i = 0; i < tabs.length; i++) {
-			FileMeta meta = tabs[i];
-			
-			if(meta.getSuffix().equals("pde")) {
-				if(meta.getPreprocOffset() <= dotJavaLine) {
-					codeIndex = i;
-					codeLine = dotJavaLine - meta.getPreprocOffset();
-				}
-			}
-		}
-		// could not find a proper line number, so deal with this differently.
-		// but if it was in fact the .java file we're looking for, though,
-		// send the error message through.
-		// this is necessary because 'import' statements will be at a line
-		// that has a lower number than the preproc offset, for instance.
-		return new SketchException(message, codeIndex, codeLine, -1, false); // changed for 0194 for compile errors, but...
-	}
+//	public SketchException placeException(String message, String dotJavaFilename, int dotJavaLine) {
+//		int codeIndex = 0;
+//		int codeLine = -1;
+//		
+//		// first check to see if it's a .java file
+//		for(int i = 0; i < tabs.length; i++) {
+//			FileMeta meta = tabs[i];
+//			
+//			if(meta.getSuffix().equals("java")) {
+//				if(dotJavaFilename.equals(meta.getFilename())) {
+//					codeIndex = i;
+//					codeLine = dotJavaLine;
+//					return new SketchException(message, codeIndex, codeLine);
+//				}
+//			}
+//		}
+//		
+//		// If not the preprocessed file at this point, then need to get out
+//		if(!dotJavaFilename.equals(sketchName + ".java"))
+//			return null;
+//		
+//		// if it's not a .java file, codeIndex will still be 0
+//		// this section searches through the list of .pde files
+//		codeIndex = 0;
+//		for(int i = 0; i < tabs.length; i++) {
+//			FileMeta meta = tabs[i];
+//			
+//			if(meta.getSuffix().equals("pde")) {
+//				if(meta.getPreprocOffset() <= dotJavaLine) {
+//					codeIndex = i;
+//					codeLine = dotJavaLine - meta.getPreprocOffset();
+//				}
+//			}
+//		}
+//		// could not find a proper line number, so deal with this differently.
+//		// but if it was in fact the .java file we're looking for, though,
+//		// send the error message through.
+//		// this is necessary because 'import' statements will be at a line
+//		// that has a lower number than the preproc offset, for instance.
+//		return new SketchException(message, codeIndex, codeLine, -1, false); // changed for 0194 for compile errors, but...
+//	}
 	
 	public String preprocess(File srcFolder, String packageName, PdePreprocessor preprocessor, boolean sizeWarning) throws SketchException {
 		if(getSketchFolder().exists());
@@ -906,47 +915,47 @@ public class Build {
 		
 		// grab the imports from the code just preproc'd
 		
-//		ArrayList<Library> importedLibraries = new ArrayList<Library>(); //TODO implement libraries
+		importedLibraries = new ArrayList<Library>();
 //		Library core = mode.getCoreLibrary();
 //		if (core != null) {
 //			importedLibraries.add(core);
 //			classPath += core.getClassPath();
 //		}
-//		
-//		for(String item : result.extraImports) {
-//			// remove things up to the last dot
-//			int dot = item.lastIndexOf('.');
-//			// http://dev.processing.org/bugs/show_bug.cgi?id=1145
-//			String entry = (dot == -1) ? item : item.substring(0, dot);
-//			Library library = mode.getLibrary(entry);
-//			
-//			if(library != null) {
-//				if(!importedLibraries.contains(library)) {
-//					importedLibraries.add(library);
-//					classPath += library.getClassPath();
+		
+		for(String item : result.extraImports) {
+			//Remove things up to the last dot
+			int dot = item.lastIndexOf('.');
+			//http://dev.processing.org/bugs/show_bug.cgi?id=1145
+			String entry = (dot == -1) ? item : item.substring(0, dot);
+			Library library = getLibrary(entry);
+			
+			if(library != null) {
+				if(!importedLibraries.contains(library)) {
+					importedLibraries.add(library);
+					classPath += library.getClassPath((APDE) editor.getApplicationContext());
 //					javaLibraryPath += File.pathSeparator + library.getNativePath();
-//				}
-//			} else {
-//				boolean found = false;
-//				// If someone insists on unnecessarily repeating the code folder
-//				// import, don't show an error for it.
-//				if(codeFolderPackages != null) {
-//					String itemPkg = item.substring(0, item.lastIndexOf('.'));
-//					for(String pkg : codeFolderPackages) {
-//						if(pkg.equals(itemPkg)) {
-//							found = true;
-//							break;
-//						}
-//					}
-//				}
-//				if(ignorableImport(item)) {
-//					found = true;
-//				}
-//				if(!found) {
-//					System.err.println("No library found for " + entry);
-//				}
-//			}
-//		}
+				}
+			} else {
+				boolean found = false;
+				//If someone insists on unnecessarily repeating the code folder
+				//import, don't show an error for it.
+				if(codeFolderPackages != null) {
+					String itemPkg = item.substring(0, item.lastIndexOf('.'));
+					for(String pkg : codeFolderPackages) {
+						if(pkg.equals(itemPkg)) {
+							found = true;
+							break;
+						}
+					}
+				}
+				if(ignorableImport(item)) {
+					found = true;
+				}
+				if(!found) {
+					System.err.println("No library found for " + entry);
+				}
+			}
+		}
 		
 		// Finally, add the regular Java CLASSPATH. This contains everything
 		// imported by the PDE itself (core.jar, pde.jar, quaqua.jar) which may
@@ -1043,6 +1052,28 @@ public class Build {
 		if (pkg.startsWith("processing.opengl.")) return true;
 
 		return false;
+	}
+	
+	private Library getLibrary(String pkgName) throws SketchException {
+		ArrayList<Library> libraries = ((APDE) editor.getApplicationContext()).getImportToLibraryTable().get(pkgName);
+		if (libraries == null) {
+			return null;
+		} else if (libraries.size() > 1) { //This is if there are multiple libraries with the same package name... but when does this ever happen?
+			String primary = "More than one library is competing for this sketch.\n";
+			String secondary = "The import " + pkgName + " points to multiple libraries:\n";
+			for (Library library : libraries) {
+				String location = library.getLibraryFolder((APDE) editor.getApplicationContext()).getAbsolutePath();
+//				if (location.startsWith(getLibrariesFolder().getAbsolutePath())) { //Android mode has no core libraries - but we'll leave this just in case
+//					location = "part of Processing";
+//				}
+				secondary += library.getName() + " (" + location + ")\n";
+			}
+			secondary += "Extra libraries need to be removed before this sketch can be used.";
+			System.err.println("Duplicate Library Problem\n\n" + primary + secondary);
+			throw new SketchException("Duplicate libraries found for " + pkgName + ".");
+		} else {
+			return libraries.get(0);
+		}
 	}
 	
 	protected int findErrorFile(int errorLine) {
@@ -1233,42 +1264,43 @@ public class Build {
 		}
 	}
 	
-//	private void copyLibraries(final File libsFolder, final File assetsFolder) throws IOException { //TODO implement libraries
-//		for (Library library : getImportedLibraries()) {
-//			// add each item from the library folder / export list to the output
-//			for (File exportFile : library.getAndroidExports()) {
-//				String exportName = exportFile.getName();
-//				if (!exportFile.exists()) {
-//					System.err.println(exportFile.getName() +
-//							" is mentioned in export.txt, but it's " +
-//							"a big fat lie and does not exist.");
-//				} else if (exportFile.isDirectory()) {
-//					// Copy native library folders to the correct location
-//					if (exportName.equals("armeabi") ||
-//							exportName.equals("armeabi-v7a") ||
-//							exportName.equals("x86")) {
-//						Base.copyDir(exportFile, new File(libsFolder, exportName));
-//					} else {
-//						// Copy any other directory to the assets folder
-//						Base.copyDir(exportFile, new File(assetsFolder, exportName));
-//					}
-//				} else if (exportName.toLowerCase().endsWith(".zip")) {
-//					// As of r4 of the Android SDK, it looks like .zip files
-//					// are ignored in the libs folder, so rename to .jar
-//					System.err.println(".zip files are not allowed in Android libraries.");
-//					System.err.println("Please rename " + exportFile.getName() + " to be a .jar file.");
-//					String jarName = exportName.substring(0, exportName.length() - 4) + ".jar";
-//					Base.copyFile(exportFile, new File(libsFolder, jarName));
-//
-//				} else if (exportName.toLowerCase().endsWith(".jar")) {
-//					Base.copyFile(exportFile, new File(libsFolder, exportName));
-//
-//				} else {
-//					Base.copyFile(exportFile, new File(assetsFolder, exportName));
-//				}
-//			}
-//		}
-//	}
+	private void copyLibraries(final File libsFolder, final File dexedLibsFolder, final File assetsFolder) throws IOException { //TODO support native library stuffs
+		for (Library library : importedLibraries) {
+			//Add each item from the library folder / export list to the output
+			for (File exportFile : library.getAndroidExports((APDE) editor.getApplicationContext())) {
+				String exportName = exportFile.getName();
+				if (!exportFile.exists()) {
+					System.err.println(exportFile.getName() +
+							" is mentioned in export.txt, but it's " +
+							"a big fat lie and does not exist.");
+				} else if (exportFile.isDirectory()) {
+					//Copy native library folders to the correct location
+					if (exportName.equals("armeabi") ||
+							exportName.equals("armeabi-v7a") ||
+							exportName.equals("x86")) {
+						copyDir(exportFile, new File(libsFolder, exportName));
+					} else {
+						//Copy any other directory to the assets folder
+						copyDir(exportFile, new File(assetsFolder, exportName));
+					}
+				} else if (exportName.toLowerCase(Locale.US).endsWith(".zip")) {
+					// As of r4 of the Android SDK, it looks like .zip files
+					// are ignored in the libs folder, so rename to .jar
+					System.err.println(".zip files are not allowed in Android libraries.");
+					System.err.println("Please rename " + exportFile.getName() + " to be a .jar file.");
+					String jarName = exportName.substring(0, exportName.length() - 4) + ".jar";
+					copyFile(exportFile, new File(libsFolder, jarName));
+				} else if(exportName.toLowerCase(Locale.US).endsWith("-dex.jar")) {
+					//Handle the dexed JARs
+					copyFile(exportFile, new File(dexedLibsFolder, exportName));
+				} else if (exportName.toLowerCase(Locale.US).endsWith(".jar")) {
+					copyFile(exportFile, new File(libsFolder, exportName));
+				} else {
+					copyFile(exportFile, new File(assetsFolder, exportName));
+				}
+			}
+		}
+	}
 	
 	private void copyCodeFolder(final File libsFolder) throws IOException {
 		// Copy files from the 'code' directory into the 'libs' folder
@@ -1281,6 +1313,23 @@ public class Build {
 					if(lcname.endsWith(".jar") || lcname.endsWith(".zip")) {
 						String jarName = name.substring(0, name.length() - 4) + ".jar";
 						copyFile(item, new File(libsFolder, jarName));
+					}
+				}
+			}
+		}
+	}
+	
+	private void copyCodeDexFolder(final File libsDexFolder) throws IOException {
+		// Copy files from the 'code-dex' directory into the 'libs' folder
+		final File codeDexFolder = getSketchCodeDexFolder();
+		if(codeDexFolder != null && codeDexFolder.exists()) {
+			for(final File item : codeDexFolder.listFiles()) {
+				if(!item.isDirectory()) {
+					final String name = item.getName();
+					final String lcname = name.toLowerCase(Locale.US);
+					if(lcname.endsWith(".jar") || lcname.endsWith(".zip")) {
+						String jarName = name.substring(0, name.length() - 4) + ".jar";
+						copyFile(item, new File(libsDexFolder, jarName));
 					}
 				}
 			}
@@ -1572,6 +1621,10 @@ public class Build {
 	
 	public File getSketchCodeFolder() {
 		return new File(getSketchFolder(), "code");
+	}
+	
+	public File getSketchCodeDexFolder() {
+		return new File(getSketchFolder(), "code-dex");
 	}
 	
 	//StackOverflow: http://codereview.stackexchange.com/questions/8835/java-most-compact-way-to-print-inputstream-to-system-out

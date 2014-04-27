@@ -882,7 +882,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    	Arrays.sort(folders);
 	    	
 	    	for(File folder : folders)
-	    		if(folder.isDirectory())
+	    		//The "libraries" folder isn't a sketch! TODO check all folders to make sure that they are valid sketches...
+	    		if(folder.isDirectory() && !folder.getName().equals("libraries"))
 	    			//Add the sketch to the ArrayAdapter
 	    			items.add(folder.getName());
     	}
