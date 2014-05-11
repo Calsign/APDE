@@ -37,6 +37,16 @@
             android:title="@string/char_inserts_include_numbers"
             android:summary="@string/char_inserts_include_numbers_desc"
             android:dependency="char_inserts" />
+        
+        <!-- We haven't figured this out yet... -->
+        <!-- <Preference
+            android:title="@string/title_activity_character_tray_settings" >
+            
+            <intent
+                android:action="android.intent.action.VIEW"
+                android:targetClass="com.calsignlabs.apde.CharacterTraySettingsActivity"
+                android:targetPackage="com.calsignlabs.apde" />
+        </Preference> -->
     </PreferenceCategory>
     
     <PreferenceCategory

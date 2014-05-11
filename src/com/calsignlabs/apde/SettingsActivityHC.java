@@ -27,7 +27,6 @@ public class SettingsActivityHC extends PreferenceActivity {
 		super.onPostCreate(savedInstanceState);
 		
 		getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
-		
 	}
 	
 	@SuppressLint("NewApi")
