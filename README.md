@@ -12,7 +12,7 @@ The acronym APDE (for Android Processing Development Environment) may prove to b
 
 APDE is based entirely on the Android mode for the PDE. Before you dive too far into coding, be sure to read through the [Android Processing wiki page](http://wiki.processing.org/w/Android)... except, skip the parts about installing the SDK. You should only look for the differences in the language between "normal" mode and Android mode because these carry over to APDE.
 
-APDE runs on Android versions 2.3 Ginegerbread to the latest version (currently 4.4 KitKat). Theoretically, I could have supported earlier versions of Android, but Processing only supports 2.3+. In 2.3, the app will appear slightly different when compared with the "newer" versions (Android 3.0+, which introduced the Action Bar design pattern).
+APDE runs on Android versions 2.3 Gingerbread to the latest version (currently 4.4 KitKat). Theoretically, I could have supported earlier versions of Android, but Processing only supports 2.3+. In 2.3, the app will appear slightly different when compared with the "newer" versions (Android 3.0+, which introduced the Action Bar design pattern).
 
 I have tested the editor on my Samsung Galaxy S4 running 4.3 and my Asus Nexus 7 running 4.4. I have limited ability to test on devices beyond these two, as I (and my family) don't own all that many Android devices. I have successfully tested the app in the 2.3 emulator, but it ran in to problems of its own, due to it being an emulator.
 
@@ -113,7 +113,7 @@ I have been developing APDE, in my free time, for the past three months (at time
 
 If you wish to build APDE yourself, then there are several steps you must take to set up your Eclipse environment.
 
-I use the ADT Eclipse bundled with the SDK Tools, revision 18. I have not tried to build APDE with revision 19, although I imagine it would be possible. It's going to have to happen eventually... To download ADT, please visit the [Android Developers website](http://developer.android.com/sdk/index.html). However, if you have done Android development in Processing before, chances are that you alredy have this installed.
+I use the ADT Eclipse bundled with the SDK Tools, revision 18. I have not tried to build APDE with revision 19, although I imagine it would be possible. It's going to have to happen eventually... To download ADT, please visit the [Android Developers website](http://developer.android.com/sdk/index.html). However, if you have done Android development in Processing before, chances are that you already have this installed.
 
 On top of Eclipse, I use the EGit plugin to push commits to GitHub. This isn't necessary, as you can use Git from the command line (as many hardcore Git users would probably prefer). To install EGit, please visit the [Eclipse website](http://www.eclipse.org/egit/download/). You may need to install Git as well.
 
