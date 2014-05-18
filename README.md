@@ -8,7 +8,7 @@ You can download APDE from [Google Play](https://play.google.com/store/apps/deta
 Background
 ----------
 
-The acronym APDE (for **A**ndroid **P**rocessing **D**evelopment **E**nvironment) may prove to be temporary. It is kept for lack of anything better.
+The acronym APDE (for Android Processing Development Environment) may prove to be temporary. It is kept for lack of anything better.
 
 APDE is based entirely on the Android mode for the PDE. Before you dive too far into coding, be sure to read through the [Android Processing wiki page](http://wiki.processing.org/w/Android)... except, skip the parts about installing the SDK. You should only look for the differences in the language between "normal" mode and Android mode because these carry over to APDE.
 
@@ -32,7 +32,7 @@ APDE strives to be a fully-featured Processing editor, using the PDE as a model.
 
  - "Run" button compiles and launches the sketch (you must enable "Install from Unknown Sources", see below)
  - Multiple files (tabs)
- - Multiple sketches accessible from the "sketchbook"
+ - Multiple sketches accessible from the "Sketchbook"
  - Internal Android Manifest file configuration (sketch permissions, orientation lock, etc.)
  - Add files to sketch's "data" folder
  - A set of examples
@@ -57,7 +57,7 @@ Key Changes from the PDE
 
 Before you begin to use APDE, it is important to understand some differences between the desktop PDE and APDE.
 
-Firstly, the sketch's name is determined by the name of the sketch folder, but the main sketch file / tab does not need to have this name. Presently, there is no concept of a "main" tab; I think that this is a beneficial re-thinking of the sketch's structure. It makes more sense because this is the way because all of the tabs are combined anyway, without regard for any "main" tab, except that the "main" tab is added first. Consequently, the default name of the initial tab is just "sketch", and it will likely stay that way the majority of simple applications. I may end up changing this functionality to mimic the PDE, though, if it is necessary purely for compatibility if I implement Git integration, for example.
+Firstly, the sketch's name is determined by the name of the sketch folder, but the main sketch file / tab does not need to have this name. Presently, there is no concept of a "main" tab; I think that this is a beneficial re-thinking of the sketch's structure. It makes more sense because all of the tabs are combined anyway, without regard for any "main" tab, except that the "main" tab is added first. Consequently, the default name of the initial tab is just "sketch", and it will likely stay that way the majority of simple applications. I may end up changing this functionality to mimic the PDE, though, if it is necessary purely for compatibility if I implement Git integration, for example.
 
 The default sketch name is "sketch", unlike the PDE, which creates a new sketch name based on the date / time for every new sketch. As such, the name "sketch" is also invalid, and this sketch cannot be saved. It must be renamed first. I may change this, as well, to make it easier to use...
 
