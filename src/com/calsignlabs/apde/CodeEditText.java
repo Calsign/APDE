@@ -652,7 +652,31 @@ public class CodeEditText extends EditText {
 					prev = token.text;
 				}
 				
-				tokens = tempTokens;
+				//Compaction of same-colored tokens - like comments, for example (they were causing serious lag)
+				//TODO we're probably still picking up space characters...
+				
+				ArrayList<Token> finalTokens = new ArrayList<Token>();
+				Token activeToken = null;
+				
+				for(Token token : tempTokens) {
+					if(activeToken == null) {
+						activeToken = token;
+						
+						continue;
+					}
+					
+					//Direct reference comparison of paints, should be OK...
+					if(activeToken.lineNum != token.lineNum || activeToken.paint != token.paint) {
+						finalTokens.add(activeToken);
+						activeToken = token;
+						
+						continue;
+					}
+					
+					activeToken.text += token.text;
+				}
+				
+				tokens = finalTokens.toArray(new Token[finalTokens.size()]);
 				
 				//If there is no text, wipe the tokens
 				//TODO ...why do we need this? It seems somewhat counterproductive...
