@@ -144,9 +144,13 @@ public class Library {
 		}
 	}
 	
+	public String[] getPackageList(APDE context) {
+		return Build.packageListFromClassPath(getClassPath(context));
+	}
+	
 	//Add this library's packages to the master list
 	public void addPackageList(HashMap<String, ArrayList<Library>> importToLibraryTable, APDE context) {
-		String[] packageList = Build.packageListFromClassPath(getClassPath(context));
+		String[] packageList = getPackageList(context);
 		
 		for (String pkg : packageList) {
 			ArrayList<Library> libraries = importToLibraryTable.get(pkg);
@@ -168,5 +172,16 @@ public class Library {
 			}
 			libraries.add(this);
 		}
+	}
+	
+	//This value *should* be different for every library - yes, libraries can have the same name... but it looks like we aren't worring about that right now
+	//Seeing as we might not be connected to the internet, we can't rely on the nice table that the Processing devs compiled for us (which has separate IDs for each library)...
+	//...additionally, that wouldn't work with custom-built libraries
+	//Ideally, we'd have some kind checksum... but that's too much work for right now
+	//So we're just using library names
+	//...
+	//Besides, the libraries of the same name would conflict because they'd both try to use the same folder in the libraries folder anyway
+	public String consumableValue() {
+		return getName();
 	}
 }

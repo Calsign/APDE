@@ -51,6 +51,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.View.MeasureSpec;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
@@ -1791,6 +1792,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             		message(getResources().getString(R.string.auto_formatter_complete));
             	}
         		return true;
+            case R.id.menu_import_library:
+            	launchImportLibrary();
+            	return true;
             case R.id.menu_sketch_properties:
             	launchSketchProperties();
             	return true;
@@ -2611,6 +2615,65 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		return true;
 	}
 	
+	private void launchImportLibrary() {
+		getGlobalState().rebuildLibraryList();
+		final String[] libList = getGlobalState().listLibraries();
+		
+		//Display a dialog containing the list of libraries
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.import_library);
+		if(libList.length > 0) {
+			//Populate the list
+			builder.setItems(libList, new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int which) {
+					addImports(getGlobalState().getLibraryByName(libList[which]).getPackageList(getGlobalState()));
+				}
+			});
+		} else {
+			//Show a message to the user
+			//This is a real hack... and a strong argument for using XML / layout inflaters
+			
+			TextView content = new TextView(this);
+			content.setText(R.string.no_contributed_libraries); //The text we want
+			content.setTextColor(getResources().getColor(R.color.grayed_out)); //The color we want
+			content.setGravity(Gravity.CENTER); //Centered
+			content.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)); //Centered...
+			content.setPadding(60, 60, 60, 60); //... CENTERED!!!
+			content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+			
+			builder.setView(content);
+		}
+		//The "Manage Libraries" button - null so that it won't automatically close itself
+		builder.setNeutralButton(R.string.manage_libraries, null);
+		final AlertDialog dialog = builder.create();
+		
+		//Fancy stuff...
+		//StackOverflow: http://stackoverflow.com/questions/2620444/how-to-prevent-a-dialog-from-closing-when-a-button-is-clicked
+		dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+			@Override
+			public void onShow(final DialogInterface dialog) {
+				Button b = ((AlertDialog) dialog).getButton(AlertDialog.BUTTON_NEUTRAL);
+				b.setOnClickListener(new View.OnClickListener() {
+					@Override
+					public void onClick(View view) {
+						launchManageLibraries();
+						//It would be better if the dialog didn't fade out when we pressed the button... but this will have to do
+						//...it's better than having it reappear when we back out of the library manager
+						dialog.dismiss();
+					}
+				});
+			}
+		});
+		
+		dialog.setCanceledOnTouchOutside(true);
+		dialog.show();
+	}
+	
+	private void launchManageLibraries() {
+		//TODO implement a library manager...
+	}
+	
 	//Called internally to open the Sketch Properties activity
 	private void launchSketchProperties() {
 		Intent intent = new Intent(this, SketchPropertiesActivity.class);
@@ -2623,6 +2686,46 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			startActivity(new Intent(this, SettingsActivity.class));
 		else
 			startActivity(new Intent(this, SettingsActivityHC.class));
+	}
+	
+	/**
+	 * Adds the imports of the given library to the top of the sketch, selecting the first tab if necessary
+	 * 
+	 * @param library
+	 */
+	public void addImports(String[] imports) {
+		//NOTE: We don't check to see if the user has already imported this library. The desktop PDE doesn't either, so who cares?
+		
+		//Build a formatted list of imports
+		String importList = "";
+		
+		//Using "im" - "import" doesn't work for obvious reasons
+		for(String im : imports) {
+			//Just to be safe, import everything
+			importList += "import " + im + ".*;\n";
+		}
+		
+		//Extra newline
+		importList += "\n";
+		
+		//Sanity check
+		if(tabBar.getTabCount() <= 0)
+			return;
+		
+		//Select the first tab
+		tabBar.selectTab(0);
+		
+		CodeEditText code = (CodeEditText) findViewById(R.id.code);
+		
+		//Select the top
+		code.setSelection(0);
+		
+		//Insert the import statements
+		code.setUpdateText(importList + code.getText());
+		
+		//Update the syntax highlighter
+		code.updateTokens();
+		code.updateBracketMatch();
 	}
 	
 	/**

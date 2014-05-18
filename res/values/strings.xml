@@ -76,5 +76,8 @@
     <string name="auto_format">Auto Format</string>
     <string name="toggle_char_inserts">Toggle Character Bar</string>
     <string name="title_activity_character_tray_settings">Special Character Tray</string>
+    <string name="import_library">Import Library</string>
+    <string name="no_contributed_libraries">Libraries folder is empty</string>
+    <string name="manage_libraries">Manage Libraries</string>
 
 </resources>

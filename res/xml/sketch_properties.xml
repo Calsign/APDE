@@ -1,7 +1,7 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
     <PreferenceCategory 
         android:title="@string/prop_manifest"
-        android:key="prop_manifest">
+        android:key="prop_manifest" >
         
         <!-- Default value "." is read by the code and changed to the name of the sketch -->
         <EditTextPreference android:key="prop_pretty_name"

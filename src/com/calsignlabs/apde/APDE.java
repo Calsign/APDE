@@ -210,4 +210,31 @@ public class APDE extends Application {
 	public HashMap<String, ArrayList<Library>> getImportToLibraryTable() {
 		return importToLibraryTable;
 	}
+	
+	public ArrayList<Library> getLibraries() {
+		return contributedLibraries;
+	}
+	
+	public String[] listLibraries() {
+		String[] output = new String[contributedLibraries.size()];
+		for(int i = 0; i < contributedLibraries.size(); i ++) {
+			output[i] = contributedLibraries.get(i).getName();
+		}
+		
+		return output;
+	}
+	
+	/**
+	 * @param name
+	 * @return the library with the specified name, or null if it cannot be found
+	 */
+	public Library getLibraryByName(String name) {
+		for(Library lib : getLibraries()) {
+			if(lib.getName().equals(name)) {
+				return lib;
+			}
+		}
+
+		return null;
+	}
 }

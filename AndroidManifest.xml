@@ -3,38 +3,44 @@
     package="com.calsignlabs.apde"
     android:versionCode="5"
     android:versionName="0.2.3" >
-    
+
     <uses-sdk
         android:minSdkVersion="10"
         android:targetSdkVersion="19" />
-    
+
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> <!-- Will be needed in future versions of Android -->
-    <uses-permission android:name="android.permission.VIBRATE" /> <!-- For the drag'n'drop Message area's haptic feedback -->
-    
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+ 	<!-- Will be needed in future versions of Android -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+ 	<!-- For the drag'n'drop Message area's haptic feedback -->
+
     <application
         android:name="com.calsignlabs.apde.APDE"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
-        
-        <!-- Got rid of configChanges to solve problems... it's here if we need it, though:
-             android:configChanges="orientation|keyboardHidden|screenSize" -->
+
+        <!--
+             Got rid of configChanges to solve problems... it's here if we need it, though:
+             android:configChanges="orientation|keyboardHidden|screenSize"
+        -->
         <activity
             android:name="com.calsignlabs.apde.EditorActivity"
             android:label="@string/app_name"
             android:theme="@style/FullscreenTheme" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            
+
             <!-- TODO implement correct handling for file intents -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
+
                 <category android:name="android.intent.category.DEFAULT" />
-                
+
                 <data android:scheme="file" />
                 <data android:host="*" />
                 <data android:mimeType="*/*" />
@@ -64,7 +70,7 @@
             android:name="com.calsignlabs.apde.CharacterTraySettingsActivity"
             android:label="@string/title_activity_character_tray_settings"
             android:theme="@style/PreferencesTheme" />
-        
+
         <!-- This is a hook into the AFileChooser library's custom file chooser activity -->
         <activity
             android:name="com.ipaulpro.afilechooser.FileChooserActivity"
@@ -74,12 +80,13 @@
             android:label="@string/chooser_label" >
             <intent-filter>
                 <action android:name="android.intent.action.GET_CONTENT" />
-                
+
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.OPENABLE" />
-                
+
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
     </application>
+
 </manifest>
