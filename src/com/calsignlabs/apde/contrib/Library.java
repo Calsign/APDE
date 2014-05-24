@@ -1,16 +1,28 @@
 package com.calsignlabs.apde.contrib;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Properties;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.build.Build;
 
 public class Library {
+	public static final String propertiesFilename = "library.properties";
+	
 	private String libraryName;
+	
+	public enum Status {
+		EXTRACTING, DEXING, INSTALLED
+	}
+	
+	private Status status;
 	
 	public Library(String libraryName) {
 		this.libraryName = libraryName;
@@ -20,8 +32,36 @@ public class Library {
 		this.libraryName = libraryFile.getName();
 	}
 	
+	public Status getStatus() {
+		return status;
+	}
+	
+	public void setStatus(Status status) {
+		this.status = status;
+	}
+	
 	public String getName() {
 		return libraryName;
+	}
+	
+	public void setName(String name) {
+		libraryName = name;
+	}
+	
+	public String getAuthorList(APDE context) {
+		try {
+			return getProperty("authorList", context);
+		} catch(Exception e) {
+			return "";
+		}
+	}
+	
+	public String getSentence(APDE context) {
+		try {
+			return getProperty("sentence", context);
+		} catch(Exception e) {
+			return "";
+		}
 	}
 	
 	/**
@@ -30,6 +70,21 @@ public class Library {
 	 */
 	public File getLibraryFolder(APDE context) {
 		return new File(context.getLibrariesFolder(), libraryName);
+	}
+	
+	public File getPropertiesFile(APDE context) {
+		return new File(getLibraryFolder(context), propertiesFilename);
+	}
+	
+	public Properties getProperties(APDE context) throws FileNotFoundException, IOException {
+		Properties props = new Properties();
+		props.load(new FileInputStream(getPropertiesFile(context)));
+		
+		return props;
+	}
+	
+	public String getProperty(String key, APDE context) throws FileNotFoundException, IOException {
+		return getProperties(context).getProperty(key);
 	}
 	
 	/**

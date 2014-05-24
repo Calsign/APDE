@@ -15,4 +15,6 @@
     <color name="char_insert_button">#222222</color>
     <color name="char_insert_button_light">#CCCCCC</color>
     <color name="grayed_out">#AAAAAA</color>
+    <color name="light_gray">#EEEEEE</color>
+    <color name="link_color">#CCCCCC</color>
 </resources>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/library_manager_list_item"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp" >
+    
+    <TextView
+        android:id="@+id/library_manager_list_item_title"
+        android:layout_width="wrap_content"
+    	android:layout_height="wrap_content"
+    	android:paddingRight="4dp"
+        android:textSize="14sp"
+        android:textColor="@color/light_gray"
+        android:textColorLink="@color/link_color"
+        android:textStyle="bold"
+        android:textIsSelectable="false"
+        android:maxLines="1"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true" />
+    
+    <TextView
+        android:id="@+id/library_manager_list_item_author"
+        android:layout_width="wrap_content"
+    	android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="@color/grayed_out"
+        android:textColorLink="@color/link_color"
+        android:textIsSelectable="false"
+        android:maxLines="1"
+        android:layout_alignBaseline="@id/library_manager_list_item_title"
+        android:layout_toRightOf="@id/library_manager_list_item_title" />
+    
+    <TextView
+        android:id="@+id/library_manager_list_item_desc"
+        android:layout_width="wrap_content"
+    	android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="@color/grayed_out"
+        android:textColorLink="@color/link_color"
+        android:textIsSelectable="false"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@id/library_manager_list_item_title"
+        android:layout_toLeftOf="@+id/library_manager_list_item_actions" />
+    
+    <ImageButton
+        android:id="@id/library_manager_list_item_actions"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:adjustViewBounds="true"
+        android:scaleType="centerInside"
+        android:src="@drawable/abc_ic_menu_moreoverflow_normal_holo_dark"
+        android:contentDescription="@string/more"
+        style="@style/Widget.AppCompat.ActionButton"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+        android:layout_margin="0dp"
+        android:padding="0dp" />
+</RelativeLayout>

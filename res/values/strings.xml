@@ -79,5 +79,22 @@
     <string name="import_library">Import Library</string>
     <string name="no_contributed_libraries">Libraries folder is empty</string>
     <string name="manage_libraries">Manage Libraries</string>
+    <string name="title_activity_library_manager">Library Manager</string>
+    <string name="action_install_zip_library">Install Compressed Library</string>
+    <string name="select_library_zip">Select Library Archive</string>
+    <string name="more">More</string>
+    <string name="library_install_dialog_title">Installing</string>
+    <string name="extracting">Extracting</string>
+    <string name="dexing">Dexing</string>
+    <string name="menu_contrib_uninstall">Uninstall</string>
+    <string name="uninstall_warning_title">Uninstall</string>
+    <string name="uninstall_warning_message">will be uninstalled.</string>
+    <string name="library_uninstall_dialog_title">Uninstalling</string>
+    <string name="run_in_background">Run in Background</string>
+    <string name="invalid_file_error_title">Invalid File</string>
+    <string name="invalid_file_error_message_1">The requested file does not exist. Try using a different file manager.</string>
+    <string name="invalid_file_error_message_2">The requested file is not a ZIP archive.</string>
+    <string name="invalid_file_error_message_3">The requested library has already been installed.</string>
+    <string name="action_get_libraries">Get Libraries</string>
 
 </resources>

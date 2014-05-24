@@ -1670,6 +1670,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	menu.findItem(R.id.menu_load).setVisible(false);
         	menu.findItem(R.id.menu_tab_new).setVisible(false);
         	menu.findItem(R.id.menu_auto_format).setVisible(false);
+        	menu.findItem(R.id.menu_import_library).setVisible(false);
         	menu.findItem(R.id.menu_sketch_properties).setVisible(false);
         	
         	//Make sure to hide the sketch name
@@ -1684,10 +1685,13 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
             	menu.findItem(R.id.menu_tab_rename).setVisible(true);
             	
-            	if(getGlobalState().isExample())
+            	if(getGlobalState().isExample()) {
             		menu.findItem(R.id.menu_auto_format).setVisible(false);
-            	else
+            		menu.findItem(R.id.menu_import_library).setVisible(false);
+            	} else {
             		menu.findItem(R.id.menu_auto_format).setVisible(true);
+            		menu.findItem(R.id.menu_import_library).setVisible(true);
+            	}
             } else {
             	//If the drawer is closed and there are no tabs
             	
@@ -1697,6 +1701,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	    	menu.findItem(R.id.menu_tab_delete).setVisible(false);
             	menu.findItem(R.id.menu_tab_rename).setVisible(false);
             	menu.findItem(R.id.menu_auto_format).setVisible(false);
+            	menu.findItem(R.id.menu_import_library).setVisible(false);
             }
         	
         	//Make sure to make all of the sketch-specific actions visible
@@ -2671,7 +2676,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	}
 	
 	private void launchManageLibraries() {
-		//TODO implement a library manager...
+		Intent intent = new Intent(this, LibraryManagerActivity.class);
+		startActivity(intent);
 	}
 	
 	//Called internally to open the Sketch Properties activity
@@ -2694,6 +2700,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	 * @param library
 	 */
 	public void addImports(String[] imports) {
+		//We can't have people messing with examples...
+		if(getGlobalState().isExample())
+			return;
+		
 		//NOTE: We don't check to see if the user has already imported this library. The desktop PDE doesn't either, so who cares?
 		
 		//Build a formatted list of imports

@@ -1,0 +1,15 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:showAsAction="never"
+        android:title="@string/action_settings" />
+    <item
+        android:id="@+id/action_get_libraries"
+        android:showAsAction="never"
+        android:title="@string/action_get_libraries" />
+    <item
+        android:id="@+id/action_install_zip_library"
+        android:showAsAction="never"
+        android:title="@string/action_install_zip_library" />
+</menu>

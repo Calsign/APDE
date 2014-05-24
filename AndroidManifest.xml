@@ -10,9 +10,9 @@
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
- 	<!-- Will be needed in future versions of Android -->
+    <!-- Will be needed in future versions of Android -->
     <uses-permission android:name="android.permission.VIBRATE" />
- 	<!-- For the drag'n'drop Message area's haptic feedback -->
+    <!-- For the drag'n'drop Message area's haptic feedback -->
 
     <application
         android:name="com.calsignlabs.apde.APDE"
@@ -70,7 +70,10 @@
             android:name="com.calsignlabs.apde.CharacterTraySettingsActivity"
             android:label="@string/title_activity_character_tray_settings"
             android:theme="@style/PreferencesTheme" />
-
+		<activity
+            android:name="com.calsignlabs.apde.LibraryManagerActivity"
+            android:label="@string/title_activity_library_manager"
+            android:theme="@style/PreferencesTheme" />
         <!-- This is a hook into the AFileChooser library's custom file chooser activity -->
         <activity
             android:name="com.ipaulpro.afilechooser.FileChooserActivity"
