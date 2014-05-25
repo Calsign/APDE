@@ -1,4 +1,4 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -6,11 +6,21 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context=".LibraryManagerActivity" >
+    tools:context=".LibraryManagerActivity"
+    android:orientation="vertical" >
+    
+    <TextView
+        android:id="@+id/library_manager_empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="@string/no_contributed_libraries"
+        android:textSize="16sp"
+        android:textColor="@color/grayed_out" />
     
     <ListView
         android:id="@+id/library_manager_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical" />
-</RelativeLayout>
+</LinearLayout>

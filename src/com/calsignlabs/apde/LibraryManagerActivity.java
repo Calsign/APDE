@@ -79,15 +79,8 @@ public class LibraryManagerActivity extends ActionBarActivity {
 					File file = new File(path);
 					if(file.exists()) {
 						if(isZipExtension(FileUtils.getExtension(path))) {
-							//TODO What if the library is packaged in a file of a different name?
-							String libraryName = file.getName();
-							//Strip the ".zip"
-							if(libraryName.endsWith(".zip")) {
-								libraryName = libraryName.substring(0, libraryName.length() - 4);
-							}
-							
 							//Make sure that this library doesn't already exist...
-							if(new Library(libraryName).getLibraryFolder((APDE) getApplicationContext()).exists()) {
+							if(new Library(ContributionManager.detectLibraryName(file)).getLibraryFolder((APDE) getApplicationContext()).exists()) {
 								alert(getResources().getString(R.string.invalid_file_error_title), getResources().getString(R.string.invalid_file_error_message_3));
 							} else {
 								addZipLibrary(file);
@@ -187,6 +180,13 @@ public class LibraryManagerActivity extends ActionBarActivity {
 		libList.setAdapter(adapter);
 		
 		adapter.notifyDataSetChanged();
+		
+		//If there aren't any libraries, let the user know
+		if(adapter.getCount() <= 0) {
+			findViewById(R.id.library_manager_empty).setVisibility(View.VISIBLE);
+		} else {
+			findViewById(R.id.library_manager_empty).setVisibility(View.GONE);
+		}
 	}
 	
 	public class LibraryManagerAdapter extends ArrayAdapter<Library> {
@@ -362,13 +362,7 @@ public class LibraryManagerActivity extends ActionBarActivity {
 		
 		final APDE context = (APDE) getApplicationContext();
 		
-		//TODO What if the library is packaged in a file of a different name?
-		String libraryName = libraryZip.getName();
-		//Strip the ".zip"
-		if(libraryName.endsWith(".zip"))
-			libraryName = libraryName.substring(0, libraryName.length() - 4);
-		
-		//This should be good enough for now
+		String libraryName = ContributionManager.detectLibraryName(libraryZip);
 		final Library library = new Library(libraryName);
 		
 		//Initialize the progress dialog

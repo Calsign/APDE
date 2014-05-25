@@ -87,23 +87,73 @@ public class Library {
 		return getProperties(context).getProperty(key);
 	}
 	
+	public File getLibraryJarFolder(APDE context) {
+		return new File(getLibraryFolder(context), "library");
+	}
+	
 	/**
 	 * @param context
-	 * @return the library's main JAR file
+	 * @return the library's JAR files
 	 */
-	public File getLibraryJar(APDE context) {
-		return new File(new File(getLibraryFolder(context), "library"), libraryName + ".jar");
+	public File[] getLibraryJars(APDE context) {
+		String[] filenames = getLibraryJarNames(context);
+		File[] files = new File[filenames.length];
+		
+		for(int i = 0; i < files.length; i ++) {
+			files[i] = new File(getLibraryJarFolder(context), filenames[i] + ".jar");
+		}
+		
+		return files;
 	}
 	
 	//NOTE: Dexed library JARs are created once and stored in the library folder so that we don't have to re-dex them every time we build
 	
+	public File getLibraryJarDexFolder(APDE context) {
+		return new File(getLibraryFolder(context), "library-dex");
+	}
+	
 	/**
 	 * @param context
-	 * @return the dexed version of the library's main JAR file
+	 * @return the dexed versions of the library's JAR files
 	 */
-	public File getLibraryDexJar(APDE context) {
-		return new File(new File(getLibraryFolder(context), "library-dex"), libraryName + "-dex.jar");
+	public File[] getLibraryDexJars(APDE context) {
+		String[] filenames = getLibraryJarNames(context);
+		File[] files = new File[filenames.length];
+		
+		for(int i = 0; i < files.length; i ++) {
+			files[i] = new File(getLibraryJarDexFolder(context), filenames[i] + "-dex.jar");
+		}
+		
+		return files;
 	}
+	
+	/**
+	 * @param context
+	 * @return the JARs found in the "library" subfolder, without the ".jar" suffix
+	 */
+	private String[] getLibraryJarNames(APDE context) {
+		//The files in the "library" and "library-dex" folders should match up
+		//The dexed versions don't exist when we're installing the library, so we'll read the regular ones
+		
+		File libraryJarFolder = getLibraryJarFolder(context);
+		
+		String[] files = libraryJarFolder.list(jarFilter);
+		
+		//Strip the ".jar"
+		for(int i = 0; i < files.length; i ++) {
+			files[i] = files[i].substring(0, files[i].length() - 4);
+		}
+		
+		return files;
+	}
+	
+	static private FilenameFilter jarFilter = new FilenameFilter() {
+		public boolean accept(File dir, String name) {
+			//Skip directories
+			if (new File(dir, name).isDirectory()) return false;
+			return (name.endsWith(".jar"));
+		}
+	};
 	
 	/**
 	 * @param context
@@ -115,14 +165,27 @@ public class Library {
 	
 	//This prepends a colon so that it can be appended to other paths safely
 	public String getClassPath(APDE context) {
-		return File.pathSeparatorChar + getLibraryJar(context).getAbsolutePath();
+		String classPath = "";
+		
+		for(File file : getLibraryJars(context)) {
+			classPath += File.pathSeparatorChar + file.getAbsolutePath();
+		}
+		
+		return classPath;
 	}
 	
 	public File[] getAndroidExports(APDE context) {
-		return new File[] {
-			getLibraryJar(context),
-			getLibraryDexJar(context)
-		};
+		File[] jars = getLibraryJars(context);
+		File[] dexJars = getLibraryDexJars(context);
+		
+		//Concatenate the arrays
+		
+		File[] exports = new File[jars.length + dexJars.length];
+		
+		System.arraycopy(jars, 0, exports, 0, jars.length);
+		System.arraycopy(dexJars, 0, exports, jars.length, dexJars.length);
+		
+		return exports;
 	}
 	
 	static private FilenameFilter junkFolderFilter = new FilenameFilter() {

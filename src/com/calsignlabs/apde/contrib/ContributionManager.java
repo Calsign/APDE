@@ -5,8 +5,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.util.Properties;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 import android.os.Handler;
@@ -35,17 +36,103 @@ public class ContributionManager {
 		library.setStatus(Library.Status.DEXING);
 		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
 		
-		File libDexJar = library.getLibraryDexJar(context);
-		//Make sure that we have a dexed library directory
-		libDexJar.getParentFile().mkdir();
-		
 		//We dex during the install to save build time
-		dexJar(library.getLibraryJar(context), libDexJar);
+		
+		//Make sure that we have a dexed library directory
+		library.getLibraryJarDexFolder(context).mkdir();
+		
+		File[] jars = library.getLibraryJars(context);
+		File[] dexJars = library.getLibraryDexJars(context);
+		
+		//Dex all of the files...
+		for(int i = 0; i < jars.length; i ++) {
+			dexJar(jars[i], dexJars[i]);
+		}
 		
 		library.setStatus(Library.Status.INSTALLED);
 		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
 		
 		return library;
+	}
+	
+	/**
+	 * Searches a zip file for the name of the library that it (hopefully) contains
+	 * 
+	 * @param libraryZip
+	 * @return the name of the zipped library
+	 */
+	public static String detectLibraryName(File libraryZip) {
+		//Read the contents of the zip file, searching for the name of the library that it contains
+		
+		ZipInputStream zis;
+		
+		try {
+			String filename;
+			zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(libraryZip)));
+			ZipEntry ze;
+			
+			//Just in case things don't quite work out
+			String backupName = "";
+			
+			while((ze = zis.getNextEntry()) != null) {
+				filename = ze.getName();
+				
+				if(isJunkFilename(filename)) {
+					zis.closeEntry();
+					
+					continue;
+				}
+				
+				//Assign the backup name to the first non-junk directory name (should be the library name, fingers crossed)
+				if(backupName.equals("") && ze.isDirectory()) {
+					//Trim the trailing slash from the directory name
+					backupName = filename.substring(0, filename.length() - 1);
+				}
+				
+				//Get the filename by itself, without the path
+				int lastSlash = filename.lastIndexOf("/");
+				
+				//Look for the "library.properties" file...
+				if((lastSlash >= 0 ? filename.substring(lastSlash, filename.length()) : filename).equals(Library.propertiesFilename)) {
+					ZipFile zipFile = new ZipFile(libraryZip);
+					
+					//...and read the properties
+					Properties props = new Properties();
+					props.load(zipFile.getInputStream(ze));
+					
+					//Specifically, the name
+					String libraryName = props.getProperty("name");
+					
+					//But make sure that the properties file is formatted properly
+					if(libraryName != null) {
+						return libraryName;
+					}
+				}
+				
+				zis.closeEntry();
+			}
+			
+			//If we've made it this far, then there must not be a properties file
+			//Let's just make sure that there was a directory, at least...
+			if(!backupName.equals("")) {
+				//...and return its name
+				return backupName;
+			}
+			
+			zis.close();
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+		
+		//If all else fails, return the name of the zip file
+		String zipName = libraryZip.getName();
+		
+		//It had better end with ".zip", because it's a zip file... but you never know
+		if(zipName.endsWith(".zip")) {
+			zipName = zipName.substring(0, zipName.length() - 4);
+		}
+		
+		return zipName;
 	}
 	
 	/**
@@ -56,15 +143,14 @@ public class ContributionManager {
 	 * @return
 	 */
 	public static boolean extractFile(File input, File output) {
+		//Modified from:
 		//StackOverflow: http://stackoverflow.com/questions/3382996/how-to-unzip-files-programmatically-in-android
 		
-		InputStream is;
 		ZipInputStream zis;
 		
 		try {
 			String filename;
-			is = new FileInputStream(input);
-			zis = new ZipInputStream(new BufferedInputStream(is));
+			zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(input)));
 			ZipEntry ze;
 			byte[] buffer = new byte[1024];
 			int count;
@@ -73,6 +159,12 @@ public class ContributionManager {
 			
 			while((ze = zis.getNextEntry()) != null) {
 				filename = ze.getName();
+				
+				if(isJunkFilename(filename)) {
+					zis.closeEntry();
+					
+					continue;
+				}
 				
 				//Need to create directories if they don't exist, or it will throw an Exception...
 				if(ze.isDirectory()) {
@@ -99,6 +191,25 @@ public class ContributionManager {
 		}
 		
 		return true;
+	}
+	
+	private static boolean isJunkFilename(String zipFilename) {
+		//Is this zip entry worth extracting?
+		//This deals with "__MACOSX" and ".DS_Store" files (cough, cough, Mac OSX), potentially others later on
+		//Currently leaves some potentially annoying files (such as "INSTALL.txt" in oscP5), but removing these might have unintentional side effects
+		
+		//Get a list of each level in the hierarchy...
+		//...because if one part of the path is junk, everything beneath it is, too
+		String[] files = zipFilename.split("/");
+		
+		for(String file : files) {
+			//The perpretrators
+			if(file.startsWith("_") || file.startsWith(".")) {
+				return true;
+			}
+		}
+			
+		return false;
 	}
 	
 	/**
