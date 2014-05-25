@@ -73,7 +73,7 @@
 		<activity
             android:name="com.calsignlabs.apde.LibraryManagerActivity"
             android:label="@string/title_activity_library_manager"
-            android:theme="@style/PreferencesTheme" />
+            android:theme="@style/FullscreenTheme" />
         <!-- This is a hook into the AFileChooser library's custom file chooser activity -->
         <activity
             android:name="com.ipaulpro.afilechooser.FileChooserActivity"
