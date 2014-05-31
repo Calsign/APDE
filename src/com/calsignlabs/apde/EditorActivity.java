@@ -1389,11 +1389,36 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
   	}
     
     private boolean validateSketchName(String name) {
-		if(name.length() <= 0)
+    	//Make sure that the name contains text
+		if(name.length() <= 0) {
+			error(getResources().getText(R.string.sketch_name_invalid_no_char));
 			return false;
+		}
 		
-		if(name.equals("sketch"))
+		//Check to make sure that the first character isn't a number and isn't an underscore
+		char first = name.charAt(0);
+		if((first >= '0' && first <= '9') || first == '_') {
+			error(getResources().getText(R.string.sketch_name_invalid_first_char));
 			return false;
+		}
+		
+		//Check all of the characters
+		for(int i = 0; i < name.length(); i ++) {
+			char c = name.charAt(i);
+			if(c >= '0' && c <= '9') continue;
+			if(c >= 'a' && c <= 'z') continue;
+			if(c >= 'A' && c <= 'Z') continue;
+			if(c == '_') continue;
+			
+			error(getResources().getText(R.string.sketch_name_invalid_char));
+			return false;
+		}
+		
+		//We can't have the name "sketch"
+		if(name.equals("sketch")) {
+			error(getResources().getText(R.string.sketch_name_invalid_sketch));
+			return false;
+		}
 		
 		return true;
 	}

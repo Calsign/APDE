@@ -18,8 +18,8 @@
     <string name="menu_settings">Settings</string>
     <string name="sketch_saved">The sketch has been saved.</string>
     <string name="sketch_save_failure">The sketch has not been saved properly.</string>
-    <string name="name_invalid_first_char">Error: Tab names cannot start with a number or an underscore!</string>
-    <string name="name_invalid_char">Error: Tab names may contain only A-Z, a-z, numbers and underscores!</string>
+    <string name="name_invalid_first_char">Error: Tab names must not start with a number or an underscore!</string>
+    <string name="name_invalid_char">Error: Tab names may contain only A-Z, a-z, numbers, and underscores!</string>
     <string name="tab_renamed">The tab has been renamed.</string>
     <string name="tab_created">The tab has been created.</string>
     <string name="tab_deleted">The tab has been deleted.</string>
@@ -96,5 +96,9 @@
     <string name="invalid_file_error_message_2">The requested file is not a ZIP archive.</string>
     <string name="invalid_file_error_message_3">The requested library has already been installed.</string>
     <string name="action_get_libraries">Get Libraries</string>
+    <string name="sketch_name_invalid_first_char">Error: Sketch names must not start with a number or an underscore!</string>
+    <string name="sketch_name_invalid_char">Error: Sketch names may contain only A-Z, a-z, numbers, and underscores!</string>
+    <string name="sketch_name_invalid_no_char">Error: Sketch name must contain text!</string>
+    <string name="sketch_name_invalid_sketch">Error: Sketch name must not be \"sketch\"!</string>
 
 </resources>
