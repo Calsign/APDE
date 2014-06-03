@@ -42,6 +42,7 @@
 					    android:typeface="monospace"
 					    android:textSize="14sp"
 					    android:textColor="#000000"
+					    android:textColorHighlight="@color/code_edit_highlight_color"
 					    android:textCursorDrawable="@drawable/code_edit_text_cursor"
 					    android:background="#00000000"
 					    android:imeOptions="flagNoExtractUi"

@@ -17,4 +17,5 @@
     <color name="grayed_out">#AAAAAA</color>
     <color name="light_gray">#EEEEEE</color>
     <color name="link_color">#CCCCCC</color>
+    <color name="code_edit_highlight_color">#97D8FA</color>
 </resources>
