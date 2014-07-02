@@ -73,4 +73,14 @@ public class KeyBinding {
 	public boolean matches(int key, boolean ctrl, boolean meta, boolean func, boolean alt, boolean sym, boolean shift) {
 		return key() == key && ctrl() == ctrl && meta() == meta && func() == func && alt() == alt() && sym() == sym && shift() == shift;
 	}
+	
+	/**
+	 * Compares another KeyBinding to this KeyBinding
+	 * 
+	 * @param binding
+	 * @return whether or not the keystrokes match
+	 */
+	public boolean matches(KeyBinding binding) {
+		return key() == binding.key() && ctrl() == binding.ctrl() && meta() == binding.meta() && func() == binding.func() && alt() == alt() && sym() == binding.sym() && shift() == binding.shift();
+	}
 }

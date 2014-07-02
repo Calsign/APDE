@@ -18,4 +18,6 @@
     <binding key="42" mod="ctrl|shift">new_tab</binding>
     <binding key="52" mod="ctrl|shift">delete_tab</binding>
     <binding key="46" mod="ctrl|shift">rename_tab</binding>
+    
+    <binding key="40" mod="ctrl">import_library</binding>
 </bindings>

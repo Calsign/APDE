@@ -100,5 +100,6 @@
     <string name="sketch_name_invalid_char">Error: Sketch names may contain only A-Z, a-z, numbers, and underscores!</string>
     <string name="sketch_name_invalid_no_char">Error: Sketch name must contain text!</string>
     <string name="sketch_name_invalid_sketch">Error: Sketch name must not be \"sketch\"!</string>
+    <string name="tools">Tools</string>
 
 </resources>

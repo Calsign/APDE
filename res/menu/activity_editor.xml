@@ -47,11 +47,7 @@
         app:showAsAction="never"
         android:title="@string/menu_tab_delete" />
     <item
-        android:id="@+id/menu_auto_format"
+        android:id="@+id/menu_tools"
         app:showAsAction="never"
-        android:title="@string/auto_format" />
-    <item
-        android:id="@+id/menu_import_library"
-        app:showAsAction="never"
-        android:title="@string/import_library" />
+        android:title="@string/tools" />
 </menu>

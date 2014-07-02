@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -75,6 +76,8 @@ import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.support.PopupMenu;
 import com.calsignlabs.apde.support.ScrollingTabContainerView;
+import com.calsignlabs.apde.tool.AutoFormat;
+import com.calsignlabs.apde.tool.Tool;
 
 /**
  * This is the editor, or the main activity of APDE
@@ -487,6 +490,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         System.setOut(outStream);
         System.setErr(errStream);
         
+        getGlobalState().rebuildToolList();
+        
         //Load default key bindings TODO load user's custom key bindings
         //Also, do this after we initialize the console so that we can get error reports
         
@@ -587,6 +592,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		
 		findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
 		findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
+    }
+    
+    public HashMap<String, KeyBinding> getKeyBindings() {
+    	return keyBindings;
     }
     
     /**
@@ -703,8 +712,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	if(keyBindings.get("auto_format").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		if(!getGlobalState().isExample()) {
-    			((CodeEditText) findViewById(R.id.code)).autoFormat();
-    			message(getResources().getString(R.string.auto_formatter_complete));
+//    			((CodeEditText) findViewById(R.id.code)).autoFormat();
+//    			message(getResources().getString(R.string.auto_formatter_complete));
+    			
+    			runOnUiThread(getGlobalState().getToolByPackageName(AutoFormat.PACKAGE_NAME));
     		}
     		return true;
     	}
@@ -737,6 +748,25 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	if(keyBindings.get("rename_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		if(!getGlobalState().isExample())
     			renameTab();
+    		return true;
+    	}
+    	
+    	//Handle tool keyboard shortcuts
+    	//TODO Potential conflicts... for now, two tools with the same shortcut will both run
+    	
+    	KeyBinding press = new KeyBinding("press", key, ctrl, meta, func, alt, sym, shift);
+    	boolean toolShortcut = false;
+    	
+    	for(Tool tool : getGlobalState().getTools()) {
+    		KeyBinding toolBinding = tool.getKeyBinding();
+    		
+    		if(toolBinding != null && toolBinding.matches(press)) {
+    			tool.run();
+    			toolShortcut = true;
+    		}
+    	}
+    	
+    	if(toolShortcut) {
     		return true;
     	}
     	
@@ -1694,8 +1724,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	menu.findItem(R.id.menu_new).setVisible(false);
         	menu.findItem(R.id.menu_load).setVisible(false);
         	menu.findItem(R.id.menu_tab_new).setVisible(false);
-        	menu.findItem(R.id.menu_auto_format).setVisible(false);
-        	menu.findItem(R.id.menu_import_library).setVisible(false);
+        	menu.findItem(R.id.menu_tools).setVisible(false);
         	menu.findItem(R.id.menu_sketch_properties).setVisible(false);
         	
         	//Make sure to hide the sketch name
@@ -1711,11 +1740,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	menu.findItem(R.id.menu_tab_rename).setVisible(true);
             	
             	if(getGlobalState().isExample()) {
-            		menu.findItem(R.id.menu_auto_format).setVisible(false);
-            		menu.findItem(R.id.menu_import_library).setVisible(false);
+            		menu.findItem(R.id.menu_tools).setVisible(false);
             	} else {
-            		menu.findItem(R.id.menu_auto_format).setVisible(true);
-            		menu.findItem(R.id.menu_import_library).setVisible(true);
+            		menu.findItem(R.id.menu_tools).setVisible(true);
             	}
             } else {
             	//If the drawer is closed and there are no tabs
@@ -1725,8 +1752,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	    	menu.findItem(R.id.menu_stop).setVisible(false);
     	    	menu.findItem(R.id.menu_tab_delete).setVisible(false);
             	menu.findItem(R.id.menu_tab_rename).setVisible(false);
-            	menu.findItem(R.id.menu_auto_format).setVisible(false);
-            	menu.findItem(R.id.menu_import_library).setVisible(false);
+            	menu.findItem(R.id.menu_tools).setVisible(false);
             }
         	
         	//Make sure to make all of the sketch-specific actions visible
@@ -1816,15 +1842,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             case R.id.menu_tab_delete:
             	deleteTab();
             	return true;
-            case R.id.menu_auto_format:
-            	if(!getGlobalState().isExample()) {
-            		((CodeEditText) findViewById(R.id.code)).autoFormat();
-            		message(getResources().getString(R.string.auto_formatter_complete));
-            	}
+            case R.id.menu_tools:
+            	launchTools();
         		return true;
-            case R.id.menu_import_library:
-            	launchImportLibrary();
-            	return true;
             case R.id.menu_sketch_properties:
             	launchSketchProperties();
             	return true;
@@ -2645,7 +2665,32 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		return true;
 	}
 	
-	private void launchImportLibrary() {
+	private void launchTools() {
+		final ArrayList<Tool> toolList = getGlobalState().getTools();
+		
+		//Display a dialog containing the list of tools
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.tools);
+		if(toolList.size() > 0) {
+			//Populate the list
+			builder.setItems(getGlobalState().listTools(), new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int which) {
+					runOnUiThread(toolList.get(which));
+				}
+			});
+		} else {
+			//Eh... there should ALWAYS be tools, unless something funky is going on
+			System.err.println("Couldn't find any tools... uh-oh...");
+		}
+		
+		final AlertDialog dialog = builder.create();
+		
+		dialog.setCanceledOnTouchOutside(true);
+		dialog.show();
+	}
+	
+	public void launchImportLibrary() {
 		getGlobalState().rebuildLibraryList();
 		final String[] libList = getGlobalState().listLibraries();
 		
@@ -2674,6 +2719,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			
 			builder.setView(content);
 		}
+		
 		//The "Manage Libraries" button - null so that it won't automatically close itself
 		builder.setNeutralButton(R.string.manage_libraries, null);
 		final AlertDialog dialog = builder.create();

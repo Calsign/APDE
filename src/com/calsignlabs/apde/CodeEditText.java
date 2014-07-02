@@ -822,16 +822,6 @@ public class CodeEditText extends EditText {
 			keyword.paint().setTextSize(scaledTextSize);
 	}
 	
-	/**
-	 * Runs the code through Processing's Auto Formatter
-	 */
-	public void autoFormat() {
-		processing.app.Preferences.setInteger("editor.tabs.size", 2);
-		
-		setUpdateText((new processing.mode.java.AutoFormat()).format(getText().toString()));
-		clearTokens();
-	}
-	
 	public void commentSelection() {
 		//TODO
 	}

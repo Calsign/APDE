@@ -2,10 +2,15 @@ package com.calsignlabs.apde;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.contrib.Library;
+import com.calsignlabs.apde.tool.AutoFormat;
+import com.calsignlabs.apde.tool.ImportLibrary;
+import com.calsignlabs.apde.tool.Tool;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
@@ -29,6 +34,9 @@ public class APDE extends Application {
 	
 	private HashMap<String, ArrayList<Library>> importToLibraryTable;
 	private ArrayList<Library> contributedLibraries;
+	
+	private HashMap<String, Tool> packageToToolTable;
+	private ArrayList<Tool> tools;
 	
 	/**
 	 * Changes the name of the current sketch and updates the editor accordingly
@@ -236,5 +244,81 @@ public class APDE extends Application {
 		}
 
 		return null;
+	}
+	
+	public void rebuildToolList() {
+		if(tools == null) {
+			tools = new ArrayList<Tool>();
+		} else {
+			tools.clear();
+		}
+		
+		if(packageToToolTable == null) {
+			packageToToolTable = new HashMap<String, Tool>();
+		} else {
+			packageToToolTable.clear();
+		}
+		
+		String[] coreTools = new String[] {AutoFormat.PACKAGE_NAME, ImportLibrary.PACKAGE_NAME};
+		
+		for(String coreTool : coreTools) {
+			loadTool(tools, packageToToolTable, coreTool);
+		}
+		
+		//Sort the tools alphabetically
+		Collections.sort(tools, new Comparator<Tool>() {
+			@Override
+			public int compare(Tool a, Tool b) {
+				return a.getMenuTitle().compareTo(b.getMenuTitle());
+			}
+		});
+	}
+	
+	private void loadTool(ArrayList<Tool> list, HashMap<String, Tool> table, String toolName) {
+		try {
+			Class<?> toolClass = Class.forName(toolName);
+			Tool tool = (Tool) toolClass.newInstance();
+			
+			tool.init(this);
+			
+			tools.add(tool);
+			table.put(toolName, tool);
+		} catch (ClassNotFoundException e) {
+			System.err.println("Failed to load tool " + toolName);
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			System.err.println("Failed to load tool " + toolName);
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			System.err.println("Failed to load tool " + toolName);
+			e.printStackTrace();
+		} catch (Error e) {
+			System.err.println("Failed to load tool " + toolName);
+			e.printStackTrace();
+		} catch (Exception e) {
+			System.err.println("Failed to load tool " + toolName);
+			e.printStackTrace();
+		}
+	}
+	
+	public HashMap<String, Tool> getPackageToToolTable() {
+		return packageToToolTable;
+	}
+	
+	public ArrayList<Tool> getTools() {
+		return tools;
+	}
+	
+	public String[] listTools() {
+		String[] output = new String[tools.size()];
+		for(int i = 0; i < tools.size(); i ++) {
+			output[i] = tools.get(i).getMenuTitle();
+		}
+		
+		return output;
+	}
+	
+	public Tool getToolByPackageName(String packageName) {
+		return packageToToolTable.get(packageName);
 	}
 }
