@@ -34,6 +34,7 @@
 					android:paddingLeft="10dp"
 					android:paddingRight="10dp" >
 	            	
+	                <!-- privateImeOptions="nm" means "no microphone" -->
 					<com.calsignlabs.apde.CodeEditText android:id="@+id/code"
 					    android:inputType="text|textNoSuggestions|textMultiLine"
 					    android:layout_width="wrap_content"
@@ -46,6 +47,7 @@
 					    android:textCursorDrawable="@drawable/code_edit_text_cursor"
 					    android:background="#00000000"
 					    android:imeOptions="flagNoExtractUi"
+					    android:privateImeOptions="nm"
 					    android:paddingTop="0dp"
 						android:paddingBottom="0dp"
 						android:paddingLeft="0dp"
