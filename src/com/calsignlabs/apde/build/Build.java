@@ -51,7 +51,6 @@ public class Build {
 	public static final String PACKAGE_REGEX ="(?:^|\\s|;)package\\s+(\\S+)\\;";
 	
 	private EditorActivity editor;
-	private boolean isExample;
 	
 	public String sketchName;
 	private FileMeta[] tabs;
@@ -83,7 +82,6 @@ public class Build {
 	
 	public Build(APDE global) {
 		this.editor = global.getEditor();
-		isExample = global.isExample();
 		
 		sketchName = global.getSketchName();
 		tabs = editor.getTabMetas();
@@ -1609,10 +1607,7 @@ public class Build {
 	}
 	
 	public File getSketchFolder() {
-		if(isExample)
-			return editor.getExampleLoc(sketchName);
-		else
-			return editor.getSketchLoc(sketchName);
+		return ((APDE) editor.getApplication()).getSketchLocation();
 	}
 	
 	public File getSketchDataFolder() {

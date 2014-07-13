@@ -59,9 +59,7 @@ import android.view.ViewGroup.LayoutParams;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AbsListView;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
@@ -70,13 +68,11 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.AbsListView.OnScrollListener;
 
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.support.PopupMenu;
 import com.calsignlabs.apde.support.ScrollingTabContainerView;
-import com.calsignlabs.apde.tool.AutoFormat;
 import com.calsignlabs.apde.tool.Tool;
 
 /**
@@ -98,6 +94,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	//Used for accessing the sliding drawer that contains the "Sketchbook"
 	private ActionBarDrawerToggle drawerToggle;
 	private boolean drawerOpen;
+	
+	private APDE.SketchLocation drawerSketchLocationType;
+	private String drawerSketchPath;
 	
 	//Used for adjusting the display to accomodate for the keyboard
 	private boolean keyboardVisible;
@@ -171,8 +170,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         //Initialize the global APDE application object
         getGlobalState().setEditor(this);
-        getGlobalState().setSketchName("sketch");
-        getGlobalState().setSelectedSketch(-1);
+        getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
         
         //Initialize the action bar title
         getSupportActionBar().setTitle(getGlobalState().getSketchName());
@@ -229,21 +227,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer);
         final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
         
+        drawerSketchLocationType = null;
+        drawerSketchPath = "";
+        
         //Populate the drawer
         forceDrawerReload();
-        
-        //Detect drawer sliding events
-        drawerList.setOnScrollListener(new OnScrollListener() {
-			@Override
-			public void onScroll(AbsListView arg0, int arg1, int arg2, int arg3) {}
-			
-			@Override
-			public void onScrollStateChanged(AbsListView listView, int scrollState) {
-				if(scrollState == SCROLL_STATE_IDLE)
-					//Select the current sketch
-                    if(getGlobalState().getSelectedSketch() < drawerList.getCount() && getGlobalState().getSelectedSketch() >= 0)
-                    	drawerList.setItemChecked(getGlobalState().getSelectedSketch(), true);
-        }});
         
         //Initialize the drawer drawer toggler
         drawerToggle = new ActionBarDrawerToggle(this, drawer, R.drawable.ic_navigation_drawer, R.string.nav_drawer_open, R.string.nav_drawer_close) {
@@ -262,18 +250,20 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
                     supportInvalidateOptionsMenu();
                     drawerOpen = true;
                     
-                    //Select the current sketch in the drawer
-                    if(getGlobalState().getSelectedSketch() < drawerList.getCount() && getGlobalState().getSelectedSketch() >= 0) {
-                    	ListView drawerList = (ListView) findViewById(R.id.drawer_list);
-                    	View view = drawerList.getChildAt(getGlobalState().getSelectedSketch());
-                    	if(view != null)
-                    		view.setSelected(true);
-                    }
+                    //Display the relative path in the action bar
+                    if(drawerSketchLocationType != null) {
+    					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
+    				} else {
+    					getSupportActionBar().setSubtitle(null);
+    				}
             	} else { //Detect a close event
             		//Re-enable the code area
             		((EditText) findViewById(R.id.code)).setEnabled(true);
                     supportInvalidateOptionsMenu();
                     drawerOpen = false;
+                    
+                    //Hide the relative path
+    				getSupportActionBar().setSubtitle(null);
             	}
             }
             
@@ -288,23 +278,55 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         drawerList.setOnItemClickListener(new ListView.OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-				//Save the current sketch
-				autoSave();
+				FileNavigatorAdapter.FileItem item = ((FileNavigatorAdapter) drawerList.getAdapter()).getItem(position);
 				
-				//Load the selected sketch
-				String sketchName = ((TextView) view).getText().toString();
+				if(drawerSketchLocationType == null) {
+					switch(position) {
+					case 0:
+						drawerSketchLocationType = APDE.SketchLocation.SKETCHBOOK;
+						break;
+					case 1:
+						drawerSketchLocationType = APDE.SketchLocation.EXAMPLE;
+						break;
+					case 2:
+						drawerSketchLocationType = APDE.SketchLocation.LIBRARY_EXAMPLE;
+						break;
+					case 3:
+						//TODO
+						return;
+					}
+				} else {
+					switch(item.getType()) {
+					case NAVIGATE_UP:
+						int lastSlash = drawerSketchPath.lastIndexOf('/');
+						if(lastSlash > 0) {
+							drawerSketchPath = drawerSketchPath.substring(0, lastSlash);
+						} else if(drawerSketchPath.length() > 0) {
+							drawerSketchPath = "";
+						} else {
+							drawerSketchLocationType = null;
+						}
+						
+						break;
+					case FOLDER:
+						drawerSketchPath += "/" + item.getText();
+						
+						break;
+					case SKETCH:
+						loadSketch(drawerSketchPath + "/" + item.getText(), drawerSketchLocationType);
+						drawer.closeDrawers();
+						
+						break;
+					}
+				}
 				
-				//If it is further down on the list, it must be an example
-				if(position > getSketchCount() + 1)
-					loadExample(sketchName);
-				else
-					loadSketch(sketchName);
+				if(drawerSketchLocationType != null) {
+					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
+				} else {
+					getSupportActionBar().setSubtitle(null);
+				}
 				
-				drawerList.setItemChecked(position, true);
-				getGlobalState().setSelectedSketch(position);
-				
-				//Close the drawer
-				drawer.closeDrawers();
+				forceDrawerReload();
 		}});
         
         //Enable the home button, the "home as up" will actually get replaced by the drawer toggle button
@@ -326,6 +348,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	
 			@Override
 			public boolean onTouch(View v, MotionEvent event) {
+				if(getGlobalState().isExample()) {
+					return false;
+				}
+				
 				final HorizontalScrollView codeScrollerX = (HorizontalScrollView) findViewById(R.id.code_scroller_x);
 				final LinearLayout padding = (LinearLayout) findViewById(R.id.code_padding);
 				
@@ -710,16 +736,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		return true;
     	}
     	
-    	if(keyBindings.get("auto_format").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		if(!getGlobalState().isExample()) {
-//    			((CodeEditText) findViewById(R.id.code)).autoFormat();
-//    			message(getResources().getString(R.string.auto_formatter_complete));
-    			
-    			runOnUiThread(getGlobalState().getToolByPackageName(AutoFormat.PACKAGE_NAME));
-    		}
-    		return true;
-    	}
-    	
     	//TODO implement these functions... they're place-holders for now
     	//TODO are these actually getting picked up?
     	if(keyBindings.get("comment").matches(key, ctrl, meta, func, alt, sym, shift)) {
@@ -778,7 +794,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      */
     public void createNewSketch() {
     	//Make sure that the sketch isn't called "sketch"
-    	if(getGlobalState().getSketchName().equals("sketch")) {
+    	if(getGlobalState().getSketchName().equals(APDE.DEFAULT_SKETCH_NAME)) {
     		//If it is, we have to let the user know
     		
 			AlertDialog.Builder alert = new AlertDialog.Builder(this);
@@ -791,8 +807,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    			//Save the sketch
 	    			autoSave();
 	    			
-	    			getGlobalState().setSketchName("sketch");
-	    			getGlobalState().setSelectedSketch(-1);
+	    			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
 	    			newSketch();
 	    			forceDrawerReload();
 	    			
@@ -802,9 +817,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    	//TODO neutral and negative seem mixed up, uncertain of correct implementation - current set up is for looks
 	    	alert.setNeutralButton(R.string.dont_save_sketch, new DialogInterface.OnClickListener() {
 	    		public void onClick(DialogInterface dialog, int whichButton) {
-	    			getGlobalState().setSketchName("sketch");
-	    			getGlobalState().setSelectedSketch(-1);
-	    			getGlobalState().getEditor().newSketch();
+	    			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
+	    			newSketch();
 	    			forceDrawerReload();
 	    			
 	    			getSupportActionBar().setTitle(getGlobalState().getSketchName());
@@ -824,8 +838,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			autoSave();
 			
 			//Update the global state
-			getGlobalState().setSketchName("sketch");
-			getGlobalState().setSelectedSketch(-1);
+			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
 			
 			//Set up for a new sketch
 			newSketch();
@@ -896,53 +909,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	return -1;
     }
     
-    /**
-     * Fills an ArrayAdapter with the names of sketches found in the sketchbook folder
-     * 
-     * @param items
-     */
-    protected void populateWithSketches(ArrayAdapter<String> items) {
-    	//Get the location of the sketchbook
-    	File sketchbookLoc = getGlobalState().getSketchbookFolder();
-    	
-    	//If the sketchbook exists
-    	if(sketchbookLoc.exists()) {
-    		//Get a list of sketches
-	    	File[] folders = sketchbookLoc.listFiles();
-	    	//Sort the list of sketches alphabetically
-	    	Arrays.sort(folders);
-	    	
-	    	for(File folder : folders)
-	    		//The "libraries" folder isn't a sketch! TODO check all folders to make sure that they are valid sketches...
-	    		if(folder.isDirectory() && !folder.getName().equals("libraries"))
-	    			//Add the sketch to the ArrayAdapter
-	    			items.add(folder.getName());
-    	}
-	}
-    
-    /**
-     * Fills an ArrayAdapter with the names of examples found in the examples folder (in assets)
-     * 
-     * @param items
-     */
-    protected void populateWithExamples(ArrayAdapter<String> items) {
-    	//Get the location of the examples directory
-    	File examplesLoc = getGlobalState().getExamplesFolder();
-    	
-    	//If the examples directory exists
-    	if(examplesLoc.exists()) {
-    		//Get a list of sketches
-	    	File[] folders = examplesLoc.listFiles();
-	    	//Sort the list of examples alphabetically
-	    	Arrays.sort(folders);
-	    	
-	    	for(File folder : folders)
-	    		if(folder.isDirectory())
-	    			//Add the sketch to the ArrayAdapter
-	    			items.add(folder.getName());
-    	}
-	}
-    
 	//http://stackoverflow.com/questions/16983989/copy-directory-from-assets-to-data-folder
     private static boolean copyAssetFolder(AssetManager assetManager, String fromAssetPath, String toPath) {
     	try {
@@ -1007,13 +973,13 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
 		//Store sketch info in private storage TODO make this SharedPreferences instead
 		
-		//Save the name of the current sketch
-		String sketchName = getGlobalState().getSketchName();
-    	writeTempFile("sketchName.txt", sketchName);
+		//Save the relative path to the current sketch
+		String sketchPath = getGlobalState().getSketchPath();
+		writeTempFile("sketchPath.txt", sketchPath);
     	
-    	//Save the index of the current sketch
-    	String selectedSketch = Integer.toString(getGlobalState().getSelectedSketch());
-		writeTempFile("sketchNum.txt", selectedSketch);
+    	//Save the location of the current sketch
+		String sketchLocation = getGlobalState().getSketchLocationType().toString();
+		writeTempFile("sketchLocation.txt", sketchLocation);
 	}
 	
 	/**
@@ -1024,35 +990,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	public boolean loadSketchStart() {
 		try {
 			//Load the temp files
-			String sketchName = readTempFile("sketchName.txt");
-			int selectedSketch = Integer.parseInt(readTempFile("sketchNum.txt"));
+			String sketchPath = readTempFile("sketchPath.txt");
+			APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(readTempFile("sketchLocation.txt"));
 			
-			//How's this for some nested if statements?
-			
-			//Check to see if this is a sketch or an example
-			if(selectedSketch > getSketchCount() + 1) {
-				//If the sketch is in the examples folder...
-				if(getExampleLoc(sketchName).exists()) {
-					//...load it
-					getGlobalState().setSelectedSketch(selectedSketch);
-					
-					return loadExample(sketchName);
-				} else {
-					//Otherwise, load the sketch from the temp folder
-					return loadSketchTemp();
-				}
-			} else {
-				//If the sketch is in the sketchbook folder...
-				if(getSketchLoc(sketchName).exists()) {
-					//...load it
-					getGlobalState().setSelectedSketch(selectedSketch);
-					
-					return loadSketch(sketchName);
-				} else {
-					//Otherwise, load the sketch from the temp folder
-					return loadSketchTemp();
-				}
-			}
+			return loadSketch(sketchPath, sketchLocation);
 		} catch(Exception e) { //Meh...
 			e.printStackTrace();
 			return false;
@@ -1064,16 +1005,18 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	 */
 	public void autoSave() {
 		//No need to save if this is an example
-		if(getGlobalState().isExample())
+		if(getGlobalState().isExample()) {
 			return;
+		}
 		
 		//If the sketch exists in the sketchbook
-		if(getSketchLoc(getGlobalState().getSketchName()).exists())
+		if(getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.SKETCHBOOK)) {
 			//Save it to the sketchbook
 			saveSketch();
-		else
+		} else {
 			//Save it to the temp folder
 			saveSketchTemp();
+		}
 	}
 	
 	/**
@@ -1092,7 +1035,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		tabs.clear();
 		
 		//Add the default "sketch" tab
-		addDefaultTab("sketch");
+		addDefaultTab(APDE.DEFAULT_SKETCH_NAME);
 		
 		//Select the new tab
 		tabBar.selectTab(0);
@@ -1106,19 +1049,24 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	}
     
 	/**
-	 * Loads a sketch from the sketchbook folder
+	 * Loads a sketch
 	 * 
-	 * @param sketchName
+	 * @param sketchPath
+	 * @param sketchLocation
 	 * @return success
 	 */
-    public boolean loadSketch(String sketchName) {
-    	//Get the sketch in the sketch folder
-    	File sketchLoc = getSketchLoc(sketchName);
+	public boolean loadSketch(String sketchPath, APDE.SketchLocation sketchLocation) {
+		if(sketchLocation.equals(APDE.SketchLocation.TEMPORARY)) {
+			return loadSketchTemp();
+		}
+		
+		//Get the sketch location
+    	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, sketchLocation);
     	boolean success;
     	
     	//Ensure that the sketch folder exists and is a directory
     	if(sketchLoc.exists() && sketchLoc.isDirectory()) {
-    		getGlobalState().setSketchName(sketchName);
+    		getGlobalState().selectSketch(sketchPath, sketchLocation);
     		
     		//Get all the files in the directory
     		File[] files = sketchLoc.listFiles();
@@ -1171,104 +1119,30 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		
     		//Automatically selects and loads the new tab
     		tabBar.selectLoadDefaultTab();
-    	} else
+    	} else {
     		success = false;
-    	
-    	if(success) {
-    		getGlobalState().setExample(false);
-    		
-    		if(tabBar.getTabCount() > 0) {
-    			//Make sure the code area is editable
-    			((CodeEditText) findViewById(R.id.code)).setFocusable(true);
-    			((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
-    		} else {
-    			//Make sure that the code area isn't editable
-    	    	((CodeEditText) findViewById(R.id.code)).setFocusable(false);
-    			((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
-    		}
     	}
     	
-    	return success;
-    }
-    
-    /**
-	 * Loads an example from the examples folder
-	 * 
-	 * @param sketchName
-	 * @return success
-	 */
-    public boolean loadExample(String sketchName) {
-    	//Get the sketch in the examples folder
-    	File sketchLoc = getExampleLoc(sketchName);
-    	boolean success;
-    	
-    	//Ensure that the sketch folder exists and is a directory
-    	if(sketchLoc.exists() && sketchLoc.isDirectory()) {
-    		getGlobalState().setSketchName(sketchName);
-    		
-    		//Get all the files in the directory
-    		File[] files = sketchLoc.listFiles();
-    		
-    		//Why do we need this...?
-    		for(FileMeta meta : tabs.values())
-    			meta.disable();
-    		
-    		//Get rid of any tabs
-    		tabs.clear();
-    		tabBar.removeAllTabs();
-    		//This method is necessary, too
-    		removeAllTabs();
-    		
-    		//Cycle through the files
-    		for(File file : files) {
-    			//Split the filename into prefix and suffix
-    			String[] folders = file.getPath().split("/");
-    			String[] parts = folders[folders.length - 1].split("\\.");
-    			//If the filename isn't formatted properly, skip this file
-    			if(parts.length != 2)
-    				continue;
-    			
-    			//Retrieve the prefix and suffix
-    			String prefix = parts[parts.length - 2];
-    			String suffix = parts[parts.length - 1];
-    			
-    			//Check to see if it's a .PDE file
-    			if(suffix.equals("pde")) {
-    				//Build a Tab Meta object
-    				FileMeta meta = new FileMeta("", "", 0, 0);
-    				meta.readData(this, file.getAbsolutePath());
-    				meta.setTitle(prefix);
-    				
-    				//Add the tab
-    				addTab(prefix, meta);
+    	if(success) {
+    		if(getGlobalState().isExample()) {
+    			//Make sure the code area isn't editable
+        		((CodeEditText) findViewById(R.id.code)).setFocusable(false);
+        		((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
+    		} else {
+    			if(tabBar.getTabCount() > 0) {
+    				//Make sure the code area is editable
+    				((CodeEditText) findViewById(R.id.code)).setFocusable(true);
+    				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
+    			} else {
+    				//Make sure that the code area isn't editable
+    				((CodeEditText) findViewById(R.id.code)).setFocusable(false);
+    				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
     			}
     		}
-    		
-    		//Update the code-view
-    		if(getSupportActionBar().getTabCount() > 0)
-    			((CodeEditText) findViewById(R.id.code)).setUpdateText(tabs.get(tabBar.getSelectedTab()).getText());
-    		else
-    			((CodeEditText) findViewById(R.id.code)).setUpdateText("");
-    		
-    		//Get rid of previous syntax highlighter data
-    		((CodeEditText) findViewById(R.id.code)).clearTokens();
-    		
-    		success = true;
-    		
-    		//Automatically selects and loads the new tab
-    		tabBar.selectLoadDefaultTab();
-    	} else
-    		success = false;
-    	
-    	if(success) {
-    		getGlobalState().setExample(true);
-    		//Make sure the code area isn't editable
-    		((CodeEditText) findViewById(R.id.code)).setFocusable(false);
-    		((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
     	}
     	
     	return success;
-    }
+	}
     
     /**
      * Saves the sketch to the sketchbook folder, creating a new subdirectory if necessary
@@ -1288,14 +1162,22 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     	
     	//Make sure that the sketch's name isn't "sketch"... and if it is, let the user change it
-    	if(getGlobalState().getSketchName().equals("sketch")) {
+    	if(getGlobalState().getSketchName().equals(APDE.DEFAULT_SKETCH_NAME)) {
     		changeSketchNameForSave();
     		return;
     	}
     	
     	boolean success = true;
+    	
+    	String sketchPath = getGlobalState().getSketchPath();
+    	
+    	//A temporary sketch doesn't have a path defined yet, so we have to use the name
+    	if(getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.TEMPORARY)) {
+    		sketchPath = "/" + getGlobalState().getSketchName();
+    	}
+    	
     	//Obtain the location of the sketch
-    	File sketchLoc = getSketchLoc(getGlobalState().getSketchName());
+    	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, APDE.SketchLocation.SKETCHBOOK); //Force save to the sketchbook so that the user can copy examples to the sketchbook;
     	
     	//Ensure that the sketch folder exists
     	sketchLoc.mkdirs();
@@ -1307,27 +1189,29 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    	
 	    	//Iterate through the FileMetas...
 	    	for(FileMeta meta : tabs.values()) {
-	    		if(meta.enabled())
+	    		if(meta.enabled()) {
 	    			//...and write them to the sketch folder
-	    			if(!meta.writeData(getApplicationContext(), sketchLoc.getPath() + "/"))
+	    			if(!meta.writeData(getApplicationContext(), sketchLoc.getPath() + "/")) {
 	    				success = false;
+	    			}
+	    		}
 	    	}
 	    	
-	    	//Notify the user whether or not the sketch has been saved properly
 	    	if(success) {
+	    		getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
+	    		
 	    		//Force the drawer to reload
 	    		forceDrawerReload();
-	            
-	            //Select the new sketch
-	            if(getGlobalState().getSelectedSketch() < 0)
-	            	getGlobalState().setSelectedSketch(getSketchCount());
+	    		
+	    		supportInvalidateOptionsMenu();
 	            
 	            //Inform the user of success
 	    		message(getResources().getText(R.string.sketch_saved));
 	    		setSaved(true);
-	    	} else
+	    	} else {
 	    		//Inform the user of failure
 	    		error(getResources().getText(R.string.sketch_save_failure));
+	    	}
     	} else {
     		//If there are no tabs
     		//TODO is this right?
@@ -1355,28 +1239,13 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	alert.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {
-    			String before = getGlobalState().getSketchName();
     			String after = input.getText().toString();
     			
     			if(validateSketchName(after)) {
     				getGlobalState().setSketchName(after);
-    				getSketchLoc(before).renameTo(getGlobalState().getEditor().getSketchLoc(after));
-    				
-    				//If the user has set the pretty name to the name of their sketch, they probably want to change the pretty name too
-    				SharedPreferences prefs = getSharedPreferences(after, 0);
-    		  		SharedPreferences.Editor ed = prefs.edit();
-    		  		
-    				if(prefs.getString("prop_pretty_name", "").equals(before))
-    					ed.putString("prop_pretty_name", after);
-    				
-    				ed.commit();
-    				
-    				copyPrefs(before, after);
-    				
-    				saveSketch();
     				
     				//We have to save before we do this... because it reads from the file system
-    				getGlobalState().setSelectedSketch(drawerIndexOfSketch(after));
+    				saveSketch();
     				forceDrawerReload();
     			}
     	}});
@@ -1445,7 +1314,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		}
 		
 		//We can't have the name "sketch"
-		if(name.equals("sketch")) {
+		if(name.equals(APDE.DEFAULT_SKETCH_NAME)) {
 			error(getResources().getText(R.string.sketch_name_invalid_sketch));
 			return false;
 		}
@@ -1457,14 +1326,19 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      * Deletes the current sketch
      */
     public void deleteSketch() {
+    	//You can't delete a temporary sketch...
+    	if(getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.TEMPORARY)) {
+    		return;
+    	}
+    	
     	//Obtain the location of the sketch folder
-    	File sketchFolder = getSketchLoc(getGlobalState().getSketchName());
+    	File sketchFolder = getGlobalState().getSketchLocation();
     	if(sketchFolder.isDirectory()) {
     		try {
     			//Perform recursive file deletion on the sketch folder
 				deleteFile(sketchFolder);
 			} catch (IOException e) {
-				//catch stuff, shouldn't be any problems, though
+				//Catch stuff, shouldn't be any problems, though
 				e.printStackTrace();
 			}
     	}
@@ -1487,10 +1361,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	for(File file : files)
     		file.delete();
     	
-    	String sketchName = getGlobalState().getSketchName();
-    	writeTempFile("sketchName.txt", sketchName);
-    	String selectedSketch = Integer.toString(getGlobalState().getSelectedSketch());
-    	writeTempFile("sketchNum.txt", selectedSketch);
+    	String sketchPath = getGlobalState().getSketchName();
+    	writeTempFile("sketchPath.txt", sketchPath);
+    	
+    	String sketchLocation = getGlobalState().getSketchLocationType().toString();
+    	writeTempFile("sketchLocation.txt", sketchLocation);
     	
     	//Preserve tab order upon re-launch
     	String tabList = "";
@@ -1506,7 +1381,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     	
     	//Save the names of the tabs
-    	writeTempFile("sketchFileNames", tabList);
+    	writeTempFile("sketchFileNames.txt", tabList);
     	
     	if(tabBar.getTabCount() > 0) {
     		//Update the current tab
@@ -1531,15 +1406,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	boolean success;
     	
     	try {
-    		//Read the sketch name
-    		String sketchName = readTempFile("sketchName.txt");
-    		getGlobalState().setSketchName(sketchName);
-    		//Read the sketch index
-    		int selectedSketch = Integer.parseInt(readTempFile("sketchNum.txt"));
-    		getGlobalState().setSelectedSketch(selectedSketch);
+    		//Read the sketch path
+    		String sketchPath = readTempFile("sketchPath.txt");
+    		APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(readTempFile("sketchLocation.txt"));
+    		
+    		getGlobalState().selectSketch(sketchPath, sketchLocation);
     		
     		//Read the list of tabs
-    		String[] files = readTempFile("sketchFileNames").split("\n");
+    		String[] files = readTempFile("sketchFileNames.txt").split("\n");
     		
     		//Iterate through the files
     		for(String filename : files) {
@@ -1655,49 +1529,35 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     }
     
     /**
-     * @param sketchName
-     * @return the File corresponding to the sketch folder of the specified sketch
-     */
-    public File getSketchLoc(String sketchName) {
-    	//The location of the sketchbook
-    	File sketchbookLoc = getGlobalState().getSketchbookFolder();
-    	
-    	//The location of the sketch
-    	return new File(sketchbookLoc, sketchName);
-    }
-    
-    /**
-     * @param exampleName
-     * @return the File corresponding to the sketch folder of the specified example
-     */
-    public File getExampleLoc(String exampleName) {
-    	//The location of the sketchbook
-    	File examplesLoc = getGlobalState().getExamplesFolder();
-    	
-    	//The location of the sketch
-    	return new File(examplesLoc, exampleName);
-    }
-    
-    /**
      * Reloads the navigation drawer
      */
     public void forceDrawerReload() {
         final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
-
-        //Create an ArrayAdapter to populate the drawer's list of sketches
-        SectionedListAdapter sections = new SectionedListAdapter(this);
         
-        ArrayAdapter<String> sketches = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
-        populateWithSketches(sketches);
+        ArrayList<FileNavigatorAdapter.FileItem> items;
         
-        ArrayAdapter<String> examples = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
-        populateWithExamples(examples);
+        if(drawerSketchLocationType != null) {
+        	items = getGlobalState().listSketchContainingFolders(getGlobalState().getSketchLocation(drawerSketchPath, drawerSketchLocationType), new String[] {APDE.LIBRARIES_FOLDER});
+        } else {
+        	items = new ArrayList<FileNavigatorAdapter.FileItem>();
+        	items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.sketches), FileNavigatorAdapter.FileItemType.FOLDER));
+        	items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.examples), FileNavigatorAdapter.FileItemType.FOLDER));
+        	items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.library_examples), FileNavigatorAdapter.FileItemType.FOLDER));
+        	items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.recent), FileNavigatorAdapter.FileItemType.FOLDER));
+        }
         
-        sections.addSection(getResources().getString(R.string.drawer_list_title_sketchbook), sketches);
-        sections.addSection(getResources().getString(R.string.drawer_list_title_examples), examples);
-
+        int selected = -1;
+        
+        if(drawerSketchLocationType != null && drawerSketchLocationType.equals(getGlobalState().getSketchLocationType())
+        		&& getGlobalState().getSketchPath().equals(drawerSketchPath + "/" + getGlobalState().getSketchName())) {
+        	
+        	selected = FileNavigatorAdapter.indexOfSketch(items, getGlobalState().getSketchName());
+        }
+        
+        FileNavigatorAdapter fileAdapter = new FileNavigatorAdapter(this, items, selected);
+        
         //Load the list of sketches into the drawer
-        drawerList.setAdapter(sections);
+        drawerList.setAdapter(fileAdapter);
         drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
     }
     
@@ -1762,7 +1622,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	menu.findItem(R.id.menu_tab_new).setVisible(true);
         	menu.findItem(R.id.menu_sketch_properties).setVisible(true);
         	
-        	//Make sure to make ths sketch name visible
+        	//Make sure to make the sketch name visible
         	getSupportActionBar().setTitle(getGlobalState().getSketchName());
         }
         
@@ -1776,6 +1636,13 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	if(tabBar.getTabCount() <= 0 && !getGlobalState().isExample())
     		menu.findItem(R.id.menu_tab_new).setVisible(true);
         
+    	//Change "Save Sketch" to "Copy to Sketchbook" for examples to clarify functionality - this is a coded-once, dual function button
+    	if(getGlobalState().isExample()) {
+    		menu.findItem(R.id.menu_save).setTitle(R.string.copy_to_sketchbook);
+    	} else {
+    		menu.findItem(R.id.menu_save).setTitle(R.string.menu_save);
+    	}
+    	
         return true;
     }
     
@@ -1974,7 +1841,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//No need to save an example...
     	if(!getGlobalState().isExample()) {
     		//Save the sketch
-    		if(getSketchLoc(getSupportActionBar().getTitle().toString()).exists()) {
+    		
+    		if(getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.SKETCHBOOK)) {
     			saveSketch();
     		} else {
     			//If the sketch has yet to be saved, inform the user
@@ -2391,7 +2259,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      */
     private boolean deleteLocalFile(String filename) {
     	//Get the sketch folder location
-    	File sketchLoc = getSketchLoc(getGlobalState().getSketchName());
+    	File sketchLoc = getGlobalState().getSketchLocation();
     	//Get the file location
     	File file = new File(sketchLoc + "/", filename);
     	

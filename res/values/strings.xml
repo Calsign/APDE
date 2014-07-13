@@ -101,5 +101,11 @@
     <string name="sketch_name_invalid_no_char">Error: Sketch name must contain text!</string>
     <string name="sketch_name_invalid_sketch">Error: Sketch name must not be \"sketch\"!</string>
     <string name="tools">Tools</string>
+    <string name="icon">Icon</string>
+    <string name="sketches">Sketches</string>
+    <string name="examples">Examples</string>
+    <string name="library_examples">Library Examples</string>
+    <string name="recent">Recent</string>
+    <string name="copy_to_sketchbook">Copy to Sketchbook</string>
 
 </resources>

@@ -28,30 +28,17 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
-import android.support.v4.app.ActionBarDrawerToggle;
-import android.support.v4.widget.DrawerLayout;
+import android.support.v4.app.ActivityCompat;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.view.WindowManager;
-import android.widget.AbsListView;
-import android.widget.AbsListView.OnScrollListener;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.TextView;
 
 public class SketchPropertiesActivity extends PreferenceActivity {
 	//This is a number, that's all that matters
 	private static final int REQUEST_CHOOSER = 6283;
 	
 	private static final boolean ALWAYS_SIMPLE_PREFS = true;
-	
-	private ActionBarDrawerToggle drawerToggle;
-	@SuppressWarnings("unused")
-	private boolean drawerOpen;
 	
 	private OnSharedPreferenceChangeListener prefListener;
 	
@@ -68,92 +55,6 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		}
 		
 		getGlobalState().setProperties(this);
-		
-		final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_sketch_properties);
-        final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
-        
-        forceDrawerReload();
-        
-        drawerList.setOnScrollListener(new OnScrollListener() {
-			@Override
-			public void onScroll(AbsListView arg0, int arg1, int arg2, int arg3) {}
-			
-			@Override
-			public void onScrollStateChanged(AbsListView listView, int scrollState) {
-				if(scrollState == SCROLL_STATE_IDLE) {
-					//Select the current sketch TODO this isn't working yet
-                    if(getGlobalState().getSelectedSketch() < drawerList.getCount() && getGlobalState().getSelectedSketch() >= 0) {
-                    	View view = listView.getChildAt(getGlobalState().getSelectedSketch());
-                    	if(view != null)
-                    		view.setSelected(true);
-                    }
-				}
-        }});
-        
-		drawerToggle = new ActionBarDrawerToggle(this, drawer, R.drawable.ic_navigation_drawer, R.string.nav_drawer_open, R.string.nav_drawer_close) {
-            @Override
-        	public void onDrawerClosed(View view) {
-            	if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
-            		invalidateOptionsMenu();
-            }
-            
-            @Override
-            public void onDrawerSlide(View drawer, float slide) {
-            	super.onDrawerSlide(drawer, slide);
-            	
-            	//Detect an initial open event
-            	if(slide > 0) {
-            		if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
-            			invalidateOptionsMenu();
-                    drawerOpen = true;
-                    
-                    //Select the current sketch
-                    if(getGlobalState().getSelectedSketch() < drawerList.getCount() && getGlobalState().getSelectedSketch() >= 0) {
-                    	ListView drawerList = (ListView) findViewById(R.id.drawer_list);
-                    	View view = drawerList.getChildAt(getGlobalState().getSelectedSketch());
-                    	if(view != null)
-                    		view.setSelected(true);
-                    }
-            	} else {
-            		if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
-            			invalidateOptionsMenu();
-                    drawerOpen = false;
-            	}
-            }
-            
-            @Override
-            public void onDrawerOpened(View drawerView) {
-            	if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
-            		invalidateOptionsMenu();
-        }};
-        drawer.setDrawerListener(drawerToggle);
-        
-        drawerList.setOnItemClickListener(new ListView.OnItemClickListener() {
-			@Override
-			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-				getGlobalState().getEditor().autoSave();
-				
-				String sketchName = ((TextView) view).getText().toString();
-				
-				//If it is further down on the list, it must be an example
-				if(position > getGlobalState().getEditor().getSketchCount() + 1)
-					getGlobalState().getEditor().loadExample(sketchName);
-				else
-					getGlobalState().getEditor().loadSketch(sketchName);
-				
-				view.setSelected(true);
-				getGlobalState().setSelectedSketch(position);
-				
-				if(android.os.Build.VERSION.SDK_INT >= 11) { //Yet another unfortunate casualty of AppCompat
-					getActionBar().setTitle(getGlobalState().getSketchName());
-					invalidateOptionsMenu();
-				}
-				
-				drawer.closeDrawers();
-				
-				forceDrawerReload();
-				restartActivity();
-		}});
         
         getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
 	}
@@ -228,9 +129,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	}
 	
 	public static void updatePrefs(APDE global) {
-		//Don't try if the name is "sketch"... it will crash and burn
-		//Why? "sketch" isn't a valid sketch name - it's the name of the temporary sketch that isn't saved in the sketchbook folder
-		if(global.getSketchName().equals("sketch"))
+		//Don't try if this is a temporary sketch... it will crash and burn
+		if(global.isTemp())
 			return;
 		
 		Manifest mf = global.getManifest();
@@ -306,7 +206,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		});
 		
 		//If this is an example... or if this is a temporary sketch...
-		if(getGlobalState().isExample() || getGlobalState().getSketchName().equals("sketch")) {
+		if(getGlobalState().isExample() || getGlobalState().isTemp()) {
         	//...disable all of the preferences
         	findPreference("prop_manifest").setEnabled(false);
         	findPreference("prop_sketch_folder").setEnabled(false);
@@ -319,7 +219,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 			@Override
 			public void onSharedPreferenceChanged(SharedPreferences pref, String key) {
 				//If this is the temporary sketch, bail out
-				if(getGlobalState().getSketchName().equals("sketch"))
+				if(getGlobalState().isTemp())
 					return;
 				
 				Manifest mf = getGlobalState().getManifest();
@@ -397,12 +297,15 @@ public class SketchPropertiesActivity extends PreferenceActivity {
         
         if(getGlobalState().isExample()) {
         	//Don't let them mess with the examples!
-        	
         	menu.findItem(R.id.menu_change_sketch_name).setVisible(false);
         	menu.findItem(R.id.menu_delete).setVisible(false);
+        	
+        	menu.findItem(R.id.menu_save).setTitle(R.string.copy_to_sketchbook);
         } else {
         	menu.findItem(R.id.menu_change_sketch_name).setVisible(true);
         	menu.findItem(R.id.menu_delete).setVisible(true);
+        	
+        	menu.findItem(R.id.menu_save).setTitle(R.string.menu_save);
         }
         
         return true;
@@ -423,9 +326,6 @@ public class SketchPropertiesActivity extends PreferenceActivity {
             case R.id.menu_save:
             	saveSketch();
             	return true;
-            case R.id.menu_load:
-            	loadSketch();
-        		return true;
         	case R.id.menu_export:
         		exportSketch();
         		return true;
@@ -472,7 +372,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	}
 	
 	private void saveSketch() {
-		if(!externalStorageWritable()) {
+		//If we cannot write to the external storage (and the user wants to), make sure to inform the user
+		if(!externalStorageWritable() && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("internal_storage_sketchbook", false)) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
             	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
@@ -484,7 +385,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     		return;
     	}
 		
-		if(getGlobalState().getSketchName().equals("sketch")) {
+		if(getGlobalState().getSketchName().equals(APDE.DEFAULT_SKETCH_NAME)) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(getResources().getText(R.string.sketch_name_dialog_title))
             	.setMessage(getResources().getText(R.string.sketch_name_dialog_message)).setCancelable(false)
@@ -498,7 +399,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     	}
 		
 		getGlobalState().getEditor().saveSketch();
-		forceDrawerReload();
+		ActivityCompat.invalidateOptionsMenu(this);
 	}
 	
 	private boolean externalStorageWritable() {
@@ -507,16 +408,9 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		else return false;
 	}
 	
-	private void loadSketch() {
-		DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_sketch_properties);
-		LinearLayout drawerLayout = (LinearLayout) findViewById(R.id.drawer_wrapper_sketch_properties);
-		
-		drawer.openDrawer(drawerLayout);
-	}
-	
 	@SuppressLint("NewApi")
 	private void newSketch() {
-		if(getGlobalState().getSketchName().equals("sketch")) {
+		if(getGlobalState().isTemp()) {
 			AlertDialog.Builder alert = new AlertDialog.Builder(this);
 	    	
 	    	alert.setTitle(R.string.save_sketch_dialog_title);
@@ -527,13 +421,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	    			//Save the sketch
 	    			getGlobalState().getEditor().autoSave();
 	    			
-	    			getGlobalState().setSketchName("sketch");
-	    			getGlobalState().setSelectedSketch(-1);
+	    			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
 	    			getGlobalState().getEditor().newSketch();
-	    			forceDrawerReload();
-	    			
-	    			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
-	    				getActionBar().setTitle(getGlobalState().getSketchName());
 	    			
 	    			finish();
 	    	}});
@@ -541,34 +430,29 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	    	//TODO neutral and negative seem mixed up, uncertain of correct implementation - current set up is for looks
 	    	alert.setNeutralButton(R.string.dont_save_sketch, new DialogInterface.OnClickListener() {
 	    		public void onClick(DialogInterface dialog, int whichButton) {
-	    			getGlobalState().setSketchName("sketch");
-	    			getGlobalState().setSelectedSketch(-1);
+	    			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
 	    			getGlobalState().getEditor().newSketch();
-	    			forceDrawerReload();
-	    			
-	    			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
-	    				getActionBar().setTitle(getGlobalState().getSketchName());
 	    			
 	    			finish();
-	    	}});
+	    		}
+	    	});
 	    	
 	    	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-	    		public void onClick(DialogInterface dialog, int whichButton) {
-	    	}});
+	    		public void onClick(DialogInterface dialog, int whichButton) {}
+	    	});
 	    	
 	    	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
 	    	AlertDialog dialog = alert.create();
-	    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+	    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
 	    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+	    	}
 	    	dialog.show();
 		} else {
 			//Save the sketch
 			getGlobalState().getEditor().autoSave();
 			
-			getGlobalState().setSketchName("sketch");
-			getGlobalState().setSelectedSketch(-1);
+			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
 			getGlobalState().getEditor().newSketch();
-			forceDrawerReload();
 			
 			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
 				getActionBar().setTitle(getGlobalState().getSketchName());
@@ -592,10 +476,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 			public void onClick(DialogInterface dialog, int whichButton) {
     			getGlobalState().getEditor().deleteSketch();
     			
-    			getGlobalState().setSketchName("sketch");
-    			getGlobalState().setSelectedSketch(-1);
+    			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
     			getGlobalState().getEditor().newSketch();
-    			forceDrawerReload();
     			
     			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
     				getActionBar().setTitle(getGlobalState().getSketchName());
@@ -615,6 +497,18 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	}
 	
 	private void changeSketchName() {
+		String sketchPath = getGlobalState().getSketchPath();
+		
+		int lastSlash = sketchPath.lastIndexOf('/');
+		final String sketchPathPrefix;
+		
+		if(lastSlash != -1) {
+			//Include the slash at the end
+			sketchPathPrefix = sketchPath.substring(0, lastSlash + 1);
+		} else {
+			sketchPathPrefix = "";
+		}
+		
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
     	
     	alert.setTitle(R.string.change_sketch_name_dialog_title);
@@ -632,28 +526,28 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     			String after = input.getText().toString();
     			
     			if(validateSketchName(after)) {
-    				getGlobalState().setSketchName(after);
-    				getGlobalState().getEditor().getSketchLoc(before).renameTo(getGlobalState().getEditor().getSketchLoc(after));
+    				if(getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.TEMPORARY)) {
+    					getGlobalState().selectSketch(sketchPathPrefix + after, APDE.SketchLocation.TEMPORARY);
+    					getGlobalState().setSketchName(after);
+    				} else {
+    					getGlobalState().getSketchLocation(sketchPathPrefix + before, APDE.SketchLocation.SKETCHBOOK).renameTo(getGlobalState().getSketchLocation(sketchPathPrefix + after, APDE.SketchLocation.SKETCHBOOK));
+    					getGlobalState().selectSketch(sketchPathPrefix + after, APDE.SketchLocation.SKETCHBOOK);
+    					
+    					//Make sure we save...
+    					saveSketch();
+    					
+    					//We have to save before we do this... because it reads from the file system
+    					getGlobalState().getEditor().forceDrawerReload();
+    				}
     				
     				//If the user has set the pretty name to the name of their sketch, they probably want to change the pretty name too
-    				@SuppressWarnings("deprecation")
+					@SuppressWarnings("deprecation")
 					EditTextPreference pref = ((EditTextPreference) findPreference("prop_pretty_name"));
-    				if(pref.getText().equals(before))
-    					pref.setText(after);
-    				
-    				//Don't copy preferences from a temporary sketch - there aren't any!
-    				if(!before.equals("sketch"))
-    					copyPrefs(before, after);
-    				
-    				//Make sure we save...
-    				saveSketch();
-    				
-    				//We have to save before we do this... because it reads from the file system
-    				getGlobalState().setSelectedSketch(getGlobalState().getEditor().drawerIndexOfSketch(after));
-    				getGlobalState().getEditor().forceDrawerReload();
-    				forceDrawerReload();
-    				
-    				restartActivity();
+					if(pref.getText().equals(before)) {
+						pref.setText(after);
+					}
+					
+					restartActivity();
     			}
     	}});
     	
@@ -667,26 +561,6 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
     	dialog.show();
     }
-	
-	protected void forceDrawerReload() {
-		final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
-
-        //Create an ArrayAdapter to populate the drawer's list of sketches
-        SectionedListAdapter sections = new SectionedListAdapter(this);
-        
-        ArrayAdapter<String> sketches = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
-        getGlobalState().getEditor().populateWithSketches(sketches);
-        
-        ArrayAdapter<String> examples = new ArrayAdapter<String>(this, R.layout.drawer_list_item);
-        getGlobalState().getEditor().populateWithExamples(examples);
-        
-        sections.addSection(getResources().getString(R.string.drawer_list_title_sketchbook), sketches);
-        sections.addSection(getResources().getString(R.string.drawer_list_title_examples), examples);
-
-        //Load the list of sketches into the drawer
-        drawerList.setAdapter(sections);
-        drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-	}
     
 	//Restart the activity with no animation
     private void restartActivity() {
@@ -704,13 +578,15 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		if(name.length() <= 0)
 			return false;
 		
-		if(name.equals("sketch"))
+		if(name.equals(APDE.DEFAULT_SKETCH_NAME))
 			return false;
 		
 		return true;
 	}
 	
+	
 	//Copy all of the old preferences over to the new SharedPreferences and delete the old ones
+	//TODO is this currently unused?
 	@SuppressWarnings("deprecation")
 	public void copyPrefs(String before, String after) {
 		SharedPreferences old = getPreferenceManager().getSharedPreferences();
