@@ -42,17 +42,20 @@ public class Preproc extends PdePreprocessor {
 	
 	public String[] initSketchSize(String code, EditorActivity editor) throws SketchException {
 		String[] info = parseSketchSizeCustom(code, true, editor); //Use our own function to resolve some issues...
+		
 		if (info == null) {
 			System.err.println("More about the size() command on Android can be");
 			System.err.println("found here: http://wiki.processing.org/w/Android");
 			System.err.println();
 			System.err.println();
+			
 			throw new SketchException("Could not parse the size() command.");
 		}
 		sizeStatement = info[0];
 		sketchWidth = info[1];
 		sketchHeight = info[2];
 		sketchRenderer = info[3];
+		
 		return info;
 	}
 	

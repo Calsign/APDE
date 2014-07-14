@@ -343,13 +343,21 @@ public class Build {
 					return;
 				}
 			}
-		} catch(IOException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
-		} catch(SketchException e) {
+		} catch (SketchException e) {
 			e.printStackTrace();
 			
 			editor.errorExt(e.getMessage());
 			editor.highlightLineExt(e.getCodeIndex(), e.getCodeLine());
+			
+			//Bail out
+			cleanUp();
+			return;
+		} catch (RuntimeException e) {
+			e.printStackTrace();
+			
+			editor.errorExt(e.getMessage());
 			
 			//Bail out
 			cleanUp();
