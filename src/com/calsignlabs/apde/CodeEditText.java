@@ -562,7 +562,7 @@ public class CodeEditText extends EditText {
 		new Thread(new Runnable() {
 			public void run() {
 				Token[] tempTokens = splitTokens(text, 0, new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '"', '\'', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' '});
-
+				
 				for(int i = 0; i < tempTokens.length; i ++) {
 					String nextNonSpace = "";
 					for(int j = i + 1; j < tempTokens.length; j ++) {
@@ -577,35 +577,35 @@ public class CodeEditText extends EditText {
 
 					tempTokens[i].updatePaint(nextNonSpace);
 				}
-
+				
 				boolean multiLineComment = false;
 				boolean singleLineComment = false;
 				boolean stringLiteral = false;
 				boolean charLiteral = false;
-
+				
 				int startLiteral = -1;
-
+				
 				String prev = "";
 				String next;
-
+				
 				for(int i = 0; i < tempTokens.length; i ++) {
 					Token token = tempTokens[i];
 					next = (i < tempTokens.length - 1 ? tempTokens[i + 1].text : "");
-
+					
 					if(token.text.equals("\n")) {
 						singleLineComment = false;
 						stringLiteral = false;
 						charLiteral = false;
-
+						
 						continue;
 					}
-
+					
 					if(stringLiteral && prev.equals("\"") && i > startLiteral + 1)
 						stringLiteral = false;
-
+					
 					if(charLiteral && prev.equals("'") && i > startLiteral + 1)
 						charLiteral = false;
-
+					
 					if(!multiLineComment && !singleLineComment && !stringLiteral && !charLiteral) {
 						//Test for single-line comments
 						if(token.text.equals("/") && next.equals("/"))
@@ -614,21 +614,21 @@ public class CodeEditText extends EditText {
 						else if(token.text.equals("/") && next.equals("*"))
 							multiLineComment = true;
 					}
-
+					
 					//TODO Implement incomplete / invalid literals
-
+					
 					//Test for String literals
 					if(!stringLiteral && !multiLineComment && !singleLineComment && !charLiteral && token.text.equals("\"")) {
 						stringLiteral = true;
 						startLiteral = i;
 					}
-
+					
 					//Test for char literals
 					if(!charLiteral && !multiLineComment && !singleLineComment && !stringLiteral && token.text.equals("'")) {
 						charLiteral = true;
 						startLiteral = i;
 					}
-
+					
 					//Change paint for comments and literals
 					if(singleLineComment) {
 						token.paint = styles.get("comment_single");
@@ -643,12 +643,12 @@ public class CodeEditText extends EditText {
 						token.paint = styles.get("literal_char");
 						token.isCustomPaint = true;
 					}
-
+					
 					//Test for end multi-line comments
 					if(multiLineComment)
 						if(prev.equals("*") && token.text.equals("/"))
 							multiLineComment = false;
-
+					
 					prev = token.text;
 				}
 				
@@ -675,6 +675,9 @@ public class CodeEditText extends EditText {
 					
 					activeToken.text += token.text;
 				}
+				
+				//Add the extra token at the end
+				finalTokens.add(activeToken);
 				
 				tokens = finalTokens.toArray(new Token[finalTokens.size()]);
 				

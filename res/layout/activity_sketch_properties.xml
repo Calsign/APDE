@@ -1,10 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- <android.support.v4.widget.DrawerLayout android:id="@+id/drawer_sketch_properties"
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"> -->
-
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/sketch_properties"
@@ -23,20 +17,3 @@
         android:layout_height="match_parent" >
     </ListView>
 </RelativeLayout>
-
-<!-- <LinearLayout android:id="@+id/drawer_wrapper_sketch_properties"
-	    android:layout_width="260dp"
-	    android:layout_height="match_parent"
-	    android:layout_gravity="start"
-	    android:orientation="vertical" >
-	    
-		<ListView android:id="@+id/drawer_list"
-	        android:layout_width="match_parent"
-	        android:layout_height="match_parent"
-	        android:choiceMode="singleChoice"
-	        android:divider="#CCCCCC"
-	        android:dividerHeight="0.5dp"
-	        android:background="#EEEEEE"
-	        android:headerDividersEnabled="true" />
-	</LinearLayout>
-</android.support.v4.widget.DrawerLayout> -->
