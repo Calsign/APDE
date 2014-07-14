@@ -363,6 +363,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 					startEvent = event;
 				}
 				
+				//Some problems... some random crashes... just keep this fail-safe even though we shouldn't need it
+				if(startEvent == null) {
+					return false;
+				}
+				
 				//Calculate change in the current motion event
 				float changeX = event.getX() - startX;
 				float changeY = event.getY() - startY;
