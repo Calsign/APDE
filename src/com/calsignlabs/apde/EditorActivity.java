@@ -623,6 +623,38 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		
 		findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
 		findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
+		
+		//Let's see if the user is trying to open a .PDE file...
+		
+		Intent intent = getIntent();
+        
+        if(intent.getAction().equals(Intent.ACTION_VIEW) && intent.getType() != null) {
+        	String scheme = intent.getData().getScheme();
+        	String filePath = intent.getData().getPath();
+        	
+        	//Let's make sure we don't have any bad data...
+        	if(scheme != null && scheme.equalsIgnoreCase("file") && filePath != null) {
+        		//Try to get the file...
+        		File file = new File(filePath);
+        		
+        		String ext = "";
+        		int lastDot = filePath.lastIndexOf('.');
+    			if(lastDot != -1) {
+    				ext = filePath.substring(lastDot);
+    			}
+    			
+        		//Is this a good file?
+        		if(file.exists() && !file.isDirectory() && ext.equalsIgnoreCase(".pde")) {
+        			//Let's get the sketch folder...
+        			File sketchFolder = file.getParentFile();
+        			
+        			//Here goes...
+        			loadSketch(sketchFolder.getAbsolutePath(), APDE.SketchLocation.EXTERNAL);
+        			
+        			message("Loaded external sketch.");
+        		}
+        	}
+        }
     }
     
     public HashMap<String, KeyBinding> getKeyBindings() {
@@ -1009,18 +1041,18 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	 * Automatically save the sketch, whether it is to the sketchbook folder or to the temp folder
 	 */
 	public void autoSave() {
-		//No need to save if this is an example
-		if(getGlobalState().isExample()) {
+		switch(getGlobalState().getSketchLocationType()) {
+		case EXAMPLE:
+		case LIBRARY_EXAMPLE:
+			//Don't need to save examples...
 			return;
-		}
-		
-		//If the sketch exists in the sketchbook
-		if(getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.SKETCHBOOK)) {
-			//Save it to the sketchbook
+		case SKETCHBOOK:
+		case EXTERNAL:
 			saveSketch();
-		} else {
-			//Save it to the temp folder
+			break;
+		case TEMPORARY:
 			saveSketchTemp();
+			break;
 		}
 	}
 	
@@ -1182,7 +1214,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     	
     	//Obtain the location of the sketch
-    	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, APDE.SketchLocation.SKETCHBOOK); //Force save to the sketchbook so that the user can copy examples to the sketchbook;
+    	//Save examples to the sketchbook so that the user can copy examples to the sketchbook
+    	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.EXTERNAL) ?
+    			APDE.SketchLocation.EXTERNAL : APDE.SketchLocation.SKETCHBOOK);
     	
     	//Ensure that the sketch folder exists
     	sketchLoc.mkdirs();
@@ -1203,7 +1237,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    	}
 	    	
 	    	if(success) {
-	    		getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
+	    		getGlobalState().selectSketch(sketchPath, getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.EXTERNAL) ?
+	        			APDE.SketchLocation.EXTERNAL : APDE.SketchLocation.SKETCHBOOK);
 	    		
 	    		//Force the drawer to reload
 	    		forceDrawerReload();
@@ -1843,24 +1878,25 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      * This CAN be called multiple times without breaking anything
      */
     private void runApplication() {
-    	//No need to save an example...
-    	if(!getGlobalState().isExample()) {
-    		//Save the sketch
+    	switch(getGlobalState().getSketchLocationType()) {
+    	case EXAMPLE:
+    	case LIBRARY_EXAMPLE:
+    		break;
+    	case SKETCHBOOK:
+    	case EXTERNAL:
+    		saveSketch();
+    		break;
+    	case TEMPORARY:
+    		//If the sketch has yet to be saved, inform the user
+    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    		builder.setTitle(getResources().getText(R.string.save_sketch_before_run_dialog_title))
+    		.setMessage(getResources().getText(R.string.save_sketch_before_run_dialog_message)).setCancelable(false)
+    		.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+    			@Override
+    			public void onClick(DialogInterface dialog, int which) {}
+    		}).show();
     		
-    		if(getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.SKETCHBOOK)) {
-    			saveSketch();
-    		} else {
-    			//If the sketch has yet to be saved, inform the user
-    			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-    			builder.setTitle(getResources().getText(R.string.save_sketch_before_run_dialog_title))
-    			.setMessage(getResources().getText(R.string.save_sketch_before_run_dialog_message)).setCancelable(false)
-    			.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-    				@Override
-    				public void onClick(DialogInterface dialog, int which) {}
-    			}).show();
-    			
-    			return;
-    		}
+    		return;
     	}
     	
     	//In case the user presses the button twice, we don't want any errors

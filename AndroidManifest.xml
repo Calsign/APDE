@@ -29,13 +29,14 @@
             android:name="com.calsignlabs.apde.EditorActivity"
             android:label="@string/app_name"
             android:theme="@style/FullscreenTheme" >
+            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- TODO implement correct handling for file intents -->
+            <!-- Open .PDE files with APDE -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -91,5 +92,4 @@
             </intent-filter>
         </activity>
     </application>
-
 </manifest>
