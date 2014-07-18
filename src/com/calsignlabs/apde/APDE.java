@@ -261,7 +261,7 @@ public class APDE extends Application {
 	 */
 	public boolean validSketch(File sketchFolder) {
 		//Sanity check
-		if(!sketchFolder.isDirectory()) {
+		if((!sketchFolder.exists()) || (!sketchFolder.isDirectory())) {
 			return false;
 		}
 		
@@ -497,6 +497,121 @@ public class APDE extends Application {
 	 */
 	public boolean isTemp() {
 		return sketchLocation.equals(SketchLocation.TEMPORARY);
+	}
+	
+	public void putRecentSketch(SketchLocation location, String path) {
+		ArrayList<SketchMeta> oldSketches = getRecentSketches();
+		SketchMeta[] sketches = new SketchMeta[oldSketches.size() + 1];
+		
+		//Add the new sketch
+		sketches[0] = new SketchMeta(location, path);
+		//Copy all of the old sketches over
+		System.arraycopy(oldSketches.toArray(), 0, sketches, 1, oldSketches.size());
+		
+		//We should get a list with the newest sketches on top...
+		
+		String data = "";
+		
+		for(int i = 0; i < sketches.length; i ++) {
+			data += sketches[i].getLocation().toString() + "," + sketches[i].getPath() + ",\n";
+		}
+		
+		PreferenceManager.getDefaultSharedPreferences(this).edit().putString("recent", data).commit();
+	}
+	
+	public ArrayList<SketchMeta> getRecentSketches() {
+		String data = PreferenceManager.getDefaultSharedPreferences(this).getString("recent", "");
+		String[] sketchLines = data.split("\n");
+		
+		ArrayList<SketchMeta> sketches = new ArrayList<SketchMeta>(sketchLines.length);
+		
+		//20 here is the number of sketches to keep in the recent list
+		//TODO maybe make this a preference?
+		for(int i = Math.min(sketchLines.length - 1, 20); i >= 0; i --) {
+			String[] parts = sketchLines[i].split(",");
+			
+			//Skip over bad data - this should only happen if the saved data is empty
+			if(parts.length < 2) {
+				continue;
+			}
+			
+			SketchMeta sketch = new SketchMeta(SketchLocation.fromString(parts[0]), parts[1]);
+			
+			//Filter out bad sketches
+			if(!validSketch(getSketchLocation(sketch.getPath(), sketch.getLocation()))) {
+				continue;
+			}
+			
+			//Avoid duplicates
+			for(int j = 0; j < sketches.size(); j ++) {
+				if(sketches.get(j).equals(sketch)) {
+					sketches.remove(j);
+				}
+			}
+			
+			sketches.add(sketch);
+		}
+		
+		//Reverse the list...
+		Collections.reverse(sketches);
+		
+		return sketches;
+	}
+	
+	public ArrayList<FileNavigatorAdapter.FileItem> listRecentSketches() {
+		ArrayList<SketchMeta> sketches = getRecentSketches();
+		
+		ArrayList<FileNavigatorAdapter.FileItem> fileItems = new ArrayList<FileNavigatorAdapter.FileItem>(sketches.size() + 1);
+		
+		//Add the "navigate up" button
+		fileItems.add(new FileNavigatorAdapter.FileItem(FileNavigatorAdapter.NAVIGATE_UP_TEXT, FileNavigatorAdapter.FileItemType.NAVIGATE_UP));
+		
+		for(int i = 0; i < sketches.size(); i ++) {
+			fileItems.add(new FileNavigatorAdapter.FileItem(sketches.get(i).getLocation().toReadableString(this) + sketches.get(i).getPathPrefix(), sketches.get(i).getName(), FileNavigatorAdapter.FileItemType.SKETCH));
+		}
+		
+		return fileItems;
+	}
+	
+	public static class SketchMeta {
+		private SketchLocation location;
+		private String path;
+		
+		public SketchMeta(SketchLocation location, String path) {
+			this.location = location;
+			this.path = path;
+		}
+		
+		public SketchLocation getLocation() {
+			return location;
+		}
+		
+		public String getPath() {
+			return path;
+		}
+		
+		public String getPathPrefix() {
+			int lastSlash = path.lastIndexOf('/');
+			
+			return lastSlash != -1 ? path.substring(0, lastSlash + 1) : "";
+		}
+		
+		public String getName() {
+			int lastSlash = path.lastIndexOf('/');
+			
+			return lastSlash != -1 && path.length() > lastSlash + 1 ? path.substring(lastSlash + 1, path.length()) : path;
+		}
+		
+		@Override
+		public boolean equals(Object other) {
+			if(other instanceof SketchMeta) {
+				SketchMeta otherSketchMeta = (SketchMeta) other;
+				
+				return otherSketchMeta.getLocation().equals(location) && otherSketchMeta.getPath().equals(path);
+			} else {
+				return false;
+			}
+		}
 	}
 	
 	/**

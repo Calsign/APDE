@@ -97,6 +97,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	
 	private APDE.SketchLocation drawerSketchLocationType;
 	private String drawerSketchPath;
+	private boolean drawerRecentSketch;
 	
 	//Used for adjusting the display to accomodate for the keyboard
 	private boolean keyboardVisible;
@@ -280,7 +281,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 				FileNavigatorAdapter.FileItem item = ((FileNavigatorAdapter) drawerList.getAdapter()).getItem(position);
 				
-				if(drawerSketchLocationType == null) {
+				if(drawerSketchLocationType == null && !drawerRecentSketch) {
 					switch(position) {
 					case 0:
 						drawerSketchLocationType = APDE.SketchLocation.SKETCHBOOK;
@@ -292,8 +293,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 						drawerSketchLocationType = APDE.SketchLocation.LIBRARY_EXAMPLE;
 						break;
 					case 3:
-						//TODO
-						return;
+						drawerRecentSketch = true;
+						break;
 					}
 				} else {
 					switch(item.getType()) {
@@ -307,13 +308,27 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 							drawerSketchLocationType = null;
 						}
 						
+						if(drawerRecentSketch) {
+							drawerRecentSketch = false;
+						}
+						
 						break;
 					case FOLDER:
 						drawerSketchPath += "/" + item.getText();
 						
 						break;
 					case SKETCH:
-						loadSketch(drawerSketchPath + "/" + item.getText(), drawerSketchLocationType);
+						//Save the current sketch...
+						autoSave();
+						
+						if(drawerRecentSketch) {
+							APDE.SketchMeta sketch = getGlobalState().getRecentSketches().get(position - 1); // "position - 1" because the first item is the UP button
+							
+							loadSketch(sketch.getPath(), sketch.getLocation());
+						} else {
+							loadSketch(drawerSketchPath + "/" + item.getText(), drawerSketchLocationType);
+						}
+						
 						drawer.closeDrawers();
 						
 						break;
@@ -322,6 +337,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				
 				if(drawerSketchLocationType != null) {
 					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
+				} else if(drawerRecentSketch) {
+					getSupportActionBar().setSubtitle(getResources().getString(R.string.recent) + "/");
 				} else {
 					getSupportActionBar().setSubtitle(null);
 				}
@@ -1045,7 +1062,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		case EXAMPLE:
 		case LIBRARY_EXAMPLE:
 			//Don't need to save examples...
-			return;
+			break;
 		case SKETCHBOOK:
 		case EXTERNAL:
 			saveSketch();
@@ -1176,6 +1193,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
     			}
     		}
+    		
+    		//Add this to the recent sketches
+    		getGlobalState().putRecentSketch(sketchLocation, sketchPath);
     	}
     	
     	return success;
@@ -1237,6 +1257,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    	}
 	    	
 	    	if(success) {
+	    		if(getGlobalState().isTemp()) {
+	    			//If it's a temporary sketch, we need to add it to the recent list
+	    			getGlobalState().putRecentSketch(APDE.SketchLocation.SKETCHBOOK, sketchPath);
+	    		}
+	    		
 	    		getGlobalState().selectSketch(sketchPath, getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.EXTERNAL) ?
 	        			APDE.SketchLocation.EXTERNAL : APDE.SketchLocation.SKETCHBOOK);
 	    		
@@ -1493,7 +1518,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     	
     	return success;
-    	
     }
     
     /**
@@ -1579,11 +1603,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         if(drawerSketchLocationType != null) {
         	items = getGlobalState().listSketchContainingFolders(getGlobalState().getSketchLocation(drawerSketchPath, drawerSketchLocationType), new String[] {APDE.LIBRARIES_FOLDER});
         } else {
-        	items = new ArrayList<FileNavigatorAdapter.FileItem>();
-        	items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.sketches), FileNavigatorAdapter.FileItemType.FOLDER));
-        	items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.examples), FileNavigatorAdapter.FileItemType.FOLDER));
-        	items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.library_examples), FileNavigatorAdapter.FileItemType.FOLDER));
-        	items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.recent), FileNavigatorAdapter.FileItemType.FOLDER));
+        	if(drawerRecentSketch) {
+        		items = getGlobalState().listRecentSketches();
+        	} else {
+        		items = new ArrayList<FileNavigatorAdapter.FileItem>();
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.sketches), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.examples), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.library_examples), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.recent), FileNavigatorAdapter.FileItemType.FOLDER));
+        	}
         }
         
         int selected = -1;
@@ -1592,6 +1620,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         		&& getGlobalState().getSketchPath().equals(drawerSketchPath + "/" + getGlobalState().getSketchName())) {
         	
         	selected = FileNavigatorAdapter.indexOfSketch(items, getGlobalState().getSketchName());
+        } else if(drawerRecentSketch && !getGlobalState().isTemp()) {
+        	//In the recent screen, the top-most sketch is always currently selected (if a temporary sketch isn't currently open)...
+        	//It's not "0" because that's the UP button
+        	selected = 1;
         }
         
         FileNavigatorAdapter fileAdapter = new FileNavigatorAdapter(this, items, selected);

@@ -536,6 +536,9 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     					//Make sure we save...
     					saveSketch();
     					
+    					//Update the recent list
+    					getGlobalState().putRecentSketch(APDE.SketchLocation.SKETCHBOOK, sketchPathPrefix + after);
+    					
     					//We have to save before we do this... because it reads from the file system
     					getGlobalState().getEditor().forceDrawerReload();
     				}

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Using paddingLeft/Right instead of paddingStart/End to fix crashes on some Samsung devices -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/drawer_list_item"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
@@ -15,14 +15,29 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:layout_marginRight="12dp"
+        android:layout_below="@+id/drawer_list_item_path"
+        android:layout_alignParentLeft="true"
         android:gravity="center_vertical"
         android:contentDescription="@string/icon" />
+    
+    <TextView android:id="@id/drawer_list_item_path"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/drawer_list_item_icon"
+        android:layout_alignParentTop="true"
+        android:gravity="center_vertical"
+        android:textIsSelectable="false"
+        android:textSize="12sp"
+        android:textColor="#555555" />
     
     <TextView android:id="@+id/drawer_list_item_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_below="@id/drawer_list_item_path"
+        android:layout_toRightOf="@id/drawer_list_item_icon"
+        android:layout_alignTop="@id/drawer_list_item_icon"
         android:gravity="center_vertical"
         android:textIsSelectable="false"
     	android:textSize="18sp"
     	android:textColor="#222222" />
-</LinearLayout>
+</RelativeLayout>

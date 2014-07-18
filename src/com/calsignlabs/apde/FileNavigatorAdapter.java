@@ -86,8 +86,17 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		
 		FileItem item = getItem(position);
 		
+		TextView path = ((TextView) convertView.findViewById(R.id.drawer_list_item_path));
 		TextView text = ((TextView) convertView.findViewById(R.id.drawer_list_item_text));
 		ImageView icon = ((ImageView) convertView.findViewById(R.id.drawer_list_item_icon));
+		
+		if(item.getPath().length() > 0) {
+			path.setVisibility(View.VISIBLE);
+			path.setText(item.getPath());
+		} else {
+			path.setVisibility(View.GONE);
+			path.setText("");
+		}
 		
 		text.setText(item.getText());
 		
@@ -126,12 +135,24 @@ public class FileNavigatorAdapter extends BaseAdapter {
 	 * An item in the list - either a sketch, a folder, or the navigate up button.
 	 */
 	public static class FileItem {
+		private String path;
 		private String text;
 		private FileItemType type;
 		
 		public FileItem(String text, FileItemType type) {
+			this.path = "";
 			this.text = text;
 			this.type = type;
+		}
+		
+		public FileItem(String path, String text, FileItemType type) {
+			this.path = path;
+			this.text = text;
+			this.type = type;
+		}
+		
+		public String getPath() {
+			return path;
 		}
 		
 		public String getText() {
