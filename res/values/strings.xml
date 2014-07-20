@@ -107,5 +107,15 @@
     <string name="library_examples">Library Examples</string>
     <string name="recent">Recent</string>
     <string name="copy_to_sketchbook">Copy to Sketchbook</string>
+    <string name="color_selector">Color Selector</string>
+    <string name="red">Red</string>
+    <string name="green">Green</string>
+    <string name="blue">Blue</string>
+    <string name="hue">Hue</string>
+    <string name="saturation">Saturation</string>
+    <string name="brightness">Brightness</string>
+    <string name="copy_hex">Copy Hex to Clipboard</string>
+    <string name="hex_color">Hex Color</string>
+    <string name="hex_color_copied_to_clipboard">Hex color data copied to clipboard.</string>
 
 </resources>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/color_selector"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical" >
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+        
+    	<view class="com.calsignlabs.apde.tool.ColorSelector$ColorSquare"
+    	    android:id="@+id/color_square"
+    	    android:layout_width="0dp"
+			android:layout_height="match_parent"
+			android:layout_weight="5"
+			android:layout_marginRight="6dp"
+			android:layout_marginLeft="12dp"
+			android:layout_marginTop="12dp"
+			android:layout_marginBottom="6dp" />
+    	
+		<view class="com.calsignlabs.apde.tool.ColorSelector$HueStrip"
+		    android:id="@+id/hue_strip"
+    	    android:layout_width="0dp"
+    	    android:layout_height="match_parent"
+    	    android:layout_weight="1"
+    	    android:layout_marginLeft="6dp"
+    	    android:layout_marginRight="12dp"
+			android:layout_marginTop="12dp"
+			android:layout_marginBottom="6dp" />
+    </LinearLayout>
+    
+    <RelativeLayout android:id="@+id/hex_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="12dp"
+    	android:layout_marginRight="12dp"
+		android:layout_marginTop="6dp"
+		android:layout_marginBottom="0dp"
+        android:orientation="horizontal" >
+        
+        <ImageButton android:id="@+id/hex_copy"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_marginLeft="12dp"
+            android:src="@drawable/ic_copy"
+            android:contentDescription="@string/copy_hex" />
+        
+        <TextView android:id="@+id/hex"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toLeftOf="@id/hex_copy"
+            android:layout_alignTop="@id/hex_copy"
+            android:layout_alignBottom="@id/hex_copy"
+            android:background="@drawable/color_selector_selection_background"
+            android:textIsSelectable="false"
+            android:textSize="18sp"
+            android:gravity="center_vertical"
+            android:padding="10dp" />
+    </RelativeLayout>
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="6dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false" >
+        
+        <LinearLayout android:id="@+id/rgb_mixer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical" >
+            
+            <EditText android:id="@+id/red"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="6dp"
+                android:inputType="number"
+                android:hint="@string/red"
+                android:maxLength="3" />
+            <EditText android:id="@+id/green"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="6dp"
+                android:inputType="number"
+                android:hint="@string/green"
+                android:maxLength="3" />
+            <EditText android:id="@+id/blue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="6dp"
+                android:inputType="number"
+                android:hint="@string/blue"
+                android:maxLength="3" />
+        </LinearLayout>
+        
+        <LinearLayout android:id="@+id/hsb_mixer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical" >
+            
+            <EditText android:id="@+id/hue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="6dp"
+                android:inputType="number"
+                android:hint="@string/hue"
+                android:maxLength="3" />
+            <EditText android:id="@+id/saturation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="6dp"
+                android:inputType="number"
+                android:hint="@string/saturation"
+                android:maxLength="3" />
+            <EditText android:id="@+id/value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="6dp"
+                android:inputType="number"
+                android:hint="@string/brightness"
+                android:maxLength="3" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
