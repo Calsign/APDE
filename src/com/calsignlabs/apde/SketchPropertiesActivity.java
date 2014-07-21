@@ -586,10 +586,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     			String after = input.getText().toString();
     			
     			if(validateSketchName(after)) {
-    				if(getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.TEMPORARY)) {
-    					getGlobalState().selectSketch(sketchPathPrefix + after, APDE.SketchLocation.TEMPORARY);
-    					getGlobalState().setSketchName(after);
-    				} else {
+    				switch(getGlobalState().getSketchLocationType()) {
+    				case SKETCHBOOK:
     					getGlobalState().getSketchLocation(sketchPathPrefix + before, APDE.SketchLocation.SKETCHBOOK).renameTo(getGlobalState().getSketchLocation(sketchPathPrefix + after, APDE.SketchLocation.SKETCHBOOK));
     					getGlobalState().selectSketch(sketchPathPrefix + after, APDE.SketchLocation.SKETCHBOOK);
     					
@@ -601,6 +599,27 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     					
     					//We have to save before we do this... because it reads from the file system
     					getGlobalState().getEditor().forceDrawerReload();
+    					
+    					break;
+    				case EXTERNAL:
+    					getGlobalState().getSketchLocation(sketchPathPrefix + before, APDE.SketchLocation.EXTERNAL).renameTo(getGlobalState().getSketchLocation(sketchPathPrefix + after, APDE.SketchLocation.EXTERNAL));
+    					getGlobalState().selectSketch(sketchPathPrefix + after, APDE.SketchLocation.EXTERNAL);
+    					
+    					//Make sure we save...
+    					saveSketch();
+    					
+    					//Update the recent list
+    					getGlobalState().putRecentSketch(APDE.SketchLocation.EXTERNAL, sketchPathPrefix + after);
+    					
+    					//We have to save before we do this... because it reads from the file system
+    					getGlobalState().getEditor().forceDrawerReload();
+    					
+    					break;
+    				case TEMPORARY:
+    					getGlobalState().selectSketch(sketchPathPrefix + after, APDE.SketchLocation.TEMPORARY);
+    					getGlobalState().setSketchName(after);
+    					
+    					break;
     				}
     				
     				//If the user has set the pretty name to the name of their sketch, they probably want to change the pretty name too
