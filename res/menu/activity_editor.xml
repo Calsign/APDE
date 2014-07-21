@@ -27,6 +27,10 @@
         app:showAsAction="never"
         android:title="@string/menu_save" />
     <item
+        android:id="@+id/menu_copy_to_sketchbook"
+        app:showAsAction="never"
+        android:title="@string/copy_to_sketchbook" />
+    <item
         android:id="@+id/menu_new"
         app:showAsAction="never"
         android:title="@string/menu_new" />

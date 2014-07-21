@@ -28,7 +28,6 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
-import android.support.v4.app.ActivityCompat;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
@@ -299,14 +298,27 @@ public class SketchPropertiesActivity extends PreferenceActivity {
         	//Don't let them mess with the examples!
         	menu.findItem(R.id.menu_change_sketch_name).setVisible(false);
         	menu.findItem(R.id.menu_delete).setVisible(false);
-        	
-        	menu.findItem(R.id.menu_save).setTitle(R.string.copy_to_sketchbook);
         } else {
         	menu.findItem(R.id.menu_change_sketch_name).setVisible(true);
         	menu.findItem(R.id.menu_delete).setVisible(true);
-        	
-        	menu.findItem(R.id.menu_save).setTitle(R.string.menu_save);
         }
+        
+        switch(getGlobalState().getSketchLocationType()) {
+    	case SKETCHBOOK:
+    	case TEMPORARY:
+    		menu.findItem(R.id.menu_save).setVisible(true);
+    		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
+    		break;
+    	case EXTERNAL:
+    		menu.findItem(R.id.menu_save).setVisible(true);
+    		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+    		break;
+    	case EXAMPLE:
+    	case LIBRARY_EXAMPLE:
+    		menu.findItem(R.id.menu_save).setVisible(false);
+    		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+    		break;
+    	}
         
         return true;
     }
@@ -325,6 +337,9 @@ public class SketchPropertiesActivity extends PreferenceActivity {
             	return true;
             case R.id.menu_save:
             	saveSketch();
+            	return true;
+            case R.id.menu_copy_to_sketchbook:
+            	copyToSketchbook();
             	return true;
         	case R.id.menu_export:
         		exportSketch();
@@ -385,19 +400,6 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     		return;
     	}
 		
-//		
-//    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-//            builder.setTitle(getResources().getText(R.string.sketch_name_dialog_title))
-//            	.setMessage(getResources().getText(R.string.sketch_name_dialog_message)).setCancelable(false)
-//            	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-//            	
-//            	@Override
-//                public void onClick(DialogInterface dialog, int which) {}
-//            }).show();
-//            
-//            return;
-//    	}
-		
 		if(getGlobalState().getSketchName().equals(APDE.DEFAULT_SKETCH_NAME)) {
 			AlertDialog.Builder alert = new AlertDialog.Builder(this);
 			
@@ -439,7 +441,25 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		}
 		
 		getGlobalState().getEditor().saveSketch();
-		ActivityCompat.invalidateOptionsMenu(this);
+	}
+	
+	private void copyToSketchbook() {
+		//If we cannot write to the external storage (and the user wants to), make sure to inform the user
+		if(!externalStorageWritable() && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("internal_storage_sketchbook", false)) {
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
+			.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
+			.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {}
+			}).show();
+			
+			return;
+		}
+		
+		getGlobalState().getEditor().copyToSketchbook();
+		
+		restartActivity();
 	}
 	
 	private boolean externalStorageWritable() {

@@ -1234,7 +1234,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     	
     	//Obtain the location of the sketch
-    	//Save examples to the sketchbook so that the user can copy examples to the sketchbook
     	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.EXTERNAL) ?
     			APDE.SketchLocation.EXTERNAL : APDE.SketchLocation.SKETCHBOOK);
     	
@@ -1264,6 +1263,78 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    		
 	    		getGlobalState().selectSketch(sketchPath, getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.EXTERNAL) ?
 	        			APDE.SketchLocation.EXTERNAL : APDE.SketchLocation.SKETCHBOOK);
+	    		
+	    		//Force the drawer to reload
+	    		forceDrawerReload();
+	    		
+	    		supportInvalidateOptionsMenu();
+	            
+	            //Inform the user of success
+	    		message(getResources().getText(R.string.sketch_saved));
+	    		setSaved(true);
+	    	} else {
+	    		//Inform the user of failure
+	    		error(getResources().getText(R.string.sketch_save_failure));
+	    	}
+    	} else {
+    		//If there are no tabs
+    		//TODO is this right?
+    		
+    		//Force the drawer to reload
+    		forceDrawerReload();
+    		
+            //Inform the user
+    		message(getResources().getText(R.string.sketch_saved));
+    		setSaved(true);
+    	}
+    }
+    
+    public void copyToSketchbook() {
+    	//If we cannot write to the external storage (and the user wants to), make sure to inform the user
+    	if(!externalStorageWritable() && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("internal_storage_sketchbook", false)) {
+    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
+            	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
+            	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+            		@Override
+            		public void onClick(DialogInterface dialog, int which) {}
+            }).show();
+            
+    		return;
+    	}
+    	
+    	boolean success = true;
+    	
+    	//Get the sketch name so that we place the copied example at the root of sketchbook
+    	String sketchPath = "/" + getGlobalState().getSketchName();
+    	
+    	//Obtain the location of the sketch
+    	//Save examples to the sketchbook so that the user can copy examples to the sketchbook
+    	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, APDE.SketchLocation.SKETCHBOOK);
+    	
+    	//Ensure that the sketch folder exists
+    	sketchLoc.mkdirs();
+    	
+    	if(tabBar.getTabCount() > 0) {
+	    	//Update the current tab
+	    	EditText code = (EditText) findViewById(R.id.code);
+	    	tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
+	    	
+	    	//Iterate through the FileMetas...
+	    	for(FileMeta meta : tabs.values()) {
+	    		if(meta.enabled()) {
+	    			//...and write them to the sketch folder
+	    			if(!meta.writeData(getApplicationContext(), sketchLoc.getPath() + "/")) {
+	    				success = false;
+	    			}
+	    		}
+	    	}
+	    	
+	    	if(success) {
+	    		//We need to add it to the recent list
+	    		getGlobalState().putRecentSketch(APDE.SketchLocation.SKETCHBOOK, sketchPath);
+	    		
+	    		getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
 	    		
 	    		//Force the drawer to reload
 	    		forceDrawerReload();
@@ -1655,6 +1726,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	menu.findItem(R.id.menu_tab_delete).setVisible(false);
         	menu.findItem(R.id.menu_tab_rename).setVisible(false);
         	menu.findItem(R.id.menu_save).setVisible(false);
+        	menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
         	menu.findItem(R.id.menu_new).setVisible(false);
         	menu.findItem(R.id.menu_load).setVisible(false);
         	menu.findItem(R.id.menu_tab_new).setVisible(false);
@@ -1690,7 +1762,24 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             }
         	
         	//Make sure to make all of the sketch-specific actions visible
-        	menu.findItem(R.id.menu_save).setVisible(true);
+        	
+        	switch(getGlobalState().getSketchLocationType()) {
+        	case SKETCHBOOK:
+        	case TEMPORARY:
+        		menu.findItem(R.id.menu_save).setVisible(true);
+        		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
+        		break;
+        	case EXTERNAL:
+        		menu.findItem(R.id.menu_save).setVisible(true);
+        		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+        		break;
+        	case EXAMPLE:
+        	case LIBRARY_EXAMPLE:
+        		menu.findItem(R.id.menu_save).setVisible(false);
+        		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+        		break;
+        	}
+        	
         	menu.findItem(R.id.menu_new).setVisible(true);
         	menu.findItem(R.id.menu_load).setVisible(true);
         	menu.findItem(R.id.menu_tab_new).setVisible(true);
@@ -1709,13 +1798,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//So that the user can add a tab if there are none
     	if(tabBar.getTabCount() <= 0 && !getGlobalState().isExample())
     		menu.findItem(R.id.menu_tab_new).setVisible(true);
-        
-    	//Change "Save Sketch" to "Copy to Sketchbook" for examples to clarify functionality - this is a coded-once, dual function button
-    	if(getGlobalState().isExample()) {
-    		menu.findItem(R.id.menu_save).setTitle(R.string.copy_to_sketchbook);
-    	} else {
-    		menu.findItem(R.id.menu_save).setTitle(R.string.menu_save);
-    	}
     	
         return true;
     }
@@ -1764,6 +1846,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	return true;
             case R.id.menu_save:
             	saveSketch();
+            	return true;
+            case R.id.menu_copy_to_sketchbook:
+            	copyToSketchbook();
             	return true;
             case R.id.menu_new:
             	createNewSketch();
