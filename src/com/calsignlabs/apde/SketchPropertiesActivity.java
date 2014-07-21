@@ -385,18 +385,58 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     		return;
     	}
 		
+//		
+//    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+//            builder.setTitle(getResources().getText(R.string.sketch_name_dialog_title))
+//            	.setMessage(getResources().getText(R.string.sketch_name_dialog_message)).setCancelable(false)
+//            	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+//            	
+//            	@Override
+//                public void onClick(DialogInterface dialog, int which) {}
+//            }).show();
+//            
+//            return;
+//    	}
+		
 		if(getGlobalState().getSketchName().equals(APDE.DEFAULT_SKETCH_NAME)) {
-    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getResources().getText(R.string.sketch_name_dialog_title))
-            	.setMessage(getResources().getText(R.string.sketch_name_dialog_message)).setCancelable(false)
-            	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-            	
-            	@Override
-                public void onClick(DialogInterface dialog, int which) {}
-            }).show();
-            
-            return;
-    	}
+			AlertDialog.Builder alert = new AlertDialog.Builder(this);
+			
+			alert.setTitle(R.string.sketch_name_dialog_title);
+			alert.setMessage(R.string.sketch_name_dialog_message);
+			
+			final EditText input = new EditText(this);
+			input.setSingleLine();
+			input.setText(getGlobalState().getSketchName());
+			input.selectAll();
+			alert.setView(input);
+			
+			alert.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int whichButton) {
+					String after = input.getText().toString();
+					
+					if(validateSketchName(after)) {
+						getGlobalState().setSketchName(after);
+						
+						//We have to save before we do this... because it reads from the file system
+						saveSketch();
+						getGlobalState().getEditor().forceDrawerReload();
+					}
+				}
+			});
+			
+			alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int whichButton) {
+				}
+			});
+			
+			//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
+			AlertDialog dialog = alert.create();
+			if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+				dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+			dialog.show();
+			
+			return;
+		}
 		
 		getGlobalState().getEditor().saveSketch();
 		ActivityCompat.invalidateOptionsMenu(this);

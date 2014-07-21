@@ -1313,11 +1313,13 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     				saveSketch();
     				forceDrawerReload();
     			}
-    	}});
+    		}
+    	});
     	
     	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {
-    	}});
+    		}
+    	});
     	
     	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
     	AlertDialog dialog = alert.create();
