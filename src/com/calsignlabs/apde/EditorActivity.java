@@ -790,21 +790,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		return true;
     	}
     	
-    	//TODO implement these functions... they're place-holders for now
-    	//TODO are these actually getting picked up?
-    	if(keyBindings.get("comment").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		((CodeEditText) findViewById(R.id.code)).commentSelection();
-    		return true;
-    	}
-    	if(keyBindings.get("shift_left").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		((CodeEditText) findViewById(R.id.code)).shiftLeft();
-    		return true;
-    	}
-    	if(keyBindings.get("shift_right").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		((CodeEditText) findViewById(R.id.code)).shiftRight();
-    		return true;
-    	}
-    	
     	if(keyBindings.get("new_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		if(!getGlobalState().isExample())
     			addTabWithDialog();

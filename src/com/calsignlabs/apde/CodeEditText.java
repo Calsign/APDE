@@ -493,6 +493,22 @@ public class CodeEditText extends EditText {
 		return off;
 	}
 	
+	public int lineForOffset(int offset) {
+		//Get a list of lines
+		String[] lines = getText().toString().split("\n");
+		
+		int off = 0;
+		for(int i = 0; i < lines.length; i ++) {
+			off += lines[i].length() + 1;
+			
+			if(off > offset) {
+				return i;
+			}
+		}
+		
+		return lines.length - 1;
+	}
+	
 	@Override
 	public void onDraw(Canvas canvas) {
 		float lineHeight = getLineHeight();
@@ -823,18 +839,6 @@ public class CodeEditText extends EditText {
 		
 		for(Keyword keyword : syntax)
 			keyword.paint().setTextSize(scaledTextSize);
-	}
-	
-	public void commentSelection() {
-		//TODO
-	}
-	
-	public void shiftLeft() {
-		//TODO
-	}
-	
-	public void shiftRight() {
-		//TODO
 	}
 	
 	public void setUpdateText(String text) {

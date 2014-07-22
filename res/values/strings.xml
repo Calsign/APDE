@@ -117,5 +117,6 @@
     <string name="copy_hex">Copy Hex to Clipboard</string>
     <string name="hex_color">Hex Color</string>
     <string name="hex_color_copied_to_clipboard">Hex color data copied to clipboard.</string>
+    <string name="comment_uncomment">Comment / Uncomment</string>
 
 </resources>
