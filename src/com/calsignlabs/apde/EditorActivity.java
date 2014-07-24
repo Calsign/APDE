@@ -2681,7 +2681,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	}
 	
 	private void launchTools() {
-		final ArrayList<Tool> toolList = getGlobalState().getTools();
+		final ArrayList<Tool> toolList = getGlobalState().getToolsInList();
 		
 		//Display a dialog containing the list of tools
 		

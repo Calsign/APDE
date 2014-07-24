@@ -118,5 +118,7 @@
     <string name="hex_color">Hex Color</string>
     <string name="hex_color_copied_to_clipboard">Hex color data copied to clipboard.</string>
     <string name="comment_uncomment">Comment / Uncomment</string>
+    <string name="increase_indent">Increase Indent</string>
+    <string name="decrease_indent">Decrease Indent</string>
 
 </resources>

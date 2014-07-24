@@ -1,6 +1,5 @@
 package com.calsignlabs.apde.tool;
 
-
 import android.annotation.SuppressLint;
 import android.view.MenuItem;
 
@@ -9,8 +8,8 @@ import com.calsignlabs.apde.CodeEditText;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
 
-public class CommentUncomment implements Tool {
-	public static final String PACKAGE_NAME = "com.calsignlabs.apde.tool.CommentUncomment";
+public class IncreaseIndent implements Tool {
+	public static final String PACKAGE_NAME = "com.calsignlabs.apde.tool.IncreaseIndent";
 	
 	private APDE context;
 	
@@ -34,34 +33,15 @@ public class CommentUncomment implements Tool {
 			int startLine = code.lineForOffset(code.getSelectionStart());
 			int endLine = code.lineForOffset(code.getSelectionEnd()) + 1;
 			
-			String[] toComment = new String[endLine - startLine];
-			System.arraycopy(lines, startLine, toComment, 0, endLine - startLine);
+			String[] toIndent = new String[endLine - startLine];
+			System.arraycopy(lines, startLine, toIndent, 0, endLine - startLine);
 			
-			boolean commenting = false;
-			
-			for(String line : toComment) {
-				if(!line.startsWith("//")) {
-					commenting = true;
-					break;
-				}
+			for(int i = 0; i < toIndent.length; i ++) {
+				//Indent this line
+				toIndent[i] = "  " + toIndent[i];
 			}
 			
-			//One branch, two loops
-			//(Theoretically) faster than one loop, two branches?
-			//Maybe I should test this...
-			if(commenting) {
-				for(int i = 0; i < toComment.length; i ++) {
-					//Comment this line
-					toComment[i] = "//" + toComment[i];
-				}
-			} else {
-				for(int i = 0; i < toComment.length; i ++) {
-					//Uncomment this line
-					toComment[i] = toComment[i].substring(2);
-				}
-			}
-			
-			System.arraycopy(toComment, 0, lines, startLine, endLine - startLine);
+			System.arraycopy(toIndent, 0, lines, startLine, endLine - startLine);
 			
 			String text = "";
 			for(String line : lines) {
@@ -83,12 +63,12 @@ public class CommentUncomment implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.comment_uncomment);
+		return context.getResources().getString(R.string.increase_indent);
 	}
 	
 	@Override
 	public KeyBinding getKeyBinding() {
-		return context.getEditor().getKeyBindings().get("comment");
+		return context.getEditor().getKeyBindings().get("shift_right");
 	}
 	
 	@Override

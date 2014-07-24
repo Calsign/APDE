@@ -13,7 +13,9 @@ import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.tool.AutoFormat;
 import com.calsignlabs.apde.tool.ColorSelector;
 import com.calsignlabs.apde.tool.CommentUncomment;
+import com.calsignlabs.apde.tool.DecreaseIndent;
 import com.calsignlabs.apde.tool.ImportLibrary;
+import com.calsignlabs.apde.tool.IncreaseIndent;
 import com.calsignlabs.apde.tool.Tool;
 
 import android.annotation.SuppressLint;
@@ -702,7 +704,7 @@ public class APDE extends Application {
 			packageToToolTable.clear();
 		}
 		
-		String[] coreTools = new String[] { AutoFormat.PACKAGE_NAME, ImportLibrary.PACKAGE_NAME, ColorSelector.PACKAGE_NAME, CommentUncomment.PACKAGE_NAME };
+		String[] coreTools = new String[] { AutoFormat.PACKAGE_NAME, ImportLibrary.PACKAGE_NAME, ColorSelector.PACKAGE_NAME, CommentUncomment.PACKAGE_NAME, IncreaseIndent.PACKAGE_NAME, DecreaseIndent.PACKAGE_NAME };
 		
 		for (String coreTool : coreTools) {
 			loadTool(tools, packageToToolTable, coreTool);
