@@ -1,5 +1,7 @@
 package com.calsignlabs.apde.tool;
 
+import android.view.MenuItem;
+
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.CodeEditText;
 import com.calsignlabs.apde.KeyBinding;
@@ -40,5 +42,16 @@ public class AutoFormat implements Tool {
 	@Override
 	public KeyBinding getKeyBinding() {
 		return context.getEditor().getKeyBindings().get("auto_format");
+	}
+	
+	@Override
+	public boolean showInToolsMenu() {
+		return true;
+	}
+	
+	@Override
+	public boolean createSelectionActionModeMenuItem(MenuItem convert) {
+		//TODO maybe support auto formatting of selection, not just the entire file
+		return false;
 	}
 }

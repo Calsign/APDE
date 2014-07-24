@@ -9,19 +9,27 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
+import com.calsignlabs.apde.tool.Tool;
+
 import processing.core.PApplet;
 import processing.data.XML;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.text.Editable;
 import android.text.TextPaint;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
 import android.util.TypedValue;
+import android.view.ActionMode;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
 
@@ -187,6 +195,63 @@ public class CodeEditText extends EditText {
 		});
 		
 		updateTokens();
+	}
+	
+	@SuppressLint("NewApi")
+	public void setupCustomActionMode() {
+		final ArrayList<Tool> tools = ((APDE) context.getApplicationContext()).getTools();
+		final HashMap<MenuItem, Tool> callbacks = new HashMap<MenuItem, Tool>();
+		
+		if(android.os.Build.VERSION.SDK_INT >= 11) {
+			setCustomSelectionActionModeCallback(new ActionMode.Callback() {
+				@Override
+				public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+					for(Tool tool : tools) {
+						MenuItem item = menu.add(tool.getMenuTitle());
+						
+						if(tool.createSelectionActionModeMenuItem(item)) {
+							callbacks.put(item, tool);
+						} else {
+							//Get rid of it
+							//It would be better if it was gone all together instead of just hidden...
+							item.setVisible(false);
+						}
+					}
+					
+					return true;
+				}
+				
+				@Override
+				public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+					return false;
+				}
+				
+				@Override
+				public void onDestroyActionMode(ActionMode mode) {}
+				
+				@Override
+				public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+					Tool callback = callbacks.get(item);
+					
+					if(callback != null) {
+						callback.run();
+						
+						return true;
+					}
+					
+					return false;
+				}
+			});
+		} else {
+			//They're just going to have to deal with it
+		}
+	}
+	
+	public void startSelectionActionMode() {
+		//Force the EditText to show the CAB (hacky!)
+		MotionEvent event = MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, 0, 0, 0);
+		dispatchTouchEvent(event);
+		event.recycle();
 	}
 	
 	/**

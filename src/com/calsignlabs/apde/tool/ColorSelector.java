@@ -16,6 +16,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
 import android.view.ContextThemeWrapper;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
@@ -244,6 +245,16 @@ public class ColorSelector implements Tool {
 	@Override
 	public KeyBinding getKeyBinding() {
 		return null;
+	}
+	
+	@Override
+	public boolean showInToolsMenu() {
+		return true;
+	}
+	
+	@Override
+	public boolean createSelectionActionModeMenuItem(MenuItem convert) {
+		return false;
 	}
 	
 	public void setRGB(int red, int green, int blue) {

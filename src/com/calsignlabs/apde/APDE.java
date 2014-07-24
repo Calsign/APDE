@@ -412,6 +412,13 @@ public class APDE extends Application {
 	}
 	
 	/**
+	 * @return a reference to the code area
+	 */
+	public CodeEditText getCodeArea() {
+    	return (CodeEditText) editor.findViewById(R.id.code);
+    }
+	
+	/**
 	 * @return the location of the Sketchbook folder on the external storage
 	 */
 	public File getSketchbookFolder() {
@@ -745,10 +752,24 @@ public class APDE extends Application {
 		return tools;
 	}
 	
-	public String[] listTools() {
-		String[] output = new String[tools.size()];
-		for (int i = 0; i < tools.size(); i++) {
-			output[i] = tools.get(i).getMenuTitle();
+	public ArrayList<Tool> getToolsInList() {
+		ArrayList<Tool> inList = new ArrayList<Tool>();
+		
+		for(Tool tool : tools) {
+			if(tool.showInToolsMenu()) {
+				inList.add(tool);
+			}
+		}
+		
+		return inList;
+	}
+	
+	public String[] listToolsInList() {
+		ArrayList<Tool> inList = getToolsInList();
+		
+		String[] output = new String[inList.size()];
+		for (int i = 0; i < inList.size(); i++) {
+			output[i] = inList.get(i).getMenuTitle();
 		}
 
 		return output;

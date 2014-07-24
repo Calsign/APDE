@@ -1,5 +1,9 @@
 package com.calsignlabs.apde.tool;
 
+
+import android.annotation.SuppressLint;
+import android.view.MenuItem;
+
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.CodeEditText;
 import com.calsignlabs.apde.KeyBinding;
@@ -15,10 +19,11 @@ public class CommentUncomment implements Tool {
 		this.context = context;
 	}
 	
+	@SuppressLint("NewApi")
 	@Override
 	public void run() {
 		if(!context.isExample()) {
-			CodeEditText code = (CodeEditText) context.getEditor().findViewById(R.id.code);
+			CodeEditText code = context.getCodeArea();
 			
 			String codeText = code.getText().toString();
 			
@@ -71,6 +76,8 @@ public class CommentUncomment implements Tool {
 			code.clearTokens();
 			
 			code.setSelection(code.offsetForLine(startLine), code.offsetForLineEnd(endLine - 1) - (trailingNewline || endLine < lines.length ? 1 : 0));
+			//The current implementation of this function is ugly, but we don't have any alternatives...
+			code.startSelectionActionMode();
 			
 			context.getEditor().message(context.getResources().getString(R.string.auto_formatter_complete));
 		}
@@ -84,5 +91,18 @@ public class CommentUncomment implements Tool {
 	@Override
 	public KeyBinding getKeyBinding() {
 		return context.getEditor().getKeyBindings().get("comment");
+	}
+	
+	@Override
+	public boolean showInToolsMenu() {
+		return false;
+	}
+	
+	@SuppressLint("NewApi")
+	@Override
+	public boolean createSelectionActionModeMenuItem(MenuItem convert) {
+		convert.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+		
+		return true;
 	}
 }

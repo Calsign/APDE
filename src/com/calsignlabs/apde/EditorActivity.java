@@ -540,6 +540,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         getGlobalState().rebuildToolList();
         
+        ((CodeEditText) findViewById(R.id.code)).setupCustomActionMode();
+        
         //Load default key bindings TODO load user's custom key bindings
         //Also, do this after we initialize the console so that we can get error reports
         
@@ -2687,7 +2689,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		builder.setTitle(R.string.tools);
 		if(toolList.size() > 0) {
 			//Populate the list
-			builder.setItems(getGlobalState().listTools(), new DialogInterface.OnClickListener() {
+			builder.setItems(getGlobalState().listToolsInList(), new DialogInterface.OnClickListener() {
 				public void onClick(DialogInterface dialog, int which) {
 					runOnUiThread(toolList.get(which));
 				}

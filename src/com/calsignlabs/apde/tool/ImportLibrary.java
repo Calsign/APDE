@@ -1,5 +1,7 @@
 package com.calsignlabs.apde.tool;
 
+import android.view.MenuItem;
+
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
@@ -30,5 +32,15 @@ public class ImportLibrary implements Tool {
 	@Override
 	public KeyBinding getKeyBinding() {
 		return context.getEditor().getKeyBindings().get("import_library");
+	}
+	
+	@Override
+	public boolean showInToolsMenu() {
+		return true;
+	}
+	
+	@Override
+	public boolean createSelectionActionModeMenuItem(MenuItem convert) {
+		return false;
 	}
 }
