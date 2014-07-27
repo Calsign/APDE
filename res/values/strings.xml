@@ -120,5 +120,6 @@
     <string name="comment_uncomment">Comment / Uncomment</string>
     <string name="increase_indent">Increase Indent</string>
     <string name="decrease_indent">Decrease Indent</string>
+    <string name="folder_empty">Folder is empty</string>
 
 </resources>

@@ -293,9 +293,17 @@ public class APDE extends Application {
 	}
 	
 	public ArrayList<FileNavigatorAdapter.FileItem> listSketchContainingFolders(File directory, final String[] ignoreFilenames) {
+		ArrayList<FileNavigatorAdapter.FileItem> output = new ArrayList<FileNavigatorAdapter.FileItem>();
+		
+		//Add the "navigate up" button
+		output.add(new FileNavigatorAdapter.FileItem(FileNavigatorAdapter.NAVIGATE_UP_TEXT, FileNavigatorAdapter.FileItemType.NAVIGATE_UP));
+		
 		//Sanity check...
 		if(!directory.isDirectory()) {
-			return new ArrayList<FileNavigatorAdapter.FileItem>();
+			//Let the user know that the folder is empty...
+			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
+			
+			return output;
 		}
 		
 		File[] contents = directory.listFiles(new FilenameFilter() {
@@ -310,11 +318,6 @@ public class APDE extends Application {
 				return true;
 			}
 		});
-		
-		ArrayList<FileNavigatorAdapter.FileItem> output = new ArrayList<FileNavigatorAdapter.FileItem>();
-		
-		//Add the "navigate up" button
-		output.add(new FileNavigatorAdapter.FileItem(FileNavigatorAdapter.NAVIGATE_UP_TEXT, FileNavigatorAdapter.FileItemType.NAVIGATE_UP));
 		
 		//Cycle through the files
 		for(File file : contents) {

@@ -3,11 +3,13 @@ package com.calsignlabs.apde;
 import java.util.ArrayList;
 
 import android.content.Context;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 /**
@@ -73,7 +75,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 	
 	@Override
 	public boolean isEnabled(int position) {
-		return true;
+		return !getItem(position).getType().equals(FileItemType.MESSAGE);
 	}
 	
 	@Override
@@ -119,6 +121,16 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			convertView.setBackgroundResource(R.drawable.bg_key);
 		}
 		
+		if(item.getType().equals(FileItemType.MESSAGE)) {
+			text.setTextColor(context.getResources().getColor(R.color.grayed_out));
+			text.setTextSize(16);
+			((RelativeLayout) convertView).setGravity(Gravity.CENTER);
+		} else {
+			text.setTextColor(0xFF222222);
+			text.setTextSize(18);
+			((RelativeLayout) convertView).setGravity(Gravity.CENTER_VERTICAL);
+		}
+		
 		return convertView;
 	}
 	
@@ -128,7 +140,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 	}
 	
 	public static enum FileItemType {
-		NAVIGATE_UP, FOLDER, SKETCH
+		NAVIGATE_UP, MESSAGE, FOLDER, SKETCH
 	}
 	
 	/**

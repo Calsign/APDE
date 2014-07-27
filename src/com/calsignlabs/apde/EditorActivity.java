@@ -313,6 +313,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 						}
 						
 						break;
+					case MESSAGE:
+						break;
 					case FOLDER:
 						drawerSketchPath += "/" + item.getText();
 						
