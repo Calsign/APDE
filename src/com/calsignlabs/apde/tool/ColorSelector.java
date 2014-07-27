@@ -3,6 +3,7 @@ package com.calsignlabs.apde.tool;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ComposeShader;
@@ -15,6 +16,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
+import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -43,19 +45,20 @@ public class ColorSelector implements Tool {
 	private ColorSquare colorSquare;
 	private HueStrip hueStrip;
 	
-	private EditText r, g, b, h, s, v;
+	private ValueEditText[] rgb = new ValueEditText[3];
+	private ValueEditText[] hsv = new ValueEditText[3];
 	private TextView hex;
-	private int rv, gv, bv;
-	private float hv, sv, vv;
 	
 	private GradientDrawable selectionBackground;
 	
-	private boolean FLAG_EDITING_VALUES = false;
-	private boolean FLAG_FIRST_TIME = true;
+	private static float DIP;
 	
 	@Override
 	public void init(APDE context) {
 		this.context = context;
+		
+		// "0.5f" scaling factor is neccessary because the graphics were originally created for a higher-resolution screen...
+		DIP = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, context.getResources().getDisplayMetrics());
 	}
 	
 	@Override
@@ -79,13 +82,58 @@ public class ColorSelector implements Tool {
 			colorSquare = (ColorSquare) layout.findViewById(R.id.color_square);
 			hueStrip = (HueStrip) layout.findViewById(R.id.hue_strip);
 			
-			r = (EditText) layout.findViewById(R.id.red);
-			g = (EditText) layout.findViewById(R.id.green);
-			b = (EditText) layout.findViewById(R.id.blue);
+			rgb[0] = (ValueEditText) layout.findViewById(R.id.red);
+			rgb[1] = (ValueEditText) layout.findViewById(R.id.green);
+			rgb[2] = (ValueEditText) layout.findViewById(R.id.blue);
 			
-			h = (EditText) layout.findViewById(R.id.hue);
-			s = (EditText) layout.findViewById(R.id.saturation);
-			v = (EditText) layout.findViewById(R.id.value);
+			hsv[0] = (ValueEditText) layout.findViewById(R.id.hue);
+			hsv[1] = (ValueEditText) layout.findViewById(R.id.saturation);
+			hsv[2] = (ValueEditText) layout.findViewById(R.id.value);
+			
+			rgb[0].setCallback(new ValueEditText.Callback() {
+				@Override
+				public void onValueChanged(float value) {
+					setRed(value);
+				}
+			});
+			
+			rgb[1].setCallback(new ValueEditText.Callback() {
+				@Override
+				public void onValueChanged(float value) {
+					setGreen(value);
+				}
+			});
+			
+			rgb[2].setCallback(new ValueEditText.Callback() {
+				@Override
+				public void onValueChanged(float value) {
+					setBlue(value);
+				}
+			});
+			
+			hsv[0].setCallback(new ValueEditText.Callback() {
+				@Override
+				public void onValueChanged(float value) {
+					setHue(value);
+				}
+			});
+			
+			hsv[1].setCallback(new ValueEditText.Callback() {
+				@Override
+				public void onValueChanged(float value) {
+					setSaturation(value);
+				}
+			});
+			
+			hsv[2].setCallback(new ValueEditText.Callback() {
+				@Override
+				public void onValueChanged(float value) {
+					setBrightness(value);
+				}
+			});
+			
+			hsv[1].setScale(100.0f);
+			hsv[2].setScale(100.0f);
 			
 			hex = (TextView) layout.findViewById(R.id.hex);
 			
@@ -97,6 +145,9 @@ public class ColorSelector implements Tool {
 				public void run() {
 					LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) hueStrip.getLayoutParams();
 					params.height = colorSquare.getWidth();
+					if(context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+						params.width = (int) (colorSquare.getWidth() / 5.0);
+					}
 					hueStrip.setLayoutParams(params);
 					
 					layout.requestLayout();
@@ -108,7 +159,7 @@ public class ColorSelector implements Tool {
 			hueStrip.setOnTouchListener(new View.OnTouchListener() {
 				@Override
 				public boolean onTouch(View view, MotionEvent event) {
-					setHue((1.0f - Math.min(Math.max(0.0f, (event.getY() - 12.0f) / (hueStrip.getHeight() - 24.0f)), 1.0f)) * 360);
+					setHue((1.0f - Math.min(Math.max(0.0f, (event.getY() - 12.0f * DIP) / (hueStrip.getHeight() - 24.0f * DIP)), 1.0f)) * 360);
 					
 					return true;
 				}
@@ -142,99 +193,6 @@ public class ColorSelector implements Tool {
 				}
 			});
 			
-			//Detect changes so that we can update everything else
-			//Yes, this is really messy - but it's the best we have right now
-			
-			r.addTextChangedListener(new TextWatcher() {
-				@Override
-				public void afterTextChanged(Editable text) {
-					if(!FLAG_EDITING_VALUES) {
-						setRed(text.toString().length() == 0 ? 0 : Integer.parseInt(text.toString()));
-					}
-				}
-				
-				@Override
-				public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-				
-				@Override
-				public void onTextChanged(CharSequence s, int start, int before, int count) {}
-			});
-			
-			g.addTextChangedListener(new TextWatcher() {
-				@Override
-				public void afterTextChanged(Editable text) {
-					if(!FLAG_EDITING_VALUES) {
-						setGreen(text.toString().length() == 0 ? 0 : Integer.parseInt(text.toString()));
-					}
-				}
-				
-				@Override
-				public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-				
-				@Override
-				public void onTextChanged(CharSequence s, int start, int before, int count) {}
-			});
-			
-			b.addTextChangedListener(new TextWatcher() {
-				@Override
-				public void afterTextChanged(Editable text) {
-					if(!FLAG_EDITING_VALUES) {
-						setBlue(text.toString().length() == 0 ? 0 : Integer.parseInt(text.toString()));
-					}
-				}
-				
-				@Override
-				public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-				
-				@Override
-				public void onTextChanged(CharSequence s, int start, int before, int count) {}
-			});
-			
-			h.addTextChangedListener(new TextWatcher() {
-				@Override
-				public void afterTextChanged(Editable text) {
-					if(!FLAG_EDITING_VALUES) {
-						setHue(text.toString().length() == 0 ? 0 : Integer.parseInt(text.toString()));
-					}
-				}
-				
-				@Override
-				public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-				
-				@Override
-				public void onTextChanged(CharSequence s, int start, int before, int count) {}
-			});
-			
-			s.addTextChangedListener(new TextWatcher() {
-				@Override
-				public void afterTextChanged(Editable text) {
-					if(!FLAG_EDITING_VALUES) {
-						setSaturation(text.toString().length() == 0 ? 0 : Integer.parseInt(text.toString()) / 100.0f);
-					}
-				}
-				
-				@Override
-				public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-				
-				@Override
-				public void onTextChanged(CharSequence s, int start, int before, int count) {}
-			});
-			
-			v.addTextChangedListener(new TextWatcher() {
-				@Override
-				public void afterTextChanged(Editable text) {
-					if(!FLAG_EDITING_VALUES) {
-						setBrightness(text.toString().length() == 0 ? 0 : Integer.parseInt(text.toString()) / 100.0f);
-					}
-				}
-				
-				@Override
-				public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-				
-				@Override
-				public void onTextChanged(CharSequence s, int start, int before, int count) {}
-			});
-			
 			builder.setView(layout);
 			dialog = builder.create();
 		}
@@ -257,15 +215,48 @@ public class ColorSelector implements Tool {
 		return false;
 	}
 	
-	public void setRGB(int red, int green, int blue) {
+	@SuppressLint("NewApi")
+	@SuppressWarnings("deprecation")
+	public void setRGB(float red, float green, float blue) {
 		red = Math.min(Math.max(red, 0), 255);
 		green = Math.min(Math.max(green, 0), 255);
 		blue = Math.min(Math.max(blue, 0), 255);
 		
 		float[] hsb = new float[3];
-		Color.RGBToHSV(red, green, blue, hsb);
+		Color.RGBToHSV((int) red, (int) green, (int) blue, hsb);
 		
-		setHSB(hsb[0], hsb[1], hsb[2]);
+		int color = Color.rgb((int) red, (int) green, (int) blue);
+		
+		hueStrip.setHue(hsb[0] / 360.0f);
+		colorSquare.setHue(hsb[0] / 360.0f);
+		colorSquare.setPoint(hsb[1] * colorSquare.getWidth(), (1.0f - hsb[2]) * colorSquare.getHeight());
+		
+		hsv[0].setValue(hsb[0]);
+		hsv[1].setValue(hsb[1]);
+		hsv[2].setValue(hsb[2]);
+		
+		rgb[0].setValue(red);
+		rgb[1].setValue(green);
+		rgb[2].setValue(blue);
+		
+		//Hex conversion
+		hex.setText(String.format("#%06X", (0xFFFFFF & color)));
+		//Make the text readable
+		hex.setTextColor(hsb[2] < 0.5 ? Color.WHITE : Color.BLACK);
+		
+		//Show the selected color
+		
+		if(selectionBackground == null) {
+			selectionBackground = ((GradientDrawable) context.getResources().getDrawable(R.drawable.color_selector_selection_background));
+		}
+		
+		selectionBackground.setColor(color);
+		
+		if(android.os.Build.VERSION.SDK_INT >= 16) {
+			hex.setBackground(selectionBackground);
+		} else {
+			hex.setBackgroundDrawable(selectionBackground);
+		}
 	}
 	
 	@SuppressWarnings("deprecation")
@@ -281,34 +272,13 @@ public class ColorSelector implements Tool {
 		
 		int color = Color.HSVToColor(new float[] {hue, saturation, brightness});
 		
-		hv = hue;
-		sv = saturation;
-		vv = brightness;
+		hsv[0].setValue(hue);
+		hsv[1].setValue(saturation);
+		hsv[2].setValue(brightness);
 		
-		rv = Color.red(color);
-		gv = Color.green(color);
-		bv = Color.blue(color);
-		
-		FLAG_EDITING_VALUES = true;
-		
-		//Yes, this is really ugly
-		
-		if(!(r.getText().toString().equals(Integer.toString(rv)) || (r.getText().toString().equals("") && r.isFocused())) || FLAG_FIRST_TIME)
-			r.setText(Integer.toString(rv));
-		if(!(g.getText().toString().equals(Integer.toString(gv)) || (g.getText().toString().equals("") && g.isFocused())) || FLAG_FIRST_TIME)
-			g.setText(Integer.toString(gv));
-		if(!(b.getText().toString().equals(Integer.toString(bv)) || (b.getText().toString().equals("") && b.isFocused())) || FLAG_FIRST_TIME)
-			b.setText(Integer.toString(bv));
-		
-		if(!(h.getText().toString().equals(Integer.toString((int) hv)) || (h.getText().toString().equals("") && h.isFocused())) || FLAG_FIRST_TIME)
-			h.setText(Integer.toString((int) hv));
-		if(!(s.getText().toString().equals(Integer.toString((int) (sv * 100))) || (s.getText().toString().equals("") && s.isFocused())) || FLAG_FIRST_TIME)
-			s.setText(Integer.toString((int) (sv * 100)));
-		if(!(v.getText().toString().equals(Integer.toString((int) (vv * 100))) || (v.getText().toString().equals("") && v.isFocused())) || FLAG_FIRST_TIME)
-			v.setText(Integer.toString((int) (vv * 100)));
-		
-		FLAG_EDITING_VALUES = false;
-		FLAG_FIRST_TIME = false;
+		rgb[0].setValue(Color.red(color));
+		rgb[1].setValue(Color.green(color));
+		rgb[2].setValue(Color.blue(color));
 		
 		//Hex conversion
 		hex.setText(String.format("#%06X", (0xFFFFFF & color)));
@@ -330,28 +300,28 @@ public class ColorSelector implements Tool {
 		}
 	}
 	
-	public void setRed(int red) {
-		setRGB(red, gv, bv);
+	public void setRed(float red) {
+		setRGB(red, rgb[1].getValue(), rgb[2].getValue());
 	}
 	
-	public void setGreen(int green) {
-		setRGB(rv, green, bv);
+	public void setGreen(float green) {
+		setRGB(rgb[0].getValue(), green, rgb[2].getValue());
 	}
 	
-	public void setBlue(int blue) {
-		setRGB(rv, gv, blue);
+	public void setBlue(float blue) {
+		setRGB(rgb[0].getValue(), rgb[1].getValue(), blue);
 	}
 	
 	public void setHue(float hue) {
-		setHSB(hue, sv, vv);
+		setHSB(hue, hsv[1].getValue(), hsv[2].getValue());
 	}
 	
 	public void setSaturation(float saturation) {
-		setHSB(hv, saturation, vv);
+		setHSB(hsv[0].getValue(), saturation, hsv[2].getValue());
 	}
 	
 	public void setBrightness(float brightness) {
-		setHSB(hv, sv, brightness);
+		setHSB(hsv[0].getValue(), hsv[1].getValue(), brightness);
 	}
 	
 	public static class ColorSquare extends View {
@@ -423,18 +393,26 @@ public class ColorSelector implements Tool {
 			if(boxPaint == null) {
 				boxPaint = new Paint();
 				boxPaint.setStyle(Style.STROKE);
-				boxPaint.setStrokeWidth(4);
+				boxPaint.setStrokeWidth(4.0f * DIP);
 			}
 			
 			boxPaint.setColor(y > getMeasuredHeight() / 2 ? Color.WHITE : Color.BLACK);
 			
-			canvas.drawRect(x - 10, y - 10, x + 10, y + 10, boxPaint);
+			canvas.drawRect(x - 10.0f * DIP, y - 10.0f * DIP, x + 10.0f * DIP, y + 10.0f * DIP, boxPaint);
 		}
 		
 		@Override
 		public void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 			//Make this into an actual square
-			super.onMeasure(widthMeasureSpec, widthMeasureSpec);
+			switch(getResources().getConfiguration().orientation) {
+			case Configuration.ORIENTATION_LANDSCAPE:
+				super.onMeasure(heightMeasureSpec, heightMeasureSpec);
+				break;
+			case Configuration.ORIENTATION_PORTRAIT:
+			default:
+				super.onMeasure(widthMeasureSpec, widthMeasureSpec);
+				break;
+			}
 		}
 		
 		/**
@@ -486,7 +464,8 @@ public class ColorSelector implements Tool {
 			
 			if(paint == null || FLAG_REFRESH_GRADIENT) {
 				paint = new Paint();
-				gradient = new LinearGradient(0.0f, 12.0f, 0.0f, getMeasuredHeight() - 12.0f, new int[] {0xFFFF0000, 0xFFFF00FF, 0xFF0000FF, 0xFF00FFFF, 0xFF00FF00, 0xFFFFFF00, 0xFFFF0000}, null, Shader.TileMode.CLAMP);
+				gradient = new LinearGradient(0.0f, 12.0f * DIP, 0.0f, getMeasuredHeight() - 12.0f * DIP,
+						new int[] {0xFFFF0000, 0xFFFF00FF, 0xFF0000FF, 0xFF00FFFF, 0xFF00FF00, 0xFFFFFF00, 0xFFFF0000}, null, Shader.TileMode.CLAMP);
 				
 				paint.setShader(gradient);
 			}
@@ -496,15 +475,15 @@ public class ColorSelector implements Tool {
 			if(boxPaint == null) {
 				boxPaint = new Paint();
 				boxPaint.setStyle(Style.STROKE);
-				boxPaint.setStrokeWidth(4);
+				boxPaint.setStrokeWidth(4.0f * DIP);
 				boxPaint.setColor(Color.WHITE);
 			}
 			
 			if(FLAG_REFRESH_HUE) {
 				//Keep the box displayable
-				float drawHue = Math.min(Math.max((1.0f - hue) * getMeasuredHeight(), 12.0f), getMeasuredHeight() - 12.0f);
+				float drawHue = Math.min(Math.max((1.0f - hue) * getMeasuredHeight(), 12.0f * DIP), getMeasuredHeight() - 12.0f * DIP);
 				
-				canvas.drawRect(2.0f, drawHue - 10.0f, getMeasuredWidth() - 2.0f, drawHue + 10.0f, boxPaint);
+				canvas.drawRect(2.0f * DIP, drawHue - 10.0f * DIP, getMeasuredWidth() - 2.0f * DIP, drawHue + 10.0f * DIP, boxPaint);
 			}
 		}
 		
@@ -518,6 +497,98 @@ public class ColorSelector implements Tool {
 			FLAG_REFRESH_HUE = true;
 			
 			invalidate();
+		}
+	}
+	
+	public static class ValueEditText extends EditText {
+		private boolean FLAG_INTERNAL_MODIFICATION;
+		private boolean FLAG_MODIFIED;
+		private float value;
+		private float scale;
+		private Callback callback;
+		
+		public ValueEditText(Context context) {
+			super(context);
+			
+			init();
+		}
+		
+		public ValueEditText(Context context, AttributeSet attrs) {
+			super(context, attrs);
+			
+			init();
+		}
+		
+		public ValueEditText(Context context, AttributeSet attrs, int defStyle) {
+			super(context, attrs, defStyle);
+			
+			init();
+		}
+		
+		private void init() {
+			addTextChangedListener(new TextWatcher() {
+				@Override
+				public void afterTextChanged(Editable text) {
+					if(!FLAG_INTERNAL_MODIFICATION) {
+						callback.onValueChanged(text.toString().length() == 0 ? 0.0f : Integer.parseInt(text.toString()) / scale);
+					}
+				}
+				
+				@Override
+				public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+				
+				@Override
+				public void onTextChanged(CharSequence s, int start, int before, int count) {}
+			});
+			
+			FLAG_MODIFIED = false;
+			scale = 1.0f;
+		}
+		
+		public void setCallback(Callback callback) {
+			this.callback = callback;
+		}
+		
+		public void setScale(float scale) {
+			this.scale = scale;
+		}
+		
+		public void setValue(float value) {
+			this.value = value;
+			
+			FLAG_INTERNAL_MODIFICATION = true;
+			
+			int selectionStart = getSelectionStart();
+			int selectionEnd = getSelectionEnd();
+			
+			String text = getText().toString();
+			if(!FLAG_MODIFIED																	//Make sure we set the text initially
+					|| !((text.equals("") && hasFocus())										//Don't change the text to "0" if it's empty (if it has focus)
+					|| (text.length() > 0 && Integer.parseInt(text) == (int) (value * scale)))	//Don't change the text if it will make no difference
+					|| (text.length() > 1 && text.startsWith("0"))) {							//Trim starting "0"s
+				
+				setText(Integer.toString((int) (value * scale)));
+				
+				//Refresh...
+				text = getText().toString();
+				
+				selectionStart = Math.min(selectionStart, text.length());
+				selectionEnd = Math.min(selectionEnd, text.length());
+				
+				//Keep the selection in the same place
+				setSelection(selectionStart, selectionEnd);
+			}
+			
+			FLAG_INTERNAL_MODIFICATION = false;
+			FLAG_MODIFIED = true;
+		}
+		
+		public float getValue() {
+			return value;
+		}
+		
+		public static interface Callback {
+			public void onValueChanged(float value);
 		}
 	}
 }
