@@ -45,8 +45,8 @@
     <string name="save_sketch_dialog_message">Do you want to save the sketch before creating a new sketch?</string>
     <string name="save_sketch">Save</string>
     <string name="dont_save_sketch">Don\'t Save</string>
-    <string name="delete_sketch_dialog_title">Delete sketch?</string>
-    <string name="delete_sketch_dialog_message">Are you sure you want to delete this sketch?</string>
+    <string name="delete_sketch_dialog_title">Delete \&quot;%1$s\&quot;?</string>
+    <string name="delete_sketch_dialog_message">Are you sure you want to delete sketch \&quot;%1$s\&quot;?</string>
     <string name="name_invalid_same_title">Error: This tab already exists!</string>
     <string name="tab_new_dialog_title">New tab</string>
     <string name="tab_new_dialog_message">Enter the name for the new tab:</string>
@@ -121,5 +121,19 @@
     <string name="increase_indent">Increase Indent</string>
     <string name="decrease_indent">Decrease Indent</string>
     <string name="folder_empty">Folder is empty</string>
+    <string name="cannot_move_sketch_title">Cannot move sketch</string>
+    <string name="cannot_move_folder_title">Cannot move folder</string>
+    <string name="cannot_move_folder_message">Another file of the same name exists in the destination folder.</string>
+    <string name="new_folder">New Folder</string>
+    <string name="edit_folder">Rename Folder</string>
+    <string name="delete_folder">Delete Folder</string>
+    <string name="delete_folder_dialog_message">Are you sure you want to delete folder \&quot;%1$s\&quot;?</string>
+    <string name="move_to_new_folder_title">Move to new folder</string>
+    <string name="move_to_new_folder_descrption">Enter the name for the new folder:</string>
+    <string name="rename_sketch_title">Rename sketch \&quot;%1$s\&quot;</string>
+    <string name="rename_sketch_message">Enter the new name for the sketch:</string>
+    <string name="rename_folder_title">Rename folder \&quot;%1$s\&quot;</string>
+    <string name="rename_folder_message">Enter the new name for the folder:</string>
+    <string name="rename">Rename</string>
 
 </resources>

@@ -19,4 +19,6 @@
     <color name="light_gray">#EEEEEE</color>
     <color name="link_color">#CCCCCC</color>
     <color name="code_edit_highlight_color">#97D8FA</color>
+    <color name="red_select">#ffBF3C3C</color>
+    <color name="red_select_light">#77BF3C3C</color>
 </resources>

@@ -133,19 +133,64 @@
 	    </ScrollView>
 	</LinearLayout>
 	
-	<LinearLayout android:id="@+id/drawer_wrapper"
+	<RelativeLayout android:id="@+id/drawer_wrapper"
 	    android:layout_width="260dp"
 	    android:layout_height="match_parent"
-	    android:layout_gravity="start"
-	    android:orientation="vertical" >
+	    android:layout_gravity="start" >
 	    
-		<ListView android:id="@+id/drawer_list"
+	    <ListView android:id="@+id/drawer_list"
 	        android:layout_width="match_parent"
 	        android:layout_height="match_parent"
+	        android:layout_above="@+id/folder_actions"
 	        android:choiceMode="singleChoice"
 	        android:divider="#CCCCCC"
 	        android:dividerHeight="0.5dp"
 	        android:background="#EEEEEE"
 	        android:headerDividersEnabled="true" />
-	</LinearLayout>
+		
+		<LinearLayout android:id="@id/folder_actions"
+		    android:layout_width="match_parent"
+		    android:layout_height="wrap_content"
+		    android:layout_alignParentBottom="true"
+		    android:visibility="gone"
+		    android:background="#EEEEEE" >
+		    
+		    <ImageView android:id="@+id/new_folder"
+		        android:layout_width="0dp"
+		        android:layout_height="wrap_content"
+		        android:layout_weight="1"
+		        android:src="@drawable/ic_new_folder"
+		        android:contentDescription="@string/new_folder"
+		        android:background="@color/holo_select_light"
+		        android:padding="8dp" />
+		    
+		    <View
+		        android:layout_width="1dp"
+		        android:layout_height="match_parent"
+		        android:background="#CCCCCC" />
+		    
+		    <ImageView android:id="@+id/edit_folder"
+		        android:layout_width="0dp"
+		        android:layout_height="wrap_content"
+		        android:layout_weight="1"
+		        android:src="@drawable/ic_edit_folder"
+		        android:contentDescription="@string/edit_folder"
+		        android:background="@color/holo_select_light"
+		        android:padding="8dp" />
+		    
+		    <View
+		        android:layout_width="1dp"
+		        android:layout_height="match_parent"
+		        android:background="#CCCCCC" />
+		    
+		    <ImageView android:id="@+id/delete_folder"
+		        android:layout_width="0dp"
+		        android:layout_height="wrap_content"
+		        android:layout_weight="1"
+		        android:src="@drawable/ic_delete_folder"
+		        android:contentDescription="@string/delete_folder"
+		        android:background="@color/red_select_light"
+		        android:padding="8dp" />
+		</LinearLayout>
+	</RelativeLayout>
 </android.support.v4.widget.DrawerLayout>

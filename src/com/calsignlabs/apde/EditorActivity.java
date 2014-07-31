@@ -3,7 +3,6 @@ package com.calsignlabs.apde;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,6 +43,7 @@ import android.support.v7.internal.widget.ScrollingTabContainerView.TabView;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
+import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -66,6 +66,7 @@ import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -132,7 +133,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	//Intent flag to delete the old just-installed APK file
 	public static final int FLAG_DELETE_APK = 5;
 	
-    @Override
+    @SuppressLint("NewApi")
+	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
@@ -346,7 +348,41 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				}
 				
 				forceDrawerReload();
-		}});
+			}
+		});
+        
+        //TODO This scrolling is currently somewhat choppy because we have a drag listener for every item to deal with ListView item recycling
+        if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.HONEYCOMB) {
+        	drawerList.setOnDragListener(new View.OnDragListener() {
+        		final float THRESHOLD = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 100, getResources().getDisplayMetrics());
+        		
+        		@Override
+        		public boolean onDrag(View view, DragEvent event) {
+        			//If the dragged item is nearing the edges, scroll to see more content
+        			//Dragged items will be sketches / folders
+        			
+        			switch(event.getAction()) {
+        			case DragEvent.ACTION_DRAG_LOCATION:
+        				float y = event.getY();
+        				float h = drawerList.getHeight();
+        				
+        				float upDif = y - THRESHOLD;
+        				float downDif = y - (h - THRESHOLD);
+        				
+        				if(upDif < 0) {
+        					drawerList.smoothScrollBy((int) upDif, 300);
+        				}
+        				if(downDif > 0) {
+        					drawerList.smoothScrollBy((int) upDif, 300);
+        				}
+        				
+        				break;
+        			}
+        			
+        			return true;
+        		}
+        	});
+        }
         
         //Enable the home button, the "home as up" will actually get replaced by the drawer toggle button
         getSupportActionBar().setHomeButtonEnabled(true);
@@ -900,7 +936,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Opens the navigation drawer
     	
 		DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer);
-		LinearLayout drawerLayout = (LinearLayout) findViewById(R.id.drawer_wrapper);
+		RelativeLayout drawerLayout = (RelativeLayout) findViewById(R.id.drawer_wrapper);
 		
 		drawer.openDrawer(drawerLayout);
 	}
@@ -1463,22 +1499,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	if(sketchFolder.isDirectory()) {
     		try {
     			//Perform recursive file deletion on the sketch folder
-				deleteFile(sketchFolder);
+				APDE.deleteFile(sketchFolder);
 			} catch (IOException e) {
 				//Catch stuff, shouldn't be any problems, though
 				e.printStackTrace();
 			}
     	}
-    }
-    
-    //Recursive file deletion
-    void deleteFile(File f) throws IOException {
-    	if(f.isDirectory())
-    		for(File c : f.listFiles())
-    			deleteFile(c);
-    	
-    	if(!f.delete()) //Uh-oh...
-    		throw new FileNotFoundException("Failed to delete file: " + f);
     }
     
     //Save the sketch into temp storage
@@ -1663,7 +1689,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         ArrayList<FileNavigatorAdapter.FileItem> items;
         
         if(drawerSketchLocationType != null) {
-        	items = getGlobalState().listSketchContainingFolders(getGlobalState().getSketchLocation(drawerSketchPath, drawerSketchLocationType), new String[] {APDE.LIBRARIES_FOLDER});
+        	items = getGlobalState().listSketchContainingFolders(getGlobalState().getSketchLocation(drawerSketchPath, drawerSketchLocationType), new String[] {APDE.LIBRARIES_FOLDER},
+        			drawerSketchPath.length() > 0, drawerSketchLocationType.equals(APDE.SketchLocation.SKETCHBOOK), new APDE.SketchMeta(drawerSketchLocationType, drawerSketchPath));
         } else {
         	if(drawerRecentSketch) {
         		items = getGlobalState().listRecentSketches();
@@ -1688,11 +1715,27 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	selected = 1;
         }
         
-        FileNavigatorAdapter fileAdapter = new FileNavigatorAdapter(this, items, selected);
+        final FileNavigatorAdapter fileAdapter = new FileNavigatorAdapter(this, items, selected);
         
         //Load the list of sketches into the drawer
         drawerList.setAdapter(fileAdapter);
         drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        
+        //Let the adapter handle long click events
+        //Used for drag and drop to move files...
+        drawerList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+			@Override
+			public boolean onItemLongClick(AdapterView<?> adapterView, View view, int position, long id) {
+				return fileAdapter.onLongClickItem(view, position);
+			}
+		});
+    }
+    
+    public void setDrawerLocation(APDE.SketchMeta folder) {
+    	drawerSketchLocationType = folder.getLocation();
+    	drawerSketchPath = folder.getPath();
+    	
+    	forceDrawerReload();
     }
     
     /**
@@ -1813,7 +1856,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         		
         		//Get a reference to the drawer views
         		DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer);
-        		LinearLayout drawerLayout = (LinearLayout) findViewById(R.id.drawer_wrapper);
+        		RelativeLayout drawerLayout = (RelativeLayout) findViewById(R.id.drawer_wrapper);
         		
         		if(drawer.isDrawerOpen(drawerLayout)) {
         			//If the drawer is open, close it
@@ -2645,7 +2688,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	}
 	
 	//Called internally to determine if a file / tab name is valid
-	private boolean validateFileName(String title) {
+	protected boolean validateFileName(String title) {
 		//Make sure that the tab name's length > 0
 		if(title.length() <= 0) {
 			error(getResources().getText(R.string.name_invalid_no_char));

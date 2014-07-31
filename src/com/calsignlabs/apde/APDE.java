@@ -1,7 +1,12 @@
 package com.calsignlabs.apde;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -19,8 +24,11 @@ import com.calsignlabs.apde.tool.IncreaseIndent;
 import com.calsignlabs.apde.tool.Tool;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Application;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -287,16 +295,17 @@ public class APDE extends Application {
 		return false;
 	}
 	
-	public ArrayList<FileNavigatorAdapter.FileItem> listSketchContainingFolders(File directory) {
+	public ArrayList<FileNavigatorAdapter.FileItem> listSketchContainingFolders(File directory, boolean parentDraggable, boolean draggable, SketchMeta location) {
 		//Convenience method
-		return listSketchContainingFolders(directory, new String[] {});
+		return listSketchContainingFolders(directory, new String[] {}, parentDraggable, draggable, location);
 	}
 	
-	public ArrayList<FileNavigatorAdapter.FileItem> listSketchContainingFolders(File directory, final String[] ignoreFilenames) {
+	public ArrayList<FileNavigatorAdapter.FileItem> listSketchContainingFolders(File directory, final String[] ignoreFilenames, boolean parentDroppable, boolean itemsDraggable, SketchMeta location) {
 		ArrayList<FileNavigatorAdapter.FileItem> output = new ArrayList<FileNavigatorAdapter.FileItem>();
 		
 		//Add the "navigate up" button
-		output.add(new FileNavigatorAdapter.FileItem(FileNavigatorAdapter.NAVIGATE_UP_TEXT, FileNavigatorAdapter.FileItemType.NAVIGATE_UP));
+		output.add(new FileNavigatorAdapter.FileItem(FileNavigatorAdapter.NAVIGATE_UP_TEXT, FileNavigatorAdapter.FileItemType.NAVIGATE_UP, false, parentDroppable,
+				new SketchMeta(location.getLocation(), location.getParent())));
 		
 		//Sanity check...
 		if(!directory.isDirectory()) {
@@ -323,9 +332,11 @@ public class APDE extends Application {
 		for(File file : contents) {
 			//Check to see if this folder has anything worth our time
 			if(validSketch(file)) {
-				output.add(new FileNavigatorAdapter.FileItem(file.getName(), FileNavigatorAdapter.FileItemType.SKETCH));
+				output.add(new FileNavigatorAdapter.FileItem(file.getName(), FileNavigatorAdapter.FileItemType.SKETCH, itemsDraggable, false,
+						new SketchMeta(location.getLocation(), location.getPath() + "/" + file.getName())));
 			} else if(containsSketches(file)) {
-				output.add(new FileNavigatorAdapter.FileItem(file.getName(), FileNavigatorAdapter.FileItemType.FOLDER));
+				output.add(new FileNavigatorAdapter.FileItem(file.getName(), FileNavigatorAdapter.FileItemType.FOLDER, itemsDraggable, itemsDraggable,
+						new SketchMeta(location.getLocation(), location.getPath() + "/" + file.getName())));
 			}
 		}
 		
@@ -484,6 +495,113 @@ public class APDE extends Application {
 		return getDir("examples", 0);
 	}
 	
+	public void moveFolder(SketchMeta source, SketchMeta dest, Activity activityContext) {
+		final File sourceFile = getSketchLocation(source.getPath(), source.getLocation());
+		final File destFile = getSketchLocation(dest.getPath(), dest.getLocation());
+		
+		final boolean isSketch = validSketch(sourceFile);
+		final boolean selected = getSketchLocationType().equals(SketchLocation.TEMPORARY) ? false : getSketchLocation().equals(getSketchLocation(source.getPath(), source.getLocation()));
+		
+		//Let's not overwrite anything...
+		//TODO Maybe give the user options to replace / keep both in the new location?
+		//We don't need that much right now, they can deal with things manually...
+		if(destFile.exists()) {
+			AlertDialog.Builder builder = new AlertDialog.Builder(activityContext);
+			
+			builder.setTitle(isSketch ? R.string.cannot_move_sketch_title : R.string.cannot_move_folder_title);
+			builder.setMessage(R.string.cannot_move_folder_message);
+			
+			builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {}
+			});
+			
+			builder.create().show();
+			
+			return;
+		}
+		
+		//TODO Maybe run in a separate thread if the file size is large enough?
+		
+		if(moveFolder(sourceFile, destFile) && selected) {
+			selectSketch(dest.getPath(), dest.getLocation());
+		}
+		
+		editor.forceDrawerReload();
+	}
+	
+	private boolean moveFolder(File sourceFile, File destFile) {
+		try {
+			copyFile(sourceFile, destFile);
+		} catch (IOException e) {
+			System.err.println("Error moving sketch...");
+			e.printStackTrace();
+			
+			return false;
+		}
+		
+		try {
+			deleteFile(sourceFile);
+		} catch (IOException e) {
+			System.err.println("Error deleting old sketch after moving...");
+			e.printStackTrace();
+			
+			return false;
+		}
+		
+		return true;
+	}
+	
+	public static void copyFile(File sourceFile, File destFile) throws IOException {
+		if (sourceFile.isDirectory()) {
+    		for (File content : sourceFile.listFiles()) {
+    			copyFile(content, new File(destFile, content.getName()));
+    		}
+    		
+    		//Don't try to copy the folder using file methods, it won't work
+    		return;
+    	}
+		
+		if (!destFile.exists()) {
+			destFile.getParentFile().mkdirs();
+			destFile.createNewFile();
+		}
+		
+		FileChannel source = null;
+		FileChannel destination = null;
+		
+		try {
+			source = new FileInputStream(sourceFile).getChannel();
+			destination = new FileOutputStream(destFile).getChannel();
+			destination.transferFrom(source, 0, source.size());
+		} finally {
+			if (source != null) {
+				source.close();
+			}
+			if (destination != null) {
+				destination.close();
+			}
+		}
+	}
+	
+	/**
+	 * Recursive file deletion
+	 * 
+	 * @param file
+	 * @throws IOException
+	 */
+    public static void deleteFile(File file) throws IOException {
+    	if (file.isDirectory()) {
+    		for (File content : file.listFiles()) {
+    			deleteFile(content);
+    		}
+    	}
+    	
+    	if (!file.delete()) { //Uh-oh...
+    		throw new FileNotFoundException("Failed to delete file: " + file);
+    	}
+    }
+	
 	/**
 	 * @return the current version code of APDE
 	 */
@@ -616,6 +734,12 @@ public class APDE extends Application {
 			return lastSlash != -1 && path.length() > lastSlash + 1 ? path.substring(lastSlash + 1, path.length()) : path;
 		}
 		
+		public String getParent() {
+			int lastSlash = path.lastIndexOf('/');
+			
+			return lastSlash != -1 ? path.substring(0, lastSlash) : "";
+		}
+		
 		@Override
 		public boolean equals(Object other) {
 			if(other instanceof SketchMeta) {
@@ -625,6 +749,21 @@ public class APDE extends Application {
 			} else {
 				return false;
 			}
+		}
+		
+		@Override
+		public String toString() {
+			return location.toString() + "," + path;
+		}
+		
+		public static SketchMeta fromString(String value) {
+			String[] parts = value.split(",");
+			
+			if(parts.length != 2) {
+				return null;
+			}
+			
+			return new SketchMeta(SketchLocation.fromString(parts[0]), parts[1]);
 		}
 	}
 	

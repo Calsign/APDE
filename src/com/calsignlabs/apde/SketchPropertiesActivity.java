@@ -1,10 +1,8 @@
 package com.calsignlabs.apde;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
+import java.util.Locale;
 import java.util.Map.Entry;
 
 import com.calsignlabs.apde.build.Manifest;
@@ -94,36 +92,17 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	
 	public void addFile(File source) {
 		//Get the location of this sketch's data folder
-		File dataFolder = new File(getGlobalState().getSketchbookFolder().getAbsolutePath() + "/" + getGlobalState().getSketchName() + "/data/");
+		File dataFolder = new File(getGlobalState().getSketchLocation(), "/data/");
 		dataFolder.mkdir();
 		
 		File dest = new File(dataFolder, source.getName());
 		
 		try {
-			copyFile(source, dest);
+			APDE.copyFile(source, dest);
 		} catch (IOException e) {
 			//Something bad happened
 			System.err.println("Failed to add file to sketch, error output:");
 			e.printStackTrace();
-		}
-	}
-	
-	public static void copyFile(File sourceFile, File destFile) throws IOException {
-		if(!destFile.exists())
-			destFile.createNewFile();
-		
-		FileChannel source = null;
-		FileChannel destination = null;
-		
-		try {
-			source = new FileInputStream(sourceFile).getChannel();
-			destination = new FileOutputStream(destFile).getChannel();
-			destination.transferFrom(source, 0, source.size());
-		} finally {
-			if(source != null)
-				source.close();
-			if(destination != null)
-				destination.close();
 		}
 	}
 	
@@ -378,7 +357,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		//TODO make this browse, not request a file...
 		//TODO also, get rid of Google Drive and such - only allow local file browsers (that support the external storage)
 		
-		File sketchFolder = new File(getGlobalState().getSketchbookFolder(), getGlobalState().getSketchName());
+		File sketchFolder = getGlobalState().getSketchLocation();;
 		
 		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
 		intent.setDataAndType(Uri.fromFile(sketchFolder), "*/*");
@@ -528,8 +507,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	private void deleteSketch() {
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
     	
-    	alert.setTitle(R.string.delete_sketch_dialog_title);
-    	alert.setMessage(R.string.delete_sketch_dialog_message);
+    	alert.setTitle(String.format(Locale.US, getResources().getString(R.string.delete_sketch_dialog_title), getGlobalState().getSketchName()));
+    	alert.setMessage(String.format(Locale.US, getResources().getString(R.string.delete_sketch_dialog_message), getGlobalState().getSketchName()));
     	
     	alert.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
     		@SuppressLint("NewApi")
@@ -543,11 +522,12 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     				getActionBar().setTitle(getGlobalState().getSketchName());
     			
     			finish();
-    	}});
+    		}
+    	});
     	
     	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-    		public void onClick(DialogInterface dialog, int whichButton) {
-    	}});
+    		public void onClick(DialogInterface dialog, int whichButton) {}
+    	});
     	
     	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
     	AlertDialog dialog = alert.create();
@@ -580,7 +560,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     	input.selectAll();
     	alert.setView(input);
     	
-    	alert.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+    	alert.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {
     			String before = getGlobalState().getSketchName();
     			String after = input.getText().toString();
