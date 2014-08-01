@@ -487,137 +487,143 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		return false;
 	}
 	
-	private static View.OnDragListener folderDragListener = new View.OnDragListener() {
-		private Handler delayHandler = new Handler();
-		
-		@SuppressLint("NewApi")
-		@SuppressWarnings("deprecation")
-		@Override
-		public boolean onDrag(View view, DragEvent event) {
-			final FileItem item = (FileItem) view.getTag();
-			
-			switch(event.getAction()) {
-			case DragEvent.ACTION_DRAG_STARTED:
-				if(event.getClipDescription().hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
-					//When scrolling, views are recycled and it makes a mess...
-					if(item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
-						view.setBackgroundColor(context.getResources().getColor(R.color.holo_select_light));
-						view.invalidate();
+	private static View.OnDragListener folderDragListener;
+	
+	static {
+		if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.HONEYCOMB) {
+			folderDragListener = new View.OnDragListener() {
+				private Handler delayHandler = new Handler();
+				
+				@SuppressLint("NewApi")
+				@SuppressWarnings("deprecation")
+				@Override
+				public boolean onDrag(View view, DragEvent event) {
+					final FileItem item = (FileItem) view.getTag();
+					
+					switch(event.getAction()) {
+					case DragEvent.ACTION_DRAG_STARTED:
+						if(event.getClipDescription().hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
+							//When scrolling, views are recycled and it makes a mess...
+							if(item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
+								view.setBackgroundColor(context.getResources().getColor(R.color.holo_select_light));
+								view.invalidate();
+							}
+							
+							//We have to do this here for some reason...
+							if(dragView != null) {
+								dragView.setBackgroundColor(context.getResources().getColor(R.color.grayed_out));
+								dragView.invalidate();
+							}
+							
+							return true;
+						}
+						
+						return false;
+						
+					case DragEvent.ACTION_DRAG_ENTERED:
+						//When scrolling, views are recycled and it makes a mess...
+						if(item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
+							view.setBackgroundColor(context.getResources().getColor(R.color.holo_select));
+							if(item.getType().equals(FileItemType.FOLDER)) {
+								((ImageView) view.findViewById(R.id.drawer_list_item_icon)).setImageDrawable(context.getResources().getDrawable(R.drawable.ic_folder_open));
+							}
+							view.invalidate();
+						}
+						
+						/*
+						 * TODO Unfortunately, we can't have this fancy behavior because it doesn't work.
+						 * Desired behavior: hovering over a folder with a dragged item for one second causes the drawer to navigate into the drawer...
+						 * ...with the dragged item still dragging...
+						 * ... for a more fluid drag and drop experience between multiple folders.
+						 * The dragged item still drags, but none of the views are able to recieve drag events...
+						 * ...because they weren't created until after the drag event started.
+						 * They were created after because the list is populated on demand when a folder is opened.
+						 * ...
+						 * I can't find a workaround...
+						 * Starting the drag again doesn't work.
+						 * We can't even stop the first drag event...
+						 * ...not even by dispatching an ACTION_UP motion event.
+						 * ...
+						 * So it's probably not worth the trouble...
+						 */
+						
+						//				delayHandler.postDelayed(new Runnable() {
+						//					@Override
+						//					public void run() {
+						//						((APDE) context.getApplicationContext()).getEditor().setDrawerLocation(item.getSketch());
+						//						startDrag(dragItem, dragView);
+						//						
+						//						//Provide haptic feedback (if the user has vibrations enabled)
+						//						if(PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("pref_vibrate", true))
+						//							((android.os.Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE)).vibrate(100); //100 millis
+						//					}
+						//				}, 1000);
+						
+						return true;
+						
+					case DragEvent.ACTION_DRAG_LOCATION:
+						return true;
+						
+					case DragEvent.ACTION_DRAG_EXITED:
+						//Don't flip out if we've navigated out of this folder...
+						//When scrolling, views are recycled and it makes a mess...
+						if(item != null && item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
+							view.setBackgroundColor(context.getResources().getColor(R.color.holo_select_light));
+							if(item.getType().equals(FileItemType.FOLDER)) {
+								((ImageView) view.findViewById(R.id.drawer_list_item_icon)).setImageDrawable(context.getResources().getDrawable(R.drawable.ic_folder_closed));
+							}
+							view.invalidate();
+						}
+						
+						delayHandler.removeCallbacksAndMessages(null);
+						
+						return true;
+						
+					case DragEvent.ACTION_DROP:
+						//Don't flip out if we've navigated out of this folder...
+						//When scrolling, views are recycled and it makes a mess...
+						if(item != null && item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
+							APDE global = (APDE) context.getApplicationContext();
+							
+							APDE.SketchMeta source = dragItem.getSketch();
+							APDE.SketchMeta destFolder = item.getSketch();
+							
+							APDE.SketchMeta destSketch = new APDE.SketchMeta(destFolder.getLocation(), destFolder.getPath() + "/" + source.getName());
+							
+							global.moveFolder(source, destSketch, global.getEditor());
+						}
+						
+						return true;
+						
+					case DragEvent.ACTION_DRAG_ENDED:
+						//Don't flip out if we've navigated out of this folder...
+						//When scrolling, views are recycled and it makes a mess...
+						if(item != null && item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
+							view.setBackgroundDrawable(context.getResources().getDrawable(R.drawable.bg_key));
+							if(item.getType().equals(FileItemType.FOLDER)) {
+								((ImageView) view.findViewById(R.id.drawer_list_item_icon)).setImageDrawable(context.getResources().getDrawable(R.drawable.ic_folder_closed));
+							}
+							view.invalidate();
+						}
+						
+						if(draggingIsSelected) {
+							dragView.setBackgroundColor(context.getResources().getColor(R.color.holo_select));
+						} else {
+							dragView.setBackgroundDrawable(context.getResources().getDrawable(R.drawable.bg_key));
+						}
+						
+						folderActions.setVisibility(View.GONE);
+						
+						delayHandler.removeCallbacksAndMessages(null);
+						
+						return true;
 					}
 					
-					//We have to do this here for some reason...
-					if(dragView != null) {
-						dragView.setBackgroundColor(context.getResources().getColor(R.color.grayed_out));
-						dragView.invalidate();
-					}
-					
-					return true;
+					return false;
 				}
-				
-				return false;
-				
-			case DragEvent.ACTION_DRAG_ENTERED:
-				//When scrolling, views are recycled and it makes a mess...
-				if(item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
-					view.setBackgroundColor(context.getResources().getColor(R.color.holo_select));
-					if(item.getType().equals(FileItemType.FOLDER)) {
-						((ImageView) view.findViewById(R.id.drawer_list_item_icon)).setImageDrawable(context.getResources().getDrawable(R.drawable.ic_folder_open));
-					}
-					view.invalidate();
-				}
-				
-				/*
-				 * TODO Unfortunately, we can't have this fancy behavior because it doesn't work.
-				 * Desired behavior: hovering over a folder with a dragged item for one second causes the drawer to navigate into the drawer...
-				 * ...with the dragged item still dragging...
-				 * ... for a more fluid drag and drop experience between multiple folders.
-				 * The dragged item still drags, but none of the views are able to recieve drag events...
-				 * ...because they weren't created until after the drag event started.
-				 * They were created after because the list is populated on demand when a folder is opened.
-				 * ...
-				 * I can't find a workaround...
-				 * Starting the drag again doesn't work.
-				 * We can't even stop the first drag event...
-				 * ...not even by dispatching an ACTION_UP motion event.
-				 * ...
-				 * So it's probably not worth the trouble...
-				 */
-				
-//				delayHandler.postDelayed(new Runnable() {
-//					@Override
-//					public void run() {
-//						((APDE) context.getApplicationContext()).getEditor().setDrawerLocation(item.getSketch());
-//						startDrag(dragItem, dragView);
-//						
-//						//Provide haptic feedback (if the user has vibrations enabled)
-//						if(PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("pref_vibrate", true))
-//							((android.os.Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE)).vibrate(100); //100 millis
-//					}
-//				}, 1000);
-				
-				return true;
-				
-			case DragEvent.ACTION_DRAG_LOCATION:
-				return true;
-				
-			case DragEvent.ACTION_DRAG_EXITED:
-				//Don't flip out if we've navigated out of this folder...
-				//When scrolling, views are recycled and it makes a mess...
-				if(item != null && item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
-					view.setBackgroundColor(context.getResources().getColor(R.color.holo_select_light));
-					if(item.getType().equals(FileItemType.FOLDER)) {
-						((ImageView) view.findViewById(R.id.drawer_list_item_icon)).setImageDrawable(context.getResources().getDrawable(R.drawable.ic_folder_closed));
-					}
-					view.invalidate();
-				}
-				
-				delayHandler.removeCallbacksAndMessages(null);
-				
-				return true;
-				
-			case DragEvent.ACTION_DROP:
-				//Don't flip out if we've navigated out of this folder...
-				//When scrolling, views are recycled and it makes a mess...
-				if(item != null && item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
-					APDE global = (APDE) context.getApplicationContext();
-					
-					APDE.SketchMeta source = dragItem.getSketch();
-					APDE.SketchMeta destFolder = item.getSketch();
-					
-					APDE.SketchMeta destSketch = new APDE.SketchMeta(destFolder.getLocation(), destFolder.getPath() + "/" + source.getName());
-					
-					global.moveFolder(source, destSketch, global.getEditor());
-				}
-				
-				return true;
-				
-			case DragEvent.ACTION_DRAG_ENDED:
-				//Don't flip out if we've navigated out of this folder...
-				//When scrolling, views are recycled and it makes a mess...
-				if(item != null && item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
-					view.setBackgroundDrawable(context.getResources().getDrawable(R.drawable.bg_key));
-					if(item.getType().equals(FileItemType.FOLDER)) {
-						((ImageView) view.findViewById(R.id.drawer_list_item_icon)).setImageDrawable(context.getResources().getDrawable(R.drawable.ic_folder_closed));
-					}
-					view.invalidate();
-				}
-				
-				if(draggingIsSelected) {
-					dragView.setBackgroundColor(context.getResources().getColor(R.color.holo_select));
-				} else {
-					dragView.setBackgroundDrawable(context.getResources().getDrawable(R.drawable.bg_key));
-				}
-				
-				folderActions.setVisibility(View.GONE);
-				
-				delayHandler.removeCallbacksAndMessages(null);
-				
-				return true;
-			}
-			
-			return false;
+			};
 		}
-	};
+	}
 	
 	@Override
 	public long getItemId(int position) {
