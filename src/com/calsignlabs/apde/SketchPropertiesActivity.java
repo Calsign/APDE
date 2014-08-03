@@ -395,7 +395,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 				public void onClick(DialogInterface dialog, int whichButton) {
 					String after = input.getText().toString();
 					
-					if(validateSketchName(after)) {
+					if(FileNavigatorAdapter.validateSketchName(after, SketchPropertiesActivity.this)) {
 						getGlobalState().setSketchName(after);
 						
 						//We have to save before we do this... because it reads from the file system
@@ -565,7 +565,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     			String before = getGlobalState().getSketchName();
     			String after = input.getText().toString();
     			
-    			if(validateSketchName(after)) {
+    			if(FileNavigatorAdapter.validateSketchName(after, SketchPropertiesActivity.this)) {
     				switch(getGlobalState().getSketchLocationType()) {
     				case SKETCHBOOK:
     					getGlobalState().getSketchLocation(sketchPathPrefix + before, APDE.SketchLocation.SKETCHBOOK).renameTo(getGlobalState().getSketchLocation(sketchPathPrefix + after, APDE.SketchLocation.SKETCHBOOK));
@@ -635,17 +635,6 @@ public class SketchPropertiesActivity extends PreferenceActivity {
         overridePendingTransition(0, 0);
         startActivity(intent);
 	}
-	
-	private boolean validateSketchName(String name) {
-		if(name.length() <= 0)
-			return false;
-		
-		if(name.equals(APDE.DEFAULT_SKETCH_NAME))
-			return false;
-		
-		return true;
-	}
-	
 	
 	//Copy all of the old preferences over to the new SharedPreferences and delete the old ones
 	//TODO is this currently unused?

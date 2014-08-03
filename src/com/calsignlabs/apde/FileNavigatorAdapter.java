@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipDescription;
@@ -343,7 +344,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			public void onClick(DialogInterface dialog, int which) {
 				String folderName = input.getText().toString();
 				
-				if(!global.getEditor().validateFileName(folderName)) {
+				if(!validateFolderName(folderName, global.getEditor())) {
 					if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
 						((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
 					
@@ -374,7 +375,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 	}
 	
 	private static void actionEditFolder() {
-		boolean isSketch = dragItem.getType().equals(FileItemType.SKETCH);
+		final boolean isSketch = dragItem.getType().equals(FileItemType.SKETCH);
 		
 		final APDE global = (APDE) context.getApplicationContext();
 		
@@ -395,7 +396,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			public void onClick(DialogInterface dialog, int which) {
 				String folderName = input.getText().toString();
 				
-				if(!global.getEditor().validateFileName(folderName)) {
+				if(!(isSketch ? validateSketchName(folderName, global.getEditor()) : validateFolderName(folderName, global.getEditor()))) {
 					if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
 						((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
 					
@@ -466,6 +467,83 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {}
     	});
+		
+		builder.create().show();
+	}
+	
+	protected static boolean validateFolderName(String name, Activity activityContext) {
+		//Make sure that the folder name's length > 0
+		if (name.length() <= 0 || name.trim().length() <= 0) {
+			showDialog(R.string.invalid_name, R.string.invalid_name_folder_no_text, activityContext);
+			return false;
+		}
+		
+		//Check all of the characters
+		for (int i = 0; i < name.length(); i ++) {
+			char c = name.charAt(i);
+			if (c >= '0' && c <= '9') continue;
+			if (c >= 'a' && c <= 'z') continue;
+			if (c >= 'A' && c <= 'Z') continue;
+			if (c == '_') continue;
+			if (c == ' ') continue;
+			
+			showDialog(R.string.invalid_name, R.string.invalid_name_folder_invalid_char, activityContext);
+			return false;
+		}
+		
+		return true;
+	}
+	
+	protected static boolean validateSketchName(String name, Activity activityContext) {
+    	//Make sure that the name contains text
+		if (name.length() <= 0) {
+			showDialog(R.string.invalid_name, R.string.invalid_name_sketch_no_char, activityContext);
+			return false;
+		}
+		
+		//Check to make sure that the first character isn't a number and isn't an underscore
+		char first = name.charAt(0);
+		if ((first >= '0' && first <= '9') || first == '_') {
+			showDialog(R.string.invalid_name, R.string.invalid_name_sketch_first_char, activityContext);
+			return false;
+		}
+		
+		//Check all of the characters
+		for (int i = 0; i < name.length(); i ++) {
+			char c = name.charAt(i);
+			if (c >= '0' && c <= '9') continue;
+			if (c >= 'a' && c <= 'z') continue;
+			if (c >= 'A' && c <= 'Z') continue;
+			if (c == '_') continue;
+			
+			showDialog(R.string.invalid_name, R.string.invalid_name_sketch_invalid_char, activityContext);
+			return false;
+		}
+		
+		//We can't have the name "sketch"
+		if (name.equals(APDE.DEFAULT_SKETCH_NAME)) {
+			showDialog(R.string.invalid_name, R.string.invalid_name_sketch_sketch, activityContext);
+			return false;
+		}
+		
+		return true;
+	}
+	
+	protected static void showDialog(int titleId, int messageId, Activity activityContext) {
+		//Convenience method
+		showDialog(context.getResources().getString(titleId), context.getResources().getString(messageId), activityContext);
+	}
+	
+	protected static void showDialog(String title, String message, Activity activityContext) {
+		AlertDialog.Builder builder = new AlertDialog.Builder(activityContext);
+		
+		builder.setTitle(title);
+		builder.setMessage(message);
+		
+		builder.setPositiveButton(context.getResources().getString(R.string.ok), new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {}
+		});
 		
 		builder.create().show();
 	}

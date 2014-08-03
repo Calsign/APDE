@@ -135,5 +135,12 @@
     <string name="rename_folder_title">Rename folder \&quot;%1$s\&quot;</string>
     <string name="rename_folder_message">Enter the new name for the folder:</string>
     <string name="rename">Rename</string>
+    <string name="invalid_name">Invalid Name</string>
+    <string name="invalid_name_folder_no_text">Folder names must contain text!</string>
+    <string name="invalid_name_folder_invalid_char">Folder names may contain only letters, numbers, underscores and spaces!</string>
+    <string name="invalid_name_sketch_no_char">Sketch names must contain text!</string>
+    <string name="invalid_name_sketch_first_char">Sketch names must not start with a number or an underscore!</string>
+    <string name="invalid_name_sketch_sketch">Sketch name must not be \&quot;sketch\&quot;!</string>
+    <string name="invalid_name_sketch_invalid_char">Sketch names may contain only letters, numbers, and underscores!</string>
 
 </resources>
