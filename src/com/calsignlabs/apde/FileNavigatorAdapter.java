@@ -1,5 +1,6 @@
 package com.calsignlabs.apde;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -353,6 +354,20 @@ public class FileNavigatorAdapter extends BaseAdapter {
 				
 				APDE.SketchMeta source = dragItem.getSketch();
 				APDE.SketchMeta dest = new APDE.SketchMeta(source.getLocation(), source.getParent() + "/" + folderName + "/" + source.getName());
+				
+				File newFolder = global.getSketchLocation(source.getParent() + "/" + folderName, source.getLocation());
+				
+				//Let's not overwrite anything...
+				//TODO Maybe give the user options to replace / keep both in the new location?
+				//We don't need that much right now, they can deal with things manually...
+				if(newFolder.exists()) {
+					if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+						((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+					
+					showDialog(R.string.cannot_move_sketch_title, R.string.cannot_move_folder_message, global.getEditor());
+					
+					return;
+				}
 				
 				global.moveFolder(source, dest, global.getEditor());
 				

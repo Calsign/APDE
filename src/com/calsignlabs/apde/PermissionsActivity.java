@@ -109,14 +109,31 @@ public class PermissionsActivity extends ActionBarActivity {
 			delete.setOnClickListener(new Button.OnClickListener() {
 				@Override
 				public void onClick(View view) {
-					saveData();
+					AlertDialog.Builder builder = new AlertDialog.Builder(PermissionsActivity.this);
 					
-					Manifest.removeCustomPermission(perm, getApplicationContext());
-					refreshPermissions();
+					builder.setTitle(R.string.delete_perm_dialog_title);
+					builder.setMessage(R.string.delete_perm_dialog_message);
 					
-					dialog.dismiss();
+					builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialogInterface, int which) {
+							saveData();
+							
+							Manifest.removeCustomPermission(perm, getApplicationContext());
+							refreshPermissions();
+							
+							dialog.dismiss();
+							
+							loadData();
+						}
+					});
 					
-					loadData();
+					builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {}
+					});
+					
+					builder.create().show();
 			}});
 		}
 		

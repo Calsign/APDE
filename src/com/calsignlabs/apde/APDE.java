@@ -702,6 +702,11 @@ public class APDE extends Application {
 			fileItems.add(new FileNavigatorAdapter.FileItem(sketches.get(i).getLocation().toReadableString(this) + sketches.get(i).getPathPrefix(), sketches.get(i).getName(), FileNavigatorAdapter.FileItemType.SKETCH));
 		}
 		
+		if(sketches.size() == 0) {
+			//Let the user know that the folder is empty...
+			fileItems.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
+		}
+		
 		return fileItems;
 	}
 	

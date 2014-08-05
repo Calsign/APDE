@@ -1709,8 +1709,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         		&& getGlobalState().getSketchPath().equals(drawerSketchPath + "/" + getGlobalState().getSketchName())) {
         	
         	selected = FileNavigatorAdapter.indexOfSketch(items, getGlobalState().getSketchName());
-        } else if(drawerRecentSketch && !getGlobalState().isTemp()) {
-        	//In the recent screen, the top-most sketch is always currently selected (if a temporary sketch isn't currently open)...
+        } else if(drawerRecentSketch && !getGlobalState().isTemp() && !(getGlobalState().getRecentSketches().size() == 0)) {
+        	//In the recent screen, the top-most sketch is always currently selected (if a temporary sketch isn't currently open and there are recent sketches)...
         	//It's not "0" because that's the UP button
         	selected = 1;
         }
