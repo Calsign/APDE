@@ -1,7 +1,7 @@
 APDE
 ====
 
-A [Processing](https://processing.org/) IDE for creating and running sketches on an Android device. What follows is a highly detailed description of APDE's concepts, features, basic use, and development.
+A [Processing](https://processing.org/) IDE for creating and running sketches on an Android device. What follows is a description of APDE's concepts, features, and basic use.
 
 You can download APDE from [Google Play](https://play.google.com/store/apps/details?id=com.calsignlabs.apde) or from the [releases page](https://github.com/Calsign/APDE/releases).
 
@@ -17,7 +17,7 @@ APDE runs on Android versions 2.3 Gingerbread to the latest version (currently 4
 I have tested the editor on an Asus Nexus 7, a Samsung Galaxy S5, an HTC One M8, and a Samsung Galaxy S4, all running Android 4.4, as well as several emulators running earlier versions, including 4.2.2, 3.2, and 2.3.3.
 
 The editor requires the following permissions:
- - *Modify and delete the contents of your USB storage* - needed to store sketches in the external storage. Consequently, your device needs an external storage (most devices should have one...).
+ - *Modify and delete the contents of your USB storage* - needed to store sketches in the external storage. Note: If you don't have an external storage, you can use the internal storage instead (in Settings).
  - *Control vibration* - vibration is used for haptic feedback in rare instances within the app. If you wish to disable it, you can do so from the Settings menu (devices without a vibrator do not have to worry about this).
  - *Test access to protected storage* - this also has to do with writing to the external storage. This permission isn't actually necessary yet, but it will be needed in future versions of Android.
 
@@ -32,11 +32,13 @@ APDE strives to be a fully-featured Processing editor, using the PDE as a model.
 
  - "Run" button compiles and launches the sketch (you must enable "Install from Unknown Sources", see below)
  - Multiple files (tabs)
- - Multiple sketches accessible from the "Sketchbook"
+ - Nested file manager, support for organizing sketches into folders
  - Import contributed libraries, which are dexed upon installation to speed up build times
  - Internal Android Manifest file configuration (sketch permissions, orientation lock, etc.)
  - Add files to sketch's "data" folder
  - A set of examples
+ - Color selector
+ - Auto format, comment / uncomment, increase / decrease indent
  - Syntax highlighting
  - Automatic saving
 
@@ -46,8 +48,8 @@ These are a few of the key features, but you will find that there are more in th
 
 In addition to the above unimplemented features, I plan to add the following at some point in the future (some more distant than others!):
 
- - Tools (like the Color Selector), possibly even contributed tools
- - Internal Documentation
+ - Contributed tools
+ - Internal documentation
  - Building sketches for release (needs custom key signing)
  - Git integration, possibly even for synchronization across the PDE and APDE if a Git client for the PDE is created
  - Support for JavaScript mode (maybe others... but "standard" mode doesn't make any sense)
@@ -74,7 +76,9 @@ Basic Use
 
 When you first open APDE, it is possible to start coding right away. However, before you can run it, you must save the sketch (from the action overflow menu). You do not need to save the sketch again (it will save automatically), but you can always invoke the save command to manually save.
 
-To access a list of all of sketches, either press the APDE icon in the top left corner, swipe in from the left side of the screen, or select "Load Sketch" from the menu. You can select a sketch to open it. The previously open sketch will be automatically saved (unless it has not been saved yet, when you will be prompted with a dialog).
+To access a list of all of sketches, either press the APDE icon in the top left corner, swipe in from the left side of the screen, or select "Load Sketch" from the menu. You will be presented with the folders "Sketches", "Examples", "Library Examples", and "Recent". These categories should be self-explanatory. After navigating into one of the folders, you can navigate back out by pressing the ".." button at the top of the list. You can select a sketch (or example) to open it. The previously open sketch will be automatically saved (unless it has not been saved yet, in which case you will be prompted with a dialog).
+
+In the sketch list, you can long press on a sketch (or a folder) to move it around (unless you have 2.3.3, in which case... sorry. The drag and drop APIs weren't added until 3.0... I'll have to make a custom implementation eventually). Drop the sketch into a folder or the parent folder ("..") to move it there. You can also drop it onto one of the three buttons at the bottom. The plus button will move the sketch to a new folder. The pencil button will rename the sketch. The trash can button will delete the sketch. You can also manage sketches / folders from a file manager (even on 2.3.3), but these features are present to make things easier.
 
 Many of the menu items are duplicated in the Sketch Properties view, although there are some differences ("Delete Sketch" is only accessible from Sketch Properties, for example).
 
@@ -82,7 +86,9 @@ Renaming the sketch (from Sketch Properties) will also rename the sketch as it i
 
 To increase the size of the console, you can long-press the message area. After the device-specified amount of time, the message area will appear selected (and there will be a vibration, if your device has a vibrator and vibrations are enabled). At this point, you can drag the message area, resizing the code area and the console accordingly.
 
-To install a library from the editor menu, navigate to Import Library > Manage Libraries > Install Compressed Library (in the overflow menu). Select the downloaded library's ZIP file (if you don't have a file manager, the aFileChooser library should provide one). A dialog will appear displaying the progress of the installation. Dexing the library will take a while, so be patient. Every second that you spend waiting for the library to dex is one less second that you have to wait every time that you build a sketch. When the dialog closes, the library should appear in the list; it has been installed.
+To install a library from the editor menu, navigate to Tools > Import Library > Manage Libraries > Install Compressed Library (in the overflow menu). Select the downloaded library's ZIP file (if you don't have a file manager, the aFileChooser library should provide one). A dialog will appear displaying the progress of the installation. Dexing the library will take a while, so be patient. Every second that you spend waiting for the library to dex is one less second that you have to wait every time that you build a sketch. When the dialog closes, the library should appear in the list; it has been installed.
+
+The Color Selector and Auto Format tools are available from the Tools menu (as well as Import Library). The text selection tools (Comment / Uncomment, Inrease Indent, and Decrease Indent) are available from the overflow menu after selecting text (but not in 2.3.3). However, it appears that an Android bug causes the menu to disappear immediately on some (most?) devices - of the devices tested, only the Samsung ones displayed the menu properly. So this might not be useful for all that many people.
 
 Running the Sketch
 ------------------
@@ -119,11 +125,11 @@ Libraries are dexed during the installation process to speed up build times.
 How to Build
 ------------
 
-I have been developing APDE, in my free time, for the past three months (at time of writing) and may be starting to burn out. Anyone that would like a new feature, or has a bug fix, is welcome to submit a pull request. Please bear with me, I'm relatively new to using Git.
+I have been developing APDE, in my free time, for the past three months (at time of writing) and may be starting to burn out. Anyone that would like a new feature, or has a bug fix, is welcome to submit a pull request.
 
 If you wish to build APDE yourself, then there are several steps you must take to set up your Eclipse environment.
 
-I use the ADT Eclipse bundled with the SDK Tools, revision 18. I have not tried to build APDE with revision 19, although I imagine it would be possible. It's going to have to happen eventually... To download ADT, please visit the [Android Developers website](http://developer.android.com/sdk/index.html). However, if you have done Android development in Processing before, chances are that you already have this installed.
+I use the ADT Eclipse bundled with the SDK Tools, revision 18. I have not tried to build APDE with revision 19, although I imagine it would be possible. To download ADT, please visit the [Android Developers website](http://developer.android.com/sdk/index.html). However, if you have done Android development in Processing before, chances are that you already have this installed.
 
 On top of Eclipse, I use the EGit plugin to push commits to GitHub. This isn't necessary, as you can use Git from the command line (as many hardcore Git users would probably prefer). To install EGit, please visit the [Eclipse website](http://www.eclipse.org/egit/download/). You may need to install Git as well.
 
