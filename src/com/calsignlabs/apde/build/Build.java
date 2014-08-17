@@ -364,13 +364,30 @@ public class Build {
 			return;
 		}
 		
-		File aaptLoc = new File(tmpFolder, "aapt");
+		System.out.println("Detected architecture " + android.os.Build.CPU_ABI);
+		
+		String arch = android.os.Build.CPU_ABI.substring(0, 3).toLowerCase(Locale.US);
+		String aaptName;
+		
+		if (arch.equals("x86")) {
+			// x86
+			aaptName = "aapt-x86";
+		} else if (arch.equals("mip")) {
+			// MIPS
+			aaptName = "aapt-mips";
+		} else {
+			// ARM or its variants
+			// Also, default to arm just in case...
+			aaptName = "aapt";
+		}
+		
+		File aaptLoc = new File(tmpFolder, "aapt"); //Use the same name for the destination so that the hyphens aren't an issue
 		
 		//AAPT setup
 		try {
 			AssetManager am = editor.getAssets();
 			
-			InputStream inputStream = am.open("aapt");
+			InputStream inputStream = am.open(aaptName);
 			createFileFromInputStream(inputStream, aaptLoc);
 			
 			//Run "chmod" on aapt so that we can execute it
