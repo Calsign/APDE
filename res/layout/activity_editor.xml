@@ -126,7 +126,7 @@
 		            android:layout_height="wrap_content"
 		            android:padding="10dp"
 		            android:textColor="#FFFFFF"
-		            android:textIsSelectable="false"
+		            android:textIsSelectable="true"
 		            android:textSize="14sp"
 		            android:typeface="monospace" />
 	        </HorizontalScrollView>

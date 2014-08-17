@@ -1176,7 +1176,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			//Check to see if it's a .PDE file
     			if(suffix.equals("pde")) {
     				//Build a Tab Meta object
-    				FileMeta meta = new FileMeta("", "", 0, 0);
+    				FileMeta meta = new FileMeta("");
     				meta.readData(this, file.getAbsolutePath());
     				meta.setTitle(prefix);
     				
@@ -1267,8 +1267,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	if(tabBar.getTabCount() > 0) {
 	    	//Update the current tab
-	    	EditText code = (EditText) findViewById(R.id.code);
-	    	tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
+	    	tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), this));
 	    	
 	    	//Iterate through the FileMetas...
 	    	for(FileMeta meta : tabs.values()) {
@@ -1342,8 +1341,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	if(tabBar.getTabCount() > 0) {
 	    	//Update the current tab
-	    	EditText code = (EditText) findViewById(R.id.code);
-	    	tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
+	    	tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), this));
 	    	
 	    	//Iterate through the FileMetas...
 	    	for(FileMeta meta : tabs.values()) {
@@ -1538,8 +1536,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	if(tabBar.getTabCount() > 0) {
     		//Update the current tab
-    		EditText code = (EditText) findViewById(R.id.code);
-    		tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
+    		tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), this));
     	}
     	
     	//Iterate through the FileMetas...
@@ -1586,7 +1583,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			//Check to see if it's a .PDE file
     			if(suffix.equals("pde")) {
     				//Build a Tab Meta object
-    				FileMeta meta = new FileMeta("", "", 0, 0);
+    				FileMeta meta = new FileMeta("");
     				meta.readTempData(this, file.getName());
     				meta.setTitle(prefix);
     				
@@ -2329,7 +2326,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	//Add the tab
     	tabBar.addTab(tab);
-    	tabs.put(tab, new FileMeta(title, "", 0, 0));
+    	tabs.put(tab, new FileMeta(title));
     	
     	//Make the tab non-all-caps
     	customizeTab(tab, title);
@@ -2348,7 +2345,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	//Add the tab
     	tabBar.addSelectTab(tab);
-    	tabs.put(tab, new FileMeta(title, "", 0, 0));
+    	tabs.put(tab, new FileMeta(title));
     	
     	//Clear the code area
     	((CodeEditText) findViewById(R.id.code)).setUpdateText("");
@@ -2607,9 +2604,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	@Override
 	public void onTabSelected(Tab tab) {
 		//Get a reference to the code area
-		CodeEditText code = ((CodeEditText) findViewById(R.id.code));
+		final CodeEditText code = ((CodeEditText) findViewById(R.id.code));
+		final HorizontalScrollView scrollerX = ((HorizontalScrollView) findViewById(R.id.code_scroller_x));
+		final ScrollView scrollerY = ((ScrollView) findViewById(R.id.code_scroller));
 		//Get a reference to the current tab's meta
-		FileMeta meta = tabs.get(tab);
+		final FileMeta meta = tabs.get(tab);
 		
 		if(tabBar.getTabCount() > 0 && meta != null) {
 			//If there are already tabs
@@ -2619,6 +2618,20 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			//Update the code area selection
 			code.setSelection(meta.getSelectionStart(), meta.getSelectionEnd());
 			code.updateBracketMatch();
+			
+			scrollerX.post(new Runnable() {
+				public void run() {
+					scrollerX.scrollTo(meta.getScrollX(), 0);
+				}
+			});
+			
+			scrollerY.post(new Runnable() {
+				public void run() {
+					scrollerY.scrollTo(0, meta.getScrollY());
+				}
+			});
+			
+//			System.out.println("scrolling tab " + meta.getTitle() + ", scrollX: " + meta.getScrollX() + ", scrollY: " + meta.getScrollY());
 			
 			//Get rid of previous syntax highlighter data
     		code.clearTokens();
@@ -2635,10 +2648,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	
 	@Override
 	public void onTabUnselected(Tab tab) {
-		//Get a reference to the code area
-		EditText code = ((EditText) findViewById(R.id.code));
-		//Save the code area's meta
-		tabs.put(tab, new FileMeta(tab.getText().toString(), code.getText().toString(), code.getSelectionStart(), code.getSelectionEnd()));
+		tabs.put(tab, new FileMeta(tab.getText().toString(), this));
 	}
 	
 	@Override
@@ -2920,6 +2930,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		tv.append(msg);
 		
 		final ScrollView scroll = ((ScrollView) findViewById(R.id.console_scroller));
+		final HorizontalScrollView scrollX = ((HorizontalScrollView) findViewById(R.id.console_scroller_x));
 		
 		//Scroll to the bottom (if the user has this feature enabled)
 		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_scroll_lock", true))
@@ -2928,6 +2939,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				public void run() {
 					//Scroll to the bottom
 					scroll.fullScroll(ScrollView.FOCUS_DOWN);
+					
+					scrollX.post(new Runnable() {
+						public void run() {
+							//Don't scroll horizontally at all...
+							//TODO This doesn't really work
+							scrollX.scrollTo(0, 0);
+						}
+					});
 			}});
 	}
 	

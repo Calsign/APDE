@@ -7,6 +7,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 import android.content.Context;
+import android.widget.EditText;
+import android.widget.HorizontalScrollView;
+import android.widget.ScrollView;
 
 /*
  * Utility class for storing information about files
@@ -24,19 +27,57 @@ public class FileMeta {
 	private int selectionStart;
 	private int selectionEnd;
 	
+	//Current scroll position;
+	private int scrollX;
+	private int scrollY;
+	
 	//Whether or not we should save this (because we need this for some reason...?)
 	private boolean enabled;
 	
 	//The offset of this file into the pre-processed, combined JAVA file
 	private int preprocOffset;
 	
-	public FileMeta(String title, String text, int selectionStart, int selectionEnd) {
+	public FileMeta(String title) {
+		setTitle(title);
+		setSuffix(".pde");
+		
+		text = "";
+		selectionStart = 0;
+		selectionEnd = 0;
+		scrollX = 0;
+		scrollY = 0;
+		
+		enabled = true;
+	}
+	
+	public FileMeta(String title, EditorActivity context) {
+		EditText code = ((EditText) context.findViewById(R.id.code));
+		HorizontalScrollView scrollerX = ((HorizontalScrollView) context.findViewById(R.id.code_scroller_x));
+		ScrollView scrollerY = ((ScrollView) context.findViewById(R.id.code_scroller));
+		
+		setTitle(title);
+		setSuffix(".pde");
+		
+		text = code.getText().toString();
+		selectionStart = code.getSelectionStart();
+		selectionEnd = code.getSelectionEnd();
+		scrollX = scrollerX.getScrollX();
+		scrollY = scrollerY.getScrollY();
+		
+		enabled = true;
+		
+//		System.out.println("setting tab " + title + ", scrollX: " + scrollX + ", scrollY: " + scrollY);
+	}
+	
+	public FileMeta(String title, String text, int selectionStart, int selectionEnd, int scrollX, int scrollY) {
 		setTitle(title);
 		setSuffix(".pde");
 		
 		this.text = text;
 		this.selectionStart = selectionStart;
 		this.selectionEnd = selectionEnd;
+		this.scrollX = scrollX;
+		this.scrollY = scrollY;
 		
 		enabled = true;
 	}
@@ -134,6 +175,29 @@ public class FileMeta {
 	public void setSelection(int selectionStart, int selectionEnd) {
 		this.selectionStart = selectionStart;
 		this.selectionEnd = selectionEnd;
+	}
+	
+	/**
+	 * @return
+	 */
+	public int getScrollX() {
+		return scrollX;
+	}
+	
+	/**
+	 * @return
+	 */
+	public int getScrollY() {
+		return scrollY;
+	}
+	
+	/**
+	 * @param scrollX
+	 * @param scrollY
+	 */
+	public void setScroll(int scrollX, int scrollY) {
+		this.scrollX = scrollX;
+		this.scrollY = scrollY;
 	}
 	
 	/**
