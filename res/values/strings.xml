@@ -143,5 +143,7 @@
     <string name="invalid_name_sketch_sketch">Sketch name must not be \&quot;sketch\&quot;!</string>
     <string name="invalid_name_sketch_invalid_char">Sketch names may contain only letters, numbers, and underscores!</string>
     <string name="cannot_create_new_folder_title">Cannot Create New Folder</string>
+    <string name="export_eclipse_project">Export Eclipse Project</string>
+    <string name="export_eclipse_project_complete">The Eclipse project has been exported.</string>
 
 </resources>

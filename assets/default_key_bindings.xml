@@ -20,4 +20,7 @@
     <binding key="46" mod="ctrl|shift">rename_tab</binding>
     
     <binding key="40" mod="ctrl">import_library</binding>
+    
+    <binding key="33" mod="ctrl">export_signed_package</binding>
+    <binding key="33" mod="ctrl|shift">export_eclipse_project</binding>
 </bindings>

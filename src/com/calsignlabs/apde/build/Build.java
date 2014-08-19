@@ -64,8 +64,6 @@ public class Build {
 	private File tmpFolder;
 	private File dexedLibsFolder;
 	
-//	private File buildFile;
-	
 	private ArrayList<Library> importedLibraries;
 	
 	protected String classPath;
@@ -145,6 +143,131 @@ public class Build {
     		System.err.println("Failed to delete file: " + f);
     }
 	
+    public void exportAndroidEclipseProject(File dest, String target) {
+    	editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
+		System.out.println("Initializing build sequence...");
+    	
+    	buildFolder = dest;
+		srcFolder = new File(buildFolder, "src");
+		genFolder = new File(buildFolder, "gen");
+		libsFolder = new File(buildFolder, "libs");
+		assetsFolder = new File(buildFolder, "assets");
+		binFolder = new File(buildFolder, "bin");
+		
+		File buildFile = new File(buildFolder, "build.xml");
+		
+		//Wipe the old export folder
+		if(buildFolder.exists()) {
+			System.out.println("Deleting old export folder...");
+			deleteFile(buildFolder);
+			System.out.println("Successfully deleted old export folder");
+		}
+		
+		buildFolder.mkdir();
+		srcFolder.mkdir();
+		libsFolder.mkdir();
+		assetsFolder.mkdir();
+		binFolder.mkdir();
+		
+		//Make sure we have the latest version of the libraries folder
+		((APDE) editor.getApplicationContext()).rebuildLibraryList();
+		
+		Manifest manifest = null;
+		String sketchClassName = null;
+		
+		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
+		
+		try {
+			manifest = new Manifest(this);
+			
+			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
+			
+			//Enable all of the fancy preprocessor stuff
+			Preferences.setBoolean("preproc.enhanced_casting", true);
+			Preferences.setBoolean("preproc.web_colors", true);
+			Preferences.setBoolean("preproc.color_datatype", true);
+			Preferences.setBoolean("preproc.substitute_floats", true);
+			Preferences.setBoolean("preproc.substitute_unicode", true);
+			
+			Preproc preproc = new Preproc(sketchName, manifest.getPackageName());
+			
+			//Combine all of the tabs to check for size
+			String combinedText = "";
+			for(FileMeta tab : tabs)
+				combinedText += tab.getText();
+			preproc.initSketchSize(combinedText, editor);
+			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false);
+			
+			if(sketchClassName != null) {
+				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
+				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
+				
+				writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
+				writeBuildXML(buildFile, sketchName);
+				writeProjectProps(new File(buildFolder, "project.properties"), Integer.toString(manifest.getTargetSdk(editor)));
+//				writeLocalProps(new File(buildFolder, "local.properties"));
+				
+				final File resFolder = new File(buildFolder, "res");
+				writeRes(resFolder, sketchClassName);
+				
+//				final File libsFolder = mkdirs(buildFolder, "libs");
+//				final File assetsFolder = mkdirs(buildFolder, "assets");
+				
+				AssetManager am = editor.getAssets();
+				
+				//Copy native libraries
+				
+				String[] libsToCopy = {"processing-core"};
+				String prefix = "libs/";
+				String suffix = ".jar";
+				
+				//Copy for the compiler
+				for(String lib : libsToCopy) {
+					InputStream inputStream = am.open(prefix + lib + suffix);
+					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
+				}
+				
+				// Copy any imported libraries (their libs and assets),
+				// and anything in the code folder contents to the project.
+				copyLibraries(libsFolder, assetsFolder);
+				copyCodeFolder(libsFolder);
+				
+				// Copy the data folder (if one exists) to the project's 'assets' folder
+				final File sketchDataFolder = getSketchDataFolder();
+				if(sketchDataFolder.exists())
+					copyDir(sketchDataFolder, assetsFolder);
+				
+				// Do the same for the 'res' folder.
+				// http://code.google.com/p/processing/issues/detail?id=767
+				final File sketchResFolder = new File(getSketchFolder(), "res");
+				if(sketchResFolder.exists())
+					copyDir(sketchResFolder, resFolder);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (SketchException e) {
+			e.printStackTrace();
+			
+			editor.errorExt(e.getMessage());
+			editor.highlightLineExt(e.getCodeIndex(), e.getCodeLine());
+			
+			//Bail out
+			cleanUp();
+			return;
+		} catch (RuntimeException e) {
+			e.printStackTrace();
+			
+			editor.errorExt(e.getMessage());
+			
+			//Bail out
+			cleanUp();
+			return;
+		}
+		
+		System.out.println("Exported to " + dest.getAbsolutePath());
+		editor.messageExt(editor.getResources().getString(R.string.export_eclipse_project_complete));
+    }
+    
 	/**
 	 * @param target either "release" or "debug"
 	 */
@@ -1110,79 +1233,73 @@ public class Build {
 		return 0; // i give up
 	}
 
-//	private void writeAntProps(final File file, String packageName) {
-//		try {
-//			PrintWriter writer = new PrintWriter(file);
-//			writer.println("application-package=" + packageName);
-//			writer.flush();
-//			writer.close();
-//		} catch (FileNotFoundException e) {
-//			e.printStackTrace();
-//		}
-//	}
+	private void writeAntProps(final File file, String packageName) {
+		try {
+			PrintWriter writer = new PrintWriter(file);
+			writer.println("application-package=" + packageName);
+			writer.flush();
+			writer.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+	}
 	
-//	private void writeBuildXML(final File file, final String projectName) {
-//		try {
-//			final PrintWriter writer = new PrintWriter(file);
-//			writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-//			
-//			writer.println(" <project name=\"" + projectName + "\" default=\"help\">");
-//	
-//			writer.println(" <property file=\"local.properties\" />");
-//			writer.println(" <property file=\"ant.properties\" />");
-//			
+	private void writeBuildXML(final File file, final String projectName) {
+		try {
+			final PrintWriter writer = new PrintWriter(file);
+			writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+			
+			writer.println(" <project name=\"" + projectName + "\" default=\"help\">");
+	
+			writer.println(" <property file=\"local.properties\" />");
+			writer.println(" <property file=\"ant.properties\" />");
+			
+			//Disabled for Eclipse project export
 //			//TODO added this to use Eclipse's compiler istead of javac
 //			writer.println("<property name=\"build.compiler\" value=\"org.eclipse.jdt.core.JDTCompilerAdapter\"/>");
-//			
-//			writer.println(" <property environment=\"env\" />");
-//			writer.println(" <condition property=\"sdk.dir\" value=\"${env.ANDROID_HOME}\">");
-//			writer.println(" <isset property=\"env.ANDROID_HOME\" />");
-//			writer.println(" </condition>");
-//	
-//			writer.println(" <loadproperties srcFile=\"project.properties\" />");
-//	
-//			writer.println(" <fail message=\"sdk.dir is missing. Make sure to generate local.properties using 'android update project'\" unless=\"sdk.dir\" />");
-//	
-//			writer.println(" <import file=\"custom_rules.xml\" optional=\"true\" />");
-//	
-//			writer.println(" <!-- version-tag: 1 -->"); // should this be 'custom' instead of 1?
-//			writer.println(" <import file=\"${sdk.dir}/tools/ant/build.xml\" />");
-//	
-//			writer.println("</project>");
-//			writer.flush();
-//			writer.close();
-//		} catch(FileNotFoundException e) {
-//			e.printStackTrace();
-//		}
-//	}
+			
+			writer.println(" <property environment=\"env\" />");
+			writer.println(" <condition property=\"sdk.dir\" value=\"${env.ANDROID_HOME}\">");
+			writer.println(" <isset property=\"env.ANDROID_HOME\" />");
+			writer.println(" </condition>");
 	
-//	private void writeProjectProps(final File file, String sdkVersion) {
-//		try {
-//			final PrintWriter writer = new PrintWriter(file);
-//			writer.println("target=" + "android-" + sdkVersion);
-//			writer.println();
-//			// http://stackoverflow.com/questions/4821043/includeantruntime-was-not-set-for-android-ant-script
-//			writer.println("# Suppress the javac task warnings about \"includeAntRuntime\"");
-//			writer.println("build.sysclasspath=last");
-//			writer.flush();
-//			writer.close();
-//		} catch(FileNotFoundException e) {
-//			e.printStackTrace();
-//		}
-//	}
+			writer.println(" <loadproperties srcFile=\"project.properties\" />");
+	
+			writer.println(" <fail message=\"sdk.dir is missing. Make sure to generate local.properties using 'android update project'\" unless=\"sdk.dir\" />");
+	
+			writer.println(" <import file=\"custom_rules.xml\" optional=\"true\" />");
+	
+			writer.println(" <!-- version-tag: 1 -->"); // should this be 'custom' instead of 1?
+			writer.println(" <import file=\"${sdk.dir}/tools/ant/build.xml\" />");
+	
+			writer.println("</project>");
+			writer.flush();
+			writer.close();
+		} catch(FileNotFoundException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void writeProjectProps(final File file, String sdkVersion) {
+		try {
+			final PrintWriter writer = new PrintWriter(file);
+			writer.println("target=" + "android-" + sdkVersion);
+			writer.println();
+			// http://stackoverflow.com/questions/4821043/includeantruntime-was-not-set-for-android-ant-script
+			writer.println("# Suppress the javac task warnings about \"includeAntRuntime\"");
+			writer.println("build.sysclasspath=last");
+			writer.flush();
+			writer.close();
+		} catch(FileNotFoundException e) {
+			e.printStackTrace();
+		}
+	}
 	
 //	private void writeLocalProps(final File file) {
 //		try {
 //			final PrintWriter writer = new PrintWriter(file);
+//			final String sdkPath = "";
 //			
-//			File destSdk = new File(getBuildFolder(), "sdk");
-//			AssetManager am = editor.getAssets();
-//			//InputStream inputStream = am.open("sdk");
-//			//createFileFromInputStream(inputStream, destSdk);
-//			//createFolderFromInputStream(inputStream, destSdk);
-//			copyAssetFolder(am, "sdk", destSdk.getAbsolutePath());
-//			
-//			final String sdkPath = destSdk.getAbsolutePath(); //TODO is this considered a valid SDK directory?
 //			writer.println("sdk.dir=" + sdkPath);
 //			writer.flush();
 //			writer.close();
@@ -1284,6 +1401,41 @@ public class Build {
 			writer.close();
 		} catch(FileNotFoundException e) {
 			e.printStackTrace();
+		}
+	}
+	
+	private void copyLibraries(final File libsFolder, final File assetsFolder) throws IOException { //TODO support native library stuffs
+		for (Library library : importedLibraries) {
+			//Add each item from the library folder / export list to the output
+			for (File exportFile : library.getAndroidExports((APDE) editor.getApplicationContext())) {
+				String exportName = exportFile.getName();
+				if (!exportFile.exists()) {
+					System.err.println(exportFile.getName() +
+							" is mentioned in export.txt, but it's " +
+							"a big fat lie and does not exist.");
+				} else if (exportFile.isDirectory()) {
+					//Copy native library folders to the correct location
+					if (exportName.equals("armeabi") ||
+							exportName.equals("armeabi-v7a") ||
+							exportName.equals("x86")) {
+						copyDir(exportFile, new File(libsFolder, exportName));
+					} else {
+						//Copy any other directory to the assets folder
+						copyDir(exportFile, new File(assetsFolder, exportName));
+					}
+				} else if (exportName.toLowerCase(Locale.US).endsWith(".zip")) {
+					// As of r4 of the Android SDK, it looks like .zip files
+					// are ignored in the libs folder, so rename to .jar
+					System.err.println(".zip files are not allowed in Android libraries.");
+					System.err.println("Please rename " + exportFile.getName() + " to be a .jar file.");
+					String jarName = exportName.substring(0, exportName.length() - 4) + ".jar";
+					copyFile(exportFile, new File(libsFolder, jarName));
+				} else if (exportName.toLowerCase(Locale.US).endsWith(".jar")) {
+					copyFile(exportFile, new File(libsFolder, exportName));
+				} else {
+					copyFile(exportFile, new File(assetsFolder, exportName));
+				}
+			}
 		}
 	}
 	
