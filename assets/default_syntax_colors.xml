@@ -320,6 +320,7 @@
         <keyword style="keyword_processing_function" function="true">copy</keyword>
         <keyword style="keyword_processing_function" function="true">blend</keyword>
         <keyword style="keyword_processing_function" function="true">save</keyword>
+        <keyword style="keyword_processing_function" function="true">saveFrame</keyword>
         
         <keyword style="keyword_processing_function" function="true">isVisible</keyword>
         <keyword style="keyword_processing_function" function="true">setVisible</keyword>
