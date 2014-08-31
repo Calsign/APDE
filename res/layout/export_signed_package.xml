@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/export_signed_package"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" >
+        
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
+            android:layout_marginLeft="12dp"
+            android:layout_marginRight="12dp"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal" >
+            
+            <ImageButton
+                android:id="@+id/keystore_file_select"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignBottom="@+id/keystore_file"
+                android:layout_alignTop="@id/keystore_file"
+                android:layout_toLeftOf="@+id/keystore_new"
+                android:contentDescription="@string/keystore_file_select"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_select_file" />
+            
+            <ImageButton
+                android:id="@id/keystore_new"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignBottom="@id/keystore_file"
+                android:layout_alignParentRight="true"
+                android:layout_alignTop="@id/keystore_file"
+                android:contentDescription="@string/keystore_new"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_new_holo_dark" />
+            
+            <AutoCompleteTextView
+                android:id="@id/keystore_file"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_toLeftOf="@id/keystore_file_select"
+                android:completionThreshold="1"
+                android:hint="@string/keystore_file"
+                android:inputType="textUri"
+                android:dropDownWidth="match_parent" />
+        </RelativeLayout>
+        
+        <EditText
+            android:id="@+id/keystore_password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:layout_marginLeft="12dp"
+            android:layout_marginRight="12dp"
+            android:layout_marginTop="6dp"
+            android:hint="@string/keystore_password"
+            android:inputType="textPassword" />
+        
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
+            android:layout_marginLeft="12dp"
+            android:layout_marginRight="12dp"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal" >
+            
+            <ImageButton
+                android:id="@+id/alias_new"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignBottom="@+id/alias"
+                android:layout_alignParentRight="true"
+                android:layout_alignTop="@+id/alias"
+                android:contentDescription="@string/alias_new"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_new_holo_dark" />
+            
+            <Spinner
+                android:id="@id/alias"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_toLeftOf="@id/alias_new" />
+        </RelativeLayout>
+        
+        <EditText
+            android:id="@+id/alias_password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:layout_marginLeft="12dp"
+            android:layout_marginRight="12dp"
+            android:layout_marginTop="6dp"
+            android:hint="@string/alias_password"
+            android:inputType="textPassword" />
+        
+        <TextView
+            android:id="@+id/export_signed_package_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:layout_marginLeft="24dp"
+            android:layout_marginRight="24dp"
+            android:layout_marginTop="12dp"
+            android:textIsSelectable="true"
+            android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

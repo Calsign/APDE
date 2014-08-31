@@ -42,6 +42,7 @@ import android.support.v7.app.ActionBarActivity;
 import android.support.v7.internal.widget.ScrollingTabContainerView.TabView;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.DragEvent;
 import android.view.Gravity;
@@ -75,6 +76,7 @@ import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.support.PopupMenu;
 import com.calsignlabs.apde.support.ScrollingTabContainerView;
 import com.calsignlabs.apde.tool.Tool;
+import com.ipaulpro.afilechooser.utils.FileUtils;
 
 /**
  * This is the editor, or the main activity of APDE
@@ -618,12 +620,37 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     }
     
+    private static SparseArray<ActivityResultCallback> activityResultCodes = new SparseArray<ActivityResultCallback>();
+    
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     	//This is the code to delete the old APK file
-    	if(requestCode == FLAG_DELETE_APK) {
+    	if (requestCode == FLAG_DELETE_APK) {
     		Build.cleanUpPostLaunch(this);
     	}
+    	
+    	ActivityResultCallback action = activityResultCodes.get(requestCode);
+    	
+    	if (action != null) {
+    		action.onActivityResult(requestCode, resultCode, data);
+    		
+    		activityResultCodes.remove(requestCode);
+    	}
+    }
+    
+    public void selectFile(int titleResId, int requestCode, ActivityResultCallback callback) {
+    	selectFile(getResources().getString(titleResId), requestCode, callback);
+    }
+    
+    public void selectFile(String title, int requestCode, ActivityResultCallback callback) {
+    	activityResultCodes.put(requestCode, callback);
+    	
+    	Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), title);
+	    startActivityForResult(intent, requestCode);
+    }
+    
+    public interface ActivityResultCallback {
+    	void onActivityResult(int requestCode, int resultCode, Intent data);
     }
     
     @SuppressWarnings("deprecation")
@@ -2048,8 +2075,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     	
     	//In case the user presses the button twice, we don't want any errors
-    	if(building)
+    	if(building) {
     		return;
+    	}
     	
     	//Clear the console
     	((TextView) findViewById(R.id.console)).setText("");

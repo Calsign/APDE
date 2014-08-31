@@ -19,6 +19,8 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.URL;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -30,6 +32,7 @@ import java.util.zip.ZipFile;
 import kellinwood.security.zipsigner.ZipSigner;
 
 import org.eclipse.jdt.internal.compiler.batch.Main;
+import org.spongycastle.jce.provider.BouncyCastleProvider;
 
 import processing.app.Preferences;
 import processing.core.PApplet;
@@ -78,6 +81,11 @@ public class Build {
 	
 	private static AtomicBoolean running;
 	
+	private String keystore;
+	private char[] keystorePassword;
+	private String keyAlias;
+	private char[] keyAliasPassword;
+	
 	public Build(APDE global) {
 		this.editor = global.getEditor();
 		
@@ -85,6 +93,13 @@ public class Build {
 		tabs = editor.getTabMetas();
 		
 		running = new AtomicBoolean(true);
+	}
+	
+	public void setKey(String keystore, char[] keystorePassword, String keyAlias, char[] keyAliasPassword) {
+		this.keystore = keystore;
+		this.keystorePassword = keystorePassword;
+		this.keyAlias = keyAlias;
+		this.keyAliasPassword = keyAliasPassword;
 	}
 	
 	/**
@@ -274,6 +289,8 @@ public class Build {
 	@SuppressLint("WorldReadableFiles")
 	@SuppressWarnings("deprecation")
 	public void build(String target) {
+		boolean debug = target.equals("debug");
+		
 		running.set(true);
 		
 		//Throughout this function, perform periodic checks to see if the user has cancelled the build
@@ -377,7 +394,7 @@ public class Build {
 			
 			if(sketchClassName != null) {
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
-				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
+				manifest.writeBuild(tempManifest, sketchClassName, debug);
 				
 				if(!running.get()) { //CHECK
 					cleanUpHalt();
@@ -724,11 +741,24 @@ public class Build {
 		
 		editor.messageExt(editor.getResources().getString(R.string.run_zipsigner));
 		
-		//Sign the APK using ZipSigner
-		signApk();
+		if (debug) {
+			//Sign the APK using ZipSigner
+			signApk();
+		} else {
+			System.out.println("Signing with private key...");
+			
+			//We want to sign for release!!!
+			signApkRelease();
+			
+			System.out.println("Exported to: " + getSketchBinFolder().getAbsolutePath() + "/" + sketchName + ".apk");
+			editor.messageExt(editor.getResources().getString(R.string.export_signed_package_complete));
+			
+			cleanUp();
+			return;
+		}
 		
 		//TODO this writes AAPT error logs, is it necessary?
-		System.out.println("AAPT logs:");
+//		System.out.println("AAPT logs:");
 		copyStream(aaptProc.getErrorStream(), System.err);
 		
 		if(!running.get()) { //CHECK
@@ -781,42 +811,36 @@ public class Build {
 		cleanUp();
 	}
 	
-	//TODO implement private key signing
 	private void signApk() {
 		String mode = "testkey";
-		String infilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned";
-		String outfilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk";
-//		String provider = null;
-//		String keyfilename = null;
-//		String keypass = null;
-//		String certfilename = null;
-//		String templatefilename = null;
+		String inFilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned";
+		String outFilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk";
 		
 		ZipSigner signer;
-//		PrivateKey privateKey = null;
-//		URL privateKeyUrl, certUrl, sbtUrl;
-//		X509Certificate cert = null;
-//		byte[] sigBlockTemplate = null;
 		
 		try {
 			signer = new ZipSigner();
-//			if(provider!=null) signer.loadProvider(provider);
-//			
-//			if(keyfilename!=null) {
-//				certUrl = new File( certfilename).toURI().toURL();
-//				cert = signer.readPublicKey(certUrl);
-//				sbtUrl = new File(templatefilename).toURI().toURL();
-//				sigBlockTemplate = signer.readContentAsBytes(sbtUrl);
-//				privateKeyUrl = new File(keyfilename).toURI().toURL();
-//				privateKey = signer.readPrivateKey(privateKeyUrl, keypass);
-//				signer.setKeys("custom", cert, privateKey, sigBlockTemplate);
-//			} else {
-//				signer.setKeymode(mode);
-//			}
 			
 			signer.setKeymode(mode);
 			
-			signer.signZip(infilename, outfilename);
+			signer.signZip(inFilename, outFilename);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void signApkRelease() {
+		Security.addProvider(new BouncyCastleProvider());
+		
+		String inFilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned";
+		String outFilename = getSketchBinFolder().getAbsolutePath() + "/" + sketchName + ".apk";
+		
+		ZipSigner signer;
+		
+		try {
+			signer = new ZipSigner();
+			
+			signer.signZip(new URL("file://" + keystore), "bks", keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outFilename);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -1797,6 +1821,10 @@ public class Build {
 	
 	public File getSketchCodeDexFolder() {
 		return new File(getSketchFolder(), "code-dex");
+	}
+	
+	public File getSketchBinFolder() {
+		return new File(getSketchFolder(), "bin");
 	}
 	
 	//StackOverflow: http://codereview.stackexchange.com/questions/8835/java-most-compact-way-to-print-inputstream-to-system-out
