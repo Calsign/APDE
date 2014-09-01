@@ -292,6 +292,9 @@ public class SketchPropertiesActivity extends PreferenceActivity {
         	menu.findItem(R.id.menu_delete).setVisible(true);
         }
         
+        //Not using this - we have "Export Eclipse Project" and "Export Signed Package" tools now
+        menu.findItem(R.id.menu_export).setVisible(false);
+        
         switch(getGlobalState().getSketchLocationType()) {
     	case SKETCHBOOK:
     	case TEMPORARY:
@@ -330,9 +333,6 @@ public class SketchPropertiesActivity extends PreferenceActivity {
             case R.id.menu_copy_to_sketchbook:
             	copyToSketchbook();
             	return true;
-        	case R.id.menu_export:
-        		exportSketch();
-        		return true;
         	case R.id.menu_delete:
         		deleteSketch();
         		return true;
@@ -508,10 +508,6 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 			
 			finish();
 		}
-	}
-	
-	private void exportSketch() {
-		
 	}
 	
 	private void deleteSketch() {
