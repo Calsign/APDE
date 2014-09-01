@@ -344,6 +344,36 @@ public class Manifest {
 	}
 	
 	/**
+	 * @param versionCode
+	 */
+	public void setVersionCode(int versionCode) {
+		xml.setInt("android:versionCode", versionCode);
+	}
+	
+	/**
+	 * @param context
+	 * @return
+	 */
+	public int getVersionCode(Context context) {
+		return xml.getInt("android:versionCode", Integer.parseInt(context.getResources().getString(R.string.prop_version_code_default)));
+	}
+	
+	/**
+	 * @param prettyVersion
+	 */
+	public void setPrettyVersion(String prettyVersion) {
+		xml.setString("android:versionName", prettyVersion);
+	}
+	
+	/**
+	 * @param context
+	 * @return
+	 */
+	public String getPrettyVersion(Context context) {
+		return xml.getString("android:versionName", context.getResources().getString(R.string.prop_pretty_version_default));
+	}
+	
+	/**
 	 * @param targetSdk
 	 */
 	public void setTargetSdk(int targetSdk) {

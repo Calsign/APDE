@@ -30,4 +30,8 @@
     <string name="prop_show_sketch_folder">Show Sketch Folder</string>
     <string name="select_file">Select File</string>
     <string name="show_sketch_folder">Show Sketch Folder</string>
+    <string name="prop_version_code">Version Code</string>
+    <string name="prop_version_code_default">1</string>
+    <string name="prop_pretty_version">Version Name</string>
+    <string name="prop_pretty_version_default">1.0</string>
 </resources>

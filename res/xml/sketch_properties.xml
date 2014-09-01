@@ -12,6 +12,22 @@
 	        android:singleLine="true"
 	        android:inputType="text" />
         
+        <EditTextPreference android:key="prop_version_code"
+            android:title="@string/prop_version_code"
+            android:defaultValue="@string/prop_version_code_default"
+            android:maxLines="1"
+	        android:selectAllOnFocus="true"
+	        android:singleLine="true"
+	        android:inputType="number" />
+        
+        <EditTextPreference android:key="prop_pretty_version"
+            android:title="@string/prop_pretty_version"
+            android:defaultValue="@string/prop_pretty_version_default"
+            android:maxLines="1"
+	        android:selectAllOnFocus="true"
+	        android:singleLine="true"
+	        android:inputType="text" />
+        
         <Preference android:key="prop_permissions"
             android:dialogTitle="@string/prop_permissions"
         	android:summary="@string/prop_permissions_desc"        

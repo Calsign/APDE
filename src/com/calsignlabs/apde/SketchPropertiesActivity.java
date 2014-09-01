@@ -118,6 +118,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		edit.putString("permissions", mf.getCustomPermissions());
 		edit.putString("prop_target_sdk", Integer.toString(mf.getTargetSdk(global)));
 		edit.putString("prop_orientation", mf.getOrientation(global));
+		edit.putString("prop_version_code", Integer.toString(mf.getVersionCode(global)));
+		edit.putString("prop_pretty_version", mf.getPrettyVersion(global));
 		edit.commit();
 	}
 	
@@ -141,6 +143,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		// their values. When their values change, their summaries are updated
 		// to reflect the new value, per the Android Design guidelines.
 		bindPreferenceSummaryToValue(findPreference("prop_pretty_name"));
+		bindPreferenceSummaryToValue(findPreference("prop_version_code"));
+		bindPreferenceSummaryToValue(findPreference("prop_pretty_version"));
 //		bindPreferenceSummaryToValue(findPreference("prop_min_sdk"));
 		bindPreferenceSummaryToValue(findPreference("prop_target_sdk"));
 		bindPreferenceSummaryToValue(findPreference("prop_orientation"));
@@ -148,6 +152,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		//Hacky way of setting up the summaries initially
 		String prettyName = ((EditTextPreference) findPreference("prop_pretty_name")).getText(); //We check this to initialize the default value with the name of the sketch
 		findPreference("prop_pretty_name").setSummary(prettyName.equals(".") ? getGlobalState().getSketchName() : prettyName); //The "." default is because we can't reference this value from XML
+		findPreference("prop_version_code").setSummary(((EditTextPreference) findPreference("prop_version_code")).getText());
+		findPreference("prop_pretty_version").setSummary(((EditTextPreference) findPreference("prop_pretty_version")).getText());
 //		findPreference("prop_min_sdk").setSummary(((EditTextPreference) findPreference("prop_min_sdk")).getText());
 		findPreference("prop_target_sdk").setSummary(((EditTextPreference) findPreference("prop_target_sdk")).getText());
 		findPreference("prop_orientation").setSummary(((ListPreference) findPreference("prop_orientation")).getEntry());
@@ -204,6 +210,10 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 				
 				if(key.equals("prop_pretty_name"))
 					mf.setPrettyName(pref.getString(key, "."));
+				if(key.equals("prop_version_code"))
+					mf.setVersionCode(Integer.parseInt(pref.getString(key, getResources().getString(R.string.prop_version_code_default))));
+				if(key.equals("prop_pretty_version"))
+					mf.setPrettyVersion(pref.getString(key, getResources().getString(R.string.prop_pretty_version_default)));
 				if(key.equals("permissions"))
 					mf.setCustomPermissions(pref.getString(key, "").split(","));
 				if(key.equals("prop_target_sdk"))
