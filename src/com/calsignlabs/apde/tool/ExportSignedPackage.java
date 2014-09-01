@@ -29,6 +29,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import kellinwood.security.zipsigner.optional.JksKeyStore;
+import kellinwood.security.zipsigner.optional.LoadKeystoreException;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -256,6 +259,8 @@ public class ExportSignedPackage implements Tool {
 				
 				if (result.resultCode() == 0) {
 					keystorePassword.setEnabled(true);
+					//Hide the dropdown
+					keystoreFile.dismissDropDown();
 					messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_keystore_password);
 				} else {
 					keystorePassword.setEnabled(false);
@@ -455,7 +460,9 @@ public class ExportSignedPackage implements Tool {
 								
 								messageView(keystoreMessage, ValidationResult.MessageSeverity.WARNING, R.string.warning_short_password);
 							} else {
-								messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO, R.string.info_create_keystore_ready);
+								messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO,
+										String.format(context.getResources().getString(R.string.info_create_keystore_ready),
+												context.getResources().getString(isBksKeystore(keystoreFileLoc) ? R.string.keystore_type_bks : R.string.keystore_type_jks)));
 							}
 							
 							createButton.setEnabled(true);
@@ -660,7 +667,7 @@ public class ExportSignedPackage implements Tool {
 			try {
 				in = new FileInputStream(file);
 				
-				keystore = KeyStore.getInstance("bks");
+				keystore = new JksKeyStore();
 				keystore.load(in, password);
 				
 				List<String> aliases = new ArrayList<String>();
@@ -670,9 +677,9 @@ public class ExportSignedPackage implements Tool {
 				loadRecentKeystores();
 				
 				result = new ValidationResult(0, aliases);
-			} catch (KeyStoreException e) {
-				//Hmm...
-				e.printStackTrace();
+			} catch (LoadKeystoreException e) {
+				//We have a JKS keystore, but it's either corrupted or we have a bad password
+				result = new ValidationResult(2, ValidationResult.MessageSeverity.ERROR, R.string.error_keystore_not_recoverable);
 			} catch (FileNotFoundException e) {
 				result = new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.error_keystore_file_nonexistant);
 			} catch (NoSuchAlgorithmException e) {
@@ -680,10 +687,51 @@ public class ExportSignedPackage implements Tool {
 			} catch (CertificateException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
-				result = new ValidationResult(2, ValidationResult.MessageSeverity.ERROR, R.string.error_keystore_not_recoverable);
+				//Okay, let's try BKS...
+				
+				try {
+					in = new FileInputStream(file);
+					
+					keystore = KeyStore.getInstance("bks");
+					keystore.load(in, password);
+					
+					List<String> aliases = new ArrayList<String>();
+					aliases = Collections.list(keystore.aliases());
+					
+					putRecentKeystore(file.getAbsolutePath());
+					loadRecentKeystores();
+					
+					result = new ValidationResult(0, aliases);
+				} catch (FileNotFoundException x) {
+					result = new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.error_keystore_file_nonexistant);
+				} catch (KeyStoreException x) {
+					e.printStackTrace();
+				} catch (NoSuchAlgorithmException x) {
+					e.printStackTrace();
+				} catch (CertificateException x) {
+					e.printStackTrace();
+				} catch (IOException x) {
+					//So... it's neither JKS nor BKS...
+					
+					result = new ValidationResult(2, ValidationResult.MessageSeverity.ERROR, R.string.error_keystore_not_recoverable);
+				} catch (OutOfMemoryError x) {
+					//This seems to happen when trying to load files with names like ".nomedia"
+					//Is this a bug in BouncyCastle? Is it because files starting with dots are hidden? Or is there something wrong with this particular ".nomedia" file?
+					e.printStackTrace();
+				} finally {
+					try {
+						if (in != null) {
+							in.close();
+						}
+					} catch (IOException x) {
+						e.printStackTrace();
+					}
+				}
 			} catch (OutOfMemoryError e) {
 				//This seems to happen when trying to load files with names like ".nomedia"
 				//Is this a bug in BouncyCastle? Is it because files starting with dots are hidden? Or is there something wrong with this particular ".nomedia" file?
+				e.printStackTrace();
+			} catch (KeyStoreException e) {
 				e.printStackTrace();
 			} finally {
 				try {
@@ -783,7 +831,14 @@ public class ExportSignedPackage implements Tool {
 	
 	protected void writeEmptyKeystore(File file, char[] password) {
 		try {
-			keystore = KeyStore.getInstance("bks");
+			//Create a JKS keystore by default
+			//If the extension is ".bks", then make it a BKS keystore
+			if (isBksKeystore(file)) {
+				keystore = KeyStore.getInstance("bks");
+			} else {
+				keystore = new JksKeyStore();
+			}
+			
 			keystore.load(null, password); //Initialize
 			
 			writeKeystore(file, password);
@@ -796,6 +851,10 @@ public class ExportSignedPackage implements Tool {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	private boolean isBksKeystore(File file) {
+		return file.getAbsolutePath().endsWith(".bks");
 	}
 	
 	protected void writeKeystore(File file, char[] password) {

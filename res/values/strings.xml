@@ -181,7 +181,7 @@
     <string name="error_passwords_disagree">Passwords don\'t match</string>
     <string name="warning_keystore_exists">Will overwrite existing keystore</string>
     <string name="warning_short_password">Consider using a longer password</string>
-    <string name="info_create_keystore_ready">Ready to create keystore</string>
+    <string name="info_create_keystore_ready">Ready to create %1$s keystore</string>
     <string name="info_enter_alias">Enter key alias</string>
     <string name="info_enter_alias_password">Enter key password</string>
     <string name="info_enter_certificate_validity">Enter certificate validity</string>
@@ -189,5 +189,7 @@
     <string name="warning_key_exists">Will overwrite existing key</string>
     <string name="warning_certificate_validity_short">Certificates should be valid for at least 25 years</string>
     <string name="warning_certificate_empty">Consider providing certificate information</string>
+    <string name="keystore_type_jks">JKS</string>
+    <string name="keystore_type_bks">BKS</string>
 
 </resources>

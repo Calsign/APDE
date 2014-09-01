@@ -19,7 +19,6 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.URL;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -30,6 +29,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import kellinwood.security.zipsigner.ZipSigner;
+import kellinwood.security.zipsigner.optional.CustomKeySigner;
 
 import org.eclipse.jdt.internal.compiler.batch.Main;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
@@ -840,7 +840,9 @@ public class Build {
 		try {
 			signer = new ZipSigner();
 			
-			signer.signZip(new URL("file://" + keystore), "bks", keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outFilename);
+//			signer.signZip(new URL("file://" + keystore), "bks", keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outFilename);
+			//Let's take advantage of ZipSigner's ability to load JKS keystores as well
+			CustomKeySigner.signZip(signer, keystore, keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outFilename);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
