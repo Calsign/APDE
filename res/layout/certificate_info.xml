@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/certificate_info"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:layout_marginLeft="24dp"
+    android:layout_marginRight="24dp"
+    android:layout_marginTop="12dp"
+    android:shrinkColumns="1"
+    android:stretchColumns="1" >
+    
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="18dp"
+        android:layout_marginTop="18dp"
+        android:layout_marginBottom="4dp" >
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/key_alias" />
+        
+        <TextView
+            android:id="@+id/alias_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="18dp"
+            android:textIsSelectable="true" />
+    </TableRow>
+    
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="18dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp" >
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/expiration_date" />
+        
+        <TextView
+            android:id="@+id/certificate_expiration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="18dp"
+            android:layout_marginBottom="12dp"
+            android:textIsSelectable="true" />
+    </TableRow>
+    
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="18dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp" >
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/certificate_name" />
+        
+        <TextView
+            android:id="@+id/alias_certificate_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="18dp"
+            android:textIsSelectable="true" />
+    </TableRow>
+    
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="18dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp" >
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/certificate_organizational_unit" />
+        
+        <TextView
+            android:id="@+id/alias_certificate_organizational_unit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="18dp"
+            android:textIsSelectable="true" />
+    </TableRow>
+    
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="18dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp" >
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/certificate_organization" />
+        
+        <TextView
+            android:id="@+id/alias_certificate_organization"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="18dp"
+            android:textIsSelectable="true" />
+    </TableRow>
+    
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="18dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp" >
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/certificate_city" />
+        
+        <TextView
+            android:id="@+id/alias_certificate_city"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="18dp"
+            android:textIsSelectable="true" />
+    </TableRow>
+    
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="18dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp" >
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/certificate_state" />
+        
+        <TextView
+            android:id="@+id/alias_certificate_state"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="18dp"
+            android:textIsSelectable="true" />
+    </TableRow>
+    
+    <TableRow
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="18dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="18dp" >
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/certificate_country" />
+        
+        <TextView
+            android:id="@+id/alias_certificate_country"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="18dp"
+            android:textIsSelectable="true" />
+    </TableRow>
+</TableLayout>

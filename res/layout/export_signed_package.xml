@@ -49,7 +49,7 @@
                 android:completionThreshold="1"
                 android:hint="@string/keystore_file"
                 android:inputType="textUri"
-                android:dropDownWidth="match_parent" />
+                android:dropDownWidth="wrap_content" />
         </RelativeLayout>
         
         <EditText
@@ -73,7 +73,18 @@
             android:orientation="horizontal" >
             
             <ImageButton
-                android:id="@+id/alias_new"
+                android:id="@+id/alias_certificate_info"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignBottom="@+id/alias"
+                android:layout_alignTop="@+id/alias"
+                android:layout_toLeftOf="@+id/alias_new"
+                android:contentDescription="@string/certificate_info"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_info" />
+            
+            <ImageButton
+                android:id="@id/alias_new"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignBottom="@+id/alias"
@@ -88,7 +99,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_alignParentLeft="true"
-                android:layout_toLeftOf="@id/alias_new" />
+                android:layout_toLeftOf="@id/alias_certificate_info" />
         </RelativeLayout>
         
         <EditText

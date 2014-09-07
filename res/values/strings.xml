@@ -179,7 +179,7 @@
     <string name="error_certificate_not_yet_valid">Certificate not valid until %1$s</string>
     <string name="date_format">EEEE, d MMMM, yyyy</string>
     <string name="error_passwords_disagree">Passwords don\'t match</string>
-    <string name="warning_keystore_exists">Will overwrite existing keystore</string>
+    <string name="warning_keystore_exists">Will overwrite existing file</string>
     <string name="warning_short_password">Consider using a longer password</string>
     <string name="info_create_keystore_ready">Ready to create %1$s keystore</string>
     <string name="info_enter_alias">Enter key alias</string>
@@ -191,5 +191,11 @@
     <string name="warning_certificate_empty">Consider providing certificate information</string>
     <string name="keystore_type_jks">JKS</string>
     <string name="keystore_type_bks">BKS</string>
+    <string name="export_signed_package_info">Generate an APK in release mode. This is recommended for creating production versions of sketches that are suitable for sharing with friends or uploading to Google Play. However, the Android SDK tools are better suited to this task and should be used in preference, especially for professional and / or commercial applications.\n\nKeystores generated and used by APDE are stored on the device\'s external storage. The security of these keystores is thus tied to the security of the device hardware and any other applications that may have access to the external storage. Additionally, the security of the keys generated and used by APDE is tied to the strength of the passwords used to secure them. APDE recommends a password length of at least eight characters, but this is by no means a guarantee of password security.\n\nIf an application is uploaded to Google Play, it must be signed with the same key / certificate in order for updates to be delivered seamlessly. If a different key / certificate is used, then a new application with a different package name must be created.\n\nCalsignLabs, William Smith, etc. are not responsible for any security or legal damages caused by the use or misuse of the export funtionality provided by APDE.</string>
+    <string name="export_signed_package_info_title">Export Signed Package Info</string>
+    <string name="info">Info</string>
+    <string name="certificate_info">Certificate Info</string>
+    <string name="expiration_date">Expiration Date:</string>
+    <string name="key_alias">Key Alias:</string>
 
 </resources>
