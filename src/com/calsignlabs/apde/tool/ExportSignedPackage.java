@@ -755,7 +755,7 @@ public class ExportSignedPackage implements Tool {
 									
 									messageView(keyMessage, ValidationResult.MessageSeverity.WARNING, R.string.warning_certificate_empty);
 								} else {
-									messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.info_create_keystore_ready);
+									messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.info_create_key_ready);
 								}
 								
 								createButton.setEnabled(true);
