@@ -618,7 +618,7 @@ public class ExportSignedPackage implements Tool {
 								messageView(keystoreMessage, ValidationResult.MessageSeverity.WARNING, R.string.warning_short_password);
 							} else {
 								messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO,
-										String.format(context.getResources().getString(R.string.info_create_keystore_ready),
+										String.format(Locale.US, context.getResources().getString(R.string.info_create_keystore_ready),
 												context.getResources().getString(isBksKeystore(keystoreFileLoc) ? R.string.keystore_type_bks : R.string.keystore_type_jks)));
 							}
 							
@@ -1000,11 +1000,11 @@ public class ExportSignedPackage implements Tool {
 				e.printStackTrace();
 			} catch (CertificateExpiredException e) {
 				result = new ValidationResult(4, ValidationResult.MessageSeverity.ERROR,
-						String.format(context.getResources().getString(R.string.error_certificate_expired),
+						String.format(Locale.US, context.getResources().getString(R.string.error_certificate_expired),
 								new SimpleDateFormat(context.getResources().getString(R.string.date_format), Locale.US).format(certificate.getNotAfter())));
 			} catch (CertificateNotYetValidException e) {
 				result = new ValidationResult(5, ValidationResult.MessageSeverity.ERROR,
-						String.format(context.getResources().getString(R.string.error_certificate_not_yet_valid),
+						String.format(Locale.US, context.getResources().getString(R.string.error_certificate_not_yet_valid),
 								new SimpleDateFormat(context.getResources().getString(R.string.date_format), Locale.US).format(certificate.getNotBefore())));
 			}
 		}
