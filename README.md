@@ -34,6 +34,7 @@ APDE strives to be a fully-featured Processing editor, using the PDE as a model.
  - Multiple files (tabs)
  - Nested file manager, support for organizing sketches into folders
  - Import contributed libraries, which are dexed upon installation to speed up build times
+ - Export sketch as a signed APK file or as an Eclipse-compatible Android project
  - Internal Android Manifest file configuration (sketch permissions, orientation lock, etc.)
  - Add files to sketch's "data" folder
  - A set of examples
