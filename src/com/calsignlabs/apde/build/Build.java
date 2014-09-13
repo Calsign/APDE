@@ -86,6 +86,8 @@ public class Build {
 	private String keyAlias;
 	private char[] keyAliasPassword;
 	
+	private boolean injectLogBroadcaster;
+	
 	public Build(APDE global) {
 		this.editor = global.getEditor();
 		
@@ -93,6 +95,8 @@ public class Build {
 		tabs = editor.getTabMetas();
 		
 		running = new AtomicBoolean(true);
+		
+		injectLogBroadcaster = PreferenceManager.getDefaultSharedPreferences(global).getBoolean("inject_log_broadcaster", true);
 	}
 	
 	public void setKey(String keystore, char[] keystorePassword, String keyAlias, char[] keyAliasPassword) {
@@ -240,6 +244,7 @@ public class Build {
 				for(String lib : libsToCopy) {
 					InputStream inputStream = am.open(prefix + lib + suffix);
 					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
+					inputStream.close();
 				}
 				
 				// Copy any imported libraries (their libs and assets),
@@ -354,6 +359,13 @@ public class Build {
 		try {
 			manifest = new Manifest(this);
 			
+			String packageName = manifest.getPackageName();
+			
+			if(!running.get()) { //CHECK
+				cleanUpHalt();
+				return;
+			}
+			
 			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
 			
 			//Enable all of the fancy preprocessor stuff
@@ -363,14 +375,14 @@ public class Build {
 			Preferences.setBoolean("preproc.substitute_floats", true);
 			Preferences.setBoolean("preproc.substitute_unicode", true);
 			
-			Preproc preproc = new Preproc(sketchName, manifest.getPackageName());
+			Preproc preproc = new Preproc(sketchName, packageName);
 			
 			//Combine all of the tabs to check for size
 			String combinedText = "";
 			for(FileMeta tab : tabs)
 				combinedText += tab.getText();
 			preproc.initSketchSize(combinedText, editor);
-			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false);
+			sketchClassName = preprocess(srcFolder, packageName, preproc, false);
 			
 			//Detect if the renderer is one of the OpenGL renderers
 			//XTODO support custom renderers that require OpenGL or... other problems that may arise
@@ -418,6 +430,7 @@ public class Build {
 				if(!androidJarLoc.exists()) {
 					InputStream is = am.open("android.jar");
 					createFileFromInputStream(is, androidJarLoc);
+					is.close();
 				}
 				
 				//Copy native libraries
@@ -430,6 +443,7 @@ public class Build {
 				for(String lib : libsToCopy) {
 					InputStream inputStream = am.open(prefix + lib + suffix);
 					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
+					inputStream.close();
 				}
 				
 				//Copy dexed versions to speed up the DEX process
@@ -457,6 +471,7 @@ public class Build {
 				for(String lib : dexLibsToCopy) {
 					InputStream inputStream = am.open(dexPrefix + lib + dexSuffix);
 					createFileFromInputStream(inputStream, new File(dexedLibsFolder, lib + dexSuffix));
+					inputStream.close();
 				}
 				
 				// Copy any imported libraries (their libs and assets),
@@ -529,6 +544,7 @@ public class Build {
 			
 			InputStream inputStream = am.open(aaptName);
 			createFileFromInputStream(inputStream, aaptLoc);
+			inputStream.close();
 			
 			//Run "chmod" on aapt so that we can execute it
 			String[] chmod = {"chmod", "744", aaptLoc.getAbsolutePath()};
@@ -805,6 +821,13 @@ public class Build {
 					);
 		}
 		
+		if (injectLogBroadcaster) {
+			//Make some space in the console
+			for (int i = 0; i < 10; i ++) {
+				System.out.println("");
+			}
+		}
+		
 		//Get a result so that we can delete the APK file
 		editor.startActivityForResult(promptInstall, EditorActivity.FLAG_DELETE_APK);
 		
@@ -953,6 +976,32 @@ public class Build {
 			classPath += File.pathSeparator + codeFolderClassPath;
 			// get list of packages found in those jars
 			codeFolderPackages = packageListFromClassPath(codeFolderClassPath);
+		}
+		
+		if (injectLogBroadcaster) {
+			//Add "LogBroadcaster.pde" to the code
+			
+			try {
+				InputStream stream = editor.getAssets().open("LogBroadcaster.pde");
+				
+				int size = stream.available();
+				byte[] buffer = new byte[size];
+				
+				stream.read(buffer);
+				stream.close();
+				
+				String text = new String(buffer);
+				
+				FileMeta[] oldMeta = tabs;
+				tabs = new FileMeta[oldMeta.length + 1];
+				System.arraycopy(oldMeta, 0, tabs, 0, oldMeta.length);
+				tabs[tabs.length - 1] = new FileMeta("LogBroadcaster.pde", text, 0, 0, 0, 0);
+				
+				System.out.println("Successfuly injected LogBroadcaster.pde");
+			} catch (IOException e) {
+				System.err.println("Failed to inject LogBroadcaster.pde into sketch!");
+				e.printStackTrace();
+			}
 		}
 		
 		// 1. concatenate all .pde files to the 'main' pde
@@ -1359,24 +1408,28 @@ public class Build {
 				if(buildIcon36.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icon-36.png");
 					createFileFromInputStream(inputStream, buildIcon36);
+					inputStream.close();
 				} else {
 					System.err.println("Could not create \"drawable-ldpi\" folder.");
 				}
 				if(buildIcon48.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icon-48.png");
 					createFileFromInputStream(inputStream, buildIcon48);
+					inputStream.close();
 				} else {
 					System.err.println("Could not create \"drawable\" folder.");
 				}
 				if(buildIcon72.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icon-72.png");
 					createFileFromInputStream(inputStream, buildIcon72);
+					inputStream.close();
 				} else {
 					System.err.println("Could not create \"drawable-hdpi\" folder.");
 				}
 				if(buildIcon96.getParentFile().mkdirs()) { //TODO make a properly scaled "icon-96.png" graphic - right now, it's scaled up from the 72p version
 					InputStream inputStream = am.open("icon-96.png");
 					createFileFromInputStream(inputStream, buildIcon96);
+					inputStream.close();
 				} else {
 					System.err.println("Could not create \"drawable-xhdpi\" folder.");
 				}

@@ -8,6 +8,7 @@
             android:key="pref_vibrate"
             android:title="@string/pref_vibrate"
             android:summary="@string/pref_vibrate_desc" />
+        
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="use_hardware_keyboard"
@@ -50,5 +51,11 @@
             android:key="pref_build_discard"
             android:title="@string/pref_build_discard"
             android:summary="@string/pref_build_discard_desc" />
+        
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="inject_log_broadcaster"
+            android:title="@string/inject_log_broadcaster"
+            android:summary="@string/inject_log_broadcaster_desc" />
     </PreferenceCategory>
 </PreferenceScreen>

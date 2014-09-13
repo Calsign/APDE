@@ -22,9 +22,11 @@ import processing.data.XML;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
@@ -45,6 +47,7 @@ import android.text.TextWatcher;
 import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.DragEvent;
+import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -120,6 +123,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	private PrintStream outStream;
 	private PrintStream errStream;
 	
+	//Recieve log / console output from sketches
+	private BroadcastReceiver consoleBroadcastReceiver;
+	
 	//Whether or not we are currently building a sketch
 	private boolean building;
 	
@@ -131,6 +137,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	//A reference to the toggle char inserts button... and why do we need this?
 	//It's because adding views to the char insert tray is somehow breaking the retrieval of this view by ID...
 	private ImageButton toggleCharInserts;
+	
+	private boolean twoFingerSwipe = false;
 	
 	//Intent flag to delete the old just-installed APK file
 	public static final int FLAG_DELETE_APK = 5;
@@ -201,11 +209,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	@Override
         	public boolean onTouch(View v, MotionEvent event) {
         		//Disable the soft keyboard if the user is using a hardware keyboard
-        		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+        		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
         			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+        		}
         		
         		return false;
-
         	}
         });
         
@@ -391,10 +399,53 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         
         final ScrollView codeScroller = (ScrollView) findViewById(R.id.code_scroller);
+        final HorizontalScrollView codeScrollerX = (HorizontalScrollView) findViewById(R.id.code_scroller_x);
         final EditText code = (EditText) findViewById(R.id.code);
         
         //Obtain the root view
         final View activityRootView = findViewById(R.id.content);
+        
+        final GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.OnGestureListener() {
+        	final static int FLING_THRESHOLD = 2;
+        	
+			@Override
+			public boolean onSingleTapUp(MotionEvent e) {
+				return false;
+			}
+			@Override
+			public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+				return false;
+			}
+			@Override
+			public boolean onDown(MotionEvent e) {
+				return false;
+			}
+			@Override
+			public void onShowPress(MotionEvent e) {}
+			@Override
+			public void onLongPress(MotionEvent e) {}
+			
+			@Override
+			public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+        		if (twoFingerSwipe) {
+        			int selectedTab = tabBar.getSelectedTabIndex();
+        			
+        			if (velocityX >= FLING_THRESHOLD) {
+        				if (selectedTab > 0) {
+        					tabBar.selectTab(selectedTab - 1);
+        				}
+        				return true;
+        			} else if (velocityX <= -FLING_THRESHOLD) {
+        				if (selectedTab < tabBar.getTabCount() - 1) {
+        					tabBar.selectTab(selectedTab + 1);
+        				}
+        				return true;
+        			}
+        		}
+        		
+				return false;
+			}
+		});
         
         //Forward touch events to the code area so that the user can select anywhere
         codeScroller.setOnTouchListener(new View.OnTouchListener() {
@@ -467,6 +518,21 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				//Make sure that the scroll area can still scroll
 				return false;
 		}});
+        
+        codeScrollerX.setOnTouchListener(new View.OnTouchListener() {
+			@Override
+			public boolean onTouch(View v, MotionEvent event) {
+				twoFingerSwipe = twoFingerSwipe || event.getPointerCount() == 2;
+				
+				boolean swipeSuccess = gestureDetector.onTouchEvent(event);
+				
+				if (event.getAction() == MotionEvent.ACTION_UP) {
+					twoFingerSwipe = false;
+				}
+				
+				return swipeSuccess || twoFingerSwipe;
+			}
+		});
         
         //Make the code area fill the width of the screen
         code.setMinimumWidth(activityRootView.getWidth());
@@ -577,6 +643,31 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         //Set the custom output / error streams
         System.setOut(outStream);
         System.setErr(errStream);
+        
+        //Initialize log / console receiver
+        consoleBroadcastReceiver = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				String message = intent.getStringExtra("com.calsignlabs.apde.LogMessage");
+				String exception = intent.getStringExtra("com.calsignlabs.apde.LogException");
+				
+				//We can show different colors for different severities if we want to... later...
+				switch (intent.getCharExtra("com.calsignlabs.apde.LogSeverity", 'o')) {
+				case 'o':
+					postConsole(message);
+					break;
+				case 'e':
+					postConsole(message);
+					break;
+				case 'x':
+					errorExt(message != null ? exception.concat(": ").concat(message) : exception);
+					break;
+				}
+			}
+        };
+        
+        //Register receiver for sketch logs / console output
+        registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
         
         getGlobalState().rebuildToolList();
         
@@ -739,6 +830,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         		}
         	}
         }
+        
+        //Register receiver for sketch logs / console output
+        registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
     }
     
     public HashMap<String, KeyBinding> getKeyBindings() {
@@ -1069,6 +1163,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		
     	super.onStop();
     }
+	
+	@Override
+	public void onDestroy() {
+		//Unregister the log / console receiver
+    	unregisterReceiver(consoleBroadcastReceiver);
+    	
+    	super.onDestroy();
+	}
 	
 	/**
 	 * Saves the sketch for when the activity is closing

@@ -40,5 +40,7 @@
     <string name="pref_build_discard_desc">For debugging purposes</string>
     <string name="pref_vibrate_desc">May consume battery</string>
     <string name="override_tab_desc">Overrides tab for accessibility</string>
+    <string name="inject_log_broadcaster">Inject Log Broadcaster</string>
+    <string name="inject_log_broadcaster_desc">Allows console to display sketch output</string>
 
 </resources>
