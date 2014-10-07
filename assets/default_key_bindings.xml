@@ -23,4 +23,7 @@
     
     <binding key="33" mod="ctrl">export_signed_package</binding>
     <binding key="33" mod="ctrl|shift">export_eclipse_project</binding>
+    
+    <binding key="54" mod="ctrl">undo</binding>
+    <binding key="53" mod="ctrl">redo</binding>
 </bindings>

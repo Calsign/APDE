@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <PreferenceCategory
+        android:key="pref_key_undo_redo_settings"
+        android:title="@string/undo_redo_settings" >
+        
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="pref_key_undo_redo"
+            android:title="@string/pref_undo_redo" />
+        
+        <ListPreference
+            android:key="pref_key_undo_redo_keep"
+            android:title="@string/pref_undo_redo_keep"
+            android:entries="@array/undo_redo_keep_entries"
+            android:entryValues="@array/undo_redo_keep_entry_values"
+            android:defaultValue="@string/undo_redo_keep_default_value"
+            android:dependency="pref_key_undo_redo" />
+    </PreferenceCategory>
+</PreferenceScreen>

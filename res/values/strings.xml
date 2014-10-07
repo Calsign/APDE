@@ -197,5 +197,7 @@
     <string name="certificate_info">Certificate Info</string>
     <string name="expiration_date">Expiration Date:</string>
     <string name="key_alias">Key Alias:</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
 
 </resources>

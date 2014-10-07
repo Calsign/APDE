@@ -93,6 +93,7 @@ public class SettingsActivity extends PreferenceActivity {
 		bindPreferenceSummaryToValue(findPreference("textsize"));
 		bindPreferenceSummaryToValue(findPreference("textsize_console"));
 		bindPreferenceSummaryToValue(findPreference("pref_sketchbook"));
+		bindPreferenceSummaryToValue(findPreference("pref_key_undo_redo_keep"));
 		
 		((CheckBoxPreference) findPreference("use_hardware_keyboard")).setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
 			@Override
@@ -118,6 +119,20 @@ public class SettingsActivity extends PreferenceActivity {
 			//...maybe this doesn't work...
 			if(vibrate == null)
 				getPreferenceScreen().removePreference(findPreference("pref_vibrate"));
+		
+		final CheckBoxPreference enableUndoRedo = (CheckBoxPreference) findPreference("pref_key_undo_redo");
+		
+		enableUndoRedo.setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
+			@Override
+			public boolean onPreferenceChange(Preference preference, Object newValue) {
+				if (!enableUndoRedo.isChecked()) {
+					//If the user disabled undo / redo, clear the undo history to prevent problems
+					((APDE) getApplicationContext()).getEditor().clearUndoRedoHistory();
+				}
+				
+				return true;
+			}
+		});
 	}
 
 	/** {@inheritDoc} */

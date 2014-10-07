@@ -25,14 +25,12 @@
     <string name="pref_sketchbook">Sketchbook</string>
     <string name="internal_storage_sketchbook">Use Internal Storage</string>
     <string name="pref_sketchbook_location">Location on External Storage</string>
-    <string name="char_inserts">Special Character Tray</string>
-    <string name="char_inserts_desc">Enable character insertion tray</string>
+    <string name="char_inserts">Enable Special Character Tray</string>
     <string name="pref_code_assistance">Coding Assistance</string>
     <string name="auto_indent">Auto Indentation</string>
     <string name="curly_brace_insertion">Close Code Blocks</string>
     <string name="curly_brace_insertion_desc">Assist in placement of curly braces</string>
     <string name="char_inserts_include_numbers">Include Numbers</string>
-    <string name="char_inserts_include_numbers_desc">In special character insertion tray</string>
     <string name="pref_build">Build</string>
     <string name="pref_build_internal_storage">Build on Internal Storage</string>
     <string name="pref_build_internal_storage_desc">May consume additional internal storage space</string>
@@ -42,5 +40,27 @@
     <string name="override_tab_desc">Overrides tab for accessibility</string>
     <string name="inject_log_broadcaster">Inject Log Broadcaster</string>
     <string name="inject_log_broadcaster_desc">Allows console to display sketch output</string>
+    <string name="undo_redo_settings">Undo / Redo</string>
+    <string name="pref_undo_redo">Enable Undo / Redo</string>
+    <string name="pref_undo_redo_keep">Keep Entries</string>
+    <string-array name="undo_redo_keep_entries">
+        <item>All</item>
+        <item >50</item>
+        <item >100</item>
+        <item >500</item>
+        <item >1,000</item>
+        <item >5,000</item>
+        <item >10,000</item>
+    </string-array>
+    <string-array name="undo_redo_keep_entry_values">
+        <item>-1</item>
+        <item >50</item>
+        <item >100</item>
+        <item >500</item>
+        <item >1000</item>
+        <item >5000</item>
+        <item >10000</item>
+    </string-array>
+    <string name="undo_redo_keep_default_value">-1</string>
 
 </resources>

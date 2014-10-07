@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -697,6 +698,22 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     protected void onSaveInstanceState(Bundle icicle) {
     	//Save the selected tab
     	icicle.putInt("selected_tab", tabBar.getSelectedTabIndex());
+    	
+    	FileMeta[] tabMetas = new FileMeta[tabs.size()];
+    	int count = 0;
+    	
+    	for (Map.Entry<ActionBar.Tab, FileMeta> entry : tabs.entrySet()) {
+    		int num = tabBar.indexOfTab(entry.getKey());
+    		FileMeta meta = entry.getValue();
+    		
+    		meta.tabNum = num;
+    		
+    		tabMetas[count] = meta;
+    		count ++;
+    	}
+    	
+    	//We have to right a map... this seems to be unnecessarily difficult
+    	icicle.putParcelableArray("tabs", getTabMetas());
     }
     
     @Override
@@ -708,6 +725,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		//Refresh the syntax highlighter AGAIN so that it can take into account the restored selected tab
     		//The tokens end up getting refreshed 3+ times on a rotation... but it doesn't seem to have much of an impact on performance, so it's fine for now
     		((CodeEditText) findViewById(R.id.code)).flagRefreshTokens();
+    		
+    		FileMeta[] tabMetas = (FileMeta[]) icicle.getParcelableArray("tabs");
+    		
+    		for (FileMeta tabMeta : tabMetas) {
+    			tabs.put(tabBar.getTab(tabMeta.tabNum), tabMeta);
+    		}
     	}
     }
     
@@ -833,6 +856,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         //Register receiver for sketch logs / console output
         registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
+        
+        //In case the user has enabled / disabled undo / redo in settings
+        supportInvalidateOptionsMenu();
     }
     
     public HashMap<String, KeyBinding> getKeyBindings() {
@@ -964,6 +990,20 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	if(keyBindings.get("rename_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		if(!getGlobalState().isExample())
     			renameTab();
+    		return true;
+    	}
+    	
+    	if(keyBindings.get("undo").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		if (!getGlobalState().isExample() && tabBar.getTabCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
+    			tabs.get(tabBar.getSelectedTab()).undo(this);
+    		}
+    		return true;
+    	}
+    	if(keyBindings.get("redo").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		if (!getGlobalState().isExample() && tabBar.getTabCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
+    			tabs.get(tabBar.getSelectedTab()).redo(this);
+    		}
+    		
     		return true;
     	}
     	
@@ -1250,7 +1290,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		
 		//Clear the code area
 		CodeEditText code = ((CodeEditText) findViewById(R.id.code));
-		code.setUpdateText("");
+		code.setNoUndoText("");
 		
 		//Get rid of previous syntax highlighter data
 		code.clearTokens();
@@ -1316,9 +1356,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		
     		//Update the code area
     		if(tabBar.getTabCount() > 0)
-    			((CodeEditText) findViewById(R.id.code)).setUpdateText(tabs.get(tabBar.getSelectedTab()).getText());
+    			((CodeEditText) findViewById(R.id.code)).setNoUndoText(tabs.get(tabBar.getSelectedTab()).getText());
     		else
-    			((CodeEditText) findViewById(R.id.code)).setUpdateText("");
+    			((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
     		
     		//Get rid of previous syntax highlighter data
     		((CodeEditText) findViewById(R.id.code)).clearTokens();
@@ -1396,7 +1436,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	if(tabBar.getTabCount() > 0) {
 	    	//Update the current tab
-	    	tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), this));
+//	    	tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), this));
+	    	tabs.get(tabBar.getSelectedTab()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
 	    	
 	    	//Iterate through the FileMetas...
 	    	for(FileMeta meta : tabs.values()) {
@@ -1665,7 +1706,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	if(tabBar.getTabCount() > 0) {
     		//Update the current tab
-    		tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), this));
+//    		tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), this));
+    		tabs.get(tabBar.getSelectedTab()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
     	}
     	
     	//Iterate through the FileMetas...
@@ -1881,6 +1923,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	//Make sure to hide all of the sketch-specific action items
         	menu.findItem(R.id.menu_run).setVisible(false);
         	menu.findItem(R.id.menu_stop).setVisible(false);
+        	menu.findItem(R.id.menu_undo).setVisible(false);
+        	menu.findItem(R.id.menu_redo).setVisible(false);
         	menu.findItem(R.id.menu_tab_delete).setVisible(false);
         	menu.findItem(R.id.menu_tab_rename).setVisible(false);
         	menu.findItem(R.id.menu_save).setVisible(false);
@@ -1905,8 +1949,19 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	
             	if(getGlobalState().isExample()) {
             		menu.findItem(R.id.menu_tools).setVisible(false);
+            		
+            		menu.findItem(R.id.menu_undo).setVisible(false);
+                	menu.findItem(R.id.menu_redo).setVisible(false);
             	} else {
             		menu.findItem(R.id.menu_tools).setVisible(true);
+            		
+            		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
+            			menu.findItem(R.id.menu_undo).setVisible(true);
+            			menu.findItem(R.id.menu_redo).setVisible(true);
+            		} else {
+            			menu.findItem(R.id.menu_undo).setVisible(false);
+                    	menu.findItem(R.id.menu_redo).setVisible(false);
+            		}
             	}
             } else {
             	//If the drawer is closed and there are no tabs
@@ -1914,6 +1969,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	//Make sure to make the tab actions invisible
             	menu.findItem(R.id.menu_run).setVisible(false);
     	    	menu.findItem(R.id.menu_stop).setVisible(false);
+    	    	menu.findItem(R.id.menu_undo).setVisible(false);
+            	menu.findItem(R.id.menu_redo).setVisible(false);
     	    	menu.findItem(R.id.menu_tab_delete).setVisible(false);
             	menu.findItem(R.id.menu_tab_rename).setVisible(false);
             	menu.findItem(R.id.menu_tools).setVisible(false);
@@ -1937,6 +1994,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
         		break;
         	}
+        	
+        	//Enable / disable undo / redo buttons
+        	FileMeta meta = tabs.get(tabBar.getSelectedTab());
+        	menu.findItem(R.id.menu_undo).setEnabled(meta.canUndo());
+        	menu.findItem(R.id.menu_redo).setEnabled(meta.canRedo());
         	
         	menu.findItem(R.id.menu_new).setVisible(true);
         	menu.findItem(R.id.menu_load).setVisible(true);
@@ -2001,6 +2063,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	return true;
             case R.id.menu_stop:
             	stopApplication();
+            	return true;
+            case R.id.menu_undo:
+        		tabs.get(tabBar.getSelectedTab()).undo(this);
+            	return true;
+            case R.id.menu_redo:
+            	tabs.get(tabBar.getSelectedTab()).redo(this);
             	return true;
             case R.id.menu_save:
             	saveSketch();
@@ -2478,7 +2546,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	tabs.put(tab, new FileMeta(title));
     	
     	//Clear the code area
-    	((CodeEditText) findViewById(R.id.code)).setUpdateText("");
+    	((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
     	((CodeEditText) findViewById(R.id.code)).clearTokens();
     	
     	//Make the tab non-all-caps
@@ -2608,7 +2676,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    	if(tabBar.getTabCount() <= 0) {
 	    		//Clear the code text area
 		    	CodeEditText code = ((CodeEditText) findViewById(R.id.code));
-		    	code.setUpdateText("");
+		    	code.setNoUndoText("");
 		    	code.setSelection(0);
 		    	
 		    	//Get rid of previous syntax highlighter data
@@ -2731,6 +2799,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     }
     
+    public FileMeta getCurrentFileMeta() {
+    	return tabs.get(tabBar.getSelectedTab());
+    }
+    
+    public void clearUndoRedoHistory() {
+    	for (FileMeta meta : tabs.values()) {
+    		meta.clearUndoRedo();
+    	}
+    }
+    
 	@Override
 	public void onTabSelected(Tab tab) {
 		//Get a reference to the code area
@@ -2744,7 +2822,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			//If there are already tabs
 			
 			//Update the code area text
-			code.setUpdateText(meta.getText());
+			code.setNoUndoText(meta.getText());
 			//Update the code area selection
 			code.setSelection(meta.getSelectionStart(), meta.getSelectionEnd());
 			code.updateBracketMatch();
@@ -2770,15 +2848,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			
 			//Re-enable the code text area
 	    	code.setEnabled(true);
-	    	
-	    	//Force action menu refresh
-    		supportInvalidateOptionsMenu();
 		}
+		
+		//Force action menu refresh
+		supportInvalidateOptionsMenu();
 	}
 	
 	@Override
 	public void onTabUnselected(Tab tab) {
-		tabs.put(tab, new FileMeta(tab.getText().toString(), this));
+//		tabs.put(tab, new FileMeta(tab.getText().toString(), this));
+		getCurrentFileMeta().update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
 	}
 	
 	@Override

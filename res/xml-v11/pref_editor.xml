@@ -24,40 +24,31 @@
             android:key="override_tab"
             android:title="@string/override_tab"
             android:summary="@string/override_tab_desc" />
-    </PreferenceCategory>
-    
-    <PreferenceCategory
-        android:key="pref_key_character_tray"
-        android:title="@string/title_activity_character_tray_settings" >
         
-        <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="char_inserts"
-            android:title="@string/char_inserts" />
+        <!-- We haven't figured this out yet... -->
+        <!-- <Preference
+            android:title="@string/title_activity_character_tray_settings" >
+            
+            <intent
+                android:action="android.intent.action.VIEW"
+                android:targetClass="com.calsignlabs.apde.CharacterTraySettingsActivity"
+                android:targetPackage="com.calsignlabs.apde" />
+        </Preference> -->
+        <!-- Use this for now... -->
+        <Preference
+            android:title="@string/title_activity_character_tray_settings"
+            android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >
+            
+            <extra android:name="resource" android:value="pref_character_tray" />
+        </Preference>
         
-        <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="char_inserts_include_numbers"
-            android:title="@string/char_inserts_include_numbers"
-            android:dependency="char_inserts" />
-    </PreferenceCategory>
-    
-    <PreferenceCategory
-        android:key="pref_key_undo_redo_settings"
-        android:title="@string/undo_redo_settings" >
-        
-        <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="pref_key_undo_redo"
-            android:title="@string/pref_undo_redo" />
-        
-        <ListPreference
-            android:key="pref_key_undo_redo_keep"
-            android:title="@string/pref_undo_redo_keep"
-            android:entries="@array/undo_redo_keep_entries"
-            android:entryValues="@array/undo_redo_keep_entry_values"
-            android:defaultValue="@string/undo_redo_keep_default_value"
-            android:dependency="pref_key_undo_redo" />
+        <!-- Undo / redo settings -->
+        <Preference
+            android:title="@string/undo_redo_settings"
+            android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >
+            
+            <extra android:name="resource" android:value="pref_undo_redo" />
+        </Preference>
     </PreferenceCategory>
     
     <PreferenceCategory

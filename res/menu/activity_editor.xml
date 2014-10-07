@@ -13,6 +13,16 @@
         app:showAsAction="ifRoom"
         android:title="@string/menu_stop" />
     <item
+        android:id="@+id/menu_undo"
+        android:icon="@drawable/ic_undo"
+        app:showAsAction="ifRoom"
+        android:title="@string/undo" />
+    <item
+        android:id="@+id/menu_redo"
+        android:icon="@drawable/ic_redo"
+        app:showAsAction="ifRoom"
+        android:title="@string/redo" />
+    <item
         android:id="@+id/menu_sketch_properties"
         app:showAsAction="never"
         android:orderInCategory="100"

@@ -60,6 +60,23 @@ public class CodeEditText extends EditText {
 	//Whether or not we need to update the tokens AGAIN
 	private AtomicBoolean flagRefreshTokens;
 	
+	private enum EditType {
+		NONE,
+		CHAR,   //The user has pressed one character
+		DELETE, //The user has deleted one character
+		ENTER,  //The user has pressed enter (includes extra simulated character presses from the auto-indenter)
+		TAB,    //The user has pressed tab
+		BATCH   //The user has added or removed several characters at once (this is either pasting text or soft-keyboard auto-completion / swipe-typing)
+	}
+	
+	private final static long UNDO_UPDATE_TIME = 400; //Save changes to undo history after user has stopped typing for 400 milliseconds
+	
+	private boolean flagEnter = false;
+	private boolean flagTab = false;
+	
+	//Used to indicate that the code area is currently being updated in such a way that we should not save the change in the undo history
+	private boolean FLAG_NO_UNDO_SNAPSHOT = false;
+	
 	public CodeEditText(Context context) {
 		super(context);
 		init();
@@ -130,7 +147,9 @@ public class CodeEditText extends EditText {
 	
 	public void setupTextListener() {
 		addTextChangedListener(new TextWatcher() {
-			String oldText;
+			private String oldText;
+			private EditType lastEditType = EditType.NONE;
+			private long lastUpdate = 0;
 			
 			@Override
 			public void afterTextChanged(Editable editable) {
@@ -144,6 +163,47 @@ public class CodeEditText extends EditText {
 					char pressedChar = text.charAt(getSelectionStart() - 1);
 					
 					pressKeys(String.valueOf(pressedChar));
+				}
+				
+				EditorActivity editor = ((APDE) context.getApplicationContext()).getEditor();
+				FileMeta meta = editor.getCurrentFileMeta();
+				
+				if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("pref_key_undo_redo", true)) {
+					if (!FLAG_NO_UNDO_SNAPSHOT) {
+						meta.clearRedo();
+						
+						EditType editType;
+						
+						int lenDif = text.length() - oldText.length();
+						
+						switch (lenDif) {
+						case 1:
+							editType = flagEnter ? EditType.ENTER : EditType.CHAR;
+							break;
+						case -1:
+							editType = flagEnter ? EditType.ENTER : EditType.DELETE;
+							break;
+						default:
+							editType = flagEnter ? EditType.ENTER : (flagTab ? EditType.TAB : EditType.BATCH);
+							break;
+						}
+						
+						meta.update(editor, true);
+						
+						if (editType.equals(lastEditType) && SystemClock.uptimeMillis() - lastUpdate < UNDO_UPDATE_TIME) {
+							//If this is the same edit type (and not too much time has passed), merge it with the last
+							//We have to use .uptimeMillis() because .threadTimeMillis() doesn't run continuously - the thread pauses...
+							meta.mergeTop();
+						}
+						
+						lastUpdate = SystemClock.uptimeMillis();
+						
+						lastEditType = editType;
+					} else {
+						lastEditType = EditType.NONE;
+					}
+				} else {
+					meta.update(editor, false);
 				}
 			}
 			
@@ -186,7 +246,12 @@ public class CodeEditText extends EditText {
 				
 				//Override default TAB key behavior
 				if(keyCode == KeyEvent.KEYCODE_TAB && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("override_tab", true)) {
+					if (!FLAG_NO_UNDO_SNAPSHOT) {
+						flagTab = true;
+					}
 					getText().insert(getSelectionStart(), "  ");
+					flagTab = false;
+					
 					return true;
 				}
 				
@@ -358,8 +423,9 @@ public class CodeEditText extends EditText {
 	
 	public void pressKeys(String pressed) {
 		//Detect the ENTER key
-		if(pressed.length() == 1 && pressed.charAt(0) == '\n')
+		if(pressed.length() == 1 && pressed.charAt(0) == '\n') {
 			pressEnter();
+		}
 		
 		//Automatically add a closing brace (if the user has enabled curly brace insertion)
 		if(pressed.charAt(0) == '{' && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("curly_brace_insertion", true)) {
@@ -401,6 +467,10 @@ public class CodeEditText extends EditText {
 		
 		//Automatically indent
 		if(lastChar == '{') {
+			if (!FLAG_NO_UNDO_SNAPSHOT) {
+				flagEnter = true;
+			}
+			
 			//Automatically increase the indent if this is a new code block
 			getText().insert(getSelectionStart(), lastIndent + indent);
 			
@@ -414,6 +484,8 @@ public class CodeEditText extends EditText {
 				//Remove the extra space (see above)
 				getText().replace(getSelectionStart() + 1, getSelectionStart() + 2, "");
 			}
+			
+			flagEnter = false;
 		} else {
 			//Regular indentation
 			getText().insert(getSelectionStart(), lastIndent);
@@ -908,6 +980,12 @@ public class CodeEditText extends EditText {
 	
 	public void setUpdateText(String text) {
 		super.setText(text);
+	}
+	
+	public void setNoUndoText(String text) {
+		FLAG_NO_UNDO_SNAPSHOT = true;
+		super.setText(text);
+		FLAG_NO_UNDO_SNAPSHOT = false;
 	}
 	
 	/**

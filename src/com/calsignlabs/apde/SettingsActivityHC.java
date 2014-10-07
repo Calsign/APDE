@@ -56,9 +56,26 @@ public class SettingsActivityHC extends PreferenceActivity {
 				((PreferenceCategory) frag.findPreference("pref_general_settings")).removePreference(vibrator);
 		}
 		
+		final CheckBoxPreference enableUndoRedo = (CheckBoxPreference) frag.findPreference("pref_key_undo_redo");
+		
+		if (enableUndoRedo != null) {
+			enableUndoRedo.setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
+				@Override
+				public boolean onPreferenceChange(Preference preference, Object newValue) {
+					if (!enableUndoRedo.isChecked()) {
+						//If the user disabled undo / redo, clear the undo history to prevent problems
+						((APDE) getApplicationContext()).getEditor().clearUndoRedoHistory();
+					}
+					
+					return true;
+				}
+			});
+		}
+		
 		bindPreferenceSummaryToValue(frag.findPreference("textsize"));
 		bindPreferenceSummaryToValue(frag.findPreference("textsize_console"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_sketchbook_location"));
+		bindPreferenceSummaryToValue(frag.findPreference("pref_key_undo_redo_keep"));
 	}
 	
 	private static void bindPreferenceSummaryToValue(Preference preference) {
