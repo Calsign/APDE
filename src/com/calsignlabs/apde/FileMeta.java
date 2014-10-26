@@ -288,6 +288,16 @@ public class FileMeta implements Parcelable {
 				scrollY = change.afterScrollY;
 				
 				context.supportInvalidateOptionsMenu();
+			} else {
+				EditText code = (EditText) context.findViewById(R.id.code);
+				HorizontalScrollView scrollerX = (HorizontalScrollView) context.findViewById(R.id.code_scroller_x);
+				ScrollView scrollerY = (ScrollView) context.findViewById(R.id.code_scroller);
+				
+				selectionStart = code.getSelectionStart();
+				selectionEnd = code.getSelectionEnd();
+				
+				scrollX = scrollerX.getScrollX();
+				scrollY = scrollerY.getScrollY();
 			}
 		} else {
 			EditText code = (EditText) context.findViewById(R.id.code);

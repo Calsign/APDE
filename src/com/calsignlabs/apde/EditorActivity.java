@@ -408,6 +408,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         final GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.OnGestureListener() {
         	final static int FLING_THRESHOLD = 2;
+        	final static double ANGLE_THRESHOLD = Math.PI / 2; //45 degrees +/- the horizontal
         	
 			@Override
 			public boolean onSingleTapUp(MotionEvent e) {
@@ -430,6 +431,19 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
         		if (twoFingerSwipe) {
         			int selectedTab = tabBar.getSelectedTabIndex();
+        			
+        			//Let's steer clear of undefined
+        			if (velocityX == 0) {
+        				return false;
+        			}
+        			
+        			//Obtain the angle, make sure that 0 < theta < 2 * PI
+        			double theta = (Math.atan2(velocityY, velocityX) + Math.PI * 2) % Math.PI * 2;
+        			
+        			//Make sure that the angle is within the allowed region
+        			if ((theta > ANGLE_THRESHOLD && theta < Math.PI * 2 - ANGLE_THRESHOLD)) {
+        				return false;
+        			}
         			
         			if (velocityX >= FLING_THRESHOLD) {
         				if (selectedTab > 0) {
@@ -461,7 +475,18 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 					return false;
 				}
 				
-				final HorizontalScrollView codeScrollerX = (HorizontalScrollView) findViewById(R.id.code_scroller_x);
+				twoFingerSwipe = twoFingerSwipe || event.getPointerCount() == 2;
+				
+				boolean swipeSuccess = gestureDetector.onTouchEvent(event);
+				
+				if (event.getAction() == MotionEvent.ACTION_UP) {
+					twoFingerSwipe = false;
+				}
+				
+				if (swipeSuccess || twoFingerSwipe) {
+					return true;
+				}
+				
 				final LinearLayout padding = (LinearLayout) findViewById(R.id.code_padding);
 				
 				//Assign the starting pointer location
@@ -1529,6 +1554,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	    		
 	    		getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
 	    		
+	    		//Make sure the code area is editable
+				((CodeEditText) findViewById(R.id.code)).setFocusable(true);
+				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
+	    		
 	    		//Force the drawer to reload
 	    		forceDrawerReload();
 	    		
@@ -1996,7 +2025,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	}
         	
         	//Enable / disable undo / redo buttons
-        	FileMeta meta = tabs.get(tabBar.getSelectedTab());
+        	FileMeta meta = getCurrentFileMeta();
         	menu.findItem(R.id.menu_undo).setEnabled(meta.canUndo());
         	menu.findItem(R.id.menu_redo).setEnabled(meta.canRedo());
         	

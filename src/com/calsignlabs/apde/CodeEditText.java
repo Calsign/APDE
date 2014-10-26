@@ -203,7 +203,9 @@ public class CodeEditText extends EditText {
 						lastEditType = EditType.NONE;
 					}
 				} else {
-					meta.update(editor, false);
+					if (!FLAG_NO_UNDO_SNAPSHOT) {
+						meta.update(editor, false);
+					}
 				}
 			}
 			
