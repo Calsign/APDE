@@ -1198,7 +1198,7 @@ public class Build {
 		// 3. then loop over the code[] and save each .java file
 
 		for(FileMeta meta : tabs) {
-			if(meta.getSuffix().equals("java")) {
+			if(meta.getSuffix().equals(".java")) {
 				// In most cases, no pre-processing services necessary for Java files.
 				// Just write the the contents of 'program' to a .java file
 				// into the build directory. However, if a default package is being

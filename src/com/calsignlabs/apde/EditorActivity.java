@@ -1368,7 +1368,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			String suffix = parts[parts.length - 1];
     			
     			//Check to see if it's a .PDE file
-    			if(suffix.equals("pde")) {
+    			if (suffix.equals("pde")) {
     				//Build a Tab Meta object
     				FileMeta meta = new FileMeta("");
     				meta.readData(this, file.getAbsolutePath());
@@ -1376,6 +1376,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     				
     				//Add the tab
     				addTab(prefix, meta);
+    			} else if (suffix.equals("java")) {
+    				//Build a Tab Meta object
+    				FileMeta meta = new FileMeta("");
+    				meta.readData(this, file.getAbsolutePath());
+    				meta.setTitle(prefix);
+    				meta.setSuffix(".java");
+    				
+    				//Add the tab
+    				addTab(meta.getTitle(), meta);
     			}
     		}
     		
@@ -1781,7 +1790,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			String suffix = parts[parts.length - 1];
     			
     			//Check to see if it's a .PDE file
-    			if(suffix.equals("pde")) {
+    			if (suffix.equals("pde")) {
     				//Build a Tab Meta object
     				FileMeta meta = new FileMeta("");
     				meta.readTempData(this, file.getName());
@@ -1789,6 +1798,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     				
     				//Add the tab
     				addTab(prefix, meta);
+    			} else if (suffix.equals("java")) {
+    				//Build a Tab Meta object
+    				FileMeta meta = new FileMeta("");
+    				meta.readTempData(this, file.getName());
+    				meta.setTitle(prefix);
+    				meta.setSuffix(".java");
+    				
+    				//Add the tab
+    				addTab(meta.getTitle(), meta);
     			}
     		}
     		
@@ -2785,45 +2803,75 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     private void checkInputDialog(int key, boolean completed, String value) {
     	if(completed) {
     		//Make sure that this is a valid name for a tab
-    		if(!validateFileName(value))
+    		if(!(validateFileName(value) || (value.endsWith(".java") && value.length() > 5 && validateFileName(value.substring(0, value.length() - 5))))) {
     			return;
+    		}
     		
     		switch(key) {
     		case RENAME_TAB:
-    	    	//Get the tab
+    			//Get the tab
     			Tab cur = tabBar.getSelectedTab();
-    	    	//Delete the tab from the sketch folder
-    	    	deleteLocalFile(tabs.get(cur).getFilename());
+    			//Delete the tab from the sketch folder
+    			deleteLocalFile(tabs.get(cur).getFilename());
     			
-    	    	//Change the tab as it is displayed
-    	    	((TextView) tabBar.getTabView(tabBar.getSelectedTab()).getChildAt(0)).setText(value); //This seems more complicated than it needs to be... but it's necessary to change the appearance of the tab name
-    	    	tabBar.getSelectedTab().setText(value);
-    	    	tabs.get(tabBar.getSelectedTab()).setTitle(value);
+    			//Change the tab as it is displayed
+    			((TextView) tabBar.getTabView(tabBar.getSelectedTab()).getChildAt(0)).setText(value); //This seems more complicated than it needs to be... but it's necessary to change the appearance of the tab name
+    			tabBar.getSelectedTab().setText(value);
+    			tabs.get(tabBar.getSelectedTab()).setTitle(value);
     	    	
     	    	//Notify the user of success
     			message(getResources().getText(R.string.tab_renamed));
     			
     			break;
     		case NEW_TAB:
-    			//Add the tab
-    			addTab(value);
-    			//Select the new tab
-    			tabBar.selectLastTab();
-    			//Perform a selection action
-    			onTabSelected(tabBar.getSelectedTab());
+    			if (value.endsWith(".java")) {
+    				//Obtain a tab
+    		    	ActionBar.Tab tab = getSupportActionBar().newTab();
+    		    	//Set the tab text
+    		    	tab.setText(value);
+    		    	
+    		    	//Add the tab
+    		    	tabBar.addSelectTab(tab);
+    		    	
+    		    	//Correctly instantiate with a .JAVA suffix
+    		    	FileMeta meta = new FileMeta(value.substring(0, value.length() - 5));
+    		    	meta.setSuffix(".java");
+    		    	
+    		    	tabs.put(tab, meta);
+    		    	
+    		    	//Clear the code area
+    		    	((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
+    		    	((CodeEditText) findViewById(R.id.code)).clearTokens();
+    		    	
+    		    	//Make the tab non-all-caps
+    		    	customizeTab(tab, value);
+    				
+    				//Select the new tab
+    				tabBar.selectLastTab();
+    				//Perform a selection action
+    				onTabSelected(tabBar.getSelectedTab());
+    				
+    			} else {
+    				//Add the tab
+    				addTab(value);
+    				//Select the new tab
+    				tabBar.selectLastTab();
+    				//Perform a selection action
+    				onTabSelected(tabBar.getSelectedTab());
+    			}
     			
     			//Refresh options menu to remove "New Tab" button
-    			if(tabBar.getTabCount() == 1)
-    				supportInvalidateOptionsMenu();
-    			
-    			//Make sure that the code area is editable
-    	    	((CodeEditText) findViewById(R.id.code)).setFocusable(true);
-    			((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
-    			
-    			//Notify the user of success
-    			message(getResources().getText(R.string.tab_created));
-    			
-    			break;
+				if(tabBar.getTabCount() == 1)
+					supportInvalidateOptionsMenu();
+				
+				//Make sure that the code area is editable
+				((CodeEditText) findViewById(R.id.code)).setFocusable(true);
+				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
+				
+				//Notify the user of success
+				message(getResources().getText(R.string.tab_created));
+				
+				break;
     		}
     	}
     }
