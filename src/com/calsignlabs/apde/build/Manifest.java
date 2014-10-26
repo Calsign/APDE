@@ -312,9 +312,16 @@ public class Manifest {
 		
 		//Add the permissions
 		for(String perm : perms) {
-			XML permXML = new XML("uses-permission");
-			permXML.setString("android:name", perm);
-			xml.addChild(permXML);
+			//For some reason, this crashes on 2.3.3
+//			XML permXML = new XML("uses-permission");
+//			permXML.setString("android:name", perm);
+//			xml.addChild(permXML);
+			
+			//Add a new permission
+			xml.addChild("uses-permission");
+			//Select the last permission (the newly added one) and change the value
+			XML[] permNodes = xml.getChildren("uses-permission");
+			permNodes[permNodes.length - 1].setString("android:name", perm);
 		}
 	}
 	
