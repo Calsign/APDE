@@ -23,6 +23,7 @@ import com.calsignlabs.apde.tool.ExportEclipseProject;
 import com.calsignlabs.apde.tool.ExportSignedPackage;
 import com.calsignlabs.apde.tool.ImportLibrary;
 import com.calsignlabs.apde.tool.IncreaseIndent;
+import com.calsignlabs.apde.tool.ManageLibraries;
 import com.calsignlabs.apde.tool.Tool;
 
 import android.annotation.SuppressLint;
@@ -80,6 +81,25 @@ public class APDE extends Application {
 			default:
 				// Uh-oh...
 				return "";
+			}
+		}
+		
+		public boolean isExample() {
+			switch(this) {
+			case EXAMPLE:
+			case LIBRARY_EXAMPLE:
+				return true;
+			default:
+				return false;
+			}
+		}
+		
+		public boolean isTemp() {
+			switch(this) {
+			case TEMPORARY:
+				return true;
+			default:
+				return false;
 			}
 		}
 		
@@ -853,7 +873,7 @@ public class APDE extends Application {
 			packageToToolTable.clear();
 		}
 		
-		String[] coreTools = new String[] { AutoFormat.PACKAGE_NAME, ImportLibrary.PACKAGE_NAME, ColorSelector.PACKAGE_NAME,
+		String[] coreTools = new String[] { AutoFormat.PACKAGE_NAME, ImportLibrary.PACKAGE_NAME, ManageLibraries.PACKAGE_NAME, ColorSelector.PACKAGE_NAME,
 				CommentUncomment.PACKAGE_NAME, IncreaseIndent.PACKAGE_NAME, DecreaseIndent.PACKAGE_NAME,
 				ExportEclipseProject.PACKAGE_NAME, ExportSignedPackage.PACKAGE_NAME };
 		
@@ -909,7 +929,7 @@ public class APDE extends Application {
 		ArrayList<Tool> inList = new ArrayList<Tool>();
 		
 		for(Tool tool : tools) {
-			if(tool.showInToolsMenu()) {
+			if(tool.showInToolsMenu(getSketchLocationType())) {
 				inList.add(tool);
 			}
 		}

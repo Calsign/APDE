@@ -25,8 +25,10 @@ public interface Tool extends Runnable {
 	
 	/**
 	 * @return should this tool appear in the tools menu?
+	 * 
+	 * @param sketchLocation the location of the current sketch
 	 */
-	public boolean showInToolsMenu();
+	public boolean showInToolsMenu(APDE.SketchLocation sketchLocation);
 	
 	/**
 	 * Returns a converted MenuItem for use in the selection Contextual Action Bar.

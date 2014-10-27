@@ -45,8 +45,8 @@ public class AutoFormat implements Tool {
 	}
 	
 	@Override
-	public boolean showInToolsMenu() {
-		return true;
+	public boolean showInToolsMenu(APDE.SketchLocation sketchLocation) {
+		return !sketchLocation.isExample();
 	}
 	
 	@Override

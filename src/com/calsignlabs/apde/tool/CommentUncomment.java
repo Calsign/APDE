@@ -92,7 +92,7 @@ public class CommentUncomment implements Tool {
 	}
 	
 	@Override
-	public boolean showInToolsMenu() {
+	public boolean showInToolsMenu(APDE.SketchLocation sketchLocation) {
 		return false;
 	}
 	

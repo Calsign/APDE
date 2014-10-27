@@ -7,10 +7,10 @@ import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
 
 /**
- * Launches EditorActivity's "Import Library" dialog - this class is just a wrapper.
+ * "Manage Libraries" button, shown when "Import Library" is hidden so that we still provide the installation functionality
  */
-public class ImportLibrary implements Tool {
-	public static final String PACKAGE_NAME = "com.calsignlabs.apde.tool.ImportLibrary";
+public class ManageLibraries implements Tool {
+	public static final String PACKAGE_NAME = "com.calsignlabs.apde.tool.ManageLibraries";
 	
 	private APDE context;
 	
@@ -21,22 +21,22 @@ public class ImportLibrary implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.import_library);
+		return context.getResources().getString(R.string.manage_libraries);
 	}
 	
 	@Override
 	public void run() {
-		context.getEditor().launchImportLibrary();
+		context.getEditor().launchManageLibraries();
 	}
 	
 	@Override
 	public KeyBinding getKeyBinding() {
-		return context.getEditor().getKeyBindings().get("import_library");
+		return null;
 	}
 	
 	@Override
 	public boolean showInToolsMenu(APDE.SketchLocation sketchLocation) {
-		return !sketchLocation.isExample();
+		return sketchLocation.isExample();
 	}
 	
 	@Override

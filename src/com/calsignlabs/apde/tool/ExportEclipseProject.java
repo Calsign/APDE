@@ -88,8 +88,8 @@ public class ExportEclipseProject implements Tool {
 	}
 	
 	@Override
-	public boolean showInToolsMenu() {
-		return true;
+	public boolean showInToolsMenu(APDE.SketchLocation sketchLocation) {
+		return !sketchLocation.isTemp();
 	}
 	
 	@Override

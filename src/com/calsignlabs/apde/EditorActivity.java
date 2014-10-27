@@ -1994,14 +1994,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
             	menu.findItem(R.id.menu_tab_rename).setVisible(true);
             	
+            	menu.findItem(R.id.menu_tools).setVisible(true);
+            	
             	if(getGlobalState().isExample()) {
-            		menu.findItem(R.id.menu_tools).setVisible(false);
-            		
             		menu.findItem(R.id.menu_undo).setVisible(false);
                 	menu.findItem(R.id.menu_redo).setVisible(false);
             	} else {
-            		menu.findItem(R.id.menu_tools).setVisible(true);
-            		
             		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
             			menu.findItem(R.id.menu_undo).setVisible(true);
             			menu.findItem(R.id.menu_redo).setVisible(true);
@@ -3102,7 +3100,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		dialog.show();
 	}
 	
-	private void launchManageLibraries() {
+	public void launchManageLibraries() {
 		Intent intent = new Intent(this, LibraryManagerActivity.class);
 		startActivity(intent);
 	}
