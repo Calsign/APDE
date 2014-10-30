@@ -199,5 +199,8 @@
     <string name="key_alias">Key Alias:</string>
     <string name="undo">Undo</string>
     <string name="redo">Redo</string>
+    <string name="library_install_failed_title">Install Failed</string>
+    <string name="library_install_failed_message">Library installation failed. This is usually caused by a poorly formatted library. Please see the console for a stack trace.</string>
+    <string name="copying">Copying</string>
 
 </resources>

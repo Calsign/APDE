@@ -19,7 +19,7 @@ public class Library {
 	private String libraryName;
 	
 	public enum Status {
-		EXTRACTING, DEXING, INSTALLED
+		COPYING, EXTRACTING, DEXING, INSTALLED
 	}
 	
 	private Status status;

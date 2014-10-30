@@ -319,6 +319,21 @@ public class LibraryManagerActivity extends ActionBarActivity {
 		builder.create().show();
 	}
 	
+	private void alert(int titleResID, int messageResID) {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(titleResID);
+		builder.setMessage(messageResID);
+		
+		builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				
+			}
+		});
+		
+		builder.create().show();
+	}
+	
 	//Handle library updates during installation
 	//This all needs to be static to avoid memory leaks
 	private static class LibraryUpdateHandler extends Handler {
@@ -333,6 +348,9 @@ public class LibraryManagerActivity extends ActionBarActivity {
 					@SuppressLint("NewApi")
 					public void run() {
 						switch((Library.Status) msg.obj) {
+						case COPYING:
+							dialog.setProgressText(res.getString(R.string.copying) + "...");
+							break;
 						case EXTRACTING:
 							dialog.setProgressText(res.getString(R.string.extracting) + "...");
 							break;
@@ -378,8 +396,16 @@ public class LibraryManagerActivity extends ActionBarActivity {
 			@Override
 			public void run() {
 				working = true;
-				ContributionManager.installLibrary(library, libraryZip, libraryUpdateHandler, context);
+				boolean success = ContributionManager.installZipLibrary(library, libraryZip, libraryUpdateHandler, context);
 				working = false;
+				
+				if (!success) {
+					runOnUiThread(new Runnable() {
+						public void run() {
+							alert(R.string.library_install_failed_title, R.string.library_install_failed_message);
+						}
+					});
+				}
 				
 				findViewById(R.id.library_manager_list).post(new Runnable() {
 					public void run() {

@@ -21,17 +21,20 @@ public class ContributionManager {
 	public static final int LIBRARY_UPDATE = 22885;
 	
 	/**
-	 * Installs a library from a ZIP archive
+	 * Installs a library from an existing directory
 	 * 
 	 * @param libraryZip
 	 * @param context
 	 */
-	public static Library installLibrary(Library library, File libraryZip, Handler handler, APDE context) {
-		library.setStatus(Library.Status.EXTRACTING);
+	public static boolean installDirLibrary(Library library, File libraryDir, Handler handler, APDE context) {
+		library.setStatus(Library.Status.COPYING);
 		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
 		
-		//Extract to the libraries folder
-		extractFile(libraryZip, library.getLibraryFolder(context));
+		//Copy to the libraries folder
+		if (!copyFile(libraryDir, library.getLibraryFolder(context))) {
+			System.err.println("Unexcepted error occurred while copying the library.");
+			return false;
+		}
 		
 		library.setStatus(Library.Status.DEXING);
 		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
@@ -41,18 +44,72 @@ public class ContributionManager {
 		//Make sure that we have a dexed library directory
 		library.getLibraryJarDexFolder(context).mkdir();
 		
-		File[] jars = library.getLibraryJars(context);
-		File[] dexJars = library.getLibraryDexJars(context);
-		
-		//Dex all of the files...
-		for(int i = 0; i < jars.length; i ++) {
-			dexJar(jars[i], dexJars[i]);
+		try {
+			File[] jars = library.getLibraryJars(context);
+			File[] dexJars = library.getLibraryDexJars(context);
+			
+			//Dex all of the files...
+			for(int i = 0; i < jars.length; i ++) {
+				dexJar(jars[i], dexJars[i]);
+			}
+		} catch (NullPointerException e) {
+			//If we can't find the JARs
+			System.err.println("Unable to locate the library JAR files at " + library.getLibraryJarFolder(context));
+			System.err.println("Try organizing the folder structure according the Processing library formatting guidelines.");
+			e.printStackTrace();
+			return false;
 		}
 		
 		library.setStatus(Library.Status.INSTALLED);
 		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
 		
-		return library;
+		return false;
+	}
+	
+	/**
+	 * Installs a library from a ZIP archive
+	 * 
+	 * @param libraryZip
+	 * @param context
+	 */
+	public static boolean installZipLibrary(Library library, File libraryZip, Handler handler, APDE context) {
+		library.setStatus(Library.Status.EXTRACTING);
+		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
+		
+		//Extract to the libraries folder
+		if(!extractFile(libraryZip, library.getLibraryFolder(context))) {
+			System.err.println("Unexcepted error occurred while extracting the library.");
+			return false;
+		}
+		
+		library.setStatus(Library.Status.DEXING);
+		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
+		
+		//We dex during the install to save build time
+		
+		//Make sure that we have a dexed library directory
+		library.getLibraryJarDexFolder(context).mkdir();
+		
+		try {
+			File[] jars = library.getLibraryJars(context);
+			File[] dexJars = library.getLibraryDexJars(context);
+			
+			//Dex all of the files...
+			for(int i = 0; i < jars.length; i ++) {
+				dexJar(jars[i], dexJars[i]);
+			}
+		} catch (NullPointerException e) {
+			//If we can't find the JARs
+			System.err.println("Unable to locate the library JAR files at " + library.getLibraryJarFolder(context));
+			System.err.println("Try organizing the folder structure within the ZIP file according the Processing library formatting guidelines.");
+			e.printStackTrace();
+			return false;
+		}
+		
+		library.setStatus(Library.Status.INSTALLED);
+		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
+		
+		return true;
 	}
 	
 	/**
@@ -187,6 +244,18 @@ public class ContributionManager {
 			zis.close();
 		} catch(IOException e) {
 			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
+	}
+	
+	private static boolean copyFile(File input, File output) {
+		try {
+			APDE.copyFile(input, output);
+		} catch (Exception e) {
+			e.printStackTrace();
+			
 			return false;
 		}
 		
