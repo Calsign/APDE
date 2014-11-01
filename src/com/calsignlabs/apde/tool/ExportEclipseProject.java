@@ -62,7 +62,8 @@ public class ExportEclipseProject implements Tool {
 			return;
 		}
 		
-		final File binFolder = new File(context.getSketchLocation(), "bin");
+		//If this is an example, then put the sketch in the "bin" directory within the sketchbook
+		final File binFolder = new File(context.isExample() ? context.getSketchbookFolder() : context.getSketchLocation(), "bin");
 		final File exportFolder = new File(binFolder, "export");
 		
 		binFolder.mkdir();

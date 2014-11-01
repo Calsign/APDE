@@ -215,7 +215,7 @@ public class Build {
 			for(FileMeta tab : tabs)
 				combinedText += tab.getText();
 			preproc.initSketchSize(combinedText, editor);
-			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false);
+			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false, false);
 			
 			if(sketchClassName != null) {
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
@@ -382,7 +382,7 @@ public class Build {
 			for(FileMeta tab : tabs)
 				combinedText += tab.getText();
 			preproc.initSketchSize(combinedText, editor);
-			sketchClassName = preprocess(srcFolder, packageName, preproc, false);
+			sketchClassName = preprocess(srcFolder, packageName, preproc, false, injectLogBroadcaster);
 			
 			//Detect if the renderer is one of the OpenGL renderers
 			//XTODO support custom renderers that require OpenGL or... other problems that may arise
@@ -956,7 +956,7 @@ public class Build {
 //		return new SketchException(message, codeIndex, codeLine, -1, false); // changed for 0194 for compile errors, but...
 //	}
 	
-	public String preprocess(File srcFolder, String packageName, PdePreprocessor preprocessor, boolean sizeWarning) throws SketchException {
+	public String preprocess(File srcFolder, String packageName, PdePreprocessor preprocessor, boolean sizeWarning, boolean localInjectLogBroadcaster) throws SketchException {
 		if(getSketchFolder().exists());
 		
 		classPath = binFolder.getAbsolutePath();
@@ -978,7 +978,7 @@ public class Build {
 			codeFolderPackages = packageListFromClassPath(codeFolderClassPath);
 		}
 		
-		if (injectLogBroadcaster) {
+		if (localInjectLogBroadcaster) {
 			//Add "LogBroadcaster.pde" to the code
 			
 			try {

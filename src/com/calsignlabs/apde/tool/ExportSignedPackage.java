@@ -1295,7 +1295,8 @@ public class ExportSignedPackage implements Tool {
 	}
 	
 	protected void releaseBuild() {
-		final File binFolder = new File(context.getSketchLocation(), "bin");
+		//If this is an example, then put the sketch in the "bin" directory within the sketchbook
+		final File binFolder = new File(context.isExample() ? context.getSketchbookFolder() : context.getSketchLocation(), "bin");
 		
 		binFolder.mkdir();
 		

@@ -367,7 +367,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		//TODO make this browse, not request a file...
 		//TODO also, get rid of Google Drive and such - only allow local file browsers (that support the external storage)
 		
-		File sketchFolder = getGlobalState().getSketchLocation();;
+		File sketchFolder = getGlobalState().getSketchLocation();
 		
 		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
 		intent.setDataAndType(Uri.fromFile(sketchFolder), "*/*");
