@@ -1,6 +1,8 @@
 package com.calsignlabs.apde;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Map.Entry;
@@ -17,6 +19,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -26,18 +31,38 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.ContextThemeWrapper;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
 public class SketchPropertiesActivity extends PreferenceActivity {
 	//This is a number, that's all that matters
 	private static final int REQUEST_CHOOSER = 6283;
+	//This is another number - this time, it's for something else
+	private static final int REQUEST_ICON_FILE = 9864;
 	
 	private static final boolean ALWAYS_SIMPLE_PREFS = true;
 	
 	private OnSharedPreferenceChangeListener prefListener;
+	
+	//The change icon dialog layout
+	private ScrollView changeIconLayout;
+	//This is used in the change icon dialog
+	private EditText iconFile;
+	//The change icon dialog "OK" button
+	private Button changeIconOK;
 	
 	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 	@Override
@@ -82,10 +107,28 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 				
 				if(path != null && FileUtils.isLocal(path)) {
 					File file = new File(path);
-					if(file.exists())
+					if(file.exists()) {
 						addFile(file);
+					}
 				}
 			}
+			
+			break;
+		case REQUEST_ICON_FILE:
+			if (resultCode == RESULT_OK) {
+				final Uri uri = data.getData();
+				
+				// Get the File path from the Uri
+				String path = FileUtils.getPath(this, uri);
+				
+				if(path != null && FileUtils.isLocal(path)) {
+					File file = new File(path);
+					if(file.exists() && iconFile != null) {
+						iconFile.setText(path);
+					}
+				}
+			}
+			
 			break;
 		}
 	}
@@ -185,6 +228,15 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 			@Override
 			public boolean onPreferenceClick(Preference preference) { 
 				launchSketchFolder();
+				return true;
+			}
+		});
+		
+		Preference launchChangeIcon = (Preference) findPreference("prop_change_icon");
+		launchChangeIcon.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+			@Override
+			public boolean onPreferenceClick(Preference preference) { 
+				launchChangeIcon();
 				return true;
 			}
 		});
@@ -373,6 +425,290 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		intent.setDataAndType(Uri.fromFile(sketchFolder), "*/*");
 		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //Start this in a separate task
 		startActivity(Intent.createChooser(intent, getResources().getString(R.string.show_sketch_folder)));
+	}
+	
+	@SuppressLint({ "InlinedApi", "NewApi" })
+	public void launchChangeIcon() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.prop_change_icon);
+		
+		if (android.os.Build.VERSION.SDK_INT >= 11) {
+			changeIconLayout = (ScrollView) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog), R.layout.change_icon, null);
+		} else {
+			changeIconLayout = (ScrollView) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Dialog), R.layout.change_icon, null);
+		}
+		
+		iconFile = (EditText) changeIconLayout.findViewById(R.id.change_icon_file);
+		final ImageButton iconFileSelect = (ImageButton) changeIconLayout.findViewById(R.id.change_icon_file_select);
+		
+		//Scale format radio group
+		final RadioGroup scaleFormat = (RadioGroup) changeIconLayout.findViewById(R.id.format_scale);
+		
+		for (int i = 0; i < scaleFormat.getChildCount(); i ++) {
+			((RadioButton) scaleFormat.getChildAt(i)).setEnabled(false);
+		}
+		
+		scaleFormat.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(RadioGroup group, int checkedId) {
+				rebuildIconChange();
+			}
+		});
+		
+		//Alt text for the big icon
+		final TextView bigIconAltText = (TextView) changeIconLayout.findViewById(R.id.big_icon_alt_text);
+		
+		if (android.os.Build.VERSION.SDK_INT >= 14) {
+			bigIconAltText.setAllCaps(true);
+		} else {
+			bigIconAltText.setText(getResources().getString(R.string.icon_file_not_selected).toUpperCase(Locale.US));
+		}
+		
+		builder.setView(changeIconLayout);
+		
+		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {}
+		});
+		
+		builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				Bitmap bitmap = BitmapFactory.decodeFile(iconFile.getText().toString());
+				int minDim = Math.min(bitmap.getWidth(), bitmap.getHeight());
+				
+				int[] dims = {36, 48, 72, 96};
+				
+				for (int dim : dims) {
+					File out = new File(getGlobalState().getSketchLocation(), "icon-" + dim + ".png");
+					
+					//Don't scale the image up
+					if (dim <= minDim) {
+						FileOutputStream stream = null;
+						
+						try {
+							stream = new FileOutputStream(out);
+							
+							//Replace the old icon
+							formatIcon(bitmap, dim, getScaleFormat(scaleFormat)).compress(Bitmap.CompressFormat.PNG, 100, stream);
+						} catch (FileNotFoundException e) {
+							e.printStackTrace();
+							//...
+						} finally {
+							//Always close the stream...
+							if (stream != null) {
+								try {
+									stream.close();
+								} catch (IOException e) {
+									e.printStackTrace();
+									//Whatever at this point...
+								}
+							}
+						}
+					} else {
+						//Get rid of the old icon...
+						out.delete();
+					}
+				}
+			}
+		});
+		
+		AlertDialog dialog = builder.create();
+		dialog.show();
+		
+		changeIconOK = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+		changeIconOK.setEnabled(false);
+		
+		iconFileSelect.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.select_file));
+			    startActivityForResult(intent, REQUEST_ICON_FILE);
+			}
+		});
+		
+		iconFile.addTextChangedListener(new TextWatcher() {
+			@Override
+			public void afterTextChanged(Editable arg0) {
+				rebuildIconChange();
+			}
+			
+			@Override
+			public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+			
+			@Override
+			public void onTextChanged(CharSequence s, int start, int before, int count) {}
+		});
+		
+		rebuildIconChange();
+	}
+	
+	public void rebuildIconChange() {
+		//Original image
+		final ImageView bigIcon = (ImageView) changeIconLayout.findViewById(R.id.big_icon);
+		//Image after cropping and scaling
+		final ImageView smallIcon = (ImageView) changeIconLayout.findViewById(R.id.small_icon);
+		
+		//Alt text for the big icon
+		final TextView bigIconAltText = (TextView) changeIconLayout.findViewById(R.id.big_icon_alt_text);
+		
+		//Scale format radio group
+		final RadioGroup scaleFormat = (RadioGroup) changeIconLayout.findViewById(R.id.format_scale);
+		
+		String iconFilePath = iconFile.getText().toString();
+		File iconFileFile = new File(iconFilePath);
+		
+		if (iconFileFile.exists() && iconFileFile.isFile()) {
+			Bitmap bitmap = BitmapFactory.decodeFile(iconFilePath);
+			
+			if (bitmap != null) {
+				int w = bitmap.getWidth();
+				int h = bitmap.getHeight();
+				
+				int dim = changeIconLayout.getWidth();
+				
+				if (w > dim || h > dim) {
+					//Resize the bitmap to fit the dialog
+					
+					if (Math.min(w, h) == w) {
+						int scaleW = Math.round(w / (((float) h) / dim));
+						
+						bigIcon.setImageBitmap(Bitmap.createScaledBitmap(bitmap, scaleW, dim, false));
+					} else {
+						int scaleH = Math.round(h / (((float) w) / dim));
+						
+						bigIcon.setImageBitmap(Bitmap.createScaledBitmap(bitmap, dim, scaleH, false));
+					}
+				} else {
+					bigIcon.setImageBitmap(bitmap);
+				}
+				
+				int iconSize = Math.round(36 * getResources().getDisplayMetrics().density);
+				
+				smallIcon.setImageBitmap(formatIcon(bitmap, iconSize, getScaleFormat(scaleFormat)));
+				
+				bigIcon.setVisibility(View.VISIBLE);
+				bigIconAltText.setVisibility(View.GONE);
+				
+				changeIconOK.setEnabled(true);
+				for (int i = 0; i < scaleFormat.getChildCount(); i ++) {
+					((RadioButton) scaleFormat.getChildAt(i)).setEnabled(true);
+				}
+				
+				return;
+			}
+		}
+		
+		//If we were unable to load the image...
+		
+		bigIcon.setImageBitmap(null);
+		
+		//Load the old icon for the current sketch
+		
+		File sketchFolder = getGlobalState().getSketchLocation();
+		String[] iconTitles = {"icon-96.png", "icon-72.png", "icon-48.png", "icon-36.png"}; //Prefer the higher-resolution icons
+		
+		String iconPath = "";
+		
+		for (String iconTitle : iconTitles) {
+			File icon = new File(sketchFolder, iconTitle);
+			
+			if (icon.exists()) {
+				iconPath = icon.getAbsolutePath();
+				break;
+			}
+		}
+		
+		if (!iconPath.equals("")) {
+			Bitmap oldIcon = BitmapFactory.decodeFile(iconPath);
+			
+			if (oldIcon != null) {
+				smallIcon.setImageBitmap(oldIcon);
+			} else {
+				//Uh-oh, some error occurred...
+			}
+		} else {
+			smallIcon.setImageDrawable(getResources().getDrawable(R.drawable.default_icon));
+		}
+		
+		bigIcon.setVisibility(View.GONE);
+		bigIconAltText.setVisibility(View.VISIBLE);
+		
+		changeIconOK.setEnabled(false);
+		for (int i = 0; i < scaleFormat.getChildCount(); i ++) {
+			((RadioButton) scaleFormat.getChildAt(i)).setEnabled(false);
+		}
+	}
+	
+	protected static final int FORMAT_SCALE_MASK = 0x0000000F;
+	
+	protected static final int FORMAT_SCALE_CROP = 0x00000001;
+	protected static final int FORMAT_SCALE_CENTER = 0x00000002;
+	protected static final int FORMAT_SCALE_RESIZE = 0x00000003;
+	
+	protected Bitmap formatIcon(Bitmap bitmap, int dim, int options) {
+		Bitmap working;
+		
+		int w = bitmap.getWidth();
+		int h = bitmap.getHeight();
+		
+		switch (options & FORMAT_SCALE_MASK) {
+		case FORMAT_SCALE_CROP:
+			if (Math.min(w, h) == w) {
+				int scaleH = Math.round(h / (((float) w) / dim));
+				int dif = scaleH - dim;
+				
+				working = Bitmap.createBitmap(Bitmap.createBitmap(Bitmap.createScaledBitmap(bitmap, dim, scaleH, false), 0, dif / 2, dim, dim));
+			} else {
+				int scaleW = Math.round(w / (((float) h) / dim));
+				int dif = scaleW - dim;
+				
+				working = Bitmap.createBitmap(Bitmap.createBitmap(Bitmap.createScaledBitmap(bitmap, scaleW, dim, false), dif / 2, 0, dim, dim));
+			}
+			
+			break;
+		case FORMAT_SCALE_CENTER:
+			//Scale down and pad the image
+			
+			working = Bitmap.createBitmap(dim, dim, Bitmap.Config.ARGB_8888);
+			Canvas canvas = new Canvas(working);
+			canvas.drawARGB(0, 255, 255, 255); //Make the background transparent
+			
+			if (Math.min(w, h) == w) {
+				int scaleW = Math.round(w / (((float) h) / dim));
+				int dif = dim - scaleW;
+				
+				canvas.drawBitmap(Bitmap.createBitmap(Bitmap.createScaledBitmap(bitmap, scaleW, dim, false)), dif / 2, 0, null);
+			} else {
+				int scaleH = Math.round(h / (((float) w) / dim));
+				int dif = dim - scaleH;
+				
+				canvas.drawBitmap(Bitmap.createBitmap(Bitmap.createScaledBitmap(bitmap, dim, scaleH, false)), 0, dif / 2, null);
+			}
+			
+			break;
+		case FORMAT_SCALE_RESIZE:
+		default:
+			working = Bitmap.createBitmap(Bitmap.createScaledBitmap(bitmap, dim, dim, false));
+			
+			break;
+		}
+		
+		return working;
+	}
+	
+	private int getScaleFormat(RadioGroup scaleFormat) {
+		//Yes, this is incredibly redundant...
+		switch (scaleFormat.getCheckedRadioButtonId()) {
+		case R.id.format_scale_crop:
+			return FORMAT_SCALE_CROP;
+		case R.id.format_scale_center:
+			return FORMAT_SCALE_CENTER;
+		case R.id.format_scale_resize:
+			return FORMAT_SCALE_RESIZE;
+		default:
+			return -1;
+		}
 	}
 	
 	private void saveSketch() {

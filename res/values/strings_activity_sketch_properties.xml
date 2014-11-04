@@ -34,4 +34,12 @@
     <string name="prop_version_code_default">1</string>
     <string name="prop_pretty_version">Version Name</string>
     <string name="prop_pretty_version_default">1.0</string>
+    <string name="prop_change_icon">Change Sketch Icon</string>
+    <string name="sketch_icon">Sketch Icon</string>
+    <string name="icon_file_select">Select Icon File</string>
+    <string name="icon_file">Icon File</string>
+    <string name="format_scale_crop">Crop</string>
+    <string name="format_scale_center">Center</string>
+    <string name="format_scale_resize">Resize</string>
+    <string name="icon_file_not_selected">No Icon File Selected</string>
 </resources>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" >
+        
+        <RelativeLayout
+            android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+            android:layout_margin="12dp"
+            android:orientation="horizontal" >
+            
+            <ImageButton android:id="@+id/change_icon_file_select"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignBottom="@+id/change_icon_file"
+                android:layout_alignParentRight="true"
+                android:layout_alignTop="@id/change_icon_file"
+                android:contentDescription="@string/icon_file_select"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_select_file" />
+            
+            <EditText android:id="@id/change_icon_file"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentLeft="true"
+                android:layout_toLeftOf="@id/change_icon_file_select"
+                android:hint="@string/icon_file"
+                android:inputType="textUri" />
+        </RelativeLayout>
+        
+        <TextView android:id="@+id/big_icon_alt_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="12dp"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/icon_file_not_selected" />
+        
+        <ImageView android:id="@+id/big_icon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="12dp"
+            android:contentDescription="@string/sketch_icon"
+            android:layout_gravity="center_horizontal"
+            android:scaleType="centerInside" />
+        
+        <RadioGroup android:id="@+id/format_scale"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checkedButton="@+id/format_scale_crop"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_margin="12dp" >
+            
+            <RadioButton android:id="@id/format_scale_crop"
+                android:text="@string/format_scale_crop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="6dp" />
+            
+            <RadioButton android:id="@+id/format_scale_center"
+                android:text="@string/format_scale_center"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="6dp" />
+            
+            <RadioButton android:id="@+id/format_scale_resize"
+                android:text="@string/format_scale_resize"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </RadioGroup>
+        
+        <ImageView android:id="@+id/small_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="12dp"
+            android:contentDescription="@string/sketch_icon"
+            android:layout_gravity="center_horizontal" />
+    </LinearLayout>
+</ScrollView>
