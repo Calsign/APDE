@@ -1531,7 +1531,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		return;
     	}
     	
-    	boolean success = true;
+    	//The old example location
+    	File oldLoc = getGlobalState().getSketchLocation();
     	
     	//Get the sketch name so that we place the copied example at the root of sketchbook
     	String sketchPath = "/" + getGlobalState().getSketchName();
@@ -1543,52 +1544,29 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Ensure that the sketch folder exists
     	sketchLoc.mkdirs();
     	
-    	if(tabBar.getTabCount() > 0) {
-	    	//Update the current tab
-	    	tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), this));
-	    	
-	    	//Iterate through the FileMetas...
-	    	for(FileMeta meta : tabs.values()) {
-	    		if(meta.enabled()) {
-	    			//...and write them to the sketch folder
-	    			if(!meta.writeData(getApplicationContext(), sketchLoc.getPath() + "/")) {
-	    				success = false;
-	    			}
-	    		}
-	    	}
-	    	
-	    	if(success) {
-	    		//We need to add it to the recent list
-	    		getGlobalState().putRecentSketch(APDE.SketchLocation.SKETCHBOOK, sketchPath);
-	    		
-	    		getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
-	    		
-	    		//Make sure the code area is editable
-				((CodeEditText) findViewById(R.id.code)).setFocusable(true);
-				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
-	    		
-	    		//Force the drawer to reload
-	    		forceDrawerReload();
-	    		
-	    		supportInvalidateOptionsMenu();
-	            
-	            //Inform the user of success
-	    		message(getResources().getText(R.string.sketch_saved));
-	    		setSaved(true);
-	    	} else {
-	    		//Inform the user of failure
-	    		error(getResources().getText(R.string.sketch_save_failure));
-	    	}
-    	} else {
-    		//If there are no tabs
-    		//TODO is this right?
+    	try {
+    		APDE.copyFile(oldLoc, sketchLoc);
+    		
+    		//We need to add it to the recent list
+    		getGlobalState().putRecentSketch(APDE.SketchLocation.SKETCHBOOK, sketchPath);
+    		
+    		getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
+    		
+    		//Make sure the code area is editable
+			((CodeEditText) findViewById(R.id.code)).setFocusable(true);
+			((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
     		
     		//Force the drawer to reload
     		forceDrawerReload();
     		
-            //Inform the user
+    		supportInvalidateOptionsMenu();
+            
+            //Inform the user of success
     		message(getResources().getText(R.string.sketch_saved));
     		setSaved(true);
+    	} catch (IOException e) {
+    		//Inform the user of failure
+    		error(getResources().getText(R.string.sketch_save_failure));
     	}
     }
     

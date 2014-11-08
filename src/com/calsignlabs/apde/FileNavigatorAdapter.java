@@ -12,6 +12,8 @@ import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Point;
 import android.os.Handler;
@@ -134,7 +136,33 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			icon.setImageDrawable(context.getResources().getDrawable(R.drawable.ic_folder_closed));
 			break;
 		case SKETCH:
-			icon.setImageDrawable(context.getResources().getDrawable(R.drawable.ic_launcher));
+			//Try to load the sketch's icon
+			
+			File sketchFolder = ((APDE) context.getApplicationContext()).getSketchLocation(item.getSketch().getPath(), item.getSketch().getLocation());
+			String[] iconTitles = {"icon-96.png", "icon-72.png", "icon-48.png", "icon-36.png"}; //Prefer the higher-resolution icons
+			String iconPath = "";
+			
+			for (String iconTitle : iconTitles) {
+				File iconFile = new File(sketchFolder, iconTitle);
+				
+				if (iconFile.exists()) {
+					iconPath = iconFile.getAbsolutePath();
+					break;
+				}
+			}
+			
+			if (!iconPath.equals("")) {
+				Bitmap curIcon = BitmapFactory.decodeFile(iconPath);
+				
+				if (curIcon != null) {
+					int iconSize = Math.round(36 * context.getResources().getDisplayMetrics().density);
+					icon.setImageBitmap(Bitmap.createScaledBitmap(curIcon, iconSize, iconSize, false));
+				} else {
+					//Uh-oh, some error occurred...
+				}
+			} else {
+				icon.setImageDrawable(context.getResources().getDrawable(R.drawable.default_icon));
+			}
 			break;
 		default:
 			icon.setImageDrawable(null);
