@@ -675,15 +675,24 @@ public class Build {
 			System.out.println("Running DX...");
 			
 			String[] args = new String[] {
-				"--dex",
+//				"--dex", //If we invoke the dexer directly, we don't need this
 				"--output=" + binFolder.getAbsolutePath() + "/classes.dex", //The location of the output DEX class file
 				binFolder.getAbsolutePath() + "/classes/", //add "/classes/" to get DX to work properly
 				dexedLibsFolder.getAbsolutePath()
 			};
 			
-			com.android.dx.command.Main.main(args);
+			//This is some side-stepping to avoid System.exit() calls
 			
-			System.out.println("Ran DX successfuly");
+			com.android.dx.command.dexer.Main.Arguments dexArgs = new com.android.dx.command.dexer.Main.Arguments();
+			dexArgs.parse(args);
+			
+			int resultCode = com.android.dx.command.dexer.Main.run(dexArgs);
+			
+			if (resultCode == 0) {
+				System.out.println("Ran DX successfuly");
+			} else {
+				System.err.println("DX Dexer result code: " + resultCode);
+			}
 		} catch(Exception e) {
 			System.out.println("DX failed");
 			e.printStackTrace();
