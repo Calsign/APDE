@@ -1315,10 +1315,17 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		
 		//Clear the code area
 		CodeEditText code = ((CodeEditText) findViewById(R.id.code));
-		code.setNoUndoText("");
+		code.setText(""); //We don't use setNoUndoText() because it screws up the undo history...
+		
+		//Fix a strange bug...
+		getCurrentFileMeta().clearUndoRedo();
 		
 		//Get rid of previous syntax highlighter data
 		code.clearTokens();
+		
+		//Make sure the code area is editable
+		code.setFocusable(true);
+		code.setFocusableInTouchMode(true);
 	}
     
 	/**
