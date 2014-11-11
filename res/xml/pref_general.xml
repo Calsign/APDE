@@ -35,27 +35,4 @@
             android:singleLine="true"
             android:title="@string/pref_sketchbook_location" />
     </PreferenceCategory>
-    
-    <PreferenceCategory
-        android:key="pref_build"
-        android:title="@string/pref_build" >
-        
-        <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="pref_build_internal_storage"
-            android:title="@string/pref_build_internal_storage"
-            android:summary="@string/pref_build_internal_storage_desc" />
-        
-        <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="pref_build_discard"
-            android:title="@string/pref_build_discard"
-            android:summary="@string/pref_build_discard_desc" />
-        
-        <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="inject_log_broadcaster"
-            android:title="@string/inject_log_broadcaster"
-            android:summary="@string/inject_log_broadcaster_desc" />
-    </PreferenceCategory>
 </PreferenceScreen>

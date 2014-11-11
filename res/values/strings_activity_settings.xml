@@ -62,5 +62,6 @@
         <item >10000</item>
     </string-array>
     <string name="undo_redo_keep_default_value">-1</string>
+    <string name="build_output_verbose">Verbose Output</string>
 
 </resources>

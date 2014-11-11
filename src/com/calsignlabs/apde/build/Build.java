@@ -15,6 +15,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -47,6 +48,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 
+import com.android.sdklib.build.ApkBuilder;
 import com.calsignlabs.apde.*;
 import com.calsignlabs.apde.contrib.Library;
 
@@ -88,6 +90,8 @@ public class Build {
 	
 	private boolean injectLogBroadcaster;
 	
+	private static boolean verbose;
+	
 	public Build(APDE global) {
 		this.editor = global.getEditor();
 		
@@ -97,6 +101,7 @@ public class Build {
 		running = new AtomicBoolean(true);
 		
 		injectLogBroadcaster = PreferenceManager.getDefaultSharedPreferences(global).getBoolean("inject_log_broadcaster", true);
+		verbose = PreferenceManager.getDefaultSharedPreferences(global).getBoolean("build_output_verbose", false);
 	}
 	
 	public void setKey(String keystore, char[] keystorePassword, String keyAlias, char[] keyAliasPassword) {
@@ -132,10 +137,12 @@ public class Build {
 	
 	public static void cleanUpPostLaunch(EditorActivity editor) {
 		if(PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_discard", true)) {
-			System.out.println("Deleting build folder...");
-			
 			//Delete the build folder
-			deleteFile((new Build(((APDE) editor.getApplicationContext())).getBuildFolder()));
+			if (!deleteFile((new Build(((APDE) editor.getApplicationContext())).getBuildFolder()))) {
+				System.out.println("Failed to delete build folder");
+			} else if (verbose) {
+				System.out.println("Deleted build folder");
+			}
 		}
 		
 		if(PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_internal_storage", true)) {
@@ -143,12 +150,16 @@ public class Build {
 			//This is so that the package installer can still see it
 			
 			File destApkFile = new File(editor.getFilesDir(), ((APDE) editor.getApplicationContext()).getSketchName() + ".apk");
-			System.out.println(destApkFile.delete() ? "Successfully deleted old APK file" : "Failed to delete old APK file");
+			if (!destApkFile.delete()) {
+				System.out.println("Failed to delete old APK file");
+			} else if (verbose) {
+				System.out.println("Deleted old APK file");
+			}
 		}
 	}
 	
 	//Recursive file deletion
-    public static void deleteFile(File f) {
+    public static boolean deleteFile(File f) {
     	if(f.isDirectory())
     		for(File c : f.listFiles())
     			deleteFile(c);
@@ -158,13 +169,21 @@ public class Build {
 		final File to = new File(f.getAbsolutePath() + System.currentTimeMillis());
 		f.renameTo(to);
     	
-    	if(!to.delete())
+    	if(!to.delete()) {
     		System.err.println("Failed to delete file: " + f);
+    		return false;
+    	}
+    	
+    	return true;
     }
 	
     public void exportAndroidEclipseProject(File dest, String target) {
     	editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
 		System.out.println("Initializing build sequence...");
+		
+		if (verbose) {
+			System.out.println("Target: export");
+		}
     	
     	buildFolder = dest;
 		srcFolder = new File(buildFolder, "src");
@@ -177,9 +196,11 @@ public class Build {
 		
 		//Wipe the old export folder
 		if(buildFolder.exists()) {
-			System.out.println("Deleting old export folder...");
-			deleteFile(buildFolder);
-			System.out.println("Successfully deleted old export folder");
+			if (deleteFile(buildFolder)) {
+				System.out.println("Deleted old export folder");
+			} else if (verbose) {
+				System.out.println("Failed to delete old export folder");
+			}
 		}
 		
 		buildFolder.mkdir();
@@ -208,6 +229,10 @@ public class Build {
 			Preferences.setBoolean("preproc.substitute_floats", true);
 			Preferences.setBoolean("preproc.substitute_unicode", true);
 			
+			if (verbose) {
+				System.out.println("Pre-processing...");
+			}
+			
 			Preproc preproc = new Preproc(sketchName, manifest.getPackageName());
 			
 			//Combine all of the tabs to check for size
@@ -218,13 +243,25 @@ public class Build {
 			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false, false);
 			
 			if(sketchClassName != null) {
+				if (verbose) {
+					System.out.println("Writing AndroidManifest.xml...");
+				}
+				
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
 				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
+				
+				if (verbose) {
+					System.out.println("Writing ANT build files...");
+				}
 				
 				writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
 				writeBuildXML(buildFile, sketchName);
 				writeProjectProps(new File(buildFolder, "project.properties"), Integer.toString(manifest.getTargetSdk(editor)));
 //				writeLocalProps(new File(buildFolder, "local.properties"));
+				
+				if (verbose) {
+					System.out.println("Writing resources...");
+				}
 				
 				final File resFolder = new File(buildFolder, "res");
 				writeRes(resFolder, sketchClassName);
@@ -236,15 +273,24 @@ public class Build {
 				
 				//Copy native libraries
 				
+				if (verbose) {
+					System.out.println("Copying Processing libraries...");
+				}
+				
 				String[] libsToCopy = {"processing-core"};
 				String prefix = "libs/";
 				String suffix = ".jar";
+				
 				
 				//Copy for the compiler
 				for(String lib : libsToCopy) {
 					InputStream inputStream = am.open(prefix + lib + suffix);
 					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
 					inputStream.close();
+				}
+				
+				if (verbose) {
+					System.out.println("Copying contributed libaries...");
 				}
 				
 				// Copy any imported libraries (their libs and assets),
@@ -254,14 +300,24 @@ public class Build {
 				
 				// Copy the data folder (if one exists) to the project's 'assets' folder
 				final File sketchDataFolder = getSketchDataFolder();
-				if(sketchDataFolder.exists())
+				if(sketchDataFolder.exists()) {
+					if (verbose) {
+						System.out.println("Copying data folder...");
+					}
+					
 					copyDir(sketchDataFolder, assetsFolder);
+				}
 				
 				// Do the same for the 'res' folder.
 				// http://code.google.com/p/processing/issues/detail?id=767
 				final File sketchResFolder = new File(getSketchFolder(), "res");
-				if(sketchResFolder.exists())
+				if(sketchResFolder.exists()) {
+					if (verbose) {
+						System.out.println("Copying res folder...");
+					}
+					
 					copyDir(sketchResFolder, resFolder);
+				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -303,6 +359,10 @@ public class Build {
 		editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
 		System.out.println("Initializing build sequence...");
 		
+		if (verbose) {
+			System.out.println("Target: " + target);
+		}
+		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
 			return;
@@ -322,9 +382,11 @@ public class Build {
 		
 		//Wipe the old build folder
 		if(buildFolder.exists()) {
-			System.out.println("Deleting old build folder...");
-			deleteFile(buildFolder);
-			System.out.println("Successfully deleted old build folder");
+			if (deleteFile(buildFolder)) {
+				System.out.println("Deleted old build folder");
+			} else if (verbose) {
+				System.out.println("Failed to delete old build folder");
+			}
 		}
 		
 		buildFolder.mkdir();
@@ -375,6 +437,10 @@ public class Build {
 			Preferences.setBoolean("preproc.substitute_floats", true);
 			Preferences.setBoolean("preproc.substitute_unicode", true);
 			
+			if (verbose) {
+				System.out.println("Pre-processing...");
+			}
+			
 			Preproc preproc = new Preproc(sketchName, packageName);
 			
 			//Combine all of the tabs to check for size
@@ -382,7 +448,7 @@ public class Build {
 			for(FileMeta tab : tabs)
 				combinedText += tab.getText();
 			preproc.initSketchSize(combinedText, editor);
-			sketchClassName = preprocess(srcFolder, packageName, preproc, false, injectLogBroadcaster);
+			sketchClassName = preprocess(srcFolder, packageName, preproc, false, debug && injectLogBroadcaster);
 			
 			//Detect if the renderer is one of the OpenGL renderers
 			//XTODO support custom renderers that require OpenGL or... other problems that may arise
@@ -405,6 +471,10 @@ public class Build {
 			}
 			
 			if(sketchClassName != null) {
+				if (verbose) {
+					System.out.println("Writing AndroidManifest.xml...");
+				}
+				
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
 				manifest.writeBuild(tempManifest, sketchClassName, debug);
 				
@@ -418,6 +488,10 @@ public class Build {
 				//writeProjectProps(new File(buildFolder, "project.properties"), Manifest.MIN_SDK);
 				//writeLocalProps(new File(buildFolder, "local.properties"));
 				
+				if (verbose) {
+					System.out.println("Writing resources...");
+				}
+				
 				final File resFolder = new File(buildFolder, "res");
 				writeRes(resFolder, sketchClassName);
 				
@@ -428,12 +502,20 @@ public class Build {
 				
 				//Copy android.jar if it hasn't been done yet
 				if(!androidJarLoc.exists()) {
+					if (verbose) {
+						System.out.println("Copying android.jar...");
+					}
+					
 					InputStream is = am.open("android.jar");
 					createFileFromInputStream(is, androidJarLoc);
 					is.close();
 				}
 				
 				//Copy native libraries
+				
+				if (verbose) {
+					System.out.println("Copying Processing libraries...");
+				}
 				
 				String[] libsToCopy = {"processing-core"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
 				String prefix = "libs/";
@@ -460,6 +542,10 @@ public class Build {
 //					createFileFromInputStream(inputStream, new File(dexedLibsFolder, "processing-core-dex.jar"));
 //				}
 				
+				if (verbose) {
+					System.out.println("Copying dexed Processing libraries...");
+				}
+				
 				String[] dexLibsToCopy = {"processing-core-dex", "annotations-dex"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
 				String dexPrefix = "libs-dex/";
 				String dexSuffix = ".jar";
@@ -474,6 +560,10 @@ public class Build {
 					inputStream.close();
 				}
 				
+				if (verbose) {
+					System.out.println("Copying contributed libaries...");
+				}
+				
 				// Copy any imported libraries (their libs and assets),
 				// and anything in the code folder contents to the project.
 				copyLibraries(libsFolder, dexedLibsFolder, assetsFolder);
@@ -484,14 +574,24 @@ public class Build {
 				
 				// Copy the data folder (if one exists) to the project's 'assets' folder
 				final File sketchDataFolder = getSketchDataFolder();
-				if(sketchDataFolder.exists())
+				if(sketchDataFolder.exists()) {
+					if (verbose) {
+						System.out.println("Copying data folder...");
+					}
+					
 					copyDir(sketchDataFolder, assetsFolder);
+				}
 				
 				// Do the same for the 'res' folder.
 				// http://code.google.com/p/processing/issues/detail?id=767
 				final File sketchResFolder = new File(getSketchFolder(), "res");
-				if(sketchResFolder.exists())
+				if(sketchResFolder.exists()) {
+					if (verbose) {
+						System.out.println("Copying res folder...");
+					}
+					
 					copyDir(sketchResFolder, resFolder);
+				}
 				
 				if(!running.get()) { //CHECK
 					cleanUpHalt();
@@ -540,11 +640,19 @@ public class Build {
 		
 		//AAPT setup
 		try {
+			if (verbose) {
+				System.out.println("Copying AAPT...");
+			}
+			
 			AssetManager am = editor.getAssets();
 			
 			InputStream inputStream = am.open(aaptName);
 			createFileFromInputStream(inputStream, aaptLoc);
 			inputStream.close();
+			
+			if (verbose) {
+				System.out.println("Changing execution permissions for AAPT...");
+			}
 			
 			//Run "chmod" on aapt so that we can execute it
 			String[] chmod = {"chmod", "744", aaptLoc.getAbsolutePath()};
@@ -564,7 +672,7 @@ public class Build {
 //		String androidVersion = "android-10";
 		String mainActivityLoc = manifest.getPackageName().replace(".", "/");
 		
-		Process aaptProc = null;
+//		Process aaptProc = null;
 		
 		// NOTE: make sure that all places where build folders are specfied
 		// (e.g. "buildFolder") it is followed by ".getAbsolutePath()"!!!!!
@@ -577,6 +685,10 @@ public class Build {
 		File glslFolder = new File(binFolder, "processing.zip");
 		
 		try {
+			if (verbose) {
+				System.out.println("Copying GLSL shader files...");
+			}
+			
 			//Copy the zip archive
 			InputStream inputStream = editor.getAssets().open("glsl/processing.zip");
 			createFileFromInputStream(inputStream, glslFolder);
@@ -593,9 +705,11 @@ public class Build {
 			return;
 		}
 		
+		System.out.println(); //Separator
+		
 		//Run AAPT
 		try {
-			System.out.println("Running AAPT...");
+			System.out.println("Packaging resurces with AAPT...");
 			
 			//Create folder structure for R.java TODO why is this necessary?
 			(new File(genFolder.getAbsolutePath() + "/" + mainActivityLoc + "/")).mkdirs();
@@ -611,9 +725,14 @@ public class Build {
 				"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res" //The location of the output .apk.res file
 			};
 			
-			aaptProc = Runtime.getRuntime().exec(args);
+			Process aaptProcess = Runtime.getRuntime().exec(args);
 			
-			System.out.println("Ran AAPT successfully");
+			if (verbose) {
+				try {
+					aaptProcess.waitFor();
+					copyStream(aaptProcess.getErrorStream(), System.out);
+				} catch (InterruptedException e) {}
+			}
 		} catch (IOException e) {
 			//Something weird happened
 			System.out.println("AAPT failed");
@@ -632,11 +751,12 @@ public class Build {
 		
 		//Run ECJ
 		{
-			System.out.println("Running ECJ...");
+			System.out.println("Compiling with ECJ...");
 			
 			Main main = new Main(new PrintWriter(System.out), new PrintWriter(System.err), false, null, null);
 			String[] args = {
-				"-verbose",
+				(verbose ? "-verbose"
+						: "-warn:-unusedImport"), //Disable warning for unused imports (the preprocessor gives us a lot of them, so this is just a lot of noise)
 				"-extdirs", libsFolder.getAbsolutePath(), //The location of the external libraries (Processing's core.jar and others)
 				"-bootclasspath", androidJarLoc.getAbsolutePath(), //buildFolder.getAbsolutePath() + "/sdk/platforms/" + androidVersion + "/android.jar", //The location of android.jar
 				"-classpath", srcFolder.getAbsolutePath() //The location of the source folder
@@ -645,18 +765,19 @@ public class Build {
 				"-1.5",
 				"-target", "1.5", //Target Java level
 				"-d", binFolder.getAbsolutePath() + "/classes/", //The location of the output folder
-				srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java" //The location of the main Activity
+				srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java", //The location of the main Activity
 			};
 			
-			System.out.println("ECJing: " + srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java");
+			if (verbose) {
+				System.out.println("Compiling: " + srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java");
+			}
 			
 			if(main.compile(args)) {
 				System.out.println();
-				System.out.println("ECJ compilation successful");
 			} else {
 				//We have some compilation errors
 				System.out.println();
-				System.out.println("ECJ compilation failed");
+				System.out.println("Compilation with ECJ failed");
 				
 				cleanUpError();
 				return;
@@ -670,16 +791,25 @@ public class Build {
 		
 		editor.messageExt(editor.getResources().getString(R.string.run_dx));
 		
-		//Run DX
-		try { //TODO dex non-processing core libraries
-			System.out.println("Running DX...");
+		//Run DX Dexer
+		try {
+			System.out.println("Dexing with DX Dexer...");
 			
-			String[] args = new String[] {
-//				"--dex", //If we invoke the dexer directly, we don't need this
-				"--output=" + binFolder.getAbsolutePath() + "/classes.dex", //The location of the output DEX class file
-				binFolder.getAbsolutePath() + "/classes/", //add "/classes/" to get DX to work properly
-				dexedLibsFolder.getAbsolutePath()
-			};
+			String[] args;
+			
+			//Yuck, this is the best way to support verbose output...
+			if (verbose ) {
+				args = new String[] {
+						"--verbose",
+						"--output=" + binFolder.getAbsolutePath() + "/sketch-classes.dex", //The output location of the sketch's dexed classes
+						binFolder.getAbsolutePath() + "/classes/" //add "/classes/" to get DX to work properly
+				};
+			} else {
+				args = new String[] {
+						"--output=" + binFolder.getAbsolutePath() + "/sketch-classes.dex", //The output location of the sketch's dexed classes
+						binFolder.getAbsolutePath() + "/classes/" //add "/classes/" to get DX to work properly
+				};
+			}
 			
 			//This is some side-stepping to avoid System.exit() calls
 			
@@ -688,13 +818,45 @@ public class Build {
 			
 			int resultCode = com.android.dx.command.dexer.Main.run(dexArgs);
 			
-			if (resultCode == 0) {
-				System.out.println("Ran DX successfuly");
-			} else {
+			if (resultCode != 0) {
 				System.err.println("DX Dexer result code: " + resultCode);
 			}
 		} catch(Exception e) {
-			System.out.println("DX failed");
+			System.out.println("DX Dexer failed");
+			e.printStackTrace();
+			
+			cleanUpError();
+			return;
+		}
+		
+		if(!running.get()) { //CHECK
+			cleanUpHalt();
+			return;
+		}
+		
+		//Run DX Merger
+		try {
+			System.out.println("Merging DEX files with DX Merger...");
+			
+			File[] dexedLibs = dexedLibsFolder.listFiles(new FilenameFilter() {
+				@Override
+				public boolean accept(File dir, String filename) {
+					return filename.endsWith("-dex.jar");
+				}
+			});
+			
+			String[] args = new String[dexedLibs.length + 2];
+			args[0] = binFolder.getAbsolutePath() + "/classes.dex"; //The location of the output DEX class file
+			args[1] = binFolder.getAbsolutePath() + "/sketch-classes.dex"; //The location of the sketch's dexed classes
+			
+			//Apparently, this tool accepts as many dex files as we want to throw at it...
+			for (int i = 0; i < dexedLibs.length; i ++) {
+				args[i + 2] = dexedLibs[i].getAbsolutePath();
+			}
+			
+			com.android.dx.merge.DexMerger.main(args);
+		} catch (Exception e) {
+			System.out.println("DX Merger failed");
 			e.printStackTrace();
 			
 			cleanUpError();
@@ -710,20 +872,32 @@ public class Build {
 		
 		//Run APKBuilder
 		try {
-			System.out.println("Running APKBuilder...");
+			System.out.println("Building APK file with APKBuilder...");
 			
-			String[] args = {
-				binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned", //The location of the output APK file (unsigned)
-				"-u",
-				"-z", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res", //The location of the output .apk.res file
-				"-f", binFolder.getAbsolutePath() + "/classes.dex", //The location of the DEX class file
-				"-z", glslFolder.getAbsolutePath(), //Location of GLSL files
-				"-rf", srcFolder.getAbsolutePath() //The location of the source folder
-			};
+//			String[] args = {
+//				binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned", //The location of the output APK file (unsigned)
+//				"-u",
+//				"-z", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res", //The location of the .apk.res file
+//				"-f", binFolder.getAbsolutePath() + "/classes.dex", //The location of the DEX class file
+//				"-z", glslFolder.getAbsolutePath(), //Location of GLSL files
+//				"-rf", srcFolder.getAbsolutePath() //The location of the source folder
+//			};
+//			
+//			com.android.sdklib.build.ApkBuilderMain.main(args);
 			
-			com.android.sdklib.build.ApkBuilderMain.main(args);
+			//Create the builder with the basic files
+			ApkBuilder builder = new ApkBuilder(new File(binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned"), //The location of the output APK file (unsigned)
+					new File(binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res"), //The location of the .apk.res file
+					new File(binFolder.getAbsolutePath() + "/classes.dex"), //The location of the DEX class file
+					null, (verbose ? System.out : null) //Only specify an output stream if we want verbose output
+			);
 			
-			System.out.println("Ran APKBuilder succesfully");
+			//Add everything else
+			builder.addZipFile(glslFolder); //Location of GLSL files
+			builder.addSourceFolder(srcFolder); //The location of the source folder
+			
+			//Seal the APK
+			builder.sealApk();
 		} catch(Exception e) {
 			System.out.println("APKBuilder failed");
 			e.printStackTrace();
@@ -766,7 +940,11 @@ public class Build {
 		
 		editor.messageExt(editor.getResources().getString(R.string.run_zipsigner));
 		
+		System.out.println(); //Separator
+		
 		if (debug) {
+			System.out.println("Signing and Zipaligning with ZipSigner...");
+			
 			//Sign the APK using ZipSigner
 			signApk();
 		} else {
@@ -784,7 +962,7 @@ public class Build {
 		
 		//TODO this writes AAPT error logs, is it necessary?
 //		System.out.println("AAPT logs:");
-		copyStream(aaptProc.getErrorStream(), System.err);
+//		copyStream(aaptProc.getErrorStream(), System.err);
 		
 		if(!running.get()) { //CHECK
 			cleanUpError();
@@ -792,6 +970,8 @@ public class Build {
 		}
 		
 		editor.messageExt(editor.getResources().getString(R.string.run_sketch));
+		
+		System.out.println("Installing APK file...");
 		
 		//Copy the APK file to a new (and hopefully readable) location
 		
@@ -1006,7 +1186,7 @@ public class Build {
 				System.arraycopy(oldMeta, 0, tabs, 0, oldMeta.length);
 				tabs[tabs.length - 1] = new FileMeta("LogBroadcaster.pde", text, 0, 0, 0, 0);
 				
-				System.out.println("Successfuly injected LogBroadcaster.pde");
+				System.out.println("Injected LogBroadcaster.pde");
 			} catch (IOException e) {
 				System.err.println("Failed to inject LogBroadcaster.pde into sketch!");
 				e.printStackTrace();

@@ -289,13 +289,26 @@ public class ContributionManager {
 	 * @param output
 	 */
 	public static void dexJar(File input, File output) {
-		String[] args = new String[] {
-				"--dex",
-				"--output=" + output.getAbsolutePath(), //The location of the output DEXed file
-				input.getAbsolutePath(), //The location of the file to DEXify
-		};
-		
-		com.android.dx.command.Main.main(args);
+		try {
+			String[] args = new String[] {
+					"--output=" + output.getAbsolutePath(), //The location of the output DEXed file
+					input.getAbsolutePath(), //The location of the file to DEXify
+			};
+			
+			//This is some side-stepping to avoid System.exit() calls
+			
+			com.android.dx.command.dexer.Main.Arguments dexArgs = new com.android.dx.command.dexer.Main.Arguments();
+			dexArgs.parse(args);
+			
+			int resultCode = com.android.dx.command.dexer.Main.run(dexArgs);
+			
+			if (resultCode != 0) {
+				System.err.println("DX Dexer failed, error code: " + resultCode);
+			}
+		} catch (Exception e) {
+			System.err.println("DX Dexer failed");
+			e.printStackTrace();
+		}
 	}
 	
 	/**

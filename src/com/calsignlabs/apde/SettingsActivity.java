@@ -84,6 +84,8 @@ public class SettingsActivity extends PreferenceActivity {
 		addPreferencesFromResource(R.xml.pref_general);
 		// Add 'editor' preferences
 		addPreferencesFromResource(R.xml.pref_editor);
+		// Add 'build' preferences
+		addPreferencesFromResource(R.xml.pref_build);
 		// Add 'coding assistance' preferences
 		addPreferencesFromResource(R.xml.pref_code_assistance);
 		
