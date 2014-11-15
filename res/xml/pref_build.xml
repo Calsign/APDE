@@ -22,7 +22,7 @@
             android:title="@string/inject_log_broadcaster"
             android:summary="@string/inject_log_broadcaster_desc" />
     
-    <CheckBoxPreference
+        <CheckBoxPreference
             android:defaultValue="false"
             android:key="build_output_verbose"
             android:title="@string/build_output_verbose" />

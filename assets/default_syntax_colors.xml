@@ -262,9 +262,7 @@
         <keyword style="keyword_processing_function" function="true">randomSeed</keyword>
         
         <keyword style="keyword_processing_function" function="true">int</keyword>
-        <keyword style="keyword_processing_function" function="true">long</keyword>
         <keyword style="keyword_processing_function" function="true">float</keyword>
-        <keyword style="keyword_processing_function" function="true">double</keyword>
         <keyword style="keyword_processing_function" function="true">boolean</keyword>
         <keyword style="keyword_processing_function" function="true">char</keyword>
         <keyword style="keyword_processing_function" function="true">byte</keyword>
@@ -288,6 +286,13 @@
         <keyword style="keyword_processing_function" function="true">PShader</keyword>
         <keyword style="keyword_processing_function" function="true">PFont</keyword>
         <keyword style="keyword_processing_function" function="true">PVector</keyword>
+        
+        <keyword style="keyword_processing_function" function="true">IntList</keyword>
+        <keyword style="keyword_processing_function" function="true">FloatList</keyword>
+        <keyword style="keyword_processing_function" function="true">StringList</keyword>
+        <keyword style="keyword_processing_function" function="true">IntDict</keyword>
+        <keyword style="keyword_processing_function" function="true">FloatDict</keyword>
+        <keyword style="keyword_processing_function" function="true">StringDict</keyword>
         
         <keyword style="keyword_processing_function" function="true">BufferedReader</keyword>
         <keyword style="keyword_processing_function" function="true">PrintWriter</keyword>
@@ -335,6 +340,9 @@
         <keyword style="keyword_processing_function" function="true">getVertex</keyword>
         <keyword style="keyword_processing_function" function="true">setVertex</keyword>
         
+        <keyword style="keyword_processing_function" function="true">sketchFile</keyword>
+        <keyword style="keyword_processing_function" function="true">sketchPath</keyword>
+        
         <!-- Java class (String, ArrayList, etc.) functions -->
         <keyword style="keyword_processing_function" function="true">size</keyword>
         <keyword style="keyword_processing_function" function="true">contains</keyword>
@@ -352,6 +360,7 @@
         <keyword style="keyword_type">false</keyword>
         <keyword style="keyword_type">int</keyword>
         <keyword style="keyword_type">long</keyword>
+        <keyword style="keyword_type">short</keyword>
         <keyword style="keyword_type">float</keyword>
         <keyword style="keyword_type">double</keyword>
         <keyword style="keyword_type">boolean</keyword>
@@ -377,6 +386,13 @@
         <keyword style="keyword_type">PFont</keyword>
         <keyword style="keyword_type">PVector</keyword>
         
+        <keyword style="keyword_type">IntList</keyword>
+        <keyword style="keyword_type">FloatList</keyword>
+        <keyword style="keyword_type">StringList</keyword>
+        <keyword style="keyword_type">IntDict</keyword>
+        <keyword style="keyword_type">FloatDict</keyword>
+        <keyword style="keyword_type">StringDict</keyword>
+        
         <keyword style="keyword_type">BufferedReader</keyword>
         <keyword style="keyword_type">PrintWriter</keyword>
         
@@ -384,6 +400,7 @@
         <keyword style="keyword_structure">null</keyword>
         <keyword style="keyword_structure">this</keyword>
         <keyword style="keyword_structure">void</keyword>
+        <keyword style="keyword_structure">do</keyword>
         <keyword style="keyword_structure" function="true">for</keyword>
         <keyword style="keyword_structure" function="true">while</keyword>
         <keyword style="keyword_structure" function="true">if</keyword>
@@ -401,14 +418,32 @@
         <keyword style="keyword_structure">abstract</keyword>
         <keyword style="keyword_structure">class</keyword>
         <keyword style="keyword_structure">interface</keyword>
+        <keyword style="keyword_structure">enum</keyword>
         <keyword style="keyword_structure">implements</keyword>
         <keyword style="keyword_structure">extends</keyword>
         <keyword style="keyword_structure">import</keyword>
         <keyword style="keyword_structure">return</keyword>
+        <keyword style="keyword_structure" function="true">return</keyword>
         <keyword style="keyword_structure">super</keyword>
+        <keyword style="keyword_structure" function="true">super</keyword>
         <keyword style="keyword_structure">try</keyword>
         <keyword style="keyword_structure" function="true">catch</keyword>
+        <keyword style="keyword_structure">finally</keyword>
         <keyword style="keyword_structure">new</keyword>
+        <keyword style="keyword_structure">instanceof</keyword>
+        <keyword style="keyword_structure" function="true">instanceof</keyword>
+        <keyword style="keyword_structure">package</keyword>
+        <keyword style="keyword_structure">volatile</keyword>
+        <keyword style="keyword_structure">transient</keyword>
+        <keyword style="keyword_structure">strictfp</keyword>
+        <keyword style="keyword_structure">native</keyword>
+        <keyword style="keyword_structure">throw</keyword>
+        <keyword style="keyword_structure" function="true">throw</keyword>
+        <keyword style="keyword_structure">throws</keyword>
+        <keyword style="keyword_structure">assert</keyword>
+        <keyword style="keyword_structure" function="true">assert</keyword>
+        <keyword style="keyword_structure">synchronized</keyword>
+        <keyword style="keyword_structure" function="true">synchronized</keyword>
         
         <!-- Processing variables -->
         <keyword style="keyword_processing_variable">width</keyword>

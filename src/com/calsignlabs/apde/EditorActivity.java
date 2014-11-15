@@ -879,6 +879,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	}
         }
         
+        //Make Processing 3.0 behave properly
+        getGlobalState().initProcessingPrefs();
+        
         //Register receiver for sketch logs / console output
         registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
         
@@ -1175,7 +1178,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     }
     
 	//http://stackoverflow.com/questions/16983989/copy-directory-from-assets-to-data-folder
-    private static boolean copyAssetFolder(AssetManager assetManager, String fromAssetPath, String toPath) {
+    protected static boolean copyAssetFolder(AssetManager assetManager, String fromAssetPath, String toPath) {
     	try {
     		String[] files = assetManager.list(fromAssetPath);
     		new File(toPath).mkdirs();

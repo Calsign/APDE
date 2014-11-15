@@ -6,11 +6,14 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+
+import processing.app.Base;
 
 import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
 import com.calsignlabs.apde.build.Manifest;
@@ -951,5 +954,31 @@ public class APDE extends Application {
 	
 	public Tool getToolByPackageName(String packageName) {
 		return packageToToolTable.get(packageName);
+	}
+	
+	public void initProcessingPrefs() {
+		//Make pde.jar behave properly
+		
+		//Set up the Processing-specific folder
+		final File dir = getDir("processing_home", 0);
+		dir.mkdir();
+		
+		//Put the default preferences file where Processing will look for it
+		EditorActivity.copyAssetFolder(getAssets(), "processing_default", dir.getAbsolutePath());
+		
+		//Some magic to put our own platform in place
+		try {
+			Class<Base> base = Base.class;
+			Field platform = base.getDeclaredField("platform");
+			platform.setAccessible(true);
+			platform.set(null, new processing.app.Platform() {
+				@Override
+				public File getSettingsFolder() throws Exception {
+					return dir;
+				}
+			});
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }
