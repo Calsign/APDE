@@ -202,5 +202,20 @@
     <string name="library_install_failed_title">Install Failed</string>
     <string name="library_install_failed_message">Library installation failed. This is usually caused by a poorly formatted library. Please see the console for a stack trace.</string>
     <string name="copying">Copying</string>
+    <string name="action_dx_dexer_tool">DX Dexer</string>
+    <string name="dex">Dex</string>
+    <string name="dx_dexer_input_file">Input File</string>
+    <string name="dx_dexer_output_file">Output File</string>
+    <string name="dx_dexer_select_input_file">Select Input File</string>
+    <string name="dx_dexer_select_output_file">Select Output File</string>
+    <string name="dx_dexer_error_enter_input_file">Enter input file path</string>
+    <string name="dx_dexer_error_enter_output_file">Enter output file path</string>
+    <string name="dx_dexer_error_input_file_exist">Input file does not exist</string>
+    <string name="dx_dexer_error_output_file_exist">Output file must not exist</string>
+    <string name="dx_dexer_error_input_file_directory">Input file must not be a directory</string>
+    <string name="dx_dexer_error_input_extension">Input file must be a .JAR, .ZIP, or .APK file</string>
+    <string name="dx_dexer_error_output_extension">Output file must be a .DEX, .JAR, .ZIP, or .APK file</string>
+    <string name="dx_dexer_ready">Ready to run DX Dexer</string>
+    <string name="dx_dexer_tool_dialog_title">Dexing</string>
 
 </resources>

@@ -23,8 +23,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.ActionBarActivity;
+import android.text.Editable;
 import android.text.Html;
+import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
+import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -32,9 +35,12 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 public class LibraryManagerActivity extends ActionBarActivity {
@@ -43,6 +49,15 @@ public class LibraryManagerActivity extends ActionBarActivity {
 	
 	//This is a number, that's all that matters
 	private static final int REQUEST_CHOOSER = 6283;
+	
+	//File select request codes for the DX Dexer tool
+	private static final int DX_DEXER_SELECT_INPUT_FILE = 7501;
+	private static final int DX_DEXER_SELECT_OUTPUT_FILE = 7502;
+	
+	private EditText dxDexerInputFile;
+	private EditText dxDexerOutputFile;
+	private Button dxDexerDexButton;
+	private TextView dxDexerErrorMessage;
 	
 	//Whether or not we are currently doing something
 	private boolean working = false;
@@ -96,6 +111,36 @@ public class LibraryManagerActivity extends ActionBarActivity {
 				}
 			}
 			break;
+		case DX_DEXER_SELECT_INPUT_FILE:
+			if(resultCode == RESULT_OK) {
+				final Uri uri = data.getData();
+				
+				//Get the File path from the Uri
+				String path = FileUtils.getPath(this, uri);
+				
+				if(path != null && FileUtils.isLocal(path)) {
+					File file = new File(path);
+					
+					dxDexerInputFile.setText(file.getAbsolutePath());
+				}
+			}
+			
+			break;
+		case DX_DEXER_SELECT_OUTPUT_FILE:
+			if(resultCode == RESULT_OK) {
+				final Uri uri = data.getData();
+				
+				//Get the File path from the Uri
+				String path = FileUtils.getPath(this, uri);
+				
+				if(path != null && FileUtils.isLocal(path)) {
+					File file = new File(path);
+
+					dxDexerOutputFile.setText(file.getAbsolutePath());
+				}
+			}
+			
+			break;
 		}
 	}
 	
@@ -146,6 +191,9 @@ public class LibraryManagerActivity extends ActionBarActivity {
             case R.id.action_settings:
             	launchSettings();
             	return true;
+            case R.id.action_dx_dexer_tool:
+            	launchDexerTool();
+            	return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -164,6 +212,200 @@ public class LibraryManagerActivity extends ActionBarActivity {
 		
 		Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://processing.org/reference/libraries/"));
 		startActivity(browserIntent);
+	}
+	
+	@SuppressLint("InlinedApi")
+	private void launchDexerTool() {
+		//Show a DX Dexer dialog
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.action_dx_dexer_tool);		
+		
+		ScrollView layout;
+		
+		if(android.os.Build.VERSION.SDK_INT >= 11) {
+			layout = (ScrollView) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog), R.layout.dx_dexer_tool, null);
+		} else {
+			layout = (ScrollView) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Dialog), R.layout.dx_dexer_tool, null);
+		}
+		
+		dxDexerInputFile = (EditText) layout.findViewById(R.id.dx_dexer_input_file);
+		dxDexerOutputFile = (EditText) layout.findViewById(R.id.dx_dexer_output_file);
+		
+		dxDexerErrorMessage = (TextView) layout.findViewById(R.id.dx_dexer_error_message);
+		
+		((ImageButton) layout.findViewById(R.id.dx_dexer_input_file_select)).setOnClickListener(new ImageButton.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.dx_dexer_select_input_file));
+			    startActivityForResult(intent, DX_DEXER_SELECT_INPUT_FILE);
+			}
+		});
+		
+		((ImageButton) layout.findViewById(R.id.dx_dexer_output_file_select)).setOnClickListener(new ImageButton.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.dx_dexer_select_output_file));
+			    startActivityForResult(intent, DX_DEXER_SELECT_OUTPUT_FILE);
+			}
+		});
+		
+		builder.setView(layout);
+		
+		builder.setPositiveButton(R.string.dex, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				dxDexerRun();
+			}
+		});
+		
+		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {}
+		});
+		
+		final AlertDialog dialog = builder.create();
+		dialog.show();
+		
+		dxDexerDexButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+		dxDexerDexButton.setEnabled(false);
+		
+		dxDexerInputFile.addTextChangedListener(new TextWatcher() {
+			@Override
+			public void afterTextChanged(Editable arg0) {
+				validateDxDexerFiles();
+			}
+			
+			@Override
+			public void beforeTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {}
+			
+			@Override
+			public void onTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {}
+		});
+		
+		dxDexerOutputFile.addTextChangedListener(new TextWatcher() {
+			@Override
+			public void afterTextChanged(Editable arg0) {
+				validateDxDexerFiles();
+			}
+			
+			@Override
+			public void beforeTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {}
+			
+			@Override
+			public void onTextChanged(CharSequence arg0, int arg1, int arg2, int arg3) {}
+		});
+		
+		dxDexerDexButton.setOnClickListener(new Button.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				dialog.dismiss();
+				dxDexerRun();
+			}
+		});
+		
+		validateDxDexerFiles();
+	}
+	
+	private void validateDxDexerFiles() {
+		dxDexerDexButton.setEnabled(false);
+		
+		String inputPath = dxDexerInputFile.getText().toString();
+		String outputPath = dxDexerOutputFile.getText().toString();
+		
+		File input = new File(inputPath);
+		File output = new File(outputPath);
+		
+		if (inputPath.length() == 0) {
+			dxDexerErrorMessage.setText(R.string.dx_dexer_error_enter_input_file);
+			return;
+		}
+		
+		if (!input.exists()) {
+			dxDexerErrorMessage.setText(R.string.dx_dexer_error_input_file_exist);
+			return;
+		}
+		
+		if (input.isDirectory()) {
+			dxDexerErrorMessage.setText(R.string.dx_dexer_error_input_file_directory);
+			return;
+		}
+		
+		if (!(inputPath.endsWith(".jar")
+				|| inputPath.endsWith(".zip")
+				|| inputPath.endsWith(".apk"))) {
+			dxDexerErrorMessage.setText(R.string.dx_dexer_error_input_extension);
+			return;
+		}
+		
+		if (outputPath.length() == 0) {
+			dxDexerErrorMessage.setText(R.string.dx_dexer_error_enter_output_file);
+			return;
+		}
+		
+		if (output.exists()) {
+			dxDexerErrorMessage.setText(R.string.dx_dexer_error_output_file_exist);
+			return;
+		}
+		
+		if (!(outputPath.endsWith(".jar")
+				|| outputPath.endsWith(".dex")
+				|| outputPath.endsWith(".zip")
+				|| outputPath.endsWith(".apk"))) {
+			dxDexerErrorMessage.setText(R.string.dx_dexer_error_output_extension);
+			return;
+		}
+		
+		dxDexerErrorMessage.setText(R.string.dx_dexer_ready);
+		
+		dxDexerDexButton.setEnabled(true);
+	}
+	
+	private void dxDexerRun() {
+		final File inputFile = new File(dxDexerInputFile.getText().toString());
+		final File outputFile = new File(dxDexerOutputFile.getText().toString());
+		
+		final CustomProgressDialog dialog = new CustomProgressDialog(this, View.GONE, View.GONE);
+		
+		dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+		dialog.setIndeterminate(true);
+		dialog.setTitle(getResources().getString(R.string.dx_dexer_tool_dialog_title) + " " + inputFile.getName());
+		dialog.setCanceledOnTouchOutside(false);
+		dialog.setCancelable(false);
+		
+		final Thread dexThread = new Thread(new Runnable() {
+			public void run() {
+				working = true;
+				ContributionManager.dexJar(inputFile, outputFile);
+				working = false;
+				
+				dialog.dismiss();
+			}
+		});
+		
+		dialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(R.string.cancel), new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				dialog.cancel();
+			}
+		});
+		
+		dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+			@Override
+			public void onCancel(DialogInterface dialogInterface) {
+				//The user cancelled... hopefully this won't cause problems
+				dexThread.interrupt();
+				working = false;
+				
+				//Undo any progress
+				outputFile.delete();
+			}
+		});
+		
+		dexThread.start();
+		dialog.show();
+		
+		dialog.setProgressText(getResources().getString(R.string.dexing) + "...");
 	}
 	
 	private void launchSettings() {
