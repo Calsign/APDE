@@ -121,7 +121,7 @@ public class ContributionManager {
 	public static String detectLibraryName(File libraryZip) {
 		//Read the contents of the zip file, searching for the name of the library that it contains
 		
-		ZipInputStream zis;
+		ZipInputStream zis = null;
 		
 		try {
 			String filename;
@@ -160,6 +160,8 @@ public class ContributionManager {
 					//Specifically, the name
 					String libraryName = props.getProperty("name");
 					
+					zipFile.close();
+					
 					//But make sure that the properties file is formatted properly
 					if(libraryName != null) {
 						return libraryName;
@@ -179,6 +181,15 @@ public class ContributionManager {
 			zis.close();
 		} catch(IOException e) {
 			e.printStackTrace();
+		} finally {
+			try {
+				if (zis != null) {
+					zis.close();
+				}
+			} catch (IOException e) {
+				//...
+				e.printStackTrace();
+			}
 		}
 		
 		//If all else fails, return the name of the zip file

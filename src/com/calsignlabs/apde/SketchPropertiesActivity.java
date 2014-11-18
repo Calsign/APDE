@@ -942,6 +942,9 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     					getGlobalState().setSketchName(after);
     					
     					break;
+					default:
+						//Shouldn't happen... but Lint wants this here
+						break;
     				}
     				
     				//If the user has set the pretty name to the name of their sketch, they probably want to change the pretty name too

@@ -633,7 +633,19 @@ public class Build {
 		} else {
 			// ARM or its variants
 			// Also, default to arm just in case...
-			aaptName = "aapt";
+			
+			//Position Independent Executables (PIE) were first supported in Jelly Bean 4.1 (API level 16)
+			//In Android 5.0, they are required
+			//Android versions before 4.1 still need the old binary...
+			if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+				aaptName = "aapt-pie";
+				
+				if (verbose) {
+					System.out.println("Using position independent executable (PIE) AAPT binary");
+				}
+			} else {
+				aaptName = "aapt";
+			}
 		}
 		
 		File aaptLoc = new File(tmpFolder, "aapt"); //Use the same name for the destination so that the hyphens aren't an issue
@@ -709,7 +721,7 @@ public class Build {
 		
 		//Run AAPT
 		try {
-			System.out.println("Packaging resurces with AAPT...");
+			System.out.println("Packaging resources with AAPT...");
 			
 			//Create folder structure for R.java TODO why is this necessary?
 			(new File(genFolder.getAbsolutePath() + "/" + mainActivityLoc + "/")).mkdirs();
