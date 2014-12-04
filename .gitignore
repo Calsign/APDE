@@ -6,3 +6,5 @@
 /.classpath
 /.project
 /libs-unused
+/proguard
+/local.properties

@@ -6,7 +6,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,6 +17,7 @@ import processing.app.Base;
 import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.contrib.Library;
+import com.calsignlabs.apde.support.AndroidPlatform;
 import com.calsignlabs.apde.tool.AutoFormat;
 import com.calsignlabs.apde.tool.ColorSelector;
 import com.calsignlabs.apde.tool.CommentUncomment;
@@ -967,18 +967,20 @@ public class APDE extends Application {
 		EditorActivity.copyAssetFolder(getAssets(), "processing_default", dir.getAbsolutePath());
 		
 		//Some magic to put our own platform in place
-		try {
-			Class<Base> base = Base.class;
-			Field platform = base.getDeclaredField("platform");
-			platform.setAccessible(true);
-			platform.set(null, new processing.app.Platform() {
-				@Override
-				public File getSettingsFolder() throws Exception {
-					return dir;
-				}
-			});
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+//		try {
+//			Class<Base> base = Base.class;
+//			Field platform = base.getDeclaredField("platform");
+//			platform.setAccessible(true);
+//			platform.set(null, new processing.app.Platform() {
+//				@Override
+//				public File getSettingsFolder() throws Exception {
+//					return dir;
+//				}
+//			});
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		Base.initPlatform();
+		AndroidPlatform.setDir(dir);
 	}
 }
