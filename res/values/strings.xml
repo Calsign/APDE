@@ -217,5 +217,10 @@
     <string name="dx_dexer_error_output_extension">Output file must be a .DEX, .JAR, .ZIP, or .APK file</string>
     <string name="dx_dexer_ready">Ready to run DX Dexer</string>
     <string name="dx_dexer_tool_dialog_title">Dexing</string>
+    <string name="examples_update">Examples have been updated.</string>
+    <string name="update">Update</string>
+    <string name="update_examples_dialog_title">Update Examples</string>
+    <string name="update_examples_dialog_message">An update is available for the examples repository.\n\nPerforming this update will connect to GitHub servers. Please do not leave the Wi-Fi coverage area.\n\nExamples repository updates can be disabled from Settings &gt; General &gt; Examples.</string>
+    <string name="examples_updating">Updating examples…</string>
 
 </resources>

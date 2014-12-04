@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <target name="-debug-obfuscation-check">
+        <!-- enable proguard even in debug mode -->
+        <property name="proguard.enabled" value="true"/>
+    
+        <!-- Secondary dx input (jar files) is empty since all the jar files will be in the obfuscated jar -->
+    <path id="out.dex.jar.input.ref" />
+    </target>
+</project>

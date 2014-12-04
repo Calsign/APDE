@@ -362,7 +362,7 @@ public class Manifest {
 	 * @return
 	 */
 	public int getVersionCode(Context context) {
-		return xml.getInt("android:versionCode", Integer.parseInt(context.getResources().getString(R.string.prop_version_code_default)));
+		return xml.getInt("android:versionCode", context.getResources().getInteger(R.integer.prop_version_code_default));
 	}
 	
 	/**
@@ -392,7 +392,7 @@ public class Manifest {
 	 * @return
 	 */
 	public int getTargetSdk(Context context) {
-		return xml.getChild("uses-sdk").getInt("android:targetSdkVersion", Integer.parseInt(context.getResources().getString(R.string.prop_target_sdk_default)));
+		return xml.getChild("uses-sdk").getInt("android:targetSdkVersion", context.getResources().getInteger(R.integer.prop_target_sdk_default));
 	}
 	
 	/**

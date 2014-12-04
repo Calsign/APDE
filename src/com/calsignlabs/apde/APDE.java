@@ -28,6 +28,7 @@ import com.calsignlabs.apde.tool.ImportLibrary;
 import com.calsignlabs.apde.tool.IncreaseIndent;
 import com.calsignlabs.apde.tool.ManageLibraries;
 import com.calsignlabs.apde.tool.Tool;
+import com.calsignlabs.apde.vcs.GitRepository;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -38,6 +39,8 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 
@@ -49,6 +52,8 @@ public class APDE extends Application {
 	public static final String DEFAULT_SKETCHBOOK_LOCATION = "Sketchbook";
 	public static final String LIBRARIES_FOLDER = "libraries";
 	public static final String DEFAULT_SKETCH_NAME = "sketch";
+	
+	public static final String EXAMPLES_REPO = "https://github.com/Calsign/APDE-examples.git";
 	
 	private String sketchName;
 	
@@ -501,6 +506,14 @@ public class APDE extends Application {
 				DEFAULT_SKETCHBOOK_LOCATION);
 	}
 	
+	public File getStarterExamplesFolder() {
+		return getDir("examples", 0);
+	}
+	
+	public File getExamplesRepoFolder() {
+		return getDir("examples_repo", 0);
+	}
+	
 	/**
 	 * @return the location of the examples folder on the private internal storage
 	 */
@@ -516,8 +529,106 @@ public class APDE extends Application {
 		 *  - Adds to the app's apparent required storage
 		 *  - Will fail if the internal storage is full
 		 */
-
-		return getDir("examples", 0);
+		
+		File examplesRepo = getExamplesRepoFolder();
+		
+		//Let's use the examples repo if it's been initialized
+		return examplesRepo.list().length > 0 ? examplesRepo : getStarterExamplesFolder();
+	}
+	
+	public void initExamplesRepo() {
+		//Don't bother checking if the user doesn't want to
+		if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("update_examples", true)) {
+			return;
+		}
+		
+		//Initialize the examples repository when the app is first opened
+		
+		final ConnectivityManager connection = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+		final NetworkInfo wifi = connection.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+		final NetworkInfo mobile = connection.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+		
+		//Make sure we're on Wi-Fi
+		if ((wifi != null && wifi.isConnected())
+				|| (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("update_examples_mobile_data", false)
+						&& mobile != null && mobile.isConnected())) {
+			//We have to do this on a non-UI thread...
+			
+			new Thread(new Runnable() {
+				public void run() {
+					GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
+					
+					//Check to see if an update is available
+					if (!examplesRepo.exists() || (examplesRepo.exists() && examplesRepo.canPull())) {
+						examplesRepo.close();
+						
+						//Yucky multi-threading
+						editor.runOnUiThread(new Runnable() {
+							public void run() {
+								AlertDialog.Builder builder = new AlertDialog.Builder(editor);
+								
+								builder.setTitle(R.string.update_examples_dialog_title);
+								builder.setMessage(R.string.update_examples_dialog_message);
+								
+								builder.setPositiveButton(R.string.update, new DialogInterface.OnClickListener() {
+									@Override
+									public void onClick(DialogInterface dialog, int which) {
+										//This kicks off yet another thread
+										updateExamplesRepo();
+									}
+								});
+								
+								builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+									@Override
+									public void onClick(DialogInterface dialog, int which) {}
+								});
+								
+								builder.create().show();
+							}
+						});
+					}
+				}
+			}).start();
+		}
+	}
+	
+	private void updateExamplesRepo() {
+		editor.message(getResources().getString(R.string.examples_updating));
+		
+		//We have to do this on a non-UI thread...
+		
+		new Thread(new Runnable() {
+			public void run() {
+				GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
+				
+				boolean update = false;
+				
+				if (examplesRepo.exists()) {
+					if (examplesRepo.canPull()) {
+						examplesRepo.pullRepo();
+						update = true;
+					}
+					
+					//Make sure to close
+					examplesRepo.close();
+				} else {
+					//We need to close before so that we can write to the directory
+					examplesRepo.close();
+					
+					GitRepository.cloneRepo(EXAMPLES_REPO, examplesRepo.getRootDir());
+					update = true;
+				}
+				
+				if (update) {
+					editor.runOnUiThread(new Runnable() {
+						public void run() {
+							editor.forceDrawerReload();
+							editor.message(getResources().getString(R.string.examples_update));
+						}
+					});
+				}
+			}
+		}).start();
 	}
 	
 	public void moveFolder(SketchMeta source, SketchMeta dest, Activity activityContext) {

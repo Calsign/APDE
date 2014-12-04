@@ -227,9 +227,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	//We need to update the examples (in case the new release has added more)
         	//This is some serious future-proofing... boy am I paranoid...
         	
-        	//TODO Show a loading dialog / spinner
+        	//Now we have the Git-powered examples repository, but we'll still keep this for people that haven't found the time to download the examples yet
         	
-        	copyAssetFolder(getAssets(), "examples", getGlobalState().getExamplesFolder().getAbsolutePath());
+        	//Let's do this in a separate thread
+        	new Thread(new Runnable() {
+        		public void run() {
+        			copyAssetFolder(getAssets(), "examples", getGlobalState().getStarterExamplesFolder().getAbsolutePath());
+        		}
+        	}).start();
         	
         	//Make sure to update the value so we don't do this again
         	SharedPreferences.Editor edit = prefs.edit();
@@ -717,6 +722,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         //Initialize the reference to the toggle char inserts button
         toggleCharInserts = (ImageButton) findViewById(R.id.toggle_char_inserts);
+        
+        //Update examples repository
+        getGlobalState().initExamplesRepo();
     }
     
     @Override
@@ -2009,6 +2017,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	menu.findItem(R.id.menu_tools).setVisible(false);
             }
         	
+        	//Enable / disable undo / redo buttons
+        	FileMeta meta = getCurrentFileMeta();
+        	menu.findItem(R.id.menu_undo).setEnabled(meta != null ? meta.canUndo() : false);
+        	menu.findItem(R.id.menu_redo).setEnabled(meta != null ? meta.canRedo() : false);
+        	
         	//Make sure to make all of the sketch-specific actions visible
         	
         	switch(getGlobalState().getSketchLocationType()) {
@@ -2027,11 +2040,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
         		break;
         	}
-        	
-        	//Enable / disable undo / redo buttons
-        	FileMeta meta = getCurrentFileMeta();
-        	menu.findItem(R.id.menu_undo).setEnabled(meta.canUndo());
-        	menu.findItem(R.id.menu_redo).setEnabled(meta.canRedo());
         	
         	menu.findItem(R.id.menu_new).setVisible(true);
         	menu.findItem(R.id.menu_load).setVisible(true);

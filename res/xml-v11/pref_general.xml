@@ -1,0 +1,50 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <PreferenceCategory
+        android:key="pref_general_settings"
+        android:title="@string/pref_general" >
+        
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="pref_vibrate"
+            android:title="@string/pref_vibrate"
+            android:summary="@string/pref_vibrate_desc" />
+        
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="use_hardware_keyboard"
+            android:title="@string/use_hardware_keyboard" />
+    </PreferenceCategory>
+    
+    <PreferenceCategory
+        android:key="pref_sketchbook"
+        android:title="@string/pref_sketchbook" >
+        
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:disableDependentsState="true"
+            android:key="internal_storage_sketchbook"
+            android:title="@string/internal_storage_sketchbook" />
+		
+        <EditTextPreference
+            android:name="@string/pref_sketchbook_location"
+            android:defaultValue=""
+            android:dependency="internal_storage_sketchbook"
+            android:inputType="textNoSuggestions|textUri"
+            android:key="pref_sketchbook_location"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:title="@string/pref_sketchbook_location" />
+    </PreferenceCategory>
+    
+    <PreferenceCategory
+        android:key="pref_key_examples"
+        android:title="@string/pref_examples" >
+        
+        <Preference
+            android:title="@string/pref_examples"
+            android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >
+            
+            <extra android:name="resource" android:value="pref_examples" />
+        </Preference>
+    </PreferenceCategory>
+</PreferenceScreen>

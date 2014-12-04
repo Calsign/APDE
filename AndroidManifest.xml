@@ -13,6 +13,8 @@
     <!-- Will be needed in future versions of Android -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- For the drag'n'drop Message area's haptic feedback -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application
         android:name="com.calsignlabs.apde.APDE"

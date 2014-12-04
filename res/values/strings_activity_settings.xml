@@ -63,5 +63,10 @@
     </string-array>
     <string name="undo_redo_keep_default_value">-1</string>
     <string name="build_output_verbose">Verbose Output</string>
+    <string name="title_activity_examples_settings"/>
+    <string name="pref_examples">Examples Updates</string>
+    <string name="enable_update_examples">Examples Updates</string>
+    <string name="enable_update_examples_mobile_data">Over Mobile Network</string>
+    <string name="enable_update_examples_mobile_data_desc">Will consume mobile data</string>
 
 </resources>
