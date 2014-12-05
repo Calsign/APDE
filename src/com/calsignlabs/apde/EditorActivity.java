@@ -2512,7 +2512,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	runOnUiThread(new Runnable() {
     		public void run() {
     			//Switch to the tab with the error if we have one to switch to
-    			if(tab != -1)
+    			if(tab != -1 && tab < tabs.size())
     				tabBar.selectTab(tab);
     			
     			//Get a reference to the code area

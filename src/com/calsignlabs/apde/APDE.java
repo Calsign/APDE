@@ -967,19 +967,6 @@ public class APDE extends Application {
 		EditorActivity.copyAssetFolder(getAssets(), "processing_default", dir.getAbsolutePath());
 		
 		//Some magic to put our own platform in place
-//		try {
-//			Class<Base> base = Base.class;
-//			Field platform = base.getDeclaredField("platform");
-//			platform.setAccessible(true);
-//			platform.set(null, new processing.app.Platform() {
-//				@Override
-//				public File getSettingsFolder() throws Exception {
-//					return dir;
-//				}
-//			});
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
 		Base.initPlatform();
 		AndroidPlatform.setDir(dir);
 	}
