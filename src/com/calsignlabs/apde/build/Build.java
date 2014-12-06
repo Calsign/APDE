@@ -803,8 +803,9 @@ public class Build {
 				"-classpath", srcFolder.getAbsolutePath() //The location of the source folder
 				+ ":" + genFolder.getAbsolutePath() //The location of the generated folder
 				+ ":" + libsFolder.getAbsolutePath(), //The location of the library folder
-				"-1.5",
-				"-target", "1.5", //Target Java level
+				"-1.6",
+				"-target", "1.6", //Target Java level
+				"-proc:none", //Disable annotation processors...
 				"-d", binFolder.getAbsolutePath() + "/classes/", //The location of the output folder
 				srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java", //The location of the main Activity
 			};
