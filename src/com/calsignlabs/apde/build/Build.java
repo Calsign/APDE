@@ -26,6 +26,7 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -597,6 +598,37 @@ public class Build {
 					cleanUpHalt();
 					return;
 				}
+				
+				if (debug && injectLogBroadcaster) {
+					//Add ("LogBroadcasterActive.pde" or "LogBroadcasterStatic.pde") and "APDEInternalLogBroadcasterUtil.java" to the code
+					//We need two versions to support both active and static modes
+					//The static version goes before the code and the active version goes after it
+					//The .pde file contains the code that initializes the output streams and the broadcaster
+					//The .java file contains the classes that are used by the .pde file
+					
+					//Read the .java file
+					
+					InputStream stream = am.open("APDEInternalLogBroadcasterUtil.java");
+					
+					int size = stream.available();
+					byte[] buffer = new byte[size];
+					
+					stream.read(buffer);
+					stream.close();
+					
+					String text = new String(buffer);
+					
+					//Add the package declaration
+					text = "package " + manifest.getPackageName() + ";\n\n" + text;
+					
+					//Save the .java file
+					saveFile(text, new File(srcFolder.getAbsolutePath(), manifest.getPackageName().replace('.', '/') + "/APDEInternalLogBroadcasterUtil.java"));
+				}
+				
+				if(!running.get()) { //CHECK
+					cleanUpHalt();
+					return;
+				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -681,10 +713,7 @@ public class Build {
 		
 		//Let's try a different method - who needs ANT, anyway?
 		
-//		String androidVersion = "android-10";
 		String mainActivityLoc = manifest.getPackageName().replace(".", "/");
-		
-//		Process aaptProc = null;
 		
 		// NOTE: make sure that all places where build folders are specfied
 		// (e.g. "buildFolder") it is followed by ".getAbsolutePath()"!!!!!
@@ -1179,32 +1208,6 @@ public class Build {
 			codeFolderPackages = packageListFromClassPath(codeFolderClassPath);
 		}
 		
-		if (localInjectLogBroadcaster) {
-			//Add "LogBroadcaster.pde" to the code
-			
-			try {
-				InputStream stream = editor.getAssets().open("LogBroadcaster.pde");
-				
-				int size = stream.available();
-				byte[] buffer = new byte[size];
-				
-				stream.read(buffer);
-				stream.close();
-				
-				String text = new String(buffer);
-				
-				FileMeta[] oldMeta = tabs;
-				tabs = new FileMeta[oldMeta.length + 1];
-				System.arraycopy(oldMeta, 0, tabs, 0, oldMeta.length);
-				tabs[tabs.length - 1] = new FileMeta("LogBroadcaster.pde", text, 0, 0, 0, 0);
-				
-				System.out.println("Injected LogBroadcaster.pde");
-			} catch (IOException e) {
-				System.err.println("Failed to inject LogBroadcaster.pde into sketch!");
-				e.printStackTrace();
-			}
-		}
-		
 		// 1. concatenate all .pde files to the 'main' pde
 		// store line number for starting point of each code bit
 		
@@ -1216,6 +1219,39 @@ public class Build {
 				bigCode.append(meta.getText());
 				bigCode.append("\n");
 				bigCount += numLines(meta.getText());
+			}
+		}
+		
+		if (localInjectLogBroadcaster) {
+			//Add ("LogBroadcasterActive.pde" or "LogBroadcasterStatic.pde") and "APDEInternalLogBroadcasterUtil.java" to the code
+			//We need two versions to support both active and static modes
+			//The static version goes before the code and the active version goes after it
+			//The .pde file contains the code that initializes the output streams and the broadcaster
+			//The .java file contains the classes that are used by the .pde file
+			
+			try {
+				boolean active = active(bigCode);
+				
+				InputStream stream = editor.getAssets().open(active ? "LogBroadcasterActive.pde" : "LogBroadcasterStatic.pde");
+				
+				int size = stream.available();
+				byte[] buffer = new byte[size];
+				
+				stream.read(buffer);
+				stream.close();
+				
+				String text = new String(buffer);
+				
+				if (active) {
+					bigCode.append(text);
+				} else {
+					bigCode.insert(0, text);
+				}
+				
+				System.out.println("Injected log broadcaster");
+			} catch (IOException e) {
+				System.err.println("Failed to inject log broadcaster into sketch!");
+				e.printStackTrace();
 			}
 		}
 		
@@ -1447,6 +1483,29 @@ public class Build {
 		}
 		foundMain = preprocessor.hasMethod("main");
 		return result.className;
+	}
+	
+	//These RegExes are borrowed from Processing's preprocessor
+	
+	private static final Pattern PUBLIC_CLASS =
+			Pattern.compile("(^|;)\\s*public\\s+class\\s+\\S+\\s+extends\\s+PApplet", Pattern.MULTILINE);
+	
+	private static final Pattern FUNCTION_DECL =
+			Pattern.compile("(^|;)\\s*((public|private|protected|final|static)\\s+)*" +
+					"(void|int|float|double|String|char|byte)" +
+					"(\\s*\\[\\s*\\])?\\s+[a-zA-Z0-9]+\\s*\\(",
+					Pattern.MULTILINE);
+	
+	/**
+	 * Determine whether the code uses active or static mode.
+	 * 
+	 * @param code
+	 * @return
+	 */
+	private boolean active(CharSequence code) {
+		String uncomment = PdePreprocessor.scrubComments(code.toString());
+		
+		return PUBLIC_CLASS.matcher(uncomment).find() || FUNCTION_DECL.matcher(uncomment).find();
 	}
 	
 	private int numLines(String input) {
