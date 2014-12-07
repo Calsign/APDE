@@ -2030,8 +2030,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	
         	//Enable / disable undo / redo buttons
         	FileMeta meta = getCurrentFileMeta();
-        	menu.findItem(R.id.menu_undo).setEnabled(meta.canUndo());
-        	menu.findItem(R.id.menu_redo).setEnabled(meta.canRedo());
+        	menu.findItem(R.id.menu_undo).setEnabled(meta != null ? meta.canUndo() : false);
+        	menu.findItem(R.id.menu_redo).setEnabled(meta != null ? meta.canRedo() : false);
         	
         	menu.findItem(R.id.menu_new).setVisible(true);
         	menu.findItem(R.id.menu_load).setVisible(true);
