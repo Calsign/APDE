@@ -8,13 +8,13 @@ You can download APDE from [Google Play](https://play.google.com/store/apps/deta
 Background
 ----------
 
-The acronym APDE (for Android Processing Development Environment) may prove to be temporary. It is kept for lack of anything better.
+The initialism APDE (for Android Processing Development Environment) may prove to be temporary. It is kept for lack of anything better.
 
 APDE is based entirely on the Android mode for the PDE. Before you dive too far into coding, be sure to read through the [Android Processing wiki page](http://wiki.processing.org/w/Android)... except, skip the parts about installing the SDK. You should only look for the differences in the language between "normal" mode and Android mode because these carry over to APDE.
 
-APDE runs on Android versions 2.3 Gingerbread to the latest version (currently 4.4 KitKat). Theoretically, I could have supported earlier versions of Android, but Processing only supports 2.3+. In 2.3, the app will appear slightly different when compared with the "newer" versions (Android 3.0+, which introduced the Action Bar design pattern).
+APDE runs on Android versions 2.3 Gingerbread to the latest version (currently 5.0 Lollipop). Theoretically, I could have supported earlier versions of Android, but Processing only supports 2.3+. In 2.3, the app will appear slightly different when compared with the "newer" versions (Android 3.0+, which introduced the Action Bar design pattern).
 
-I have tested the editor on an Asus Nexus 7, a Samsung Galaxy S5, an HTC One M8, and a Samsung Galaxy S4, all running Android 4.4, as well as several emulators running earlier versions, including 4.2.2, 3.2, and 2.3.3.
+I have tested the editor on an Asus Nexus 7 running Android 5.0, a Samsung Galaxy S5, an HTC One M8, and a Samsung Galaxy S4, all running Android 4.4.4, as well as several emulators running earlier versions, including 4.2.2, 3.2, and 2.3.3.
 
 The editor requires the following permissions:
  - *Modify and delete the contents of your USB storage* - needed to store sketches in the external storage. Note: If you don't have an external storage, you can use the internal storage instead (in Settings).
@@ -36,22 +36,20 @@ APDE strives to be a fully-featured Processing editor, using the PDE as a model.
  - Import contributed libraries, which are dexed upon installation to speed up build times
  - Export sketch as a signed APK file or as an Eclipse-compatible Android project
  - Internal Android Manifest file configuration (sketch permissions, orientation lock, etc.)
+ - Sketch output and exceptions in console by injecting a log broadcaster (may be disabled)
+ - Undo / Redo
  - Add files to sketch's "data" folder
- - A set of examples
+ - A set of examples (more to come soon)
  - Color selector
+ - Change sketch icon wizard
  - Auto format, comment / uncomment, increase / decrease indent
  - Syntax highlighting
  - Automatic saving
 
-These are a few of the key features, but you will find that there are more in the app. There are also a couple of features that aren't yet working:
-
- - Sketch runtime console / exception error output (this is more complicated than you think it is!)... but AIDE has done it, so it must be possible...
-
-In addition to the above unimplemented features, I plan to add the following at some point in the future (some more distant than others!):
+These are a few of the key features, but you will find that there are more in the app. I plan to add the following features at some point in the future (some are more distant than others!):
 
  - Contributed tools
  - Internal documentation
- - Building sketches for release (needs custom key signing)
  - Git integration, possibly even for synchronization across the PDE and APDE if a Git client for the PDE is created
  - Support for JavaScript mode (maybe others... but "standard" mode doesn't make any sense)
 
@@ -70,7 +68,7 @@ APDE libraries are dexed when they are installed. This means that you have to us
 
 There is currently no library downloader. Libraries must be downloaded manually (there is a link, "Get Libraries" in the Library Manager) and then installed with the installer described above. I am staying away from adding an installer right now for fear of Google Play policy (see [ArduinoDroid](http://arduinodroid.blogspot.com/2014/03/arduinodroid-is-temporarily-removed.html) as an example). I consider the Library Installer (well, extractor and dexifier) dangerous enough, so I don't want to make things any worse. At some point in time, I may release a separate application that serves as a download manager (modularization), but that is a challenge for later.
 
-The code folder is supported, but like libraries, the JARs must be dexed and placed in a "code-dex" folder in the sketch folder (beside the "code" folder). Once dexed, the JAR's name must be exactly the same, but have "-dex" at the end, before the ".jar". For example: "MyJavaLibrary.jar", when dexed, must be named "MyJavaLibrary-dex.jar". I should probably get around to making this user experience better at some point in time, but I don't see this feature being used much to begin with...
+The code folder is supported, but like libraries, the JARs must be dexed and placed in a "code-dex" folder in the sketch folder (beside the "code" folder). Once dexed, the JAR's name must be exactly the same, but have "-dex" at the end, before the ".jar". For example: "MyJavaLibrary.jar", when dexed, must be named "MyJavaLibrary-dex.jar". There is a DX Dexer tool in the Library Manager to enable this process on a device. I should probably get around to making this user experience better at some point in time, but I don't see this feature being used much to begin with...
 
 Basic Use
 ---------
@@ -115,7 +113,8 @@ APDE uses a custom build sequence. These are the steps used to build sketches, a
  - Processing Preprocessor (ANTLR), basically the same as the PDE
  - AAPT, Android SDK binary that creates R.java and bundles the resources
  - ECJ, Eclipse Java Compiler, compiles resulting source files, spits out errors
- - DEX, Android SDK JAR, converts compiled .class files to Android's .dex (Dalvik EXecutable) files
+ - DX Dexer, Android SDK JAR, converts compiled .class files to Android's .dex (Dalvik EXecutable) files
+ - DX Merger, Android SDK JAR, merges all of the .dex files into one bit .dex file
  - APKBuilder, creates an APK (Android Package) file from the resources and the DEX files
  - ZipSigner, Android library that zipaligns the APK and also signs it with a debug certificate
 
@@ -126,11 +125,11 @@ Libraries are dexed during the installation process to speed up build times.
 How to Build
 ------------
 
-I have been developing APDE, in my free time, for the past three months (at time of writing) and may be starting to burn out. Anyone that would like a new feature, or has a bug fix, is welcome to submit a pull request.
+I have been developing APDE, in my free time, for roughly the past year (at time of writing). Anyone that would like a new feature, or has a bug fix, is welcome to submit a pull request.
 
 If you wish to build APDE yourself, then there are several steps you must take to set up your Eclipse environment.
 
-I use the ADT Eclipse bundled with the SDK Tools, revision 18. I have not tried to build APDE with revision 19, although I imagine it would be possible. To download ADT, please visit the [Android Developers website](http://developer.android.com/sdk/index.html). However, if you have done Android development in Processing before, chances are that you already have this installed.
+I use Eclipse ADT v23. To download ADT, please visit the [Android Developers website](http://developer.android.com/sdk/index.html). However, if you have done Android development in Processing before, chances are that you already have this installed.
 
 On top of Eclipse, I use the EGit plugin to push commits to GitHub. This isn't necessary, as you can use Git from the command line (as many hardcore Git users would probably prefer). To install EGit, please visit the [Eclipse website](http://www.eclipse.org/egit/download/). You may need to install Git as well.
 
