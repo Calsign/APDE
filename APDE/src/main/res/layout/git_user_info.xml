@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/git_user_info"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="6dp" >
+
+    <EditText
+        android:id="@+id/git_user_info_name"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="6dp"
+        android:inputType="textPersonName"
+        android:hint="@string/git_user_info_name" />
+
+    <EditText
+        android:id="@+id/git_user_info_email"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="6dp"
+        android:inputType="textEmailAddress"
+        android:hint="@string/git_user_info_email" />
+</LinearLayout >

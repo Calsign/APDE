@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/git_clone"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="6dp" >
+
+    <EditText
+        android:id="@+id/git_clone_remote"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="6dp"
+        android:inputType="textUri"
+        android:hint="@string/git_remote" />
+
+    <EditText
+        android:id="@+id/git_clone_local_name"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="6dp"
+        android:inputType="text"
+        android:hint="@string/git_local_name" />
+
+    <include layout="@layout/git_credentials" />
+</LinearLayout >

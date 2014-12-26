@@ -1,0 +1,52 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 21
+    buildToolsVersion "21.1.1"
+
+    defaultConfig {
+        applicationId "com.calsignlabs.apde"
+        minSdkVersion 10
+        targetSdkVersion 21
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-project.txt'
+        }
+
+        debug {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-project.txt'
+        }
+    }
+
+    dexOptions {
+        javaMaxHeapSize "4g"
+    }
+    sourceSets { main { res.srcDirs = ['src/main/res', 'src/main/res/layout-xlarge/'] } }
+}
+
+dependencies {
+    compile project(':aFileChooser')
+    compile 'com.android.support:support-v4:21.0.3'
+    //We need to use the old library because they made the internal API private access
+    compile 'com.android.support:appcompat-v7:20.0.+'
+    compile files('libs/android-core.jar')
+    compile files('libs/antlr.jar')
+    compile files('libs/core-1.51.0.0.jar')
+    compile files('libs/dx.jar')
+    compile files('libs/ecj.jar')
+    compile files('libs/jsch-0.1.51.jar')
+    compile files('libs/kellinwood-logging-android-1.4.jar')
+    compile files('libs/kellinwood-logging-lib-1.1.jar')
+    compile files('libs/org.eclipse.jgit-3.5.2.201411120430-r.jar')
+    compile files('libs/pde.jar')
+    compile files('libs/pkix-1.51.0.0.jar')
+    compile files('libs/prov-1.51.0.0.jar')
+    compile files('libs/sdklib.jar')
+    compile files('libs/zipio-lib-1.8.jar')
+    compile files('libs/zipsigner-lib-1.17.jar')
+    compile files('libs/zipsigner-lib-optional-1.17.jar')
+}

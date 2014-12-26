@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources >
+    <string name="git_init">Create New Repository</string>
+    <string name="git_clone">Clone Repository</string>
+    <string name="git_delete">Delete Repository</string>
+    <string name="git_pull">Pull</string>
+    <string name="git_push">Push</string>
+    <string name="git_snapshot">Take Snapshot</string>
+    <string name="git_history">History</string>
+
+    <string name="git_clone_button">Clone</string>
+    <string name="git_delete_button">Delete</string>
+    <string name="git_pull_button">Pull</string>
+    <string name="git_push_button">Push</string>
+    <string name="git_snapshot_button">Capture</string>
+
+    <string name="git_credentials_username">Username</string>
+    <string name="git_credentials_password">Password</string>
+    <string name="git_user_info_name">Name</string>
+    <string name="git_user_info_email">Email</string>
+
+    <string name="git_remote">Remote</string>
+    <string name="git_local_name">Local Name</string>
+    <string name="git_commit_message">Commit Message</string>
+    <string name="git_history_empty">No Commits</string>
+    <string name="git_diff_empty">No Changes</string>
+</resources >
