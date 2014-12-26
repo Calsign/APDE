@@ -1,0 +1,29 @@
+<resources>
+    <color name="bar_overlay">#31426C</color>
+    <color name="current_line">#CCCCCC</color>
+    <color name="message_back">#AAAAAA</color>
+    <color name="error_back">#89440F</color>
+    <color name="message_text">#000000</color>
+    <color name="error_text">#FFFFFF</color>
+    <color name="drawer_default_color">#EEEEEE</color>
+    <color name="holo_select">#ff33b5e5</color>
+    <color name="holo_select_light">#7733b5e5</color>
+    <color name="tab_text_color">#EEEEEE</color>
+    <!-- <color name="activity_background">#DDDDDD</color> -->
+    <color name="activity_background">#222222</color>
+    <color name="toggle_char_inserts_separator">#666666</color>
+    <color name="toggle_char_inserts_separator_light">#CCCCCC</color>
+    <color name="char_insert_button">#222222</color>
+    <color name="char_insert_button_light">#CCCCCC</color>
+    <color name="grayed_out">#AAAAAA</color>
+    <color name="light_gray">#EEEEEE</color>
+    <color name="link_color">#CCCCCC</color>
+    <color name="code_edit_highlight_color">#97D8FA</color>
+    <color name="red_select">#ffBF3C3C</color>
+    <color name="red_select_light">#77BF3C3C</color>
+    
+    <color name="git_diff_plus">#ff6edd84</color>
+    <color name="git_diff_minus">#ffd14748</color>
+    <color name="git_diff_hunk_header">#ffbdc964</color>
+    <color name="git_diff_no_newline">#ff9673ae</color>
+</resources>
