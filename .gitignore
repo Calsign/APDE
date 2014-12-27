@@ -1,0 +1,7 @@
+.gradle/
+.idea/copyright/
+.idea/libraries/
+.idea/workspace.xml
+APDE/build/
+aFileChooser/build/
+build/
