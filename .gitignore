@@ -5,3 +5,4 @@
 APDE/build/
 aFileChooser/build/
 build/
+*.log
