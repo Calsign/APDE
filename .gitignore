@@ -6,3 +6,4 @@ APDE/build/
 aFileChooser/build/
 build/
 *.log
+local.properties
