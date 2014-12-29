@@ -1,9 +1,10 @@
+aFileChooser/build/**
+APDE/build/**
 .gradle/
 .idea/copyright/
 .idea/libraries/
+.idea/dictionaries/
 .idea/workspace.xml
-APDE/build/
-aFileChooser/build/
-build/
+gradle/
 *.log
 local.properties
