@@ -24,4 +24,18 @@
     <string name="git_commit_message">Commit Message</string>
     <string name="git_history_empty">No Commits</string>
     <string name="git_diff_empty">No Changes</string>
+    
+    <string name="git_task_pull_begin">Pulling repository…</string>
+    <string name="git_task_pull_finish">Repository pulled from remote.</string>
+    <string name="git_task_push_begin">Pushing repository…</string>
+    <string name="git_task_push_finish">Repository pushed to remote.</string>
+    <string name="git_task_snapshot_begin">Taking snapshot…</string>
+    <string name="git_task_snapshot_finish">Snapshot captured.</string>
+    <string name="git_task_init_begin">Initializing repository…</string>
+    <string name="git_task_init_finish">Initialized repository.</string>
+    <string name="git_task_clone_begin">Cloning repository…</string>
+    <string name="git_task_clone_finish">Repository cloned.</string>
+    <string name="git_task_delete_begin">Deleting repository…</string>
+    <string name="git_task_delete_finish">Repository deleted.</string>
+    <string name="git_task_delete_fail">Failed to delete repository.</string>
 </resources >

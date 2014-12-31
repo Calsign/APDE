@@ -223,5 +223,8 @@
     <string name="update_examples_dialog_message">An update is available for the examples repository.\n\nPerforming this update will connect to GitHub servers. Please do not leave the Wi-Fi coverage area.\n\nExamples repository updates can be disabled from Settings &gt; General &gt; Examples.</string>
     <string name="examples_updating">Updating examples…</string>
     <string name="git_manager">Git Manager</string>
+    <string name="delete_task_begin">Deleting file&#8230;</string>
+    <string name="delete_task_finish">Deleted file.</string>
+    <string name="delete_task_fail">Failed to delete file.</string>
 
 </resources>

@@ -25,7 +25,7 @@ android {
     dexOptions {
         javaMaxHeapSize "4g"
     }
-    sourceSets { main { res.srcDirs = ['src/main/res', 'src/main/res/layout-xlarge/'] } }
+    sourceSets { main { res.srcDirs = ['src/main/res'] } }
 }
 
 dependencies {

@@ -148,6 +148,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
+		
+		getGlobalState().initTaskManager();
         
         //Initialize the custom tab bar
         tabBar = new ScrollingTabContainerView(getSupportActionBar().getThemedContext(), this);

@@ -1,36 +1,5 @@
 package com.calsignlabs.apde;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-
-import processing.app.Base;
-
-import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
-import com.calsignlabs.apde.build.Manifest;
-import com.calsignlabs.apde.contrib.Library;
-import com.calsignlabs.apde.support.AndroidPlatform;
-import com.calsignlabs.apde.tool.AutoFormat;
-import com.calsignlabs.apde.tool.ColorSelector;
-import com.calsignlabs.apde.tool.CommentUncomment;
-import com.calsignlabs.apde.tool.DecreaseIndent;
-import com.calsignlabs.apde.tool.ExportEclipseProject;
-import com.calsignlabs.apde.tool.ExportSignedPackage;
-import com.calsignlabs.apde.tool.GitManager;
-import com.calsignlabs.apde.tool.ImportLibrary;
-import com.calsignlabs.apde.tool.IncreaseIndent;
-import com.calsignlabs.apde.tool.ManageLibraries;
-import com.calsignlabs.apde.tool.Tool;
-import com.calsignlabs.apde.vcs.GitRepository;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -45,6 +14,38 @@ import android.net.NetworkInfo;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 
+import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
+import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.contrib.Library;
+import com.calsignlabs.apde.support.AndroidPlatform;
+import com.calsignlabs.apde.task.TaskManager;
+import com.calsignlabs.apde.tool.AutoFormat;
+import com.calsignlabs.apde.tool.ColorSelector;
+import com.calsignlabs.apde.tool.CommentUncomment;
+import com.calsignlabs.apde.tool.DecreaseIndent;
+import com.calsignlabs.apde.tool.ExportEclipseProject;
+import com.calsignlabs.apde.tool.ExportSignedPackage;
+import com.calsignlabs.apde.tool.GitManager;
+import com.calsignlabs.apde.tool.ImportLibrary;
+import com.calsignlabs.apde.tool.IncreaseIndent;
+import com.calsignlabs.apde.tool.ManageLibraries;
+import com.calsignlabs.apde.tool.Tool;
+import com.calsignlabs.apde.vcs.GitRepository;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+
+import processing.app.Base;
+
 /**
  * This is the Application global state for APDE. It manages things like the
  * currently selected sketch and references to the various activities.
@@ -55,6 +56,8 @@ public class APDE extends Application {
 	public static final String DEFAULT_SKETCH_NAME = "sketch";
 	
 	public static final String EXAMPLES_REPO = "https://github.com/Calsign/APDE-examples.git";
+	
+	private TaskManager taskManager;
 	
 	private String sketchName;
 	
@@ -146,6 +149,16 @@ public class APDE extends Application {
 	private SketchLocation sketchLocation;
 	// Relative path to the sketch within its location group
 	private String sketchPath;
+	
+	public void initTaskManager() {
+		if (taskManager == null) {
+			taskManager = new TaskManager(this);
+		}
+	}
+	
+	public TaskManager getTaskManager() {
+		return taskManager;
+	}
 	
 	/**
 	 * Changes the name of the current sketch and updates the editor accordingly

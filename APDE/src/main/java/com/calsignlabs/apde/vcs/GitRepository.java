@@ -12,6 +12,8 @@ import android.widget.LinearLayout;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.task.DeleteFileTask;
+import com.calsignlabs.apde.task.Task;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -302,9 +304,10 @@ public class GitRepository {
 		return formatter;
 	}
 
-    /**
-     * @return a lit of possible actions for this repository
-     */
+	/**
+	 * @param context the application context
+	 * @return a list of possible actions for this repository
+	 */
     public ArrayList<GitAction> getActions(final APDE context) {
         ArrayList<GitAction> actions = new ArrayList<GitAction>();
 		
@@ -328,9 +331,12 @@ public class GitRepository {
 
 							final String username = ((EditText) layout.findViewById(R.id.git_credentials_username)).getText().toString();
 							final char[] password = ((EditText) layout.findViewById(R.id.git_credentials_password)).getText().toString().toCharArray();
-
-							new Thread(new Runnable() {
+							
+							context.getTaskManager().launchTask("gitPullTask", true, context.getEditor(), true, new Task() {
+								@Override
 								public void run() {
+									postStatus(context.getResources().getString(R.string.git_task_pull_begin));
+									
 									if (username.length() > 0 || password.length > 0) {
 										repo.pullRepo(remote, MASTER_BRANCH, new GitUser(username, password, "", ""));
 									} else {
@@ -344,8 +350,15 @@ public class GitRepository {
 											context.getEditor().reloadSketch();
 										}
 									});
+									
+									postStatus(context.getResources().getString(R.string.git_task_pull_finish));
 								}
-							}).start();
+								
+								@Override
+								public CharSequence getTitle() {
+									return context.getResources().getString(R.string.git_pull);
+								}
+							});
 						}
 					});
 				}
@@ -371,11 +384,21 @@ public class GitRepository {
 							final String username = ((EditText) layout.findViewById(R.id.git_credentials_username)).getText().toString();
 							final char[] password = ((EditText) layout.findViewById(R.id.git_credentials_password)).getText().toString().toCharArray();
 							
-							new Thread(new Runnable() {
+							context.getTaskManager().launchTask("gitPushTask", true, context.getEditor(), true, new Task() {
+								@Override
 								public void run() {
+									postStatus(context.getResources().getString(R.string.git_task_push_begin));
+									
 									repo.pushRepo(remote, new GitUser(username, password, "", ""));
+									
+									postStatus(context.getResources().getString(R.string.git_task_push_finish));
 								}
-							}).start();
+								
+								@Override
+								public CharSequence getTitle() {
+									return context.getResources().getString(R.string.git_push);
+								}
+							});
 						}
 					});
 				}
@@ -399,12 +422,22 @@ public class GitRepository {
 								public void run() {
 									//Make sure we use the most updated version of the files
 									context.getEditor().autoSave();
-
-									new Thread(new Runnable() {
+									
+									context.getTaskManager().launchTask("gitAddCommitTask", false, null, true, new Task() {
+										@Override
 										public void run() {
+											postStatus(context.getResources().getString(R.string.git_task_snapshot_begin));
+											
 											repo.addAndCommit(message, new GitUser("", new char[0], name, email));
+											
+											postStatus(context.getResources().getString(R.string.git_task_snapshot_finish));
 										}
-									}).start();
+										
+										@Override
+										public CharSequence getTitle() {
+											return context.getResources().getString(R.string.git_snapshot);
+										}
+									});
 								}
 							});
 						}
@@ -423,11 +456,7 @@ public class GitRepository {
 			actions.add(new GitAction(context, this, R.string.git_delete) {
 				@Override
 				public void run() {
-					try {
-						APDE.deleteFile(repo.getGitDir());
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
+					launchGitDeleteTask(context, repo);
 				}
 			});
         } else {
@@ -435,7 +464,27 @@ public class GitRepository {
 				actions.add(new GitAction(context, this, R.string.git_init) {
 					@Override
 					public void run() {
-						repo.initRepo();
+						context.getTaskManager().launchTask("gitInitTask", false, null, true, new Task() {
+							@Override
+							public void run() {
+								postStatus(context.getResources().getString(R.string.git_task_init_begin));
+								
+								repo.initRepo();
+								
+								postStatus(context.getResources().getString(R.string.git_task_init_finish));
+							}
+							
+							@Override
+							public CharSequence getTitle() {
+								return context.getResources().getString(R.string.git_init);
+							}
+							
+							@Override
+							public void cancel() {
+								//Undo progress by deleting the repository
+								launchGitDeleteTask(context, repo);
+							}
+						});
 					}
 				});
 			}
@@ -450,20 +499,25 @@ public class GitRepository {
 					@Override
 					public void onClick(DialogInterface dialog, int button) {
 						final String remote = ((EditText) layout.findViewById(R.id.git_clone_remote)).getText().toString();
-						String localName = ((EditText) layout.findViewById(R.id.git_clone_local_name)).getText().toString();
-
+						final String localName = ((EditText) layout.findViewById(R.id.git_clone_local_name)).getText().toString();
+						
 						final File destDir = new File(context.getSketchbookFolder(), localName);
-
+						
 						final String username = ((EditText) layout.findViewById(R.id.git_credentials_username)).getText().toString();
 						final char[] password = ((EditText) layout.findViewById(R.id.git_credentials_password)).getText().toString().toCharArray();
-
-						new Thread(new Runnable() {
+						
+						context.getTaskManager().launchTask("gitCloneTask", true, context.getEditor(), true, new Task() {
+							@Override
 							public void run() {
+								postStatus(context.getResources().getString(R.string.git_task_clone_begin));
+								
 								if (username.length() > 0 || password.length > 0) {
 									cloneRepo(remote, destDir, MASTER_BRANCH, new GitUser(username, password, "", ""));
 								} else {
 									cloneRepo(remote, destDir, MASTER_BRANCH);
 								}
+								
+								postStatus(context.getResources().getString(R.string.git_task_clone_finish));
 								
 								context.getEditor().runOnUiThread(new Runnable() {
 									@Override
@@ -472,92 +526,115 @@ public class GitRepository {
 									}
 								});
 							}
-						}).start();
+							
+							@Override
+							public CharSequence getTitle() {
+								return context.getResources().getString(R.string.git_clone);
+							}
+							
+							@Override
+							public void cancel() {
+								//Undo progress by deleting the folder
+								context.getTaskManager().launchTask("gitCloneUndoTask", false, null, true,
+										new DeleteFileTask(destDir, context.getResources().getString(R.string.git_delete), null,
+												context.getResources().getString(R.string.git_task_delete_begin),
+												context.getResources().getString(R.string.git_task_delete_finish),
+												context.getResources().getString(R.string.git_task_delete_fail)));
+							}
+						});
 					}
 				});
 			}
 		});
-
+		
         return actions;
     }
-
+	
+	private void launchGitDeleteTask(APDE context, GitRepository repo) {
+		context.getTaskManager().launchTask("gitDeleteTask", false, null, true,
+				new DeleteFileTask(repo.getGitDir(), context.getResources().getString(R.string.git_delete), null,
+						context.getResources().getString(R.string.git_task_delete_begin),
+						context.getResources().getString(R.string.git_task_delete_finish),
+						context.getResources().getString(R.string.git_task_delete_fail)));
+	}
+	
 	private View inflateLayout(Context context, int layoutId) {
 		View layout;
-
+		
 		if(android.os.Build.VERSION.SDK_INT >= 11) {
 			layout = (View) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), layoutId, null);
 		} else {
 			layout = (View) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), layoutId, null);
 		}
-
+		
 		return layout;
 	}
 
 	private void showLayoutAlert(Activity context, int titleId, View layout, int positiveButtonTitleId, DialogInterface.OnClickListener positiveListener) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(context);
 		builder.setTitle(titleId);
-
+		
 		builder.setView(layout);
-
+		
 		builder.setPositiveButton(positiveButtonTitleId, positiveListener);
 		builder.setNegativeButton(R.string.cancel, null);
-
+		
 		builder.create().show();
 	}
-
+	
     /**
      * @return a list of names of possible actions for this repository
      */
     public String[] getActionNames(ArrayList<GitAction> actions) {
         String[] actionNames = new String[actions.size()];
-
+		
         for (int i = 0; i < actions.size(); i ++) {
             actionNames[i] = actions.get(i).getName();
         }
-
+		
         return actionNames;
     }
-
+	
     /**
      * @return a list of names of possible actions for this repository
      */
     public String[] getActionNames(APDE context) {
         ArrayList<GitAction> actions = getActions(context);
         String[] actionNames = new String[actions.size()];
-
+		
         for (int i = 0; i < actions.size(); i ++) {
             actionNames[i] = actions.get(i).getName();
         }
-
+		
         return actionNames;
     }
-
+	
     public abstract class GitAction implements Runnable {
 		protected APDE context;
         protected GitRepository repo;
 		protected String name;
-
+		
         public GitAction(APDE context, GitRepository repo, String name) {
 			this.context = context;
             this.repo = repo;
 			this.name = name;
         }
-
+		
 		public GitAction(APDE context, GitRepository repo, int nameId) {
 			this.context = context;
 			this.repo = repo;
 			name = context.getResources().getString(nameId);
 		}
-
+		
         public String getName() {
 			return name;
 		}
     }
-
+	
 	public void close() {
 		git.close();
 	}
-
+	
     public void open() {
         try {
             git = new Git(new FileRepository(getGitDir()));
@@ -565,11 +642,11 @@ public class GitRepository {
             e.printStackTrace();
         }
     }
-
+	
 	public File getRootDir() {
 		return rootDir;
 	}
-
+	
 	public File getGitDir() {
 		return new File(rootDir, ".git");
 	}

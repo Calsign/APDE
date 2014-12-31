@@ -450,9 +450,11 @@ public class GitHistoryActivity extends ActionBarActivity {
 			selectedItem = num;
 			int selection = num - commitList.getFirstVisiblePosition();
 			
-			//Keep the selected commit on screen
-			if (num < commitList.getFirstVisiblePosition() + 2 || num > commitList.getLastVisiblePosition() - 2) {
-				commitList.setSelection(num);
+			//Keep the selected commit on screen... with a little bit of breathing room
+			if (num < commitList.getFirstVisiblePosition() + 2) {
+				commitList.setSelection(num == 0 ? num : num - 1);
+			} else if (num > commitList.getLastVisiblePosition() - 2) {
+				commitList.setSelection(num == commitList.getCount() - 1 ? num : num + 1);
 			}
 			
 			for (int i = 0; i < commitList.getCount(); i ++) {
