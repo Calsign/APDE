@@ -32,12 +32,16 @@ import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Locale;
 
 public class GitRepository {
 	public static final String MASTER_BRANCH = "master";
@@ -69,6 +73,45 @@ public class GitRepository {
 			e.printStackTrace();
 		} catch (GitAPIException e) {
 			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Adds a rule to the .gitignore file. Creates this file if it does not exist.
+	 * 
+	 * @param rules
+	 */
+	public void addIgnoreRules(String[] rules) {
+		File gitignoreFile = new File(rootDir, ".gitignore");
+		
+		FileOutputStream fileOut = null;
+		BufferedOutputStream out = null;
+		
+		try {
+			fileOut = new FileOutputStream(gitignoreFile, true);
+			out = new BufferedOutputStream(fileOut);
+			
+			for (String rule : rules) {
+				out.write((rule + "\n").getBytes());
+			}
+			
+			out.flush();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (out != null) {
+					out.close();
+				}
+				
+				if (fileOut != null) {
+					fileOut.close();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -205,7 +248,7 @@ public class GitRepository {
 			e.printStackTrace();
 		}
 	}
-
+	
 	public void pushRepo(String uri, GitUser user) {
 		try {
 			setRemote(uri);
@@ -233,7 +276,7 @@ public class GitRepository {
 			e.printStackTrace();
 		}
 	}
-
+	
 	/**
 	 * Get a list of recent commits
 	 * 
@@ -274,25 +317,37 @@ public class GitRepository {
 		return commits;
 	}
 	
-	public ArrayList<CharSequence> getRecentCommitMessages(int num) {
+	public ArrayList<CharSequence> getRecentCommitMessages(int num, int truncateAt) {
 		ArrayList<RevCommit> commits = getRecentCommits(num);
 		ArrayList<CharSequence> commitMessages = new ArrayList<CharSequence>(commits.size());
 		
 		for (RevCommit commit : commits) {
-			commitMessages.add(commit.getFullMessage());
+			//Ellipsize if necessary
+			commitMessages.add(ellipsizeCommitMessage(commit, truncateAt));
 		}
 		
 		return commitMessages;
 	}
 	
-	public ArrayList<CharSequence> getRecentCommitMessages(ArrayList<RevCommit> commits) {
+	public ArrayList<CharSequence> getRecentCommitMessages(ArrayList<RevCommit> commits, int truncateAt) {
 		ArrayList<CharSequence> commitMessages = new ArrayList<CharSequence>(commits.size());
 		
 		for (RevCommit commit : commits) {
-			commitMessages.add(commit.getFullMessage());
+			//Ellipsize if necessary
+			commitMessages.add(ellipsizeCommitMessage(commit, truncateAt));
 		}
 
 		return commitMessages;
+	}
+	
+	public static String ellipsizeCommitMessage(RevCommit commit, int truncateAt) {
+		String shortMessage = commit.getShortMessage();
+		
+		return truncateAt > 0 ?
+				(shortMessage.length() > truncateAt
+						? shortMessage.substring(0, Math.min(truncateAt, shortMessage.length())) + "…"
+						: shortMessage)
+				: commit.getFullMessage();
 	}
 	
 	public DiffFormatter getDiffFormatter(OutputStream out) {
@@ -303,7 +358,7 @@ public class GitRepository {
 		
 		return formatter;
 	}
-
+	
 	/**
 	 * @param context the application context
 	 * @return a list of possible actions for this repository
@@ -456,7 +511,24 @@ public class GitRepository {
 			actions.add(new GitAction(context, this, R.string.git_delete) {
 				@Override
 				public void run() {
-					launchGitDeleteTask(context, repo);
+					AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
+					
+					builder.setTitle(R.string.git_delete_confirmation_dialog_title);
+					builder.setMessage(String.format(Locale.US, context.getResources().getString(R.string.git_delete_confirmation_dialog_message), context.getSketchName()));
+					
+					builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							launchGitDeleteTask(context, repo);
+						}
+					});
+					
+					builder.setNeutralButton(R.string.cancel, new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {}
+					});
+					
+					builder.create().show();
 				}
 			});
         } else {
@@ -470,6 +542,10 @@ public class GitRepository {
 								postStatus(context.getResources().getString(R.string.git_task_init_begin));
 								
 								repo.initRepo();
+								
+								postStatus(context.getResources().getString(R.string.git_task_init_gitignore_begin));
+								
+								addIgnoreRules(new String[] {"bin/**"});
 								
 								postStatus(context.getResources().getString(R.string.git_task_init_finish));
 							}

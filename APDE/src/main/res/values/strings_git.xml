@@ -32,10 +32,17 @@
     <string name="git_task_snapshot_begin">Taking snapshot…</string>
     <string name="git_task_snapshot_finish">Snapshot captured.</string>
     <string name="git_task_init_begin">Initializing repository…</string>
-    <string name="git_task_init_finish">Initialized repository.</string>
+    <string name="git_task_init_gitignore_begin">Setting up .gitignore…</string>
+    <string name="git_task_init_finish">Created repository.</string>
     <string name="git_task_clone_begin">Cloning repository…</string>
     <string name="git_task_clone_finish">Repository cloned.</string>
     <string name="git_task_delete_begin">Deleting repository…</string>
     <string name="git_task_delete_finish">Repository deleted.</string>
     <string name="git_task_delete_fail">Failed to delete repository.</string>
+    
+    <string name="git_diff">Diff</string>
+    <string name="git_diff_two_items">Diff requires two items</string>
+    
+    <string name="git_delete_confirmation_dialog_title">Delete Repository?</string>
+    <string name="git_delete_confirmation_dialog_message">Are you sure that you want to delete the Git repository for sketch %1$s? Repository deletion cannot be undone. You will lose all of your local history!</string>
 </resources >

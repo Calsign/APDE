@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_git_diff"
+        android:title="@string/git_diff"
+        android:icon="@drawable/ic_git_diff" />
+</menu>

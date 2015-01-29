@@ -11,7 +11,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_margin="6dp"
-        android:inputType="text"
+        android:inputType="text|textMultiLine"
+        android:minLines="2"
+        android:maxLines="5"
+        android:gravity="top|left"
+        android:scrollbars="vertical"
         android:hint="@string/git_commit_message" />
 
     <include layout="@layout/git_user_info" />

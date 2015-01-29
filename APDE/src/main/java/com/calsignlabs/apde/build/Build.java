@@ -8,16 +8,35 @@
 
 package com.calsignlabs.apde.build;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.Intent;
+import android.content.res.AssetManager;
+import android.net.Uri;
+import android.os.Environment;
+import android.preference.PreferenceManager;
+
+import com.android.sdklib.build.ApkBuilder;
+import com.calsignlabs.apde.APDE;
+import com.calsignlabs.apde.EditorActivity;
+import com.calsignlabs.apde.FileMeta;
+import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.contrib.Library;
+
+import org.eclipse.jdt.internal.compiler.batch.Main;
+import org.spongycastle.jce.provider.BouncyCastleProvider;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.security.Security;
@@ -32,26 +51,10 @@ import java.util.zip.ZipFile;
 
 import kellinwood.security.zipsigner.ZipSigner;
 import kellinwood.security.zipsigner.optional.CustomKeySigner;
-
-import org.eclipse.jdt.internal.compiler.batch.Main;
-import org.spongycastle.jce.provider.BouncyCastleProvider;
-
 import processing.app.Preferences;
 import processing.core.PApplet;
 import processing.mode.java.preproc.PdePreprocessor;
 import processing.mode.java.preproc.PreprocessorResult;
-
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.content.Intent;
-import android.content.res.AssetManager;
-import android.net.Uri;
-import android.os.Environment;
-import android.preference.PreferenceManager;
-
-import com.android.sdklib.build.ApkBuilder;
-import com.calsignlabs.apde.*;
-import com.calsignlabs.apde.contrib.Library;
 
 public class Build {
 	public static final String PACKAGE_REGEX ="(?:^|\\s|;)package\\s+(\\S+)\\;";
@@ -656,6 +659,12 @@ public class Build {
 		String arch = android.os.Build.CPU_ABI.substring(0, 3).toLowerCase(Locale.US);
 		String aaptName;
 		
+		int numCores = getNumCores();
+		
+		if (verbose) {
+			System.out.println("Available cores: " + numCores);
+		}
+		
 		if (arch.equals("x86")) {
 			// x86
 			aaptName = "aapt-x86";
@@ -843,11 +852,13 @@ public class Build {
 			if (verbose ) {
 				args = new String[] {
 						"--verbose",
+						"--num-threads=" + numCores,
 						"--output=" + binFolder.getAbsolutePath() + "/sketch-classes.dex", //The output location of the sketch's dexed classes
 						binFolder.getAbsolutePath() + "/classes/" //add "/classes/" to get DX to work properly
 				};
 			} else {
 				args = new String[] {
+						"--num-threads=" + numCores,
 						"--output=" + binFolder.getAbsolutePath() + "/sketch-classes.dex", //The output location of the sketch's dexed classes
 						binFolder.getAbsolutePath() + "/classes/" //add "/classes/" to get DX to work properly
 				};
@@ -1099,6 +1110,40 @@ public class Build {
 			CustomKeySigner.signZip(signer, keystore, keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outFilename);
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Gets the number of cores available in this device, across all processors.
+	 * Requires: Ability to peruse the filesystem at "/sys/devices/system/cpu"
+	 * 
+	 * From StackOverflow: http://stackoverflow.com/a/10377934
+	 * 
+	 * @return The number of cores, or Runtime.availableProcessors() if failed to get result
+	 */
+	private int getNumCores() {
+		//Private Class to display only CPU devices in the directory listing
+		class CpuFilter implements FileFilter {
+			@Override
+			public boolean accept(File pathname) {
+				//Check if filename is "cpu", followed by a single digit number
+				if (Pattern.matches("cpu[0-9]+", pathname.getName())) {
+					return true;
+				}
+				return false;
+			}
+		}
+		
+		try {
+			//Get directory containing CPU info
+			File dir = new File("/sys/devices/system/cpu/");
+			//Filter to only list the devices we care about
+			File[] files = dir.listFiles(new CpuFilter());
+			//Return the number of cores (virtual CPU devices)
+			return files.length;
+		} catch (Exception e) {
+			//Default to return 1 core
+			return Runtime.getRuntime().availableProcessors();
 		}
 	}
 	

@@ -1,5 +1,6 @@
 aFileChooser/build/**
 APDE/build/**
+build/**
 .gradle/
 .idea/copyright/
 .idea/libraries/

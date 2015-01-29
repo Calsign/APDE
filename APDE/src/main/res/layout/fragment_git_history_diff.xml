@@ -4,6 +4,42 @@
     android:layout_height="match_parent"
     android:padding="8dp"
     android:orientation="vertical" >
+    
+    <LinearLayout
+        android:id="@+id/git_history_diff_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="24dp"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:paddingTop="8dp"
+        android:orientation="vertical"
+        android:visibility="gone" >
+
+        <TextView
+            android:id="@+id/git_history_diff_commit_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#ffffff"
+            android:textIsSelectable="true"
+            android:textSize="16sp" />
+        
+        <TextView
+            android:id="@+id/git_history_diff_commit_author"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#cccccc"
+            android:textIsSelectable="true"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/git_history_diff_commit_timestamp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#cccccc"
+            android:textIsSelectable="true"
+            android:textSize="16sp" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/git_diff_empty"
@@ -11,10 +47,10 @@
         android:layout_height="match_parent"
         android:gravity="center"
         android:text="@string/git_diff_empty"
-        android:textSize="16sp"
         android:textColor="@color/grayed_out"
-        android:visibility="gone" />
-
+        android:textSize="16sp"
+        android:visibility="gone"/>
+    
     <ProgressBar
         android:id="@+id/git_diff_progress_bar"
         style="@style/Widget.AppCompat.ProgressBar"

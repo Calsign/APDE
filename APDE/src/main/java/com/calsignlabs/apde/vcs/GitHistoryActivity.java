@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.view.ActionMode;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
@@ -20,6 +21,7 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.R;
@@ -28,8 +30,15 @@ import com.calsignlabs.apde.SettingsActivityHC;
 
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
+import org.eclipse.jgit.errors.IncorrectObjectTypeException;
+import org.eclipse.jgit.lib.ObjectReader;
+import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
+import org.eclipse.jgit.treewalk.AbstractTreeIterator;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
+import org.eclipse.jgit.treewalk.EmptyTreeIterator;
+import org.eclipse.jgit.treewalk.FileTreeIterator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -59,7 +68,9 @@ public class GitHistoryActivity extends ActionBarActivity {
 		repo = new GitRepository(((APDE) getApplicationContext()).getSketchLocation());
 		//TODO Implement infinite scrolling with dynamic loading for sketches with lots of commits
 		commits = repo.getRecentCommits(-1);
-		commitMessages = repo.getRecentCommitMessages(commits);
+		commitMessages = repo.getRecentCommitMessages(commits, 72);
+		commitMessages.add(0, "[Local Changes]");
+		commitMessages.add("[Empty Repository]");
 		
 		repo.close();
 		
@@ -125,33 +136,53 @@ public class GitHistoryActivity extends ActionBarActivity {
 	private Thread loadThread;
 	
 	protected void selectCommit(final int num) {
+		if (num == commitMessages.size() - 1) {
+			//You can't select the last item, "Empty Repository"
+			return;
+		}
+
+		if ((getResources().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_XLARGE) {
+			commitListFragment.selectItem(num);
+		}
+		
+		diffCommits(num, num + 1, num > 0 ? commits.get(num - 1) : null);
+	}
+	
+	protected void diffCommits(int a, int b, final RevCommit commit) {
 		if (!((getResources().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_XLARGE)) {
 			commitDiffFragment = new CommitDiffFragment();
 			loadFragment(commitDiffFragment, R.id.git_history_frame, true);
-		} else {
-			commitListFragment.selectItem(num);
 		}
+		
+		final int commitNum = Math.min(a, b);
+		final int parentNum = Math.max(a, b);
 		
 		if (loadThread != null) {
 			loadThread.interrupt();
 		}
 		
-		loadThread = new Thread(new Runnable() {
+		loadThread = new Thread() {
+			@Override
 			public void run() {
 				repo.open();
-
-				RevCommit commit = commits.get(num);
-				RevTree commitTree = commit.getTree();
-
-				RevCommit parent = null;
-				RevTree parentTree;
-
-				if (commit.getParentCount() == 0) {
-					//This is the first commit
-					parentTree = null;
+				
+				AbstractTreeIterator commitTreeIterator;
+				AbstractTreeIterator parentTreeIterator;
+				
+				if (commitNum == 0) {
+					//Local changes
+					commitTreeIterator = new FileTreeIterator(repo.getGit().getRepository());
 				} else {
-					parent = commit.getParent(0);
-					parentTree = parent.getTree();
+					//Some commit
+					commitTreeIterator = createTreeIterator(commits.get(commitNum - 1).getTree());
+				}
+				
+				if (parentNum == commits.size() + 1) {
+					//Empty repository
+					parentTreeIterator = new EmptyTreeIterator();
+				} else {
+					//Some commit
+					parentTreeIterator = createTreeIterator(commits.get(parentNum - 1).getTree());
 				}
 
 				ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -160,8 +191,10 @@ public class GitHistoryActivity extends ActionBarActivity {
 				final ArrayList<CommitDiff> commitDiffs = new ArrayList<CommitDiff>();
 
 				try {
-					List<DiffEntry> diffEntries = formatter.scan(parentTree, commitTree);
-
+					List<DiffEntry> diffEntries;
+					
+					diffEntries = formatter.scan(parentTreeIterator, commitTreeIterator);
+					
 					for (DiffEntry diffEntry : diffEntries) {
 						String changeType = diffEntry.getChangeType().name().toUpperCase();
 						//If we're deleting, at least show a path that's useful
@@ -192,14 +225,14 @@ public class GitHistoryActivity extends ActionBarActivity {
 				}
 				
 				repo.close();
-				
+
 				runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
 						try {
 							getSupportFragmentManager().executePendingTransactions();
 							commitDiffFragment.setProgressVisibility(false);
-							commitDiffFragment.setCommitDiffs(commitDiffs);
+							commitDiffFragment.setCommitDiffs(commit, commitDiffs);
 						} catch (NullPointerException e) {
 							//This happens when the user has already navigated away from this screen
 							//It took too long to load or something
@@ -208,10 +241,10 @@ public class GitHistoryActivity extends ActionBarActivity {
 					}
 				});
 			}
-		});
+		};
 		
 		loadThread.start();
-		
+
 		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
@@ -219,6 +252,23 @@ public class GitHistoryActivity extends ActionBarActivity {
 				commitDiffFragment.setProgressVisibility(true);
 			}
 		});
+	}
+	
+	private CanonicalTreeParser createTreeIterator(RevTree tree) {
+		CanonicalTreeParser treeParser = new CanonicalTreeParser();
+		ObjectReader objectReader = repo.getGit().getRepository().newObjectReader();
+		
+		try {
+			treeParser.reset(objectReader, tree.getId());
+		} catch (IncorrectObjectTypeException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			objectReader.release();
+		}
+		
+		return treeParser;
 	}
 	
 	private Spannable cleanDiffText(String diffText) {
@@ -330,6 +380,9 @@ public class GitHistoryActivity extends ActionBarActivity {
 	public static class CommitListFragment extends Fragment {
 		private boolean loaded = false;
 		private int selectedItem = -1;
+		private int[] selection = {-1, -1};
+		
+		private ActionMode actionMode;
 		
 		private View rootView;
 		
@@ -387,25 +440,25 @@ public class GitHistoryActivity extends ActionBarActivity {
 		public void loadCommitList() {
 			if (!loaded) {
 				final ListView commitList = (ListView) getView().findViewById(R.id.git_history_commit_list);
-
+				
 				final ArrayList<CharSequence> commitMessages = ((GitHistoryActivity) getActivity()).getCommitMessages();
-
+				
 				commitList.setAdapter(new BaseAdapter() {
 					@Override
 					public int getCount() {
 						return commitMessages.size();
 					}
-
+					
 					@Override
 					public Object getItem(int position) {
 						return commitMessages.get(position);
 					}
-
+					
 					@Override
 					public long getItemId(int position) {
 						return position;
 					}
-
+					
 					@Override
 					public View getView(int position, View convertView, ViewGroup parent) {
 						//Let's see if we can convert the old view - otherwise inflate a new one
@@ -417,15 +470,23 @@ public class GitHistoryActivity extends ActionBarActivity {
 						convertView.setBackgroundColor(getResources().getColor(selectedItem == position
 								? R.color.holo_select
 								: android.R.color.transparent));
-
+						
+						if (selectedItem != position) {
+							for (int item : selection) {
+								if (position == item) {
+									convertView.setBackgroundColor(getResources().getColor(R.color.holo_select_light));
+								}
+							}
+						}
+						
 						CharSequence message = commitMessages.get(position);
-
+						
 						((TextView) convertView.findViewById(R.id.git_history_commit_list_item_text)).setText(message);
-
+						
 						return convertView;
 					}
 				});
-
+				
 				//If there aren't any commits, let the user know
 				if (commitList.getCount() <= 0) {
 					getView().findViewById(R.id.git_history_empty).setVisibility(View.VISIBLE);
@@ -436,11 +497,95 @@ public class GitHistoryActivity extends ActionBarActivity {
 				commitList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 					@Override
 					public void onItemClick(AdapterView<?> parentAdapter, View view, int position, long id) {
-						((GitHistoryActivity) getActivity()).selectCommit(position);
+						if (actionMode == null) {
+							((GitHistoryActivity) getActivity()).selectCommit(position);
+						} else {
+							handleActionModeTouch(position);
+						}
+					}
+				});
+				
+				commitList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+					@Override
+					public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+						handleActionModeTouch(position);
+						
+						return true;
 					}
 				});
 				
 				loaded = true;
+			}
+		}
+		
+		private void handleActionModeTouch(int position) {
+			//If this item has already been selected, then un-select it
+			//If there are less than two items selected, then select this item
+			//If there are already two items selected, then tell the user that they can't select another item
+			if (selection[0] == position) {
+				selection[0] = -1;
+			} else if (selection[1] == position) {
+				selection[1] = -1;
+			} else if (selection[0] == -1) {
+				selection[0] = position;
+			} else if (selection[1] == -1) {
+				selection[1] = position;
+			} else {
+				Toast.makeText(getActivity(), R.string.git_diff_two_items, Toast.LENGTH_SHORT).show();
+			}
+			
+			selectItems();
+			
+			if ((selection[0] != -1 || selection[1] != -1) && actionMode == null) {
+				//We need to start the CAB
+				
+				actionMode = ((GitHistoryActivity) getActivity()).startSupportActionMode(new ActionMode.Callback() {
+					@Override
+					public boolean onCreateActionMode(ActionMode actionMode, Menu menu) {
+						actionMode.getMenuInflater().inflate(R.menu.git_history_commit_list_actions, menu);
+						return true;
+					}
+					
+					@Override
+					public boolean onPrepareActionMode(ActionMode actionMode, Menu menu) {
+						return false;
+					}
+					
+					@Override
+					public boolean onActionItemClicked(ActionMode actionMode, MenuItem menuItem) {
+						switch (menuItem.getItemId()) {
+						case R.id.menu_git_diff:
+							//Need two commits for a diff...
+							if (selection[0] != -1 && selection[1] != -1) {
+								((GitHistoryActivity) getActivity()).diffCommits(selection[0], selection[1], null);
+								actionMode.finish();
+							} else {
+								Toast.makeText(getActivity(), R.string.git_diff_two_items, Toast.LENGTH_SHORT).show();
+							}
+							
+							return true;
+						}
+						
+						return false;
+					}
+					
+					@Override
+					public void onDestroyActionMode(ActionMode actionMode) {
+						selection[0] = -1;
+						selection[1] = -1;
+						
+						//If we're navigating away, then we can't be messing with the non-existant view...
+						if (getView() != null) {
+							selectItems();
+						}
+						
+						CommitListFragment.this.actionMode = null;
+					}
+				});
+			} else if (selection[0] == -1 && selection[1] == -1 && actionMode != null) {
+				//We need to close the CAB
+				
+				actionMode.finish();
 			}
 		}
 		
@@ -464,6 +609,27 @@ public class GitHistoryActivity extends ActionBarActivity {
 					child.setBackgroundColor(selection == i
 							? getResources().getColor(R.color.holo_select)
 							: getResources().getColor(android.R.color.transparent));
+				}
+			}
+		}
+		
+		public void selectItems() {
+			final ListView commitList = (ListView) getView().findViewById(R.id.git_history_commit_list);
+			
+			for (int i = 0; i < commitList.getCount(); i ++) {
+				View child = commitList.getChildAt(i);
+				
+				if (child != null) {
+					child.setBackgroundColor(getResources().getColor(android.R.color.transparent));
+				}
+			}
+			
+			for (int item : selection) {
+				int index = item - commitList.getFirstVisiblePosition();
+				View child = commitList.getChildAt(index);
+				
+				if (child != null) {
+					child.setBackgroundColor(getResources().getColor(R.color.holo_select_light));
 				}
 			}
 		}
@@ -494,7 +660,7 @@ public class GitHistoryActivity extends ActionBarActivity {
 			super.onStart();
 		}
 		
-		public void setCommitDiffs(final ArrayList<CommitDiff> commitDiffs) {
+		public void setCommitDiffs(RevCommit commit, final ArrayList<CommitDiff> commitDiffs) {
 			final ListView diffList = (ListView) getView().findViewById(R.id.git_history_diff_list);
 			diffList.setAdapter(new BaseAdapter() {
 				@Override
@@ -529,7 +695,61 @@ public class GitHistoryActivity extends ActionBarActivity {
 					return convertView;
 				}
 			});
+			
+			if (commit != null) {
+				PersonIdent commitAuthor = commit.getAuthorIdent();
+				String name = commitAuthor.getName();
+				String email = commitAuthor.getEmailAddress();
+				
+				String author;
+				
+				if (name.equals("") && email.equals("")) {
+					author = "No Author";
+				} else if (name.equals("")) {
+					author = "<" + email + ">";
+				} else if (email.equals("")) {
+					author = name;
+				} else {
+					author = name + " <" + email + ">";
+				}
+				
+				String timestamp = commit.getCommitterIdent().getWhen().toString();
+				
+				final String shortMessage = GitRepository.ellipsizeCommitMessage(commit, 72);
+				final String fullMessage = commit.getFullMessage();
+				
+				final TextView messageView = ((TextView) getView().findViewById(R.id.git_history_diff_commit_message));
+				final TextView authorView = ((TextView) getView().findViewById(R.id.git_history_diff_commit_author));
+				final TextView timestampView = ((TextView) getView().findViewById(R.id.git_history_diff_commit_timestamp));
+				
+				messageView.setText(shortMessage);
+				authorView.setText(author);
+				timestampView.setText(timestamp);
+				
+				View diffHeader = getView().findViewById(R.id.git_history_diff_header);
+				diffHeader.setVisibility(View.VISIBLE);
+				
+				if (!shortMessage.equals(fullMessage)) {
+					//Allow the user to toggle between the full message and the shortened message
+					View.OnClickListener messageToggleListener = new View.OnClickListener() {
+						private boolean full = false;
+						
+						@Override
+						public void onClick(View view) {
+							full = !full;
 
+							messageView.setText(full ? fullMessage : shortMessage);
+						}
+					};
+					
+					//Detect touches anywhere in the header
+					diffHeader.setOnClickListener(messageToggleListener);
+					messageView.setOnClickListener(messageToggleListener);
+					authorView.setOnClickListener(messageToggleListener);
+					timestampView.setOnClickListener(messageToggleListener);
+				}
+			}
+			
 			//If there aren't any changes, let the user know
 			if(diffList.getCount() <= 0) {
 				getView().findViewById(R.id.git_diff_empty).setVisibility(View.VISIBLE);
