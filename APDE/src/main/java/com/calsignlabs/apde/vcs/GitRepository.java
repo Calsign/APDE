@@ -136,10 +136,10 @@ public class GitRepository {
 			}
 		}
 	}
-
+	
 	public static void cloneRepo(String uri, File cloneTo, String branch) {
 		Git result = null;
-
+		
 		try {
 			result = Git.cloneRepository().setURI(uri).setDirectory(cloneTo)
 					.setBranch(branch).setBare(false).setRemote(REMOTE_NAME)
@@ -158,10 +158,10 @@ public class GitRepository {
 			}
 		}
 	}
-
+	
 	public static void cloneRepo(String uri, File cloneTo, String branch, GitUser user) {
 		Git result = null;
-
+		
 		try {
 			result = Git.cloneRepository().setURI(uri).setDirectory(cloneTo)
 					.setBranch(branch).setBare(false).setRemote(REMOTE_NAME)
@@ -371,14 +371,17 @@ public class GitRepository {
 				@Override
 				public void run() {
 					final LinearLayout layout = (LinearLayout) inflateLayout(context, R.layout.git_pull);
-
+					
 					String origin = getRemote();
 					
 					if (origin != null) {
 						//If the repository already has a remote, then we can fill it in
 						((EditText) layout.findViewById(R.id.git_pull_remote)).setText(origin);
 					}
-
+					
+					GitUser savedUser = new GitUser(context);
+					((EditText) layout.findViewById(R.id.git_credentials_username)).setText(savedUser.getUsername());
+					
 					showLayoutAlert(context.getEditor(), R.string.git_pull, layout, R.string.git_pull_button, new DialogInterface.OnClickListener() {
 						@Override
 						public void onClick(DialogInterface dialog, int button) {
@@ -393,7 +396,11 @@ public class GitRepository {
 									postStatus(context.getResources().getString(R.string.git_task_pull_begin));
 									
 									if (username.length() > 0 || password.length > 0) {
-										repo.pullRepo(remote, MASTER_BRANCH, new GitUser(username, password, "", ""));
+										GitUser user = new GitUser(username, password, "", "");
+										
+										repo.pullRepo(remote, MASTER_BRANCH, user);
+										
+										user.saveUser(context);
 									} else {
 										repo.pullRepo(remote, MASTER_BRANCH);
 									}
@@ -430,6 +437,9 @@ public class GitRepository {
 						//If the repository already has a remote, then we can fill it in
 						((EditText) layout.findViewById(R.id.git_push_remote)).setText(origin);
 					}
+
+					GitUser savedUser = new GitUser(context);
+					((EditText) layout.findViewById(R.id.git_credentials_username)).setText(savedUser.getUsername());
 					
 					showLayoutAlert(context.getEditor(), R.string.git_push, layout, R.string.git_push_button, new DialogInterface.OnClickListener() {
 						@Override
@@ -444,7 +454,11 @@ public class GitRepository {
 								public void run() {
 									postStatus(context.getResources().getString(R.string.git_task_push_begin));
 									
-									repo.pushRepo(remote, new GitUser(username, password, "", ""));
+									GitUser user = new GitUser(username, password, "", "");
+									
+									repo.pushRepo(remote, user);
+									
+									user.saveUser(context);
 									
 									postStatus(context.getResources().getString(R.string.git_task_push_finish));
 								}
@@ -463,6 +477,10 @@ public class GitRepository {
 				@Override
 				public void run() {
 					final LinearLayout layout = (LinearLayout) inflateLayout(context, R.layout.git_commit);
+					
+					GitUser savedUser = new GitUser(context);
+					((EditText) layout.findViewById(R.id.git_user_info_name)).setText(savedUser.getName());
+					((EditText) layout.findViewById(R.id.git_user_info_email)).setText(savedUser.getEmail());
 					
 					showLayoutAlert(context.getEditor(), R.string.git_snapshot, layout, R.string.git_snapshot_button, new DialogInterface.OnClickListener() {
 						@Override
@@ -483,7 +501,11 @@ public class GitRepository {
 										public void run() {
 											postStatus(context.getResources().getString(R.string.git_task_snapshot_begin));
 											
-											repo.addAndCommit(message, new GitUser("", new char[0], name, email));
+											GitUser user = new GitUser("", new char[0], name, email);
+											
+											repo.addAndCommit(message, user);
+											
+											user.saveUser(context);
 											
 											postStatus(context.getResources().getString(R.string.git_task_snapshot_finish));
 										}
@@ -570,7 +592,10 @@ public class GitRepository {
 			@Override
 			public void run() {
 				final LinearLayout layout = (LinearLayout) inflateLayout(context, R.layout.git_clone);
-
+				
+				GitUser savedUser = new GitUser(context);
+				((EditText) layout.findViewById(R.id.git_credentials_username)).setText(savedUser.getUsername());
+				
 				showLayoutAlert(context.getEditor(), R.string.git_clone, layout, R.string.git_clone_button, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int button) {
@@ -588,7 +613,11 @@ public class GitRepository {
 								postStatus(context.getResources().getString(R.string.git_task_clone_begin));
 								
 								if (username.length() > 0 || password.length > 0) {
-									cloneRepo(remote, destDir, MASTER_BRANCH, new GitUser(username, password, "", ""));
+									GitUser user = new GitUser(username, password, "", "");
+									
+									cloneRepo(remote, destDir, MASTER_BRANCH, user);
+									
+									user.saveUser(context);
 								} else {
 									cloneRepo(remote, destDir, MASTER_BRANCH);
 								}
@@ -645,7 +674,7 @@ public class GitRepository {
 		
 		return layout;
 	}
-
+	
 	private void showLayoutAlert(Activity context, int titleId, View layout, int positiveButtonTitleId, DialogInterface.OnClickListener positiveListener) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(context);
 		builder.setTitle(titleId);
