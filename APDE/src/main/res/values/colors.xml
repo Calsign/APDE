@@ -26,4 +26,8 @@
     <color name="git_diff_minus">#ffd14748</color>
     <color name="git_diff_hunk_header">#ffbdc964</color>
     <color name="git_diff_no_newline">#ff9673ae</color>
+
+    <color name="find_replace_bar">#ff324f7a</color>
+    <color name="find_replace_replace_bar">#ff365988</color>
+    <color name="find_replace_find_not_found">#aaa91c0c</color>
 </resources>

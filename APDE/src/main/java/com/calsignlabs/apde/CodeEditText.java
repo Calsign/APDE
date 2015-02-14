@@ -1,23 +1,10 @@
 package com.calsignlabs.apde;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.xml.sax.SAXException;
-
-import com.calsignlabs.apde.tool.Tool;
-
-import processing.core.PApplet;
-import processing.data.XML;
-
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.text.Editable;
@@ -32,6 +19,22 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
+import android.widget.ScrollView;
+
+import com.calsignlabs.apde.tool.Tool;
+
+import org.xml.sax.SAXException;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.xml.parsers.ParserConfigurationException;
+
+import processing.core.PApplet;
+import processing.data.XML;
 
 /**
  * Custom EditText for syntax highlighting, auto-indent, etc.
@@ -57,8 +60,23 @@ public class CodeEditText extends EditText {
 	protected Token[] tokens;
 	protected int matchingBracket;
 	
+	//Highlight
+	ArrayList<Highlight> highlights;
+	
 	//Whether or not we need to update the tokens AGAIN
 	private AtomicBoolean flagRefreshTokens;
+	
+	public class Highlight {
+		public int pos;
+		public int len;
+		public Paint paint;
+		
+		public Highlight(int pos, int len, Paint paint) {
+			this.pos = pos;
+			this.len = len;
+			this.paint = paint;
+		}
+	}
 	
 	private enum EditType {
 		NONE,
@@ -143,6 +161,8 @@ public class CodeEditText extends EditText {
 		}
 		
 		matchingBracket = -1;
+		
+		highlights = new ArrayList<Highlight>();
 	}
 	
 	public void setupTextListener() {
@@ -568,6 +588,25 @@ public class CodeEditText extends EditText {
 		}
 	}
 	
+	public void addHighlight(int pos, int len, Paint paint) {
+		highlights.add(new Highlight(pos, len, paint));
+	}
+	
+	public void clearHighlights() {
+		highlights.clear();
+	}
+	
+	public void scrollToChar(int pos, EditorActivity editor) {
+		float xOffset = getCompoundPaddingLeft();
+		
+		//Calculate coordinates
+		int x = (int) Math.max(xOffset + getLayout().getPrimaryHorizontal(pos), 1);
+		int y = getLineHeight() * getLayout().getLineForOffset(pos);
+		
+		((HorizontalScrollView) editor.findViewById(R.id.code_scroller_x)).smoothScrollTo(x, 0);
+		((ScrollView) editor.findViewById(R.id.code_scroller)).smoothScrollTo(0, y);
+	}
+	
 	/**
 	 * @return the number of the currently selected line
 	 */
@@ -653,9 +692,10 @@ public class CodeEditText extends EditText {
 		float lineHeight = getLineHeight();
 		int currentLine = getCurrentLine();
 		
-		if(isFocused())
+		if(isFocused()) {
 			//Draw line highlight around the line that the cursor is on
 			canvas.drawRect(getScrollX(), currentLine * lineHeight, canvas.getWidth() + getScrollX(), (currentLine + 1) * lineHeight, lineHighlight);
+		}
 		
 		//Draw base text
 		super.onDraw(canvas);
@@ -693,6 +733,22 @@ public class CodeEditText extends EditText {
 				float y = lineHeight * getLayout().getLineForOffset(matchingBracket);
 
 				canvas.drawRect(x, y, x + charWidth, y + lineHeight, bracketMatch);
+			}
+			
+			float xOffset = getCompoundPaddingLeft();
+			float charWidth = getPaint().measureText("m");
+			
+			float radius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 3, context.getResources().getDisplayMetrics());
+			
+			//Draw the highlight boxes
+			for (Highlight highlight : highlights) {
+				if (highlight.pos != -1 && highlight.pos + highlight.len <= getText().length()) {
+					//Calculate coordinates
+					float x = Math.max(xOffset + getLayout().getPrimaryHorizontal(highlight.pos), 1);
+					float y = lineHeight * getLayout().getLineForOffset(highlight.pos);
+					
+					canvas.drawRoundRect(new RectF(x, y, x + charWidth * highlight.len, y + lineHeight), radius, radius, highlight.paint);
+				}
 			}
 		}
 		
@@ -997,8 +1053,11 @@ public class CodeEditText extends EditText {
 	public void clearTokens() {
 		tokens = new Token[0];
 		
-		//Also clear the matching bracket
+		//Also clear the matching bracket...
 		matchingBracket = -1;
+		
+		//...and also clear the highlight
+		clearHighlights();
 	}
 	
 	public Keyword getKeyword(String text, boolean function) {

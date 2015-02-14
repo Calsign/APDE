@@ -18,6 +18,7 @@ import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.support.AndroidPlatform;
+import com.calsignlabs.apde.support.ScrollingTabContainerView;
 import com.calsignlabs.apde.task.TaskManager;
 import com.calsignlabs.apde.tool.AutoFormat;
 import com.calsignlabs.apde.tool.ColorSelector;
@@ -25,6 +26,7 @@ import com.calsignlabs.apde.tool.CommentUncomment;
 import com.calsignlabs.apde.tool.DecreaseIndent;
 import com.calsignlabs.apde.tool.ExportEclipseProject;
 import com.calsignlabs.apde.tool.ExportSignedPackage;
+import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.GitManager;
 import com.calsignlabs.apde.tool.ImportLibrary;
 import com.calsignlabs.apde.tool.IncreaseIndent;
@@ -477,6 +479,10 @@ public class APDE extends Application {
 	public CodeEditText getCodeArea() {
     	return (CodeEditText) editor.findViewById(R.id.code);
     }
+	
+	public ScrollingTabContainerView getEditorTabBar() {
+		return editor.tabBar;
+	}
 	
 	/**
 	 * @return the location of the Sketchbook folder on the external storage
@@ -1005,7 +1011,7 @@ public class APDE extends Application {
 		String[] coreTools = new String[] { AutoFormat.PACKAGE_NAME, ImportLibrary.PACKAGE_NAME, ManageLibraries.PACKAGE_NAME, ColorSelector.PACKAGE_NAME,
 				CommentUncomment.PACKAGE_NAME, IncreaseIndent.PACKAGE_NAME, DecreaseIndent.PACKAGE_NAME,
 				ExportEclipseProject.PACKAGE_NAME, ExportSignedPackage.PACKAGE_NAME,
-				GitManager.PACKAGE_NAME};
+				GitManager.PACKAGE_NAME, FindReplace.PACKAGE_NAME};
 		
 		for (String coreTool : coreTools) {
 			loadTool(tools, packageToToolTable, coreTool);

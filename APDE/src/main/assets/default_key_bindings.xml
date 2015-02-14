@@ -26,4 +26,6 @@
     
     <binding key="54" mod="ctrl">undo</binding>
     <binding key="53" mod="ctrl">redo</binding>
+    
+    <binding key="34" mod="ctrl">find_replace</binding>
 </bindings>

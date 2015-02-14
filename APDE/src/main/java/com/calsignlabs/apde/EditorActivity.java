@@ -109,6 +109,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	private boolean keyboardVisible;
 	private boolean firstResize = true; //this is a makeshift arrangement (hopefully)
 	private int oldCodeHeight = -1;
+	private boolean consoleWasHidden = false;
+	
+	private View extraHeaderView;
 	
 	//Possible dialog results
 	private final static int RENAME_TAB = 0;
@@ -613,7 +616,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	        				oldCodeHeight = code.getHeight();
 	        			
 	        			//Start the custom animation TODO make the keyboard appearance prettier
-	        			messageArea.startAnimation(new MessageAreaAnimation(code, console, messageArea, oldCodeHeight, content.getHeight() - message  - tabBar.getHeight(), content.getHeight()));
+	        			messageArea.startAnimation(new MessageAreaAnimation(code, console, messageArea,
+								oldCodeHeight, content.getHeight() - message  - tabBar.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0), content.getHeight()));
 	        			
 	        			//Remove the focus from the Message slider if it has it and maintain styling
 	        			if(errorMessage) {
@@ -649,9 +653,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         				View consoleArea = findViewById(R.id.console_scroller);
         				
         				//Start the custom animation TODO make the keyboard appearance prettier
-        				messageArea.startAnimation(new MessageAreaAnimation(codeArea, consoleArea, messageArea, codeArea.getLayoutParams().height, oldCodeHeight, findViewById(R.id.content).getHeight()  - tabBar.getHeight()));
+        				messageArea.startAnimation(new MessageAreaAnimation(codeArea, consoleArea, messageArea, codeArea.getLayoutParams().height, oldCodeHeight,
+								findViewById(R.id.content).getHeight()  - tabBar.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
         				
 	        			keyboardVisible = false;
+						
+						if (oldCodeHeight > 0) {
+							consoleWasHidden = false;
+						}
 	        			
 	        			//Remove any unnecessary focus from the code area
 	        			((CodeEditText) findViewById(R.id.code)).clearFocus();
@@ -727,6 +736,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         //Update examples repository
         getGlobalState().initExamplesRepo();
     }
+	
+	public void setExtraHeaderView(View headerView) {
+		extraHeaderView = headerView;
+	}
     
     @Override
     protected void onSaveInstanceState(Bundle icicle) {
@@ -2495,13 +2508,61 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			
     			//We can't shrink the console if it's hidden (like when the keyboard is visible)...
     			//...so shrink the code area instead
-    			if(console.getHeight() <= 0)
-    				code.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, content.getHeight() - tabBar.getHeight() - message));
-    			else
-    				console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, content.getHeight() - code.getHeight() - tabBar.getHeight() - message));
+    			if (console.getHeight() <= 0) {
+					code.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+							content.getHeight() - tabBar.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+				} else {
+					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+							content.getHeight() - code.getHeight() - tabBar.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+				}
     		}
     	});
     }
+	
+	/**
+	 * Fix inconsistencies in the vertical distribution of the content area views
+	 */
+	public void refreshMessageAreaLocation() {
+		//Obtain some references
+		final View content = findViewById(R.id.content);
+		final View console = findViewById(R.id.console_scroller);
+		final View code = findViewById(R.id.code_scroller);
+		final TextView messageArea = (TextView) findViewById(R.id.message);
+		
+		if (firstResize) {
+			//Use some better layout parameters - this switches from fractions/layout weights to absolute values
+			code.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, code.getHeight()));
+			console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight()));
+
+			firstResize = false;
+		}
+		
+		messageArea.requestLayout();
+		
+		messageArea.post(new Runnable() {
+			public void run() {
+				//We need to use this in case the message area is partially off the screen
+				//This is the DESIRED height, not the ACTUAL height
+				message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
+				
+				int consoleSize = content.getHeight() - code.getHeight() - tabBar.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+				
+				//We can't shrink the console if it's hidden (like when the keyboard is visible)...
+				//...so shrink the code area instead
+				if (consoleSize < 0 || consoleWasHidden || keyboardVisible) {
+					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
+					code.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+							content.getHeight() - tabBar.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+					
+					consoleWasHidden = true;
+				} else {
+					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, consoleSize));
+					
+					consoleWasHidden = false;
+				}
+			}
+		});
+	}
     
     //Calculates the height of a TextView
     //StackOverflow: http://stackoverflow.com/questions/14276853/how-to-measure-textview-height-based-on-device-width-and-font-size
@@ -3277,7 +3338,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 						message = findViewById(R.id.message).getHeight();
 					
 					//Calculate maximum possible code view height
-					int maxCode = content.getHeight() - message - tabBar.getHeight();
+					int maxCode = content.getHeight() - message - tabBar.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
 					
 					//Find relative movement for this event
 					int y = (int) event.getY() - touchOff;
@@ -3297,6 +3358,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 					console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
 					
 					firstResize = false;
+					
+					if (consoleDim > 0) {
+						consoleWasHidden = false;
+					}
 					
 					return true;
 				case MotionEvent.ACTION_UP:

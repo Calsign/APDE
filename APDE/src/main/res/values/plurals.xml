@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="find_replace_replace_all_complete">
+        <item quantity="one">Replaced %1$s occurrence</item>
+        <item quantity="other">Replaced %1$s occurrences</item>
+    </plurals>
+</resources>

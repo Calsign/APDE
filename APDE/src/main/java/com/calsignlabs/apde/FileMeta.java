@@ -1,12 +1,5 @@
 package com.calsignlabs.apde;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.LinkedList;
-
 import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -14,6 +7,13 @@ import android.preference.PreferenceManager;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.LinkedList;
 
 /*
  * Utility class for storing information about files
@@ -49,23 +49,23 @@ public class FileMeta implements Parcelable {
 	protected int scrollY;
 	
 	public static class FileChange implements Parcelable {
-		protected int changeIndex;
-		protected String beforeText;
-		protected String afterText;
+		public int changeIndex;
+		public String beforeText;
+		public String afterText;
 		
 		//Current selection
-		protected int beforeSelectionStart;
-		protected int beforeSelectionEnd;
-		
-		protected int afterSelectionStart;
-		protected int afterSelectionEnd;
+		public int beforeSelectionStart;
+		public int beforeSelectionEnd;
+
+		public int afterSelectionStart;
+		public int afterSelectionEnd;
 		
 		//Current scroll position;
-		protected int beforeScrollX;
-		protected int beforeScrollY;
-		
-		protected int afterScrollX;
-		protected int afterScrollY;
+		public int beforeScrollX;
+		public int beforeScrollY;
+
+		public int afterScrollX;
+		public int afterScrollY;
 		
 		public FileChange() {}
 		
@@ -211,7 +211,7 @@ public class FileMeta implements Parcelable {
 		enabled = true;
 	}
 	
-	public void getTextChange(FileChange change, String oldText, String newText) {
+	public static void getTextChange(FileChange change, String oldText, String newText) {
 		//Find the difference between the old text and the new text
 		//Compare text starting at both ends to find the difference in the middle
 		

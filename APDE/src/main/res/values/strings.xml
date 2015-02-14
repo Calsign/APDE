@@ -226,5 +226,27 @@
     <string name="delete_task_begin">Deleting file&#8230;</string>
     <string name="delete_task_finish">Deleted file.</string>
     <string name="delete_task_fail">Failed to delete file.</string>
+    <string name="find_replace">Find/Replace</string>
+    <string name="find">Find</string>
+    <string name="replace">Replace</string>
+    <string name="close">Close</string>
+    <string name="replace_all">Replace All</string>
+    <string name="more_options">More Options</string>
+    <string name="replace_and_find">Replace and Find</string>
+    <string name="expand_collapse">Expand/Collapse</string>
+    <string name="expand">Expand</string>
+    <string name="collapse">Collapse</string>
+    <string name="find_replace_options_direction">Direction</string>
+    <string name="find_replace_options_direction_forward">Forward</string>
+    <string name="find_replace_options_direction_backward">Backward</string>
+    <string name="find_replace_options_scope">Scope</string>
+    <string name="find_replace_options_scope_selection">Selection</string>
+    <string name="find_replace_options_scope_current_tab">Current Tab</string>
+    <string name="find_replace_options_scope_all_tabs">All Tabs</string>
+    <string name="find_replace_options_highlight_all">Highlight All</string>
+    <string name="find_replace_options_wrap_around">Wrap Around</string>
+    <string name="find_replace_options_case_sensitive">Case Sensitive</string>
+    <string name="find_replace_options_reg_exp">Regular Expressions</string>
+    <string name="find_replace_end">Reached end of file</string>
 
 </resources>
