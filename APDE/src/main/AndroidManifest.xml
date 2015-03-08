@@ -9,15 +9,13 @@
         android:targetSdkVersion="21" />
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <!-- Will be needed in future versions of Android -->
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- For the drag'n'drop Message area's haptic feedback -->
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> <!-- Will be needed in future versions of Android -->
+    <uses-permission android:name="android.permission.VIBRATE" /> <!-- For the drag'n'drop Message area's haptic feedback -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
-        android:name="com.calsignlabs.apde.APDE"
+        android:name=".APDE"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
@@ -28,10 +26,9 @@
              android:configChanges="orientation|keyboardHidden|screenSize"
         -->
         <activity
-            android:name="com.calsignlabs.apde.EditorActivity"
+            android:name=".EditorActivity"
             android:label="@string/app_name"
             android:theme="@style/FullscreenTheme" >
-            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -51,34 +48,40 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.calsignlabs.apde.SketchPropertiesActivity"
+            android:name=".SketchPropertiesActivity"
             android:icon="@drawable/ic_launcher"
             android:label="@string/title_activity_sketch_properties"
             android:theme="@style/PreferencesTheme" />
         <activity
-            android:name="com.calsignlabs.apde.SettingsActivity"
+            android:name=".SettingsActivity"
             android:icon="@drawable/ic_launcher"
             android:label="@string/title_activity_settings"
             android:theme="@style/PreferencesTheme" />
         <activity
-            android:name="com.calsignlabs.apde.SettingsActivityHC"
+            android:name=".SettingsActivityHC"
             android:icon="@drawable/ic_launcher"
             android:label="@string/title_activity_settings"
             android:theme="@style/PreferencesTheme" />
         <activity
-            android:name="com.calsignlabs.apde.PermissionsActivity"
+            android:name=".LicensesActivity"
+            android:icon="@drawable/ic_launcher"
+            android:label="@string/pref_about_licenses"
+            android:theme="@style/PreferencesTheme"
+            android:hardwareAccelerated="true" />
+        <activity
+            android:name=".PermissionsActivity"
             android:label="@string/title_activity_permissions"
             android:theme="@style/FullscreenTheme" />
         <activity
-            android:name="com.calsignlabs.apde.CharacterTraySettingsActivity"
+            android:name=".CharacterTraySettingsActivity"
             android:label="@string/title_activity_character_tray_settings"
             android:theme="@style/PreferencesTheme" />
-		<activity
-            android:name="com.calsignlabs.apde.LibraryManagerActivity"
+        <activity
+            android:name=".LibraryManagerActivity"
             android:label="@string/title_activity_library_manager"
             android:theme="@style/FullscreenTheme" />
         <activity
-            android:name="com.calsignlabs.apde.vcs.GitHistoryActivity"
+            android:name=".vcs.GitHistoryActivity"
             android:label="@string/git_history"
             android:theme="@style/FullscreenTheme" />
         <!-- This is a hook into the AFileChooser library's custom file chooser activity -->
@@ -98,4 +101,5 @@
             </intent-filter>
         </activity>
     </application>
+
 </manifest>

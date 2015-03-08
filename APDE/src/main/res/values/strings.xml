@@ -248,5 +248,8 @@
     <string name="find_replace_options_case_sensitive">Case Sensitive</string>
     <string name="find_replace_options_reg_exp">Regular Expressions</string>
     <string name="find_replace_end">Reached end of file</string>
+    <string name="title_activity_licenses">LicensesActivity</string>
+
+    <string name="hello_world">Hello world!</string>
 
 </resources>

@@ -66,5 +66,14 @@
     <string name="enable_update_examples">Examples Updates</string>
     <string name="enable_update_examples_mobile_data">Over Mobile Network</string>
     <string name="enable_update_examples_mobile_data_desc">Will consume mobile data</string>
+    <string name="pref_about">About</string>
+    <string name="pref_about_version">App Version</string>
+    <string name="pref_about_google_play">APDE on Google Play</string>
+    <string name="pref_about_github">APDE on GitHub</string>
+    <string name="pref_about_email_dev">Email Developer</string>
+    <string name="pref_about_licenses">Open Source Licenses</string>
+    <string name="pref_about_github_uri">https://github.com/Calsign/APDE/</string>
+    <string name="pref_about_email_address">calsignlabs@gmail.com</string>
+    <string name="pref_about_email_subject">APDE - Android Processing IDE</string>
 
 </resources>

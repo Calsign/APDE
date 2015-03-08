@@ -3,7 +3,10 @@ package com.calsignlabs.apde;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
@@ -76,10 +79,10 @@ public class SettingsActivity extends PreferenceActivity {
 	private void setupSimplePreferencesScreen() {
 		if(!isSimplePreferences(this))
 			return;
-
+		
 		// In the simplified UI, fragments are not used at all and we instead
 		// use the older PreferenceActivity APIs.
-
+		
 		// Add 'general' preferences
 		addPreferencesFromResource(R.xml.pref_general);
 		// Add 'examples' preferences
@@ -90,6 +93,8 @@ public class SettingsActivity extends PreferenceActivity {
 		addPreferencesFromResource(R.xml.pref_build);
 		// Add 'coding assistance' preferences
 		addPreferencesFromResource(R.xml.pref_code_assistance);
+		// Add 'about' preferences
+		addPreferencesFromResource(R.xml.pref_about);
 		
 		// Bind the summaries of EditText/List/Dialog/Ringtone preferences to
 		// their values. When their values change, their summaries are updated
@@ -137,8 +142,96 @@ public class SettingsActivity extends PreferenceActivity {
 				return true;
 			}
 		});
+		
+		Preference version = findPreference("pref_about_version");
+		
+		if (version != null) {
+			try {
+				version.setSummary(getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
+			} catch (PackageManager.NameNotFoundException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		Preference licenses = findPreference("pref_about_licenses");
+		
+		if (licenses != null) {
+			licenses.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchLicenses();
+					
+					return true;
+				}
+			});
+		}
+		
+		Preference googlePlay = findPreference("pref_about_google_play");
+		
+		if (googlePlay != null) {
+			googlePlay.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchGooglePlay();
+					
+					return true;
+				}
+			});
+		}
+		
+		Preference github = findPreference("pref_about_github");
+		
+		if (github != null) {
+			github.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchGitHub();
+					
+					return true;
+				}
+			});
+		}
+		
+		Preference emailDev = findPreference("pref_about_email_dev");
+		
+		if (emailDev != null) {
+			emailDev.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchEmailDev();
+					
+					return true;
+				}
+			});
+		}
 	}
-
+	
+	protected void launchLicenses() {
+		startActivity(new Intent(this, LicensesActivity.class));
+	}
+	
+	protected void launchGooglePlay() {
+		//StackOverflow: http://stackoverflow.com/a/11753070
+		
+		final String appPackageName = getPackageName();
+		try {
+			startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + appPackageName)));
+		} catch (android.content.ActivityNotFoundException e) {
+			//If this is a non-Google Play device
+			startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + appPackageName)));
+		}
+	}
+	
+	protected void launchGitHub() {
+		startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.pref_about_github_uri))));
+	}
+	
+	protected void launchEmailDev() {
+		Intent emailIntent = new Intent(Intent.ACTION_SENDTO, Uri.fromParts("mailto", getResources().getString(R.string.pref_about_email_address), null));
+		emailIntent.putExtra(Intent.EXTRA_SUBJECT, getResources().getString(R.string.pref_about_email_subject));
+		startActivity(emailIntent);
+	}
+	
 	/** {@inheritDoc} */
 	@Override
 	public boolean onIsMultiPane() {

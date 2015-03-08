@@ -1,10 +1,9 @@
 package com.calsignlabs.apde;
 
-import java.util.List;
-
-import com.calsignlabs.apde.support.StockPreferenceFragment;
-
 import android.annotation.SuppressLint;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.preference.CheckBoxPreference;
@@ -16,6 +15,10 @@ import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.view.MenuItem;
 import android.view.WindowManager;
+
+import com.calsignlabs.apde.support.StockPreferenceFragment;
+
+import java.util.List;
 
 /**
  * Settings activity for API level 11+
@@ -72,10 +75,98 @@ public class SettingsActivityHC extends PreferenceActivity {
 			});
 		}
 		
+		Preference version = frag.findPreference("pref_about_version");
+		
+		if (version != null) {
+			try {
+				version.setSummary(getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
+			} catch (PackageManager.NameNotFoundException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		Preference licenses = frag.findPreference("pref_about_licenses");
+		
+		if (licenses != null) {
+			licenses.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchLicenses();
+					
+					return true;
+				}
+			});
+		}
+		
+		Preference googlePlay = frag.findPreference("pref_about_google_play");
+		
+		if (googlePlay != null) {
+			googlePlay.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchGooglePlay();
+					
+					return true;
+				}
+			});
+		}
+		
+		Preference github = frag.findPreference("pref_about_github");
+		
+		if (github != null) {
+			github.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchGitHub();
+					
+					return true;
+				}
+			});
+		}
+		
+		Preference emailDev = frag.findPreference("pref_about_email_dev");
+		
+		if (emailDev != null) {
+			emailDev.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchEmailDev();
+					
+					return true;
+				}
+			});
+		}
+		
 		bindPreferenceSummaryToValue(frag.findPreference("textsize"));
 		bindPreferenceSummaryToValue(frag.findPreference("textsize_console"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_sketchbook_location"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_key_undo_redo_keep"));
+	}
+	
+	protected void launchLicenses() {
+		startActivity(new Intent(this, LicensesActivity.class));
+	}
+	
+	protected void launchGooglePlay() {
+		//StackOverflow: http://stackoverflow.com/a/11753070
+		
+		final String appPackageName = getPackageName();
+		try {
+			startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + appPackageName)));
+		} catch (android.content.ActivityNotFoundException e) {
+			//If this is a non-Google Play device
+			startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + appPackageName)));
+		}
+	}
+	
+	protected void launchGitHub() {
+		startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.pref_about_github_uri))));
+	}
+	
+	protected void launchEmailDev() {
+		Intent emailIntent = new Intent(Intent.ACTION_SENDTO, Uri.fromParts("mailto", getResources().getString(R.string.pref_about_email_address), null));
+		emailIntent.putExtra(Intent.EXTRA_SUBJECT, getResources().getString(R.string.pref_about_email_subject));
+		startActivity(emailIntent);
 	}
 	
 	private static void bindPreferenceSummaryToValue(Preference preference) {
