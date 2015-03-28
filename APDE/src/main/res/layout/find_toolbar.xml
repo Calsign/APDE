@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/find_replace_toolbar"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical" >
+    
+    <RelativeLayout
+        android:id="@+id/find_replace_find_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/find_replace_bar" >
+        
+        <ImageButton
+            android:id="@+id/find_replace_find"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_find"
+            android:layout_alignTop="@+id/find_replace_find_text"
+            android:layout_alignBottom="@id/find_replace_find_text"
+            android:layout_toLeftOf="@+id/find_replace_more_options"
+            android:contentDescription="@string/find"
+            style="@style/Widget.AppCompat.Light.ActionButton" />
+        
+        <ImageButton
+            android:id="@id/find_replace_more_options"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/abc_ic_menu_moreoverflow_normal_holo_dark"
+            android:layout_alignTop="@id/find_replace_find_text"
+            android:layout_alignBottom="@id/find_replace_find_text"
+            android:layout_toLeftOf="@+id/find_replace_close"
+            android:contentDescription="@string/more_options"
+            style="@style/Widget.AppCompat.Light.ActionButton" />
+        
+        <ImageButton
+            android:id="@id/find_replace_close"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_close"
+            android:layout_alignTop="@id/find_replace_find_text"
+            android:layout_alignBottom="@id/find_replace_find_text"
+            android:layout_alignParentRight="true"
+            android:contentDescription="@string/close"
+            style="@style/Widget.AppCompat.Light.ActionButton" />
+        
+        <EditText
+            android:id="@id/find_replace_find_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textFilter"
+            android:hint="@string/find"
+            android:layout_alignParentLeft="true"
+            android:layout_toLeftOf="@id/find_replace_find" />
+    </RelativeLayout>
+    
+    <RelativeLayout
+        android:id="@+id/find_replace_replace_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/find_replace_replace_bar" >
+        
+        <ImageButton
+            android:id="@+id/find_replace_replace"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_replace"
+            android:layout_alignTop="@+id/find_replace_replace_text"
+            android:layout_alignBottom="@id/find_replace_replace_text"
+            android:layout_toLeftOf="@+id/find_replace_all"
+            android:contentDescription="@string/replace_and_find"
+            style="@style/Widget.AppCompat.Light.ActionButton" />
+        
+        <ImageButton
+            android:id="@id/find_replace_all"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_replace_all"
+            android:layout_alignTop="@id/find_replace_replace_text"
+            android:layout_alignBottom="@id/find_replace_replace_text"
+            android:layout_toLeftOf="@+id/find_replace_expand_collapse_wrapper"
+            android:contentDescription="@string/replace_all"
+            style="@style/Widget.AppCompat.Light.ActionButton" />
+
+        <!-- Wrapper layout so that we can change the background
+             without getting rid of the fancy button press drawables -->
+        <FrameLayout
+            android:id="@+id/find_replace_expand_collapse_wrapper"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@color/find_replace_replace_bar"
+            android:layout_alignTop="@id/find_replace_replace_text"
+            android:layout_alignBottom="@id/find_replace_replace_text"
+            android:layout_alignParentRight="true" >
+
+            <ImageButton
+                android:id="@+id/find_replace_expand_collapse"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_caret_down"
+                android:contentDescription="@string/expand_collapse"
+                style="@style/Widget.AppCompat.Light.ActionButton" />
+        </FrameLayout>
+        
+        <EditText
+            android:id="@id/find_replace_replace_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textFilter"
+            android:hint="@string/replace"
+            android:layout_alignParentLeft="true"
+            android:layout_toLeftOf="@id/find_replace_replace" />
+    </RelativeLayout>
+</LinearLayout>

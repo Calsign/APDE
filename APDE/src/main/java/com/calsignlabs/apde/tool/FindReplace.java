@@ -67,6 +67,9 @@ public class FindReplace implements Tool {
 	
 	protected TextWatcher codeWatcher;
 	
+	protected LinearLayout contentView;
+	protected LinearLayout findReplaceToolbar;
+	
 	public interface FlattenableEnum<E> {
 		public String toString();
 		public E fromString(String value);
@@ -223,14 +226,20 @@ public class FindReplace implements Tool {
 		//Do this on the UI thread
 		context.getEditor().runOnUiThread(new Runnable() {
 			public void run() {
-				final LinearLayout contentView = ((LinearLayout) context.getEditor().findViewById(R.id.content));
+				contentView = ((LinearLayout) context.getEditor().findViewById(R.id.content));
 				
-				final LinearLayout findReplaceToolbar;
-				
-				if (android.os.Build.VERSION.SDK_INT >= 11) {
-					findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo), R.layout.find_replace_toolbar, null);
+				if (context.isExample()) {
+					if (android.os.Build.VERSION.SDK_INT >= 11) {
+						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo), R.layout.find_toolbar, null);
+					} else {
+						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme), R.layout.find_toolbar, null);
+					}
 				} else {
-					findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme), R.layout.find_replace_toolbar, null);
+					if (android.os.Build.VERSION.SDK_INT >= 11) {
+						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo), R.layout.find_replace_toolbar, null);
+					} else {
+						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme), R.layout.find_replace_toolbar, null);
+					}
 				}
 				
 				if (android.os.Build.VERSION.SDK_INT >= 11) {
@@ -318,13 +327,7 @@ public class FindReplace implements Tool {
 				closeButton.setOnClickListener(new ImageButton.OnClickListener() {
 					@Override
 					public void onClick(View v) {
-						contentView.removeView(findReplaceToolbar);
-						context.getEditor().setExtraHeaderView(null);
-						context.getEditor().refreshMessageAreaLocation();
-
-						clearHighlights();
-						
-						context.getCodeArea().removeTextChangedListener(codeWatcher);
+						close();
 					}
 				});
 				
@@ -410,8 +413,23 @@ public class FindReplace implements Tool {
 				findTextField.requestFocus();
 				
 				context.getCodeArea().addTextChangedListener(codeWatcher);
+				
+				//Make sure to update the layout
+				contentView.invalidate();
 			}
 		});
+	}
+	
+	public void close() {
+		if (findReplaceToolbar != null) {
+			contentView.removeView(findReplaceToolbar);
+			context.getEditor().setExtraHeaderView(null);
+			context.getEditor().refreshMessageAreaLocation();
+
+			clearHighlights();
+
+			context.getCodeArea().removeTextChangedListener(codeWatcher);
+		}
 	}
 	
 	protected void assignLongPressDescription(final APDE context, final ImageButton button, final int descId) {

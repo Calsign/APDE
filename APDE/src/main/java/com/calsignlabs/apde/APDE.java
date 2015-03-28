@@ -1027,14 +1027,14 @@ public class APDE extends Application {
 		});
 	}
 	
-	private void loadTool(ArrayList<Tool> list, HashMap<String, Tool> table,String toolName) {
+	private void loadTool(ArrayList<Tool> list, HashMap<String, Tool> table, String toolName) {
 		try {
 			Class<?> toolClass = Class.forName(toolName);
 			Tool tool = (Tool) toolClass.newInstance();
 			
 			tool.init(this);
 			
-			tools.add(tool);
+			list.add(tool);
 			table.put(toolName, tool);
 		} catch (ClassNotFoundException e) {
 			System.err.println("Failed to load tool " + toolName);

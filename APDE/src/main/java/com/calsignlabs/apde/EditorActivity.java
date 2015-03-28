@@ -57,6 +57,7 @@ import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.support.PopupMenu;
 import com.calsignlabs.apde.support.ScrollingTabContainerView;
+import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
@@ -1446,6 +1447,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     	
     	if(success) {
+			//Close Find/Replace (if it's open)
+			((FindReplace) getGlobalState().getPackageToToolTable().get(FindReplace.PACKAGE_NAME)).close();
+			
     		if(getGlobalState().isExample()) {
     			//Make sure the code area isn't editable
         		((CodeEditText) findViewById(R.id.code)).setFocusable(false);
@@ -1837,6 +1841,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		
     		success = false;
     	}
+		
+		if (success) {
+			//Close Find/Replace (if it's open)
+			((FindReplace) getGlobalState().getPackageToToolTable().get(FindReplace.PACKAGE_NAME)).close();
+		}
     	
     	return success;
     }
