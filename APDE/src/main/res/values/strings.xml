@@ -249,7 +249,8 @@
     <string name="find_replace_options_reg_exp">Regular Expressions</string>
     <string name="find_replace_end">Reached end of file</string>
     <string name="title_activity_licenses">LicensesActivity</string>
-
-    <string name="hello_world">Hello world!</string>
+    <string name="uninstall_sketch">Uninstall Sketch</string>
+    <string name="sketch_not_installed_dialog_title">Sketch Not Installed</string>
+    <string name="sketch_not_installed_dialog_message">The sketch cannot be uninstalled because it is not installed.</string>
 
 </resources>
