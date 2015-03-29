@@ -665,28 +665,41 @@ public class Build {
 			System.out.println("Available cores: " + numCores);
 		}
 		
-		if (arch.equals("x86")) {
-			// x86
-			aaptName = "aapt-x86";
-		} else if (arch.equals("mip")) {
-			// MIPS
-			aaptName = "aapt-mips";
-		} else {
-			// ARM or its variants
-			// Also, default to arm just in case...
-			
-			//Position Independent Executables (PIE) were first supported in Jelly Bean 4.1 (API level 16)
-			//In Android 5.0, they are required
-			//Android versions before 4.1 still need the old binary...
-			if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
-				aaptName = "aapt-pie";
+		//Position Independent Executables (PIE) were first supported in Jelly Bean 4.1 (API level 16)
+		//In Android 5.0, they are required
+		//Android versions before 4.1 still need the old binary...
+		boolean usePie = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN;
+		
+		//Get the correct AAPT binary for this processor architecture
+		switch (arch) {
+		case "mip":
+			aaptName = "aapt-binaries/aapt-mips";
+			break;
+		case "x86":
+			if (usePie) {
+				aaptName = "aapt-binaries/aapt-x86-pie";
 				
 				if (verbose) {
 					System.out.println("Using position independent executable (PIE) AAPT binary");
 				}
 			} else {
-				aaptName = "aapt";
+				aaptName = "aapt-binaries/aapt-x86";
 			}
+			break;
+		case "arm":
+		default:
+			//Default to ARM, just in case
+			
+			if (usePie) {
+				aaptName = "aapt-binaries/aapt-arm-pie";
+				
+				if (verbose) {
+					System.out.println("Using position independent executable (PIE) AAPT binary");
+				}
+			} else {
+				aaptName = "aapt-binaries/aapt-arm";
+			}
+			break;
 		}
 		
 		File aaptLoc = new File(tmpFolder, "aapt"); //Use the same name for the destination so that the hyphens aren't an issue
