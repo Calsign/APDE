@@ -204,6 +204,19 @@ public class SettingsActivity extends PreferenceActivity {
 				}
 			});
 		}
+		
+		Preference updateExamplesNow = findPreference("update_examples_download_now");
+		
+		if (updateExamplesNow != null) {
+			updateExamplesNow.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchUpdateExamplesNow();
+					
+					return true;
+				}
+			});
+		}
 	}
 	
 	protected void launchLicenses() {
@@ -230,6 +243,10 @@ public class SettingsActivity extends PreferenceActivity {
 		Intent emailIntent = new Intent(Intent.ACTION_SENDTO, Uri.fromParts("mailto", getResources().getString(R.string.pref_about_email_address), null));
 		emailIntent.putExtra(Intent.EXTRA_SUBJECT, getResources().getString(R.string.pref_about_email_subject));
 		startActivity(emailIntent);
+	}
+	
+	protected void launchUpdateExamplesNow() {
+		((APDE) getApplication()).redownloadExamplesNow(SettingsActivity.this);
 	}
 	
 	/** {@inheritDoc} */

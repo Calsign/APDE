@@ -192,6 +192,14 @@ public class GitRepository {
 			ObjectId remoteHead = refs.iterator().next().getObjectId();
 			ObjectId localHead = git.getRepository().resolve("HEAD");
 			
+			if (remoteHead == null) {
+				return false;
+			}
+			
+			if (localHead == null) {
+				return true;
+			}
+			
 			return !remoteHead.toString().equals(localHead.toString());
 		} catch (InvalidRemoteException e) {
 			e.printStackTrace();
@@ -655,7 +663,7 @@ public class GitRepository {
         return actions;
     }
 	
-	private void launchGitDeleteTask(APDE context, GitRepository repo) {
+	public void launchGitDeleteTask(APDE context, GitRepository repo) {
 		context.getTaskManager().launchTask("gitDeleteTask", false, null, true,
 				new DeleteFileTask(repo.getGitDir(), context.getResources().getString(R.string.git_delete), null,
 						context.getResources().getString(R.string.git_task_delete_begin),

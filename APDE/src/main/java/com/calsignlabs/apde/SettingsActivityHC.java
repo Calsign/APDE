@@ -137,6 +137,19 @@ public class SettingsActivityHC extends PreferenceActivity {
 			});
 		}
 		
+		Preference updateExamplesNow = frag.findPreference("update_examples_download_now");
+		
+		if (updateExamplesNow != null) {
+			updateExamplesNow.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchUpdateExamplesNow();
+					
+					return true;
+				}
+			});
+		}
+		
 		bindPreferenceSummaryToValue(frag.findPreference("textsize"));
 		bindPreferenceSummaryToValue(frag.findPreference("textsize_console"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_sketchbook_location"));
@@ -167,6 +180,10 @@ public class SettingsActivityHC extends PreferenceActivity {
 		Intent emailIntent = new Intent(Intent.ACTION_SENDTO, Uri.fromParts("mailto", getResources().getString(R.string.pref_about_email_address), null));
 		emailIntent.putExtra(Intent.EXTRA_SUBJECT, getResources().getString(R.string.pref_about_email_subject));
 		startActivity(emailIntent);
+	}
+	
+	protected void launchUpdateExamplesNow() {
+		((APDE) getApplication()).redownloadExamplesNow(SettingsActivityHC.this);
 	}
 	
 	private static void bindPreferenceSummaryToValue(Preference preference) {

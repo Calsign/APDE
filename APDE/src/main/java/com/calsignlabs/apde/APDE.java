@@ -652,6 +652,60 @@ public class APDE extends Application {
 		}).start();
 	}
 	
+	public void redownloadExamplesNow(final Activity activityContext) {
+		//Don't bother checking if the user doesn't want to
+		if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("update_examples", true)) {
+			return;
+		}
+		
+		//Initialize the examples repository when the app is first opened
+		
+		final ConnectivityManager connection = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+		final NetworkInfo wifi = connection.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+		final NetworkInfo mobile = connection.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+		
+		//Make sure we're on Wi-Fi
+		if ((wifi != null && wifi.isConnected())
+				|| (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("update_examples_mobile_data", false)
+				&& mobile != null && mobile.isConnected())) {
+			//We have to do this on a non-UI thread...
+			
+			new Thread(new Runnable() {
+				public void run() {
+					GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
+					
+					//Delete the repository
+					try {
+						deleteFile(examplesRepo.getRootDir());
+					} catch (IOException e) {
+						e.printStackTrace();
+						return;
+					}
+					examplesRepo.close();
+					
+					activityContext.runOnUiThread(new Runnable() {
+						@Override
+						public void run() {
+							//Now re-update it
+							updateExamplesRepo();
+						}
+					});
+				}
+			}).start();
+		} else {
+			AlertDialog.Builder builder = new AlertDialog.Builder(activityContext);
+			builder.setTitle(R.string.update_examples_download_now_mobile_data_error_dialog_title);
+			builder.setMessage(R.string.update_examples_download_now_mobile_data_error_dialog_message);
+			
+			builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {}
+			});
+			
+			builder.create().show();
+		}
+	}
+	
 	public void moveFolder(SketchMeta source, SketchMeta dest, Activity activityContext) {
 		final File sourceFile = getSketchLocation(source.getPath(), source.getLocation());
 		final File destFile = getSketchLocation(dest.getPath(), dest.getLocation());
