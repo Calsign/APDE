@@ -15,6 +15,7 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Parcelable;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.widget.DrawerLayout;
@@ -773,12 +774,19 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		//Refresh the syntax highlighter AGAIN so that it can take into account the restored selected tab
     		//The tokens end up getting refreshed 3+ times on a rotation... but it doesn't seem to have much of an impact on performance, so it's fine for now
     		((CodeEditText) findViewById(R.id.code)).flagRefreshTokens();
-    		
-    		FileMeta[] tabMetas = (FileMeta[]) icicle.getParcelableArray("tabs");
-    		
-    		for (FileMeta tabMeta : tabMetas) {
-    			tabs.put(tabBar.getTab(tabMeta.tabNum), tabMeta);
-    		}
+
+			Parcelable[] tabMetaParcels = icicle.getParcelableArray("tabs");
+			
+			//Fix an all-too-common crash report that hides the stack trace that we really want
+			if (tabMetaParcels instanceof FileMeta[]) {
+				FileMeta[] tabMetas = (FileMeta[]) tabMetaParcels;
+
+				for (FileMeta tabMeta : tabMetas) {
+					tabs.put(tabBar.getTab(tabMeta.tabNum), tabMeta);
+				}
+			} else {
+				System.err.println("Error occurred restoring state, likely caused by\na crash in an activity further down the hierarchy");
+			}
     	}
     }
     
