@@ -154,6 +154,39 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
 		
+		//Create custom output / error streams for the console
+		outStream = new PrintStream(new ConsoleStream());
+		errStream = new PrintStream(new ConsoleStream());
+		
+		//Set the custom output / error streams
+		System.setOut(outStream);
+		System.setErr(errStream);
+		
+		//Initialize log / console receiver
+		consoleBroadcastReceiver = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				String message = intent.getStringExtra("com.calsignlabs.apde.LogMessage");
+				String exception = intent.getStringExtra("com.calsignlabs.apde.LogException");
+				
+				//We can show different colors for different severities if we want to... later...
+				switch (intent.getCharExtra("com.calsignlabs.apde.LogSeverity", 'o')) {
+				case 'o':
+					postConsole(message);
+					break;
+				case 'e':
+					postConsole(message);
+					break;
+				case 'x':
+					errorExt(message != null ? exception.concat(": ").concat(message) : exception);
+					break;
+				}
+			}
+		};
+		
+		//Register receiver for sketch logs / console output
+		registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
+		
 		getGlobalState().initTaskManager();
         
         //Initialize the custom tab bar
@@ -187,7 +220,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         //The sketch is not saved TODO what's going on here, really?
         setSaved(false);
-        
+
+		getGlobalState().rebuildToolList();
+		
         //Initialize the global APDE application object
         getGlobalState().setEditor(this);
         getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
@@ -196,8 +231,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         getSupportActionBar().setTitle(getGlobalState().getSketchName());
         
         //Try to load the auto-save sketch, otherwise set the editor up as a new sketch
-        if(!loadSketchStart())
-        	addDefaultTab(getGlobalState().getSketchName());
+        if(!loadSketchStart()) {
+			addDefaultTab(getGlobalState().getSketchName());
+		}
         
         //Make the code area able to detect its own text changing
         ((CodeEditText) findViewById(R.id.code)).setupTextListener();
@@ -678,41 +714,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         		}
         	}
         });
-        
-        //Create custom output / error streams for the console
-        outStream = new PrintStream(new ConsoleStream());
-        errStream = new PrintStream(new ConsoleStream());
-        
-        //Set the custom output / error streams
-        System.setOut(outStream);
-        System.setErr(errStream);
-        
-        //Initialize log / console receiver
-        consoleBroadcastReceiver = new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				String message = intent.getStringExtra("com.calsignlabs.apde.LogMessage");
-				String exception = intent.getStringExtra("com.calsignlabs.apde.LogException");
-				
-				//We can show different colors for different severities if we want to... later...
-				switch (intent.getCharExtra("com.calsignlabs.apde.LogSeverity", 'o')) {
-				case 'o':
-					postConsole(message);
-					break;
-				case 'e':
-					postConsole(message);
-					break;
-				case 'x':
-					errorExt(message != null ? exception.concat(": ").concat(message) : exception);
-					break;
-				}
-			}
-        };
-        
-        //Register receiver for sketch logs / console output
-        registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
-        
-        getGlobalState().rebuildToolList();
         
         ((CodeEditText) findViewById(R.id.code)).setupCustomActionMode();
         
