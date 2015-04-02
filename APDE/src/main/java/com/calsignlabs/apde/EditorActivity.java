@@ -3184,6 +3184,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	}
 	
 	public void launchManageLibraries() {
+		getGlobalState().rebuildLibraryList();
+		
 		Intent intent = new Intent(this, LibraryManagerActivity.class);
 		startActivity(intent);
 	}
