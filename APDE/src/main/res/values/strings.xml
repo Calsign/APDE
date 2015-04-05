@@ -220,7 +220,7 @@
     <string name="examples_update">Examples have been updated.</string>
     <string name="update">Update</string>
     <string name="update_examples_dialog_title">Update Examples</string>
-    <string name="update_examples_dialog_message">An update is available for the examples repository.\n\nPerforming this update will connect to GitHub servers.\n\nExamples repository updates can be disabled from Settings &gt; General &gt; Examples Updates.</string>
+    <string name="update_examples_dialog_message">An update is available for the examples repository.\n\nPerforming this update will connect to GitHub servers.\n\nExamples updates can be configured from Settings > General > Examples Updates.</string>
     <string name="examples_updating">Updating examples…</string>
     <string name="update_examples_download_now">Re-download Examples Now</string>
     <string name="update_examples_download_now_mobile_data_error_dialog_title">No Wi-Fi</string>
@@ -255,5 +255,7 @@
     <string name="uninstall_sketch">Uninstall Sketch</string>
     <string name="sketch_not_installed_dialog_title">Sketch Not Installed</string>
     <string name="sketch_not_installed_dialog_message">The sketch cannot be uninstalled because it is not installed.</string>
+    <string name="examples_update_dialog_dont_show_again">Don\'t show again</string>
+    <string name="examples_update_dialog_disable_warning">Will not check for examples updates unless you re-enable checks from Settings.</string>
 
 </resources>

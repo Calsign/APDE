@@ -13,6 +13,12 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.view.View;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
 import com.calsignlabs.apde.build.Manifest;
@@ -589,13 +595,30 @@ public class APDE extends Application {
 								AlertDialog.Builder builder = new AlertDialog.Builder(editor);
 								
 								builder.setTitle(R.string.update_examples_dialog_title);
-								builder.setMessage(R.string.update_examples_dialog_message);
+								
+								LinearLayout layout = (LinearLayout) View.inflate(APDE.this, R.layout.examples_update_dialog, null);
+								
+								final CheckBox dontShowAgain = (CheckBox) layout.findViewById(R.id.examples_update_dialog_dont_show_again);
+								final TextView disableWarning = (TextView) layout.findViewById(R.id.examples_update_dialog_disable_warning);
+								
+								builder.setView(layout);
 								
 								builder.setPositiveButton(R.string.update, new DialogInterface.OnClickListener() {
 									@Override
 									public void onClick(DialogInterface dialog, int which) {
-										//This kicks off yet another thread
-										updateExamplesRepo();
+										if (dontShowAgain.isChecked()) {
+											//"Close"
+											
+											//Disable examples updates
+											SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(APDE.this).edit();
+											edit.putBoolean("update_examples", false);
+											edit.apply();
+										} else {
+											//"Update"
+											
+											//This kicks off yet another thread
+											updateExamplesRepo();
+										}
 									}
 								});
 								
@@ -604,7 +627,19 @@ public class APDE extends Application {
 									public void onClick(DialogInterface dialog, int which) {}
 								});
 								
-								builder.create().show();
+								AlertDialog dialog = builder.create();
+								dialog.show();
+								
+								final Button updateButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+								
+								dontShowAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+									@Override
+									public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+										disableWarning.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+										//Change the behavior if the user wants to get rid of this dialog...
+										updateButton.setText(isChecked ? R.string.close : R.string.update);
+									}
+								});
 							}
 						});
 					}

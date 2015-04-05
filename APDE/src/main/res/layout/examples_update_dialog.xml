@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="12dp" >
+    
+    <TextView android:id="@+id/examples_update_dialog_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/update_examples_dialog_message" />
+    
+    <CheckBox android:id="@+id/examples_update_dialog_dont_show_again"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/examples_update_dialog_dont_show_again"
+        android:layout_marginTop="12dp" />
+    
+    <TextView android:id="@+id/examples_update_dialog_disable_warning"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/examples_update_dialog_disable_warning"
+        android:layout_marginTop="12dp" />
+</LinearLayout>
