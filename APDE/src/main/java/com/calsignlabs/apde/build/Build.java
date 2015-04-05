@@ -722,8 +722,24 @@ public class Build {
 			
 			//Run "chmod" on aapt so that we can execute it
 			String[] chmod = {"chmod", "744", aaptLoc.getAbsolutePath()};
-			Runtime.getRuntime().exec(chmod);
+			Process chmodProcess = Runtime.getRuntime().exec(chmod);
+			
+			int code = chmodProcess.waitFor();
+			
+			if (code != 0) {
+				System.err.println("Unable to make AAPT executable, error code " + code);
+				
+				cleanUpError();
+				return;
+			}
+			
+			if (verbose) {
+				copyStream(chmodProcess.getErrorStream(), System.out);
+			}
 		} catch (IOException e) {
+			System.out.println("Unable to make AAPT executable");
+			e.printStackTrace();
+		} catch (InterruptedException e) {
 			System.out.println("Unable to make AAPT executable");
 			e.printStackTrace();
 		}
@@ -790,14 +806,27 @@ public class Build {
 			
 			Process aaptProcess = Runtime.getRuntime().exec(args);
 			
+			int code = aaptProcess.waitFor();
+			
+			if (code != 0) {
+				System.err.println("AAPT exited with error code " + code);
+				
+				cleanUpError();
+				return;
+			}
+			
 			if (verbose) {
-				try {
-					aaptProcess.waitFor();
-					copyStream(aaptProcess.getErrorStream(), System.out);
-				} catch (InterruptedException e) {}
+				copyStream(aaptProcess.getErrorStream(), System.out);
 			}
 		} catch (IOException e) {
 			//Something weird happened
+			System.out.println("AAPT failed");
+			e.printStackTrace();
+			
+			cleanUpError();
+			return;
+		} catch (InterruptedException e) {
+			//Something even weirder happened
 			System.out.println("AAPT failed");
 			e.printStackTrace();
 			
