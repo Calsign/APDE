@@ -1303,7 +1303,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			
 			return loadSketch(sketchPath, sketchLocation);
 		} catch(Exception e) { //Meh...
-			e.printStackTrace();
 			return false;
 		}
 	}
@@ -1379,6 +1378,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	 * @return success
 	 */
 	public boolean loadSketch(String sketchPath, APDE.SketchLocation sketchLocation) {
+		if (sketchLocation == null) {
+			//Something bad happened
+			return false;
+		}
+		
 		if(sketchLocation.equals(APDE.SketchLocation.TEMPORARY)) {
 			return loadSketchTemp();
 		}
@@ -1916,8 +1920,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			//Read the contents of the file
 			while((bytesRead = inputStream.read(contents)) != -1)
 				output += new String(contents, 0, bytesRead);
-		} catch(Exception e) { //Umm... why is this here, again?
-			e.printStackTrace();
+		} catch(Exception e) {
+			//... nothing much to do here
 		} finally {
 			//Make sure to close the stream
 			try {
