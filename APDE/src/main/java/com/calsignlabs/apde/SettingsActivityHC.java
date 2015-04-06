@@ -124,6 +124,19 @@ public class SettingsActivityHC extends PreferenceActivity {
 			});
 		}
 		
+		Preference previewChannel = frag.findPreference("pref_about_preview_channel");
+		
+		if (previewChannel != null) {
+			previewChannel.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchPreviewChannel();
+					
+					return true;
+				}
+			});
+		}
+		
 		Preference emailDev = frag.findPreference("pref_about_email_dev");
 		
 		if (emailDev != null) {
@@ -174,6 +187,10 @@ public class SettingsActivityHC extends PreferenceActivity {
 	
 	protected void launchGitHub() {
 		startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.pref_about_github_uri))));
+	}
+	
+	protected void launchPreviewChannel() {
+		startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.pref_about_preview_channel_uri))));
 	}
 	
 	protected void launchEmailDev() {

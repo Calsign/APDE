@@ -75,5 +75,8 @@
     <string name="pref_about_github_uri">https://github.com/Calsign/APDE/</string>
     <string name="pref_about_email_address">calsignlabs@gmail.com</string>
     <string name="pref_about_email_subject">APDE - Android Processing IDE</string>
+    <string name="pref_about_preview_channel">APDE Preview Channel</string>
+    <string name="pref_about_preview_channel_desc">Join community to receive preview releases</string>
+    <string name="pref_about_preview_channel_uri">https://plus.google.com/communities/117703520591262292626</string>
 
 </resources>

@@ -17,6 +17,11 @@
             android:title="@string/pref_about_github" />
         
         <Preference
+            android:key="pref_about_preview_channel"
+            android:title="@string/pref_about_preview_channel"
+            android:summary="@string/pref_about_preview_channel_desc" />
+        
+        <Preference
             android:key="pref_about_email_dev"
             android:title="@string/pref_about_email_dev" />
         
