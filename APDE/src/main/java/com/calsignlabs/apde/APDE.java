@@ -41,12 +41,15 @@ import com.calsignlabs.apde.tool.Tool;
 import com.calsignlabs.apde.tool.UninstallSketch;
 import com.calsignlabs.apde.vcs.GitRepository;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -861,6 +864,33 @@ public class APDE extends Application {
 		}
 
 		return -1;
+	}
+	
+	public static String readAssetFile(Context context, String filename) {
+		try {
+			InputStream assetStream = context.getAssets().open(filename);
+			BufferedInputStream stream = new BufferedInputStream(assetStream);
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			
+			byte[] buffer = new byte[1024];
+			int numRead;
+			while ((numRead = stream.read(buffer)) != -1) {
+				out.write(buffer, 0, numRead);
+			}
+			
+			stream.close();
+			assetStream.close();
+			
+			String text = new String(out.toByteArray());
+			
+			out.close();
+			
+			return text;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return "";
 	}
 	
 	/**

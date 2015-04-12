@@ -1,0 +1,109 @@
+v0.3.3 Alpha
+
+ - Large set of examples (must be downloaded)
+ - Git integration
+ - Find/Replace
+ - Java 1.6 compiler compliance
+ - What's new and about screens
+ - Library manager crash fixed
+ - Conway example fixed
+
+Note: This release adds the permissions INTERNET and 
+ACCESS_NETWORK_STATE that are required for the examples and Git.
+
+------------------------------------------------------------------------
+
+v0.3.2 Alpha
+
+ - Undo/Redo
+ - Android 5.0 (Lollipop) support
+ - Console output
+ - Improved build system
+ - Processing core sync with latest version of Android Mode (0232)
+ - Processing internals sync with latest version (3.0a4)
+   - Improved pre-processor and auto formatter
+ - Wizard for changing sketch icon
+ - Support for .JAVA files
+ - DX Dexer tool in Library Manager
+
+------------------------------------------------------------------------
+
+v0.3.1 Alpha
+
+- Export
+   - Android application export
+   - Android project export
+   - Signing key manager
+ - x86, MIPS support
+
+------------------------------------------------------------------------
+
+v0.3.0 Alpha
+
+ - Nested file manager
+   - Library examples
+   - Recent sketches
+ - Tools
+   - Auto Format and Import Library are now tools
+   - Color selector
+ - Improved formatting
+   - Comment/uncomment
+   - Increase/decrease indent
+ - Load external sketches
+
+------------------------------------------------------------------------
+
+v0.2.4 Alpha
+
+ - Support for contributed libraries
+ - Contributed library installer (in Library Manager)
+ - Support for code and code-dex folders in sketch folder
+
+------------------------------------------------------------------------
+
+v0.2.3 Alpha
+
+ - Full support for devices without an external storage
+ - Fragment-based Settings screen
+ - Special character insertion tray
+ - Auto indentation and code block completion
+ - Bugs causing tabs to overwrite each other have been fixed
+
+------------------------------------------------------------------------
+
+v0.2.2 Alpha
+
+ - Auto format
+ - Faster syntax highlighter
+ - Tab key now works
+ - Support for data folder
+ - Fix numerous bugs...
+
+------------------------------------------------------------------------
+
+v0.2.1 Alpha
+
+ - OpenGL support (3D and hardware-accelerated drawing)
+ - Editor bracket matching (( and ), { and }, and [ and ])
+ - Various other bug fixes
+
+------------------------------------------------------------------------
+
+v0.2.0 Alpha
+
+ - Small set of examples
+ - Improved syntax highlighter
+ - Support for Honeycomb and 10" tablets
+
+------------------------------------------------------------------------
+
+v0.1.1 Alpha
+
+ - First release on Google Play
+ - Small bug fixes
+
+------------------------------------------------------------------------
+
+v0.1.0 Alpha
+
+ - Initial release

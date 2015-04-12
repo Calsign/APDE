@@ -78,5 +78,9 @@
     <string name="pref_about_preview_channel">APDE Preview Channel</string>
     <string name="pref_about_preview_channel_desc">Join community to receive preview releases</string>
     <string name="pref_about_preview_channel_uri">https://plus.google.com/communities/117703520591262292626</string>
+    <string name="pref_whats_new">Recent Changes</string>
+    <string name="pref_whats_new_enable">Show \"What\'s New\" Screen</string>
+    <string name="pref_whats_new_enable_desc">When APDE updates</string>
+    <string name="pref_whats_new_display">View Recent Changes</string>
 
 </resources>

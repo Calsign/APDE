@@ -10,8 +10,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.preference.ListPreference;
 import android.preference.CheckBoxPreference;
+import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
@@ -225,6 +225,19 @@ public class SettingsActivity extends PreferenceActivity {
 				@Override
 				public boolean onPreferenceClick(Preference preference) {
 					launchUpdateExamplesNow();
+					
+					return true;
+				}
+			});
+		}
+		
+		Preference displayRecentChanges = findPreference("pref_whats_new_display");
+		
+		if (displayRecentChanges != null) {
+			displayRecentChanges.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					SettingsActivityHC.launchDisplayRecentChanges(SettingsActivity.this);
 					
 					return true;
 				}

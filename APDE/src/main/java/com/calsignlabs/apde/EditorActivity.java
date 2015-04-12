@@ -26,6 +26,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.SparseArray;
 import android.util.TypedValue;
+import android.view.ContextThemeWrapper;
 import android.view.DragEvent;
 import android.view.GestureDetector;
 import android.view.Gravity;
@@ -44,8 +45,11 @@ import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -74,10 +78,13 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Stack;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -264,8 +271,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         int oldVersionNum = prefs.getInt("version_num", -1);
         int realVersionNum = getGlobalState().appVersionCode();
+		
+		boolean justUpdated = realVersionNum > oldVersionNum;
         
-        if(realVersionNum > oldVersionNum) {
+        if (justUpdated) {
         	//We need to update the examples (in case the new release has added more)
         	//This is some serious future-proofing... boy am I paranoid...
         	
@@ -281,7 +290,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	//Make sure to update the value so we don't do this again
         	SharedPreferences.Editor edit = prefs.edit();
         	edit.putInt("version_num", realVersionNum);
-        	edit.commit();
+        	edit.apply();
         }
         
         //Initialize the navigation drawer
@@ -735,10 +744,145 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         //Initialize the reference to the toggle char inserts button
         toggleCharInserts = (ImageButton) findViewById(R.id.toggle_char_inserts);
-        
-        //Update examples repository
-        getGlobalState().initExamplesRepo();
+		
+		//Show "What's New" screen if this is an update
+		
+		if (justUpdated && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_whats_new_enable", true)) {
+			final Stack<String> releaseNotesStack = getReleaseNotesStack(this);
+			
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setTitle(R.string.whats_new);
+			
+			final RelativeLayout layout;
+			
+			if (android.os.Build.VERSION.SDK_INT >= 11) {
+				layout = (RelativeLayout) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog), R.layout.whats_new, null);
+			} else {
+				layout = (RelativeLayout) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Dialog), R.layout.whats_new, null);
+			}
+			
+			final ListView list = (ListView) layout.findViewById(R.id.whats_new_list);
+			final Button loadMore = (Button) layout.findViewById(R.id.whats_new_more);
+			final CheckBox keepShowing = (CheckBox) layout.findViewById(R.id.whats_new_keep_showing);
+			
+			final ArrayAdapter<String> listAdapter = new ArrayAdapter<String>(this, R.layout.whats_new_list_item, R.id.whats_new_list_item_text);
+			list.setAdapter(listAdapter);
+			
+			addWhatsNewItem(list, listAdapter, releaseNotesStack, loadMore, false);
+			
+			loadMore.setOnClickListener(new OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					//Load five at once
+					for (int i = 0; i < 5; i++) {
+						//Stop if we can't add any more
+						if (!addWhatsNewItem(list, listAdapter, releaseNotesStack, loadMore, true)) {
+							break;
+						}
+					}
+					
+					//Make the dialog big enough to hold all of them
+					int w = FrameLayout.LayoutParams.MATCH_PARENT;
+					int h = FrameLayout.LayoutParams.WRAP_CONTENT;
+							
+					layout.setLayoutParams(new FrameLayout.LayoutParams(w, h));
+				}
+			});
+			
+			builder.setView(layout);
+			builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+				}
+			});
+			
+			AlertDialog dialog = builder.create();
+			dialog.show();
+			
+			dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+				@Override
+				public void onDismiss(DialogInterface dialog) {
+					//Let the user disable the "What's New" screen functionality
+					SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(EditorActivity.this).edit();
+					edit.putBoolean("pref_whats_new_enable", keepShowing.isChecked());
+					edit.apply();
+					
+					//If the "What's New" screen is visible, wait to show the examples updates screen
+					
+					//Update examples repository
+					getGlobalState().initExamplesRepo();
+				}
+			});
+			
+			layout.requestLayout();
+			
+			layout.post(new Runnable() {
+				@Override
+				public void run() {
+					//Force the dialog to be the right size...
+					
+					int w = FrameLayout.LayoutParams.MATCH_PARENT;
+					int h = list.getChildAt(0).getHeight()
+							+ loadMore.getHeight() + keepShowing.getHeight()
+							+ Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24, getResources().getDisplayMetrics()));
+					
+					layout.setLayoutParams(new FrameLayout.LayoutParams(w, h));
+				}
+			});
+		} else {
+			//If the "What's New" screen is visible, wait to show the examples updates screen
+			
+			//Update examples repository
+			getGlobalState().initExamplesRepo();
+		}
     }
+	
+	/**
+	 * Used internally to manage the "What's New" screen
+	 * 
+	 * @param adapter
+	 * @param items
+	 * @param more
+	 * @return whether or not more items can be added
+	 */
+	protected static boolean addWhatsNewItem(ListView list, ArrayAdapter<String> adapter, Stack<String> items, Button more, boolean fullScroll) {
+		//Don't try if we're out of items
+		if (items.empty()) {
+			more.setVisibility(View.GONE);
+			return false;
+		}
+		
+		//Add another items
+		adapter.add(items.pop());
+		
+		if (fullScroll) {
+			//Scroll all the way down
+			list.smoothScrollToPosition(adapter.getCount());
+		}
+		
+		//Are there more items to add?
+		if (items.empty()) {
+			more.setVisibility(View.GONE);
+			return false;
+		} else {
+			more.setVisibility(View.VISIBLE);
+			return true;
+		}
+	}
+	
+	protected static Stack<String> getReleaseNotesStack(Context context) {
+		String fullText = APDE.readAssetFile(context, "whatsnew.txt");
+		//File is seperated human-readably...
+		List<String> releaseNotes = Arrays.asList(
+				fullText.split("\n------------------------------------------------------------------------\n"));
+		//Read most recent first
+		Collections.reverse(releaseNotes);
+		//Make into a stack so that we can peel off items one at a time
+		final Stack<String> releaseNotesStack = new Stack<String>();
+		releaseNotesStack.addAll(releaseNotes);
+		
+		return releaseNotesStack;
+	}
 	
 	public void setExtraHeaderView(View headerView) {
 		extraHeaderView = headerView;

@@ -257,5 +257,8 @@
     <string name="sketch_not_installed_dialog_message">The sketch cannot be uninstalled because it is not installed.</string>
     <string name="examples_update_dialog_dont_show_again">Don\'t show again</string>
     <string name="examples_update_dialog_disable_warning">Will not check for examples updates unless you re-enable checks from Settings.</string>
+    <string name="whats_new">What\'s New</string>
+    <string name="whats_new_more">More changes</string>
+    <string name="whats_new_keep_showing">Show when APDE updates</string>
 
 </resources>

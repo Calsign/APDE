@@ -1,6 +1,9 @@
 package com.calsignlabs.apde;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -13,12 +16,20 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
+import android.view.ContextThemeWrapper;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.ListView;
+import android.widget.RelativeLayout;
 
 import com.calsignlabs.apde.support.StockPreferenceFragment;
 
 import java.util.List;
+import java.util.Stack;
 
 /**
  * Settings activity for API level 11+
@@ -163,6 +174,19 @@ public class SettingsActivityHC extends PreferenceActivity {
 			});
 		}
 		
+		Preference displayRecentChanges = frag.findPreference("pref_whats_new_display");
+		
+		if (displayRecentChanges != null) {
+			displayRecentChanges.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchDisplayRecentChanges(SettingsActivityHC.this);
+					
+					return true;
+				}
+			});
+		}
+		
 		bindPreferenceSummaryToValue(frag.findPreference("textsize"));
 		bindPreferenceSummaryToValue(frag.findPreference("textsize_console"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_sketchbook_location"));
@@ -201,6 +225,57 @@ public class SettingsActivityHC extends PreferenceActivity {
 	
 	protected void launchUpdateExamplesNow() {
 		((APDE) getApplication()).redownloadExamplesNow(SettingsActivityHC.this);
+	}
+	
+	protected static void launchDisplayRecentChanges(Activity activity) {
+		final Stack<String> releaseNotesStack = EditorActivity.getReleaseNotesStack(activity);
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+		builder.setTitle(R.string.pref_whats_new);
+		
+		RelativeLayout layout;
+		
+		if (android.os.Build.VERSION.SDK_INT >= 11) {
+			layout = (RelativeLayout) View.inflate(new ContextThemeWrapper(activity, android.R.style.Theme_Holo_Dialog), R.layout.whats_new, null);
+		} else {
+			layout = (RelativeLayout) View.inflate(new ContextThemeWrapper(activity, android.R.style.Theme_Dialog), R.layout.whats_new, null);
+		}
+		
+		final ListView list = (ListView) layout.findViewById(R.id.whats_new_list);
+		final Button loadMore = (Button) layout.findViewById(R.id.whats_new_more);
+		final CheckBox keepShowing = (CheckBox) layout.findViewById(R.id.whats_new_keep_showing);
+		
+		//Hide this for this view...
+		keepShowing.setVisibility(View.GONE);
+		
+		final ArrayAdapter<String> listAdapter = new ArrayAdapter<String>(activity, R.layout.whats_new_list_item, R.id.whats_new_list_item_text);
+		list.setAdapter(listAdapter);
+		
+		//Load five to start
+		for (int i = 0; i < 5; i ++) {
+			EditorActivity.addWhatsNewItem(list, listAdapter, releaseNotesStack, loadMore, false);
+		}
+		
+		loadMore.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				//Load five at once
+				for (int i = 0; i < 5; i++) {
+					//Stop if we can't add any more
+					if (!EditorActivity.addWhatsNewItem(list, listAdapter, releaseNotesStack, loadMore, true)) {
+						break;
+					}
+				}
+			}
+		});
+		
+		builder.setView(layout);
+		builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {}
+		});
+		
+		builder.create().show();
 	}
 	
 	private static void bindPreferenceSummaryToValue(Preference preference) {

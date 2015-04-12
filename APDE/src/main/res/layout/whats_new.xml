@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="6dp" >
+    
+    <LinearLayout android:id="@+id/bottom_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_alignParentBottom="true" >
+        
+        <Button android:id="@+id/whats_new_more"
+            android:text="@string/whats_new_more"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+        
+        <CheckBox android:id="@+id/whats_new_keep_showing"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:padding="6dp"
+            android:checked="true"
+            android:text="@string/whats_new_keep_showing" />
+    </LinearLayout>
+    
+    <ListView android:id="@+id/whats_new_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/bottom_section"
+        android:layout_alignParentTop="true" />
+</RelativeLayout>

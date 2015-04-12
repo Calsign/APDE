@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:key="pref_whats_new"
+        android:title="@string/pref_whats_new" >
+        
+        <CheckBoxPreference
+            android:key="pref_whats_new_enable"
+            android:title="@string/pref_whats_new_enable"
+            android:summary="@string/pref_whats_new_enable_desc"
+            android:defaultValue="true" />
+        
+        <Preference
+            android:key="pref_whats_new_display"
+            android:title="@string/pref_whats_new_display" />
+    </PreferenceCategory>
+</PreferenceScreen>
