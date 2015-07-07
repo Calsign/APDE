@@ -23,11 +23,16 @@ import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
+import com.calsignlabs.apde.support.CustomListPreference;
 import com.calsignlabs.apde.support.StockPreferenceFragment;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
@@ -187,10 +192,67 @@ public class SettingsActivityHC extends PreferenceActivity {
 			});
 		}
 		
+		Preference sketchbookDrivePref = frag.findPreference("pref_sketchbook_drive");
+		
+		if (sketchbookDrivePref != null) {
+			//Set up the list of available storage drives
+			
+			final CustomListPreference sketchbookDrive = (CustomListPreference) sketchbookDrivePref;
+			final Preference sketchbookLocation = frag.findPreference("pref_sketchbook_location");
+			
+			final ArrayList<APDE.StorageDrive> drives = ((APDE) getApplication()).getStorageLocations();
+			
+			final CharSequence[] readables = new CharSequence[drives.size()];
+			final CharSequence[] paths = new CharSequence[drives.size()];
+			
+			for (int i = 0; i < drives.size(); i ++) {
+				APDE.StorageDrive drive = drives.get(i);
+				
+				readables[i] = drive.space + " " + drive.type.title + "\n" + drive.root.getAbsolutePath();
+				paths[i] = drive.root.getAbsolutePath();
+			}
+			
+			sketchbookDrive.setEntries(readables);
+			sketchbookDrive.setEntryValues(paths);
+			
+			sketchbookDrive.setValue(PreferenceManager.getDefaultSharedPreferences(SettingsActivityHC.this).getString("pref_sketchbook_drive", ""));
+			
+			sketchbookDrive.init(R.layout.pref_sketchbook_drive_list_item, new CustomListPreference.Populator() {
+				@Override
+				public void populate(View view, int position, CharSequence[] entries) {
+					LinearLayout layout = (LinearLayout) view;
+					
+					APDE.StorageDrive drive = drives.get(position);
+					
+					((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_type)).setText(drive.type.title);
+					((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_space)).setText(drive.space);
+					((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_root)).setText(drive.root.getAbsolutePath());
+				}
+			}, new Runnable() {
+				@Override
+				public void run() {
+					updateSketchbookDrivePref(sketchbookDrive, sketchbookLocation, drives);
+				}
+			});
+			
+			updateSketchbookDrivePref(sketchbookDrive, sketchbookLocation, drives);
+		}
+		
 		bindPreferenceSummaryToValue(frag.findPreference("textsize"));
 		bindPreferenceSummaryToValue(frag.findPreference("textsize_console"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_sketchbook_location"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_key_undo_redo_keep"));
+	}
+	
+	protected void updateSketchbookDrivePref(ListPreference sketchbookDrive, Preference sketchbookLocation, ArrayList<APDE.StorageDrive> drives) {
+		APDE.StorageDrive selected = drives.get(sketchbookDrive.findIndexOfValue(sketchbookDrive.getValue().toString()));
+		
+		if (selected == null) {
+			return;
+		}
+		
+		sketchbookLocation.setEnabled(!(selected.type.equals(APDE.StorageDrive.StorageDriveType.INTERNAL) || selected.type.equals(APDE.StorageDrive.StorageDriveType.SECONDARY_EXTERNAL)));
+		sketchbookDrive.setSummary(selected.space + " " + selected.type.title);
 	}
 	
 	protected void launchLicenses() {

@@ -82,5 +82,6 @@
     <string name="pref_whats_new_enable">Show \"What\'s New\" Screen</string>
     <string name="pref_whats_new_enable_desc">When APDE updates</string>
     <string name="pref_whats_new_display">View Recent Changes</string>
+    <string name="pref_sketchbook_drive">Sketchbook Location</string>
 
 </resources>

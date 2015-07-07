@@ -11,7 +11,9 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.Environment;
+import android.os.StatFs;
 import android.preference.PreferenceManager;
 import android.view.View;
 import android.widget.Button;
@@ -50,7 +52,9 @@ import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.RoundingMode;
 import java.nio.channels.FileChannel;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -499,25 +503,159 @@ public class APDE extends Application {
 	 */
 	public File getSketchbookFolder() {
 		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		final String storageDrivePref = "pref_sketchbook_drive";
 		
-		if (prefs.getBoolean("internal_storage_sketchbook", false)) {
-			// The "sketchbook" directory on the internal storage
-			return getDir("sketchbook", 0);
-		} else {
-			// The user defined sketchbook location
-			String path = prefs.getString("pref_sketchbook_location", "");
-			File loc = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), path);
+		ArrayList<StorageDrive> storageDrives = getStorageLocations();
+		
+		if (prefs.contains("internal_storage_sketchbook") && !prefs.contains(storageDrivePref)) {
+			// Upgrade from the old way of doing sketchbook location (pre 0.3.3)
 			
-			// Only return this if the specified path is valid...
-			if (loc.exists() && path.length() > 0)
-				return loc;
-			else {
-				// Update the stored value
-				prefs.edit().putString("pref_sketchbook_location", DEFAULT_SKETCHBOOK_LOCATION).commit();
+			String path;
+			
+			if (prefs.getBoolean("internal_storage_sketchbook", false)) {
+				path = getDir("sketchbook", 0).getAbsolutePath();
+			} else {
+				path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile().getAbsolutePath();
+			}
+			
+			SharedPreferences.Editor edit = prefs.edit();
+			edit.putString(storageDrivePref, path);
+			edit.commit();
+		} else if (!prefs.contains(storageDrivePref)) {
+			// Or... if there is nothing set, use the default
+			
+			SharedPreferences.Editor edit = prefs.edit();
+			edit.putString(storageDrivePref, getDefaultSketchbookStorageDrive(storageDrives).root.toString());
+			edit.commit();
+		}
+		
+		StorageDrive savedDrive = getStorageDriveByRoot(storageDrives, prefs.getString(storageDrivePref, ""));
+		String externalPath = prefs.getString("pref_sketchbook_location", DEFAULT_SKETCHBOOK_LOCATION);
+		
+		if (savedDrive == null) {
+			// The drive has probably been removed
+			
+			System.err.println("Sketchbook drive could not be found, it may\n" +
+					"have been removed. Reverting to default drive.");
+			
+			SharedPreferences.Editor edit = prefs.edit();
+			edit.putString(storageDrivePref, getDefaultSketchbookStorageDrive(storageDrives).root.toString());
+			edit.commit();
+			
+			savedDrive = getStorageDriveByRoot(storageDrives, prefs.getString(storageDrivePref, ""));
+		}
+		
+		switch (savedDrive.type) {
+			case INTERNAL:
+			case SECONDARY_EXTERNAL:
+				return savedDrive.root;
+			case EXTERNAL:
+			case PRIMARY_EXTERNAL:
+				return new File(savedDrive.root, externalPath);
+			default:
+				return null;
+		}
+	}
+	
+	public ArrayList<StorageDrive> getStorageLocations() {
+		File primaryExtDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile();
+		File internalDir = getDir("sketchbook", 0);
+		
+		ArrayList<StorageDrive> locations = new ArrayList<StorageDrive>();
+		
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+			File[] extDirs = getExternalFilesDirs(null);
+			
+			for (File dir : extDirs) {
+				if (dir.getAbsolutePath().startsWith(primaryExtDir.getAbsolutePath())) {
+					//Use the root of the primary external storage, don't use the application-specific folder
+					locations.add(new StorageDrive(primaryExtDir, StorageDrive.StorageDriveType.PRIMARY_EXTERNAL, getAvailableSpace(primaryExtDir)));
+				} else {
+					locations.add(new StorageDrive(new File(dir, "sketchbook"), StorageDrive.StorageDriveType.SECONDARY_EXTERNAL, getAvailableSpace(dir)));
+				}
+			}
+			
+			locations.add(new StorageDrive(internalDir, StorageDrive.StorageDriveType.INTERNAL, getAvailableSpace(internalDir)));
+		} else {
+			locations.add(new StorageDrive(primaryExtDir, StorageDrive.StorageDriveType.EXTERNAL, getAvailableSpace(primaryExtDir)));
+			locations.add(new StorageDrive(internalDir, StorageDrive.StorageDriveType.INTERNAL, getAvailableSpace(internalDir)));
+		}
+		
+		return locations;
+	}
+	
+	public StorageDrive getDefaultSketchbookStorageDrive(ArrayList<StorageDrive> storageDrives) {
+		StorageDrive firstChoice = null;
+		StorageDrive secondChoice = null;
+		
+		for (StorageDrive storageDrive : storageDrives) {
+			if (storageDrive.type.equals(StorageDrive.StorageDriveType.PRIMARY_EXTERNAL)
+					|| storageDrive.type.equals(StorageDrive.StorageDriveType.EXTERNAL)) {
 				
-				return getDefaultSketchbookFolder();
+				firstChoice = storageDrive;
+			} else if (storageDrive.type.equals(StorageDrive.StorageDriveType.INTERNAL)) {
+				secondChoice = storageDrive;
 			}
 		}
+		
+		return firstChoice != null ? firstChoice : secondChoice;
+	}
+	
+	public StorageDrive getStorageDriveByRoot(ArrayList<StorageDrive> storageDrives, String root) {
+		for (StorageDrive storageDrive : storageDrives) {
+			if (storageDrive.root.getAbsolutePath().equals(root)) {
+				return storageDrive;
+			}
+		}
+		
+		return null;
+	}
+	
+	public static class StorageDrive {
+		public File root;
+		public StorageDriveType type;
+		public String space;
+		
+		public StorageDrive(File root, StorageDriveType type, String space) {
+			this.root = root;
+			this.type = type;
+			this.space = space;
+		}
+		
+		public static enum StorageDriveType {
+			INTERNAL ("Internal"),
+			EXTERNAL ("External"),
+			PRIMARY_EXTERNAL ("Primary External"),
+			SECONDARY_EXTERNAL ("Secondary External");
+			
+			public String title;
+			
+			StorageDriveType(String title) {
+				this.title = title;
+			}
+		}
+	}
+	
+	final static double BYTE_PER_GB = 1_073_741_824.0d; // 1024^3
+	
+	public static String getAvailableSpace(File drive) {
+		StatFs stat = new StatFs(drive.getAbsolutePath());
+		
+		DecimalFormat df = new DecimalFormat("#.00");
+		df.setRoundingMode(RoundingMode.HALF_UP);
+		
+		long available;
+		long total;
+		
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+			available = stat.getAvailableBytes();
+			total = stat.getTotalBytes();
+		} else {
+			available = stat.getAvailableBlocks() * stat.getBlockSize();
+			total = stat.getBlockCount() * stat.getBlockSize();
+		}
+		
+		return df.format(available / BYTE_PER_GB) + " GB free of " + df.format(total / BYTE_PER_GB) + " GB";
 	}
 	
 	/**
@@ -525,15 +663,6 @@ public class APDE extends Application {
 	 */
 	public File getLibrariesFolder() {
 		return new File(getSketchbookFolder(), LIBRARIES_FOLDER);
-	}
-	
-	/**
-	 * @return the default location of the Sketchbook folder (on the external storage)
-	 */
-	public File getDefaultSketchbookFolder() {
-		return new File(Environment.getExternalStoragePublicDirectory(
-				Environment.DIRECTORY_DCIM).getParentFile(),
-				DEFAULT_SKETCHBOOK_LOCATION);
 	}
 	
 	public File getStarterExamplesFolder() {

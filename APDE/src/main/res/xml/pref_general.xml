@@ -19,16 +19,15 @@
         android:key="pref_sketchbook"
         android:title="@string/pref_sketchbook" >
         
-        <CheckBoxPreference
-            android:defaultValue="false"
-            android:disableDependentsState="true"
-            android:key="internal_storage_sketchbook"
-            android:title="@string/internal_storage_sketchbook" />
+        <com.calsignlabs.apde.support.CustomListPreference
+            android:key="pref_sketchbook_drive"
+            android:title="@string/pref_sketchbook_drive"
+            android:summary=""
+            android:dialogTitle="@string/pref_sketchbook_drive" />
 		
         <EditTextPreference
             android:name="@string/pref_sketchbook_location"
             android:defaultValue=""
-            android:dependency="internal_storage_sketchbook"
             android:inputType="textNoSuggestions|textUri"
             android:key="pref_sketchbook_location"
             android:maxLines="1"
