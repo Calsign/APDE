@@ -1,196 +1,209 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.v4.widget.DrawerLayout android:id="@+id/drawer"
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-	
-	<LinearLayout android:id="@+id/content"
-	    android:layout_width="match_parent"
-	    android:layout_height="match_parent"
-	    android:background="#FFFFFF"
-	    tools:context=".APDE"
-	    android:orientation="vertical" >
-	    
-        <!-- Use ScrollView(s) for smooth scrolling -->
-	    <ScrollView android:id="@+id/code_scroller"
-	        android:layout_width="match_parent"
-	        android:layout_height="0dp"
-	        android:layout_weight="3"
-	        android:scrollbars="vertical"
-			android:background="#FFFFFFFF"
-			android:fadeScrollbars="false" >
-			
-	        <HorizontalScrollView android:id="@+id/code_scroller_x"
-	            android:layout_width="wrap_content"
-		        android:layout_height="wrap_content" >
-				
-	            <!-- Padding for the code area -->
-	            <LinearLayout android:id="@+id/code_padding"
-	                android:layout_width="wrap_content"
-	                android:layout_height="wrap_content"
-	                android:paddingTop="10dp"
-					android:paddingBottom="10dp"
-					android:paddingLeft="10dp"
-					android:paddingRight="10dp" >
-	            	
-	                <!-- privateImeOptions="nm" means "no microphone" -->
-					<com.calsignlabs.apde.CodeEditText android:id="@+id/code"
-					    android:inputType="text|textNoSuggestions|textMultiLine"
-					    android:layout_width="wrap_content"
-					    android:layout_height="wrap_content"
-					   	android:gravity="top"
-					    android:typeface="monospace"
-					    android:textSize="14sp"
-					    android:textColor="#000000"
-					    android:textColorHighlight="@color/code_edit_highlight_color"
-					    android:textCursorDrawable="@drawable/code_edit_text_cursor"
-					    android:background="#00000000"
-					    android:imeOptions="flagNoExtractUi"
-					    android:privateImeOptions="nm"
-					    android:paddingTop="0dp"
-						android:paddingBottom="0dp"
-						android:paddingLeft="0dp"
-						android:paddingRight="0dp" />
-				</LinearLayout>
-			</HorizontalScrollView>
-    	</ScrollView>
-	    
-	    <LinearLayout
-	        android:id="@+id/buffer"
-	        android:layout_width="fill_parent"
-	        android:layout_height="wrap_content"
-	        android:orientation="horizontal"
-	        android:background="@drawable/back" >
-	        
-	        <TextView
-                android:id="@+id/message"
-                android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <android.support.v7.widget.Toolbar
+             android:id="@+id/toolbar"
+             android:layout_width="match_parent"
+             android:layout_height="wrap_content"/>
+
+    <android.support.v4.widget.DrawerLayout android:id="@+id/drawer"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="match_parent">
+
+        <LinearLayout android:id="@+id/content"
+                      android:layout_width="match_parent"
+                      android:layout_height="match_parent"
+                      android:background="#FFFFFF"
+                      tools:context=".APDE"
+                      android:orientation="vertical" >
+
+            <!-- Use ScrollView(s) for smooth scrolling -->
+            <ScrollView android:id="@+id/code_scroller"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="3"
+                        android:scrollbars="vertical"
+                        android:background="#FFFFFFFF"
+                        android:fadeScrollbars="false" >
+
+                <HorizontalScrollView android:id="@+id/code_scroller_x"
+                                      android:layout_width="wrap_content"
+                                      android:layout_height="wrap_content" >
+
+                    <!-- Padding for the code area -->
+                    <LinearLayout android:id="@+id/code_padding"
+                                  android:layout_width="wrap_content"
+                                  android:layout_height="wrap_content"
+                                  android:paddingTop="10dp"
+                                  android:paddingBottom="10dp"
+                                  android:paddingLeft="10dp"
+                                  android:paddingRight="10dp" >
+
+                        <!-- privateImeOptions="nm" means "no microphone" -->
+                        <com.calsignlabs.apde.CodeEditText android:id="@+id/code"
+                                                           android:inputType="text|textNoSuggestions|textMultiLine"
+                                                           android:layout_width="wrap_content"
+                                                           android:layout_height="wrap_content"
+                                                           android:gravity="top"
+                                                           android:fontFamily="monospace"
+                                                           android:typeface="monospace"
+                                                           android:textSize="14sp"
+                                                           android:textColor="#000000"
+                                                           android:textColorHighlight="@color/code_edit_highlight_color"
+                                                           android:textCursorDrawable="@drawable/code_edit_text_cursor"
+                                                           android:background="#00000000"
+                                                           android:imeOptions="flagNoExtractUi"
+                                                           android:privateImeOptions="nm"
+                                                           android:paddingTop="0dp"
+                                                           android:paddingBottom="0dp"
+                                                           android:paddingLeft="0dp"
+                                                           android:paddingRight="0dp" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+            </ScrollView>
+
+            <LinearLayout
+                android:id="@+id/buffer"
+                android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:padding="10dp"
-                android:text=""
-                android:textColor="#000000" />
-	        
-	        <HorizontalScrollView
-	            android:id="@+id/char_insert_tray"
-	            android:layout_width="0dp"
-	            android:layout_height="wrap_content"
-	            android:layout_weight="1"
-	            android:visibility="gone" >
-	            
-	            <LinearLayout
-	                android:id="@+id/char_insert_tray_list"
-	                android:layout_width="wrap_content"
-	                android:layout_height="wrap_content"
-	                android:orientation="horizontal" />
-	        </HorizontalScrollView>
-	        
-	        <View
-	            android:id="@+id/toggle_char_inserts_separator"
-                android:layout_width="1dp"
-                android:layout_height="fill_parent"
-                android:background="@color/toggle_char_inserts_separator"
-                android:layout_margin="3dp"
-                android:visibility="gone" />
-	        
-	        <ImageButton
-                android:id="@+id/toggle_char_inserts"
-                android:layout_width="wrap_content"
-                android:layout_height="fill_parent"
-                android:layout_gravity="center"
-                android:adjustViewBounds="true"
-        		android:scaleType="centerInside"
-                android:contentDescription="@string/toggle_char_inserts"
-                android:src="@drawable/ic_caret_left"
-                style="@style/Widget.AppCompat.ActionButton"
-                android:onClick="toggleCharInserts" />
-	    </LinearLayout>
-	    
-	    <!-- Use ScrollView(s) for smooth scrolling -->
-	    <ScrollView android:id="@+id/console_scroller"
-	        android:layout_weight="1"
-	        android:background="@drawable/back_console"
-	        android:layout_width="fill_parent"
-	        android:layout_height="0dp"
-	        android:scrollbars="vertical"
-	        android:fadeScrollbars="false" >
-			
-	        <HorizontalScrollView android:id="@+id/console_scroller_x"
-	            android:layout_width="fill_parent"
-		        android:layout_height="wrap_content" >
-				
-	            <!-- TODO make text selectable... disabled it because it was causing some problems -->
-		        <TextView android:id="@+id/console"
-		            android:layout_width="wrap_content"
-		            android:layout_height="wrap_content"
-		            android:padding="10dp"
-		            android:textColor="#FFFFFF"
-		            android:textIsSelectable="true"
-		            android:textSize="14sp"
-		            android:typeface="monospace" />
-	        </HorizontalScrollView>
-	    </ScrollView>
-	</LinearLayout>
-	
-	<RelativeLayout android:id="@+id/drawer_wrapper"
-	    android:layout_width="260dp"
-	    android:layout_height="match_parent"
-	    android:layout_gravity="start" >
-	    
-	    <ListView android:id="@+id/drawer_list"
-	        android:layout_width="match_parent"
-	        android:layout_height="match_parent"
-	        android:layout_above="@+id/folder_actions"
-	        android:choiceMode="singleChoice"
-	        android:divider="#CCCCCC"
-	        android:dividerHeight="0.5dp"
-	        android:background="#EEEEEE"
-	        android:headerDividersEnabled="true" />
-		
-		<LinearLayout android:id="@id/folder_actions"
-		    android:layout_width="match_parent"
-		    android:layout_height="wrap_content"
-		    android:layout_alignParentBottom="true"
-		    android:visibility="gone"
-		    android:background="#EEEEEE" >
-		    
-		    <ImageView android:id="@+id/new_folder"
-		        android:layout_width="0dp"
-		        android:layout_height="wrap_content"
-		        android:layout_weight="1"
-		        android:src="@drawable/ic_new_folder"
-		        android:contentDescription="@string/new_folder"
-		        android:background="@color/holo_select_light"
-		        android:padding="8dp" />
-		    
-		    <View
-		        android:layout_width="1dp"
-		        android:layout_height="match_parent"
-		        android:background="#CCCCCC" />
-		    
-		    <ImageView android:id="@+id/edit_folder"
-		        android:layout_width="0dp"
-		        android:layout_height="wrap_content"
-		        android:layout_weight="1"
-		        android:src="@drawable/ic_edit_folder"
-		        android:contentDescription="@string/edit_folder"
-		        android:background="@color/holo_select_light"
-		        android:padding="8dp" />
-		    
-		    <View
-		        android:layout_width="1dp"
-		        android:layout_height="match_parent"
-		        android:background="#CCCCCC" />
-		    
-		    <ImageView android:id="@+id/delete_folder"
-		        android:layout_width="0dp"
-		        android:layout_height="wrap_content"
-		        android:layout_weight="1"
-		        android:src="@drawable/ic_delete_folder"
-		        android:contentDescription="@string/delete_folder"
-		        android:background="@color/red_select_light"
-		        android:padding="8dp" />
-		</LinearLayout>
-	</RelativeLayout>
-</android.support.v4.widget.DrawerLayout>
+                android:orientation="horizontal"
+                android:background="@drawable/back" >
+
+                <TextView
+                    android:id="@+id/message"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="10dp"
+                    android:text=""
+                    android:textColor="#000000" />
+
+                <HorizontalScrollView
+                    android:id="@+id/char_insert_tray"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:visibility="gone" >
+
+                    <LinearLayout
+                        android:id="@+id/char_insert_tray_list"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+
+                <View
+                    android:id="@+id/toggle_char_inserts_separator"
+                    android:layout_width="1dp"
+                    android:layout_height="fill_parent"
+                    android:background="@color/toggle_char_inserts_separator"
+                    android:layout_margin="3dp"
+                    android:visibility="gone" />
+
+                <ImageButton
+                    android:id="@+id/toggle_char_inserts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="fill_parent"
+                    android:layout_gravity="center"
+                    android:adjustViewBounds="true"
+                    android:scaleType="centerInside"
+                    android:contentDescription="@string/toggle_char_inserts"
+                    android:src="@drawable/ic_caret_left"
+                    style="@style/Widget.AppCompat.ActionButton"
+                    android:onClick="toggleCharInserts" />
+            </LinearLayout>
+
+            <!-- Use ScrollView(s) for smooth scrolling -->
+            <ScrollView android:id="@+id/console_scroller"
+                        android:layout_weight="1"
+                        android:background="@drawable/back_console"
+                        android:layout_width="fill_parent"
+                        android:layout_height="0dp"
+                        android:scrollbars="vertical"
+                        android:fadeScrollbars="false" >
+
+                <HorizontalScrollView android:id="@+id/console_scroller_x"
+                                      android:layout_width="fill_parent"
+                                      android:layout_height="wrap_content" >
+
+                    <!-- TODO make text selectable... disabled it because it was causing some problems -->
+                    <TextView android:id="@+id/console"
+                              android:layout_width="wrap_content"
+                              android:layout_height="wrap_content"
+                              android:padding="10dp"
+                              android:textColor="#FFFFFF"
+                              android:textIsSelectable="true"
+                              android:textSize="14sp"
+                              android:fontFamily="monospace"
+                              android:typeface="monospace" />
+                </HorizontalScrollView>
+            </ScrollView>
+        </LinearLayout>
+
+        <RelativeLayout android:id="@+id/drawer_wrapper"
+                        android:layout_width="260dp"
+                        android:layout_height="match_parent"
+                        android:layout_gravity="start" >
+
+            <ListView android:id="@+id/drawer_list"
+                      android:layout_width="match_parent"
+                      android:layout_height="match_parent"
+                      android:layout_above="@+id/folder_actions"
+                      android:choiceMode="singleChoice"
+                      android:divider="#CCCCCC"
+                      android:dividerHeight="0.5dp"
+                      android:background="#EEEEEE"
+                      android:headerDividersEnabled="true" />
+
+            <LinearLayout android:id="@id/folder_actions"
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:layout_alignParentBottom="true"
+                          android:visibility="gone"
+                          android:background="#EEEEEE" >
+
+                <ImageView android:id="@+id/new_folder"
+                           android:layout_width="0dp"
+                           android:layout_height="wrap_content"
+                           android:layout_weight="1"
+                           android:src="@drawable/ic_new_folder"
+                           android:contentDescription="@string/new_folder"
+                           android:background="@color/holo_select_light"
+                           android:padding="8dp" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="#CCCCCC" />
+
+                <ImageView android:id="@+id/edit_folder"
+                           android:layout_width="0dp"
+                           android:layout_height="wrap_content"
+                           android:layout_weight="1"
+                           android:src="@drawable/ic_edit_folder"
+                           android:contentDescription="@string/edit_folder"
+                           android:background="@color/holo_select_light"
+                           android:padding="8dp" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="#CCCCCC" />
+
+                <ImageView android:id="@+id/delete_folder"
+                           android:layout_width="0dp"
+                           android:layout_height="wrap_content"
+                           android:layout_weight="1"
+                           android:src="@drawable/ic_delete_folder"
+                           android:contentDescription="@string/delete_folder"
+                           android:background="@color/red_select_light"
+                           android:padding="8dp" />
+            </LinearLayout>
+        </RelativeLayout>
+    </android.support.v4.widget.DrawerLayout>
+</LinearLayout>

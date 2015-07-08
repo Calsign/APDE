@@ -30,9 +30,9 @@ android {
 
 dependencies {
     compile project(':aFileChooser')
-    compile 'com.android.support:support-v4:21.0.3'
+    compile 'com.android.support:support-v4:22.2.0'
     //We need to use the old library because they made the internal API private access
-    compile 'com.android.support:appcompat-v7:20.0.+'
+    compile 'com.android.support:appcompat-v7:22.2.0'
     compile files('libs/android-core.jar')
     compile files('libs/antlr.jar')
     compile files('libs/core-1.51.0.0.jar')

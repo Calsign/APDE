@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Vibrator;
@@ -16,9 +17,16 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
+import android.support.annotation.LayoutRes;
+import android.support.annotation.Nullable;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.AppCompatDelegate;
+import android.support.v7.widget.Toolbar;
 import android.view.ContextThemeWrapper;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -40,10 +48,98 @@ import java.util.Stack;
  * Settings activity for API level 11+
  */
 public class SettingsActivityHC extends PreferenceActivity {
+	//StackOverflow: http://stackoverflow.com/a/26705551/1628609
+	private AppCompatDelegate mDelegate;
+	
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		getDelegate().installViewFactory();
+		getDelegate().onCreate(savedInstanceState);
+		super.onCreate(savedInstanceState);
+		
+		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+	}
+	
+	public ActionBar getSupportActionBar() {
+		return getDelegate().getSupportActionBar();
+	}
+	
+	public void setSupportActionBar(@Nullable Toolbar toolbar) {
+		getDelegate().setSupportActionBar(toolbar);
+	}
+	
+	@Override
+	public MenuInflater getMenuInflater() {
+		return getDelegate().getMenuInflater();
+	}
+	
+	@Override
+	public void setContentView(@LayoutRes int layoutResID) {
+		getDelegate().setContentView(layoutResID);
+	}
+	
+	@Override
+	public void setContentView(View view) {
+		getDelegate().setContentView(view);
+	}
+	
+	@Override
+	public void setContentView(View view, ViewGroup.LayoutParams params) {
+		getDelegate().setContentView(view, params);
+	}
+	
+	@Override
+	public void addContentView(View view, ViewGroup.LayoutParams params) {
+		getDelegate().addContentView(view, params);
+	}
+	
+	@Override
+	protected void onPostResume() {
+		super.onPostResume();
+		getDelegate().onPostResume();
+	}
+	
+	@Override
+	protected void onTitleChanged(CharSequence title, int color) {
+		super.onTitleChanged(title, color);
+		getDelegate().setTitle(title);
+	}
+	
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {
+		super.onConfigurationChanged(newConfig);
+		getDelegate().onConfigurationChanged(newConfig);
+	}
+	
+	@Override
+	protected void onStop() {
+		super.onStop();
+		getDelegate().onStop();
+	}
+	
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		getDelegate().onDestroy();
+	}
+	
+	public void invalidateOptionsMenu() {
+		getDelegate().invalidateOptionsMenu();
+	}
+	
+	private AppCompatDelegate getDelegate() {
+		if (mDelegate == null) {
+			mDelegate = AppCompatDelegate.create(this, null);
+		}
+		return mDelegate;
+	}
+	
 	@SuppressLint("NewApi")
 	@Override
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
+		
+		getDelegate().onPostCreate(savedInstanceState);
 		
 		getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
 	}

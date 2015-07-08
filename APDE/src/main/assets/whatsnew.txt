@@ -3,6 +3,7 @@ v0.3.3 Alpha
  - Large set of examples (must be downloaded)
  - Git integration
  - Find/Replace
+ - Support all external storage locations
  - Java 1.6 compiler compliance
  - What's new and about screens
  - Library manager crash fixed

@@ -2,7 +2,8 @@
     <!--
         Base application theme for API 14+. This theme completely replaces
         AppBaseTheme from BOTH res/values/styles.xml and
-        res/values-v11/styles.xml on API 14+ devices.
+        res/values-v11/styles.xml on API 14+ devices.
+
     -->
     
     <style name="AppBaseTheme" parent="android:Theme.Holo">
@@ -11,10 +12,15 @@
     
     <style name="PreferencesTheme" parent="@style/FullscreenTheme" >
         <item name="android:actionBarStyle">@style/PreferencesActionBarStyle</item>
+        <item name="android:windowBackground">@color/activity_background</item>
+        <item name="colorPrimary">@color/bar_overlay</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
     </style>
     
     <style name="PreferencesActionBarStyle" parent="android:style/Widget.Holo.ActionBar">
         <item name="android:background">@color/bar_overlay</item>
         <item name="android:displayOptions">showHome|homeAsUp|showTitle</item>
+        <item name="colorPrimary">@color/bar_overlay</item>
     </style>
 </resources>

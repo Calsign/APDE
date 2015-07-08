@@ -17,11 +17,14 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
 import android.preference.PreferenceManager;
-import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBar.Tab;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutCompat;
+import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.SparseArray;
@@ -76,6 +79,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -93,7 +97,7 @@ import processing.data.XML;
 /**
  * This is the editor, or the main activity of APDE
  */
-public class EditorActivity extends ActionBarActivity implements ScrollingTabContainerView.TabListener {
+public class EditorActivity extends AppCompatActivity implements ScrollingTabContainerView.TabListener {
 	//List of key bindings for hardware / bluetooth keyboards
 	private HashMap<String, KeyBinding> keyBindings;
 	
@@ -160,6 +164,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
+		
+		Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+		
+		setSupportActionBar(toolbar);
 		
 		//Create custom output / error streams for the console
 		outStream = new PrintStream(new ConsoleStream());
@@ -304,7 +312,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         forceDrawerReload();
         
         //Initialize the drawer drawer toggler
-        drawerToggle = new ActionBarDrawerToggle(this, drawer, R.drawable.ic_navigation_drawer, R.string.nav_drawer_open, R.string.nav_drawer_close) {
+        drawerToggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.nav_drawer_open, R.string.nav_drawer_close) {
             @Override
         	public void onDrawerClosed(View view) {
             	((EditText) findViewById(R.id.code)).setEnabled(true);
@@ -454,7 +462,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         //Enable the home button, the "home as up" will actually get replaced by the drawer toggle button
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        
+		
         final ScrollView codeScroller = (ScrollView) findViewById(R.id.code_scroller);
         final HorizontalScrollView codeScrollerX = (HorizontalScrollView) findViewById(R.id.code_scroller_x);
         final EditText code = (EditText) findViewById(R.id.code);
@@ -972,7 +980,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	@SuppressLint("NewApi")
 	public void onResume() {
     	super.onResume();
-    	
+		
+//		LinearLayout content = (LinearLayout) findViewById(R.id.content);
+//		
+//		//If the tab bar has been removed, we need to re-add it
+//		if (!(content.getChildAt(0) == tabBar)) {
+//			System.out.println("re-added tab bar");
+//			content.addView(tabBar, 0, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+//		}
+		
     	//Reference the SharedPreferences text size value
     	((CodeEditText) findViewById(R.id.code)).refreshTextSize();
 		((TextView) findViewById(R.id.console)).setTextSize(Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(this).getString("textsize_console", "14")));
@@ -1063,7 +1079,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         //In case the user has enabled / disabled undo / redo in settings
         supportInvalidateOptionsMenu();
-    }
+	}
     
     public HashMap<String, KeyBinding> getKeyBindings() {
     	return keyBindings;
@@ -1908,9 +1924,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Preserve tab order upon re-launch
     	String tabList = "";
     	for(int i = 0; i < tabBar.getTabCount(); i ++) {
-    		String tabName = ((TextView) tabBar.getTabView(i).getChildAt(0)).getText().toString();
-    		
-    		//If it's a .PDE file, make sure to add the suffix
+			String tabName = ((TextView) ((LinearLayoutCompat) tabBar.getTabView(i)).getChildAt(0)).getText().toString();
+			
+			//If it's a .PDE file, make sure to add the suffix
     		if(tabName.split(".").length <= 1)
     			tabName += ".pde";
     		
@@ -2842,12 +2858,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		//Theoretically, we could do some other stuff here, too...
 		
 		//Get the tab view
-    	ScrollingTabContainerView.TabView view = tabBar.getNewTabView();
+		LinearLayoutCompat view = (LinearLayoutCompat) tabBar.getNewTabView();
     	
     	//Initialize some basic properties
     	view.setGravity(Gravity.CENTER);
     	view.setBackgroundColor(getResources().getColor(R.color.activity_background));
-    	view.setBackgroundDrawable(getResources().getDrawable(R.drawable.tab_indicator_ab_holo));
+    	view.setBackgroundDrawable(getResources().getDrawable(R.drawable.abc_tab_indicator_mtrl_alpha));
     	
     	//Get the text view
     	TextView textView = (TextView) view.getChildAt(0);
@@ -3045,7 +3061,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     			deleteLocalFile(tabs.get(cur).getFilename());
     			
     			//Change the tab as it is displayed
-    			((TextView) tabBar.getTabView(tabBar.getSelectedTab()).getChildAt(0)).setText(value); //This seems more complicated than it needs to be... but it's necessary to change the appearance of the tab name
+    			((TextView) ((LinearLayoutCompat) tabBar.getTabView(tabBar.getSelectedTab())).getChildAt(0)).setText(value); //This seems more complicated than it needs to be... but it's necessary to change the appearance of the tab name
     			tabBar.getSelectedTab().setText(value);
     			tabs.get(tabBar.getSelectedTab()).setTitle(value);
     	    	
@@ -3171,7 +3187,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	public void onTabReselected(Tab tab) {
 		if(!drawerOpen && !getGlobalState().isExample()) {
 			//Get a reference to the anchor view for the popup window
-			View anchorView = tabBar.getTabView(tabBar.getSelectedTab());
+			View anchorView = (View) tabBar.getTabView(tabBar.getSelectedTab());
 			
 			//Create a PopupMenu anchored to a 0dp height "fake" view at the top if the display
 			//This is a custom implementation, designed to support API level 10+ (Android's PopupMenu is 11+)

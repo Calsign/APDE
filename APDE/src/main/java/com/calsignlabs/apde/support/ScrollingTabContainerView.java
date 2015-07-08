@@ -1,12 +1,13 @@
 package com.calsignlabs.apde.support;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 import android.content.Context;
 import android.support.v7.app.ActionBar.Tab;
+import android.support.v7.widget.LinearLayoutCompat;
 import android.util.AttributeSet;
 import android.view.View;
-import android.widget.LinearLayout;
 
 /**
  * This is a custom wrapper of ActionBarCompat's internal ScrollingTabContainerView.
@@ -214,24 +215,40 @@ public class ScrollingTabContainerView extends android.support.v7.internal.widge
 		return tabs.size();
 	}
 	
-	public TabView getTabView(Tab tab) {
-        LinearLayout group = (LinearLayout) getChildAt(0);
-		return (TabView) group.getChildAt(indexOfTab(tab));
+	public Object getTabView(Tab tab) {
+		LinearLayoutCompat group = (LinearLayoutCompat) getChildAt(0);
+		return group.getChildAt(indexOfTab(tab));
 	}
 	
-	public TabView getTabView(String title) {
-        LinearLayout group = (LinearLayout) getChildAt(0);
-		return (TabView) group.getChildAt(indexOfTab(title));
+	public Object getTabView(String title) {
+		LinearLayoutCompat group = (LinearLayoutCompat) getChildAt(0);
+		return group.getChildAt(indexOfTab(title));
 	}
 	
-	public TabView getTabView(int tab) {
-        LinearLayout group = (LinearLayout) getChildAt(0);
-		return (TabView) group.getChildAt(tab);
+	public Object getTabView(int tab) {
+		LinearLayoutCompat group = (LinearLayoutCompat) getChildAt(0);
+		return group.getChildAt(tab);
 	}
 	
-	public TabView getNewTabView() {
-        LinearLayout group = (LinearLayout) getChildAt(0);
-		return (TabView) group.getChildAt(group.getChildCount() - 1);
+	public Object getNewTabView() {
+        LinearLayoutCompat group = (LinearLayoutCompat) getChildAt(0);
+		return group.getChildAt(group.getChildCount() - 1);
+	}
+	
+	public Class<?> getTabViewClass() {
+		try {
+			return Class.forName("android.support.v7.internal.widget.ScrollingTabContainerView$TabView");
+		} catch (ClassNotFoundException e) {
+			return null;
+		}
+	}
+	
+	public Method getTabViewClassMethod(String name, Class<?>[] paramTypes) {
+		try {
+			return getTabViewClass().getMethod(name, paramTypes);
+		} catch (NoSuchMethodException e) {
+			return null;
+		}
 	}
 	
 	public TabClickListener getTabClickListener() {
@@ -242,19 +259,33 @@ public class ScrollingTabContainerView extends android.support.v7.internal.widge
 		@Override
 		public void onClick(View view) {
 			if(view != null) {
-				TabView tabView = (TabView) view;
-				tabView.getTab().select();
+				try {
+					((Tab) getTabViewClassMethod("getTab", null).invoke(view)).select();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				
+//				TabView tabView = (TabView) view;
+//				tabView.getTab().select();
 			}
 			
 			Tab toSelect = null;
 			Tab toUnselect = null;
 			
 			for(int i = 0; i < getTabCount(); i ++) {
-				final View child = ((LinearLayout) getChildAt(0)).getChildAt(i);
+				final View child = ((LinearLayoutCompat) getChildAt(0)).getChildAt(i);
 				boolean preSelected = child.isSelected();
 				boolean postSelected = child == view;
 				
-				Tab tab = ((TabView) child).getTab();
+				Tab tab = null;
+				
+				try {
+					tab = (Tab) getTabViewClassMethod("getTab", null).invoke(getTabViewClass().cast(child));
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				
+//				Tab tab = ((TabView) child).getTab();
 				
 				if(preSelected && !postSelected)
 					toUnselect = tab;
@@ -282,8 +313,8 @@ public class ScrollingTabContainerView extends android.support.v7.internal.widge
 	}
 	
 	public interface TabListener {
-		public void onTabUnselected(Tab tab);
-		public void onTabSelected(Tab tab);
-		public void onTabReselected(Tab tab);
+		void onTabUnselected(Tab tab);
+		void onTabSelected(Tab tab);
+		void onTabReselected(Tab tab);
 	}
 }

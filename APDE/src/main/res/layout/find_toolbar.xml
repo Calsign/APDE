@@ -26,7 +26,7 @@
             android:id="@id/find_replace_more_options"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/abc_ic_menu_moreoverflow_normal_holo_dark"
+            android:src="@drawable/abc_ic_menu_moreoverflow_mtrl_alpha"
             android:layout_alignTop="@id/find_replace_find_text"
             android:layout_alignBottom="@id/find_replace_find_text"
             android:layout_toLeftOf="@+id/find_replace_close"

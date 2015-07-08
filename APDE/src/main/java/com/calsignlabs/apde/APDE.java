@@ -186,15 +186,15 @@ public class APDE extends Application {
 	@SuppressLint("NewApi")
 	public void setSketchName(String sketchName) {
 		this.sketchName = sketchName;
-
+		
 		if (editor != null) {
 			editor.getSupportActionBar().setTitle(sketchName);
 			editor.setSaved(false);
 		}
-		// Yet another unfortunate casualty of AppCompat
-		if (properties != null && android.os.Build.VERSION.SDK_INT >= 11) {
-			properties.getActionBar().setTitle(sketchName);
-		}
+//		// Yet another unfortunate casualty of AppCompat
+//		if (properties != null && android.os.Build.VERSION.SDK_INT >= 11) {
+//			properties.getActionBar().setTitle(sketchName);
+//		}
 	}
 	
 	/**

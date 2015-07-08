@@ -2,7 +2,8 @@
 <resources>
     <!--
         Base application theme, dependent on API level. This theme is replaced
-        by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
+        by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
+
     -->
     
     <style name="AppBaseTheme" parent="Theme.AppCompat">
@@ -23,16 +24,20 @@
 	    <item name="backgroundStacked">@color/bar_overlay</item>
 	</style>
 	
-    <style name="FullscreenTheme" parent="Theme.AppCompat">
+    <style name="FullscreenTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowBackground">@color/activity_background</item>
         <item name="buttonBarStyle">@style/ButtonBar</item>
         <item name="buttonBarButtonStyle">@style/ButtonBarButton</item>
+        <item name="colorPrimary">@color/bar_overlay</item>
+        <item name="android:windowNoTitle">true</item>
     </style>
     
-    <style name="PreferencesTheme" parent="@style/Theme.AppCompat">
+    <style name="PreferencesTheme" parent="@style/FullscreenTheme">
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowBackground">@color/activity_background</item>
+        <item name="colorPrimary">@color/bar_overlay</item>
+        <item name="android:windowNoTitle">true</item>
     </style>
     
     <style name="ButtonBar">

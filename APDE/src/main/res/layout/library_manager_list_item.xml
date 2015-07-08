@@ -50,7 +50,7 @@
         android:layout_gravity="center"
         android:adjustViewBounds="true"
         android:scaleType="centerInside"
-        android:src="@drawable/abc_ic_menu_moreoverflow_normal_holo_dark"
+        android:src="@drawable/abc_ic_menu_moreoverflow_mtrl_alpha"
         android:contentDescription="@string/more"
         style="@style/Widget.AppCompat.ActionButton"
         android:layout_alignParentTop="true"
