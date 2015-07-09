@@ -503,6 +503,24 @@ public class APDE extends Application {
 	 */
 	public File getSketchbookFolder() {
 		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		
+		StorageDrive savedDrive = getSketchbookDrive();
+		String externalPath = prefs.getString("pref_sketchbook_location", DEFAULT_SKETCHBOOK_LOCATION);
+		
+		switch (savedDrive.type) {
+			case INTERNAL:
+			case SECONDARY_EXTERNAL:
+				return savedDrive.root;
+			case EXTERNAL:
+			case PRIMARY_EXTERNAL:
+				return new File(savedDrive.root, externalPath);
+			default:
+				return null;
+		}
+	}
+	
+	public StorageDrive getSketchbookDrive() {
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 		final String storageDrivePref = "pref_sketchbook_drive";
 		
 		ArrayList<StorageDrive> storageDrives = getStorageLocations();
@@ -530,7 +548,6 @@ public class APDE extends Application {
 		}
 		
 		StorageDrive savedDrive = getStorageDriveByRoot(storageDrives, prefs.getString(storageDrivePref, ""));
-		String externalPath = prefs.getString("pref_sketchbook_location", DEFAULT_SKETCHBOOK_LOCATION);
 		
 		if (savedDrive == null) {
 			// The drive has probably been removed
@@ -545,16 +562,7 @@ public class APDE extends Application {
 			savedDrive = getStorageDriveByRoot(storageDrives, prefs.getString(storageDrivePref, ""));
 		}
 		
-		switch (savedDrive.type) {
-			case INTERNAL:
-			case SECONDARY_EXTERNAL:
-				return savedDrive.root;
-			case EXTERNAL:
-			case PRIMARY_EXTERNAL:
-				return new File(savedDrive.root, externalPath);
-			default:
-				return null;
-		}
+		return savedDrive;
 	}
 	
 	public ArrayList<StorageDrive> getStorageLocations() {
@@ -567,11 +575,13 @@ public class APDE extends Application {
 			File[] extDirs = getExternalFilesDirs(null);
 			
 			for (File dir : extDirs) {
-				if (dir.getAbsolutePath().startsWith(primaryExtDir.getAbsolutePath())) {
-					//Use the root of the primary external storage, don't use the application-specific folder
-					locations.add(new StorageDrive(primaryExtDir, StorageDrive.StorageDriveType.PRIMARY_EXTERNAL, getAvailableSpace(primaryExtDir)));
-				} else {
-					locations.add(new StorageDrive(new File(dir, "sketchbook"), StorageDrive.StorageDriveType.SECONDARY_EXTERNAL, getAvailableSpace(dir)));
+				if (dir != null) {
+					if (dir.getAbsolutePath().startsWith(primaryExtDir.getAbsolutePath())) {
+						//Use the root of the primary external storage, don't use the application-specific folder
+						locations.add(new StorageDrive(primaryExtDir, StorageDrive.StorageDriveType.PRIMARY_EXTERNAL, getAvailableSpace(primaryExtDir)));
+					} else {
+						locations.add(new StorageDrive(new File(dir, "sketchbook"), StorageDrive.StorageDriveType.SECONDARY_EXTERNAL, getAvailableSpace(dir)));
+					}
 				}
 			}
 			
@@ -696,84 +706,98 @@ public class APDE extends Application {
 	}
 	
 	public void initExamplesRepo() {
-		//Don't bother checking if the user doesn't want to
+		// Don't bother checking if the user doesn't want to
 		if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("update_examples", true)) {
 			return;
 		}
 		
-		//Initialize the examples repository when the app is first opened
+		// Initialize the examples repository when the app is first opened
 		
 		final ConnectivityManager connection = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 		final NetworkInfo wifi = connection.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
 		final NetworkInfo mobile = connection.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
 		
-		//Make sure we're on Wi-Fi
+		// Make sure we're on Wi-Fi
 		if ((wifi != null && wifi.isConnected())
 				|| (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("update_examples_mobile_data", false)
-						&& mobile != null && mobile.isConnected())) {
-			//We have to do this on a non-UI thread...
+				&& mobile != null && mobile.isConnected())) {
+			// We have to do this on a non-UI thread...
 			
 			new Thread(new Runnable() {
 				public void run() {
-					GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
+					// For some reason, there's a lot of useless console output here...
+					// 
+					// This will also block console output for a couple of 
+					// things that run after this because this runs in a 
+					// separate thread, but it's worth it. The user can turn 
+					// the output back on from Settings if it becomes a problem.
+					getEditor().FLAG_SUSPEND_OUT_STREAM.set(true);
 					
-					//Check to see if an update is available
-					if (!examplesRepo.exists() || (examplesRepo.exists() && examplesRepo.canPull())) {
-						examplesRepo.close();
-						
-						//Yucky multi-threading
-						editor.runOnUiThread(new Runnable() {
-							public void run() {
-								AlertDialog.Builder builder = new AlertDialog.Builder(editor);
-								
-								builder.setTitle(R.string.update_examples_dialog_title);
-								
-								LinearLayout layout = (LinearLayout) View.inflate(APDE.this, R.layout.examples_update_dialog, null);
-								
-								final CheckBox dontShowAgain = (CheckBox) layout.findViewById(R.id.examples_update_dialog_dont_show_again);
-								final TextView disableWarning = (TextView) layout.findViewById(R.id.examples_update_dialog_disable_warning);
-								
-								builder.setView(layout);
-								
-								builder.setPositiveButton(R.string.update, new DialogInterface.OnClickListener() {
-									@Override
-									public void onClick(DialogInterface dialog, int which) {
-										if (dontShowAgain.isChecked()) {
-											//"Close"
-											
-											//Disable examples updates
-											SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(APDE.this).edit();
-											edit.putBoolean("update_examples", false);
-											edit.apply();
-										} else {
-											//"Update"
-											
-											//This kicks off yet another thread
-											updateExamplesRepo();
+					try {
+						GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
+
+						// Check to see if an update is available
+						if (!examplesRepo.exists() || (examplesRepo.exists() && examplesRepo.canPull())) {
+							examplesRepo.close();
+
+							// Yucky multi-threading
+							editor.runOnUiThread(new Runnable() {
+								public void run() {
+									AlertDialog.Builder builder = new AlertDialog.Builder(editor);
+
+									builder.setTitle(R.string.update_examples_dialog_title);
+
+									LinearLayout layout = (LinearLayout) View.inflate(APDE.this, R.layout.examples_update_dialog, null);
+
+									final CheckBox dontShowAgain = (CheckBox) layout.findViewById(R.id.examples_update_dialog_dont_show_again);
+									final TextView disableWarning = (TextView) layout.findViewById(R.id.examples_update_dialog_disable_warning);
+
+									builder.setView(layout);
+
+									builder.setPositiveButton(R.string.update, new DialogInterface.OnClickListener() {
+										@Override
+										public void onClick(DialogInterface dialog, int which) {
+											if (dontShowAgain.isChecked()) {
+												// "Close"
+
+												// Disable examples updates
+												SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(APDE.this).edit();
+												edit.putBoolean("update_examples", false);
+												edit.apply();
+											} else {
+												// "Update"
+
+												// This kicks off yet another thread
+												updateExamplesRepo();
+											}
 										}
-									}
-								});
-								
-								builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-									@Override
-									public void onClick(DialogInterface dialog, int which) {}
-								});
-								
-								AlertDialog dialog = builder.create();
-								dialog.show();
-								
-								final Button updateButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
-								
-								dontShowAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-									@Override
-									public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-										disableWarning.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-										//Change the behavior if the user wants to get rid of this dialog...
-										updateButton.setText(isChecked ? R.string.close : R.string.update);
-									}
-								});
-							}
-						});
+									});
+
+									builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+										@Override
+										public void onClick(DialogInterface dialog, int which) {
+										}
+									});
+
+									AlertDialog dialog = builder.create();
+									dialog.show();
+
+									final Button updateButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+
+									dontShowAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+										@Override
+										public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+											disableWarning.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+											// Change the behavior if the user wants to get rid of this dialog...
+											updateButton.setText(isChecked ? R.string.close : R.string.update);
+										}
+									});
+								}
+							});
+						}
+					} finally {
+						// Make sure that we turn console output back on!!!
+						getEditor().FLAG_SUSPEND_OUT_STREAM.set(false);
 					}
 				}
 			}).start();
@@ -787,6 +811,8 @@ public class APDE extends Application {
 		
 		new Thread(new Runnable() {
 			public void run() {
+				getEditor().FLAG_SUSPEND_OUT_STREAM.set(true);
+				
 				GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
 				
 				boolean update = false;
@@ -815,6 +841,8 @@ public class APDE extends Application {
 						}
 					});
 				}
+				
+				getEditor().FLAG_SUSPEND_OUT_STREAM.set(false);
 			}
 		}).start();
 	}
@@ -1342,11 +1370,14 @@ public class APDE extends Application {
 		
 		//Set up the Processing-specific folder
 		final File dir = getDir("processing_home", 0);
-		dir.mkdir();
 		
-		//Put the default preferences file where Processing will look for it
-		EditorActivity.copyAssetFolder(getAssets(), "processing_default", dir.getAbsolutePath());
-		
+		if (!dir.exists()) {
+			dir.mkdir();
+
+			//Put the default preferences file where Processing will look for it
+			EditorActivity.copyAssetFolder(getAssets(), "processing_default", dir.getAbsolutePath());
+		}
+			
 		//Some magic to put our own platform in place
 		Base.initPlatform();
 		AndroidPlatform.setDir(dir);

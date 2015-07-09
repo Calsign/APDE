@@ -85,6 +85,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -134,6 +135,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	//Custom output / error streams for printing to the console
 	private PrintStream outStream;
 	private PrintStream errStream;
+	protected AtomicBoolean FLAG_SUSPEND_OUT_STREAM = new AtomicBoolean(false);
 	
 	//Recieve log / console output from sketches
 	private BroadcastReceiver consoleBroadcastReceiver;
@@ -161,22 +163,22 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
 		
-		//Create custom output / error streams for the console
+		// Create custom output / error streams for the console
 		outStream = new PrintStream(new ConsoleStream());
 		errStream = new PrintStream(new ConsoleStream());
 		
-		//Set the custom output / error streams
+		// Set the custom output / error streams
 		System.setOut(outStream);
 		System.setErr(errStream);
 		
-		//Initialize log / console receiver
+		// Initialize log / console receiver
 		consoleBroadcastReceiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
 				String message = intent.getStringExtra("com.calsignlabs.apde.LogMessage");
 				String exception = intent.getStringExtra("com.calsignlabs.apde.LogException");
 				
-				//We can show different colors for different severities if we want to... later...
+				// We can show different colors for different severities if we want to... later...
 				switch (intent.getCharExtra("com.calsignlabs.apde.LogSeverity", 'o')) {
 				case 'o':
 					postConsole(message);
@@ -191,58 +193,61 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			}
 		};
 		
-		//Register receiver for sketch logs / console output
+		// Register receiver for sketch logs / console output
 		registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
 		
 		getGlobalState().initTaskManager();
+		
+		// Make sure that we have a good sketchbook folder to use
+		getGlobalState().getSketchbookDrive();
         
-        //Initialize the custom tab bar
+        // Initialize the custom tab bar
         tabBar = new ScrollingTabContainerView(getSupportActionBar().getThemedContext(), this);
         
-        //Set the tab bar to the proper height
+        // Set the tab bar to the proper height
         TypedValue tv = new TypedValue();
         getTheme().resolveAttribute(android.support.v7.appcompat.R.attr.actionBarSize, tv, true);
         int actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data, getResources().getDisplayMetrics());
         tabBar.setContentHeight(actionBarHeight);
         
-        //Add the tab bar at the top of the layout
+        // Add the tab bar at the top of the layout
         ((LinearLayout) findViewById(R.id.content)).addView(tabBar, 0, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
         tabBar.setAllowCollapse(false);
         
-        //Set the tab bar background color
+        // Set the tab bar background color
         tabBar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
 		
-        //Load all of the permissions
+        // Load all of the permissions
         Manifest.loadPermissions(this);
         
-        //Initialize the sliding message area listener
+        // Initialize the sliding message area listener
         messageListener = new MessageTouchListener();
         
-        //Enable the message area listener
+        // Enable the message area listener
         findViewById(R.id.buffer).setOnLongClickListener(messageListener);
         findViewById(R.id.buffer).setOnTouchListener(messageListener);
         
-        //Initialize the list of tabs
+        // Initialize the list of tabs
         tabs = new HashMap<Tab, FileMeta>();
         
-        //The sketch is not saved TODO what's going on here, really?
+        // The sketch is not saved TODO what's going on here, really?
         setSaved(false);
 
 		getGlobalState().rebuildToolList();
 		
-        //Initialize the global APDE application object
+        // Initialize the global APDE application object
         getGlobalState().setEditor(this);
         getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
         
-        //Initialize the action bar title
+        // Initialize the action bar title
         getSupportActionBar().setTitle(getGlobalState().getSketchName());
         
-        //Try to load the auto-save sketch, otherwise set the editor up as a new sketch
+        // Try to load the auto-save sketch, otherwise set the editor up as a new sketch
         if(!loadSketchStart()) {
 			addDefaultTab(getGlobalState().getSketchName());
 		}
         
-        //Make the code area able to detect its own text changing
+        // Make the code area able to detect its own text changing
         ((CodeEditText) findViewById(R.id.code)).setupTextListener();
         
         //Detect text changes for determining whether or not the sketch has been saved
@@ -254,7 +259,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             public void onTextChanged(CharSequence s, int start, int before, int count){}
         });
         
-        //Detect touch events
+        // Detect touch events
         ((EditText) findViewById(R.id.code)).setOnTouchListener(new EditText.OnTouchListener() {
         	@Override
         	public boolean onTouch(View v, MotionEvent event) {
@@ -267,7 +272,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	}
         });
         
-        //Check for an app update
+        // Check for an app update
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         int oldVersionNum = prefs.getInt("version_num", -1);
         int realVersionNum = getGlobalState().appVersionCode();
@@ -275,35 +280,26 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		boolean justUpdated = realVersionNum > oldVersionNum;
         
         if (justUpdated) {
-        	//We need to update the examples (in case the new release has added more)
-        	//This is some serious future-proofing... boy am I paranoid...
+        	// Do anything that needs to be done for this upgrade
+			runUpgradeChanges(oldVersionNum, realVersionNum);
         	
-        	//Now we have the Git-powered examples repository, but we'll still keep this for people that haven't found the time to download the examples yet
-        	
-        	//Let's do this in a separate thread
-        	new Thread(new Runnable() {
-        		public void run() {
-        			copyAssetFolder(getAssets(), "examples", getGlobalState().getStarterExamplesFolder().getAbsolutePath());
-        		}
-        	}).start();
-        	
-        	//Make sure to update the value so we don't do this again
+        	// Make sure to update the value so we don't do this again
         	SharedPreferences.Editor edit = prefs.edit();
         	edit.putInt("version_num", realVersionNum);
         	edit.apply();
         }
         
-        //Initialize the navigation drawer
+        // Initialize the navigation drawer
         final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer);
         final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
         
         drawerSketchLocationType = null;
         drawerSketchPath = "";
         
-        //Populate the drawer
+        // Populate the drawer
         forceDrawerReload();
         
-        //Initialize the drawer drawer toggler
+        // Initialize the drawer drawer toggler
         drawerToggle = new ActionBarDrawerToggle(this, drawer, R.drawable.ic_navigation_drawer, R.string.nav_drawer_open, R.string.nav_drawer_close) {
             @Override
         	public void onDrawerClosed(View view) {
@@ -315,19 +311,19 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             public void onDrawerSlide(View drawer, float slide) {
             	super.onDrawerSlide(drawer, slide);
             	
-            	if(slide > 0) { //Detect an open event
+            	if(slide > 0) { // Detect an open event
             		((EditText) findViewById(R.id.code)).setEnabled(false);
                     supportInvalidateOptionsMenu();
                     drawerOpen = true;
                     
-                    //Display the relative path in the action bar
+                    // Display the relative path in the action bar
                     if(drawerSketchLocationType != null) {
     					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
     				} else {
     					getSupportActionBar().setSubtitle(null);
     				}
-            	} else { //Detect a close event
-            		//Re-enable the code area
+            	} else { // Detect a close event
+            		// Re-enable the code area
             		((EditText) findViewById(R.id.code)).setEnabled(true);
                     supportInvalidateOptionsMenu();
                     drawerOpen = false;
@@ -344,7 +340,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         }};
         drawer.setDrawerListener(drawerToggle);
         
-        //Detect drawer sketch selection events
+        // Detect drawer sketch selection events
         drawerList.setOnItemClickListener(new ListView.OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -389,7 +385,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 						
 						break;
 					case SKETCH:
-						//Save the current sketch...
+						// Save the current sketch...
 						autoSave();
 						
 						if(drawerRecentSketch) {
@@ -418,15 +414,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			}
 		});
         
-        //TODO This scrolling is currently somewhat choppy because we have a drag listener for every item to deal with ListView item recycling
+        // TODO This scrolling is currently somewhat choppy because we have a drag listener for every item to deal with ListView item recycling
         if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.HONEYCOMB) {
         	drawerList.setOnDragListener(new View.OnDragListener() {
         		final float THRESHOLD = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 100, getResources().getDisplayMetrics());
         		
         		@Override
         		public boolean onDrag(View view, DragEvent event) {
-        			//If the dragged item is nearing the edges, scroll to see more content
-        			//Dragged items will be sketches / folders
+        			// If the dragged item is nearing the edges, scroll to see more content
+        			// Dragged items will be sketches / folders
         			
         			switch(event.getAction()) {
         			case DragEvent.ACTION_DRAG_LOCATION:
@@ -451,7 +447,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	});
         }
         
-        //Enable the home button, the "home as up" will actually get replaced by the drawer toggle button
+        // Enable the home button, the "home as up" will actually get replaced by the drawer toggle button
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         
@@ -459,7 +455,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         final HorizontalScrollView codeScrollerX = (HorizontalScrollView) findViewById(R.id.code_scroller_x);
         final EditText code = (EditText) findViewById(R.id.code);
         
-        //Obtain the root view
+        // Obtain the root view
         final View activityRootView = findViewById(R.id.content);
         
         final GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.OnGestureListener() {
@@ -518,9 +514,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			}
 		});
         
-        //Forward touch events to the code area so that the user can select anywhere
+        // Forward touch events to the code area so that the user can select anywhere
         codeScroller.setOnTouchListener(new View.OnTouchListener() {
-        	//Meta data from the current touch event
+        	// Meta data from the current touch event
         	private boolean dragged = false;
         	private float startX, startY;
         	private MotionEvent startEvent;
@@ -545,7 +541,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				
 				final LinearLayout padding = (LinearLayout) findViewById(R.id.code_padding);
 				
-				//Assign the starting pointer location
+				// Assign the starting pointer location
 				if(event.getAction() == MotionEvent.ACTION_DOWN) {
 					startX = event.getX();
 					startY = event.getY();
@@ -553,33 +549,33 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 					startEvent = event;
 				}
 				
-				//Some problems... some random crashes... just keep this fail-safe even though we shouldn't need it
+				// Some problems... some random crashes... just keep this fail-safe even though we shouldn't need it
 				if(startEvent == null) {
 					return false;
 				}
 				
-				//Calculate change in the current motion event
+				// Calculate change in the current motion event
 				float changeX = event.getX() - startX;
 				float changeY = event.getY() - startY;
 				
-				//The maximum change before the motion becomes a drag (20 DP)
+				// The maximum change before the motion becomes a drag (20 DP)
 				float maxChange = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 20, getResources().getDisplayMetrics());
 				
-				//Calculate distance to see if we've moved too far
+				// Calculate distance to see if we've moved too far
 				if(event.getAction() == MotionEvent.ACTION_MOVE && (changeX * changeX) + (changeY * changeY) > maxChange * maxChange)
 					dragged = true;
 				
-				//Only dispatch the touch event if this isn't a drag and there are tabs
+				// Only dispatch the touch event if this isn't a drag and there are tabs
 				if(code.getHeight() < codeScroller.getHeight() - padding.getPaddingBottom() + padding.getPaddingTop() && event.getAction() == MotionEvent.ACTION_UP
 						&& !dragged && tabBar.getTabCount() > 0) {
-					//Hacky - dispatches a touch event to the code area
+					// Hacky - dispatches a touch event to the code area
 					
 					code.requestFocus();
 					
 					code.post(new Runnable() {
 						public void run() {
 							MotionEvent me = MotionEvent.obtain(startEvent);
-							//Accommodate for scrolling
+							// Accommodate for scrolling
 							me.setLocation(me.getX() + codeScrollerX.getScrollX(), me.getY());
 							me.setAction(MotionEvent.ACTION_UP);
 							code.dispatchTouchEvent(me);
@@ -587,7 +583,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 						}
 					});
 					
-					//Make the keyboard visible (if the user doesn't have a hardware keyboard)
+					// Make the keyboard visible (if the user doesn't have a hardware keyboard)
 					if(!keyboardVisible && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
 						InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 						imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
@@ -597,7 +593,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				if(event.getAction() == MotionEvent.ACTION_UP)
 					dragged = false;
 				
-				//Make sure that the scroll area can still scroll
+				// Make sure that the scroll area can still scroll
 				return false;
 		}});
         
@@ -616,12 +612,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			}
 		});
         
-        //Make the code area fill the width of the screen
+        // Make the code area fill the width of the screen
         code.setMinimumWidth(activityRootView.getWidth());
         code.setMinWidth(activityRootView.getWidth());
         
-        //Detect software keyboard open / close events
-        //StackOverflow: http://stackoverflow.com/questions/2150078/how-to-check-visibility-of-software-keyboard-in-android
+        // Detect software keyboard open / close events
+        // StackOverflow: http://stackoverflow.com/questions/2150078/how-to-check-visibility-of-software-keyboard-in-android
         activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
         	@SuppressWarnings("deprecation")
 			@Override
@@ -631,8 +627,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         		activityRootView.getWindowVisibleDisplayFrame(r);
         		int heightDiff = activityRootView.getRootView().getHeight() - (r.bottom - r.top);
         		
-        		//Hide the soft keyboard if it's trying to show its dirty face...
-        		//...and the user doesn't want it
+        		// Hide the soft keyboard if it's trying to show its dirty face...
+        		// ...and the user doesn't want it
         		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
         			InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         			imm.hideSoftInputFromWindow(activityRootView.getWindowToken(), 0);
@@ -642,14 +638,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         		if(oldCodeHeight == -1)
         			oldCodeHeight = findViewById(R.id.code_scroller).getHeight();
         		
-        		if(heightDiff > 100) { //If the difference is bigger than 100, it's probably the keyboard
+        		if(heightDiff > 100) { // If the difference is bigger than 100, it's probably the keyboard
         			if(!keyboardVisible) {
 	        			keyboardVisible = true;
 	        			
 	        			if(message == -1)
 	        				message = findViewById(R.id.message).getHeight();
 	        			
-	        			//Configure the layout for the keyboard
+	        			// Configure the layout for the keyboard
 	        			
 	        			LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
 	        			TextView messageArea = (TextView) findViewById(R.id.message);
@@ -662,11 +658,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	        			else
 	        				oldCodeHeight = code.getHeight();
 	        			
-	        			//Start the custom animation TODO make the keyboard appearance prettier
+	        			// Start the custom animation TODO make the keyboard appearance prettier
 	        			messageArea.startAnimation(new MessageAreaAnimation(code, console, messageArea,
 								oldCodeHeight, content.getHeight() - message  - tabBar.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0), content.getHeight()));
 	        			
-	        			//Remove the focus from the Message slider if it has it and maintain styling
+	        			// Remove the focus from the Message slider if it has it and maintain styling
 	        			if(errorMessage) {
 	        				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
 	        				buffer.setBackgroundColor(getResources().getColor(R.color.error_back));
@@ -679,9 +675,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	        			
 	        			((CodeEditText) findViewById(R.id.code)).updateBracketMatch();
 	        			
-	        			//Don't do anything if the user has disabled the character insert tray
+	        			// Don't do anything if the user has disabled the character insert tray
 	        			if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true)) {
-	        				//Update the character insert tray
+	        				// Update the character insert tray
 	        				toggleCharInserts.setVisibility(View.VISIBLE);
 	        				findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.VISIBLE);
 	        				
@@ -693,13 +689,13 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         			}
         		} else {
         			if(keyboardVisible) {
-        				//Configure the layout for the absence of the keyboard
+        				// Configure the layout for the absence of the keyboard
         				
         				View messageArea = findViewById(R.id.message);
         				View codeArea = findViewById(R.id.code_scroller);
         				View consoleArea = findViewById(R.id.console_scroller);
         				
-        				//Start the custom animation TODO make the keyboard appearance prettier
+        				// Start the custom animation TODO make the keyboard appearance prettier
         				messageArea.startAnimation(new MessageAreaAnimation(codeArea, consoleArea, messageArea, codeArea.getLayoutParams().height, oldCodeHeight,
 								findViewById(R.id.content).getHeight()  - tabBar.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
         				
@@ -709,11 +705,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 							consoleWasHidden = false;
 						}
 	        			
-	        			//Remove any unnecessary focus from the code area
+	        			// Remove any unnecessary focus from the code area
 	        			((CodeEditText) findViewById(R.id.code)).clearFocus();
 	        			((CodeEditText) findViewById(R.id.code)).matchingBracket = -1;
 	        			
-	        			//Update the character insert tray
+	        			// Update the character insert tray
 	        			toggleCharInserts.setVisibility(View.GONE);
 	        			findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.GONE);
 	        			
@@ -726,15 +722,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         ((CodeEditText) findViewById(R.id.code)).setupCustomActionMode();
         
-        //Load default key bindings TODO load user's custom key bindings
-        //Also, do this after we initialize the console so that we can get error reports
+        // Load default key bindings TODO load user's custom key bindings
+        // Also, do this after we initialize the console so that we can get error reports
         
         keyBindings = new HashMap<String, KeyBinding>();
         
         try {
-        	//Use Processing's XML for simplicity
+        	// Use Processing's XML for simplicity
 			loadKeyBindings(new XML(getResources().getAssets().open("default_key_bindings.xml")));
-		} catch (IOException e) { //Errors... who cares, anyway?
+		} catch (IOException e) { // Errors... who cares, anyway?
 			e.printStackTrace();
 		} catch (ParserConfigurationException e) {
 			e.printStackTrace();
@@ -742,10 +738,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			e.printStackTrace();
 		}
         
-        //Initialize the reference to the toggle char inserts button
+        // Initialize the reference to the toggle char inserts button
         toggleCharInserts = (ImageButton) findViewById(R.id.toggle_char_inserts);
 		
-		//Show "What's New" screen if this is an update
+		// Show "What's New" screen if this is an update
 		
 		if (justUpdated && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_whats_new_enable", true)) {
 			final Stack<String> releaseNotesStack = getReleaseNotesStack(this);
@@ -773,15 +769,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			loadMore.setOnClickListener(new OnClickListener() {
 				@Override
 				public void onClick(View v) {
-					//Load five at once
+					// Load five at once
 					for (int i = 0; i < 5; i++) {
-						//Stop if we can't add any more
+						// Stop if we can't add any more
 						if (!addWhatsNewItem(list, listAdapter, releaseNotesStack, loadMore, true)) {
 							break;
 						}
 					}
 					
-					//Make the dialog big enough to hold all of them
+					// Make the dialog big enough to hold all of them
 					int w = FrameLayout.LayoutParams.MATCH_PARENT;
 					int h = FrameLayout.LayoutParams.WRAP_CONTENT;
 							
@@ -802,14 +798,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
 				@Override
 				public void onDismiss(DialogInterface dialog) {
-					//Let the user disable the "What's New" screen functionality
+					// Let the user disable the "What's New" screen functionality
 					SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(EditorActivity.this).edit();
 					edit.putBoolean("pref_whats_new_enable", keepShowing.isChecked());
 					edit.apply();
 					
-					//If the "What's New" screen is visible, wait to show the examples updates screen
+					// If the "What's New" screen is visible, wait to show the examples updates screen
 					
-					//Update examples repository
+					// Update examples repository
 					getGlobalState().initExamplesRepo();
 				}
 			});
@@ -830,9 +826,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				}
 			});
 		} else {
-			//If the "What's New" screen is visible, wait to show the examples updates screen
+			// If the "What's New" screen is visible, wait to show the examples updates screen
 			
-			//Update examples repository
+			// Update examples repository
 			getGlobalState().initExamplesRepo();
 		}
     }
@@ -972,7 +968,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	@SuppressLint("NewApi")
 	public void onResume() {
     	super.onResume();
-    	
+		
     	//Reference the SharedPreferences text size value
     	((CodeEditText) findViewById(R.id.code)).refreshTextSize();
 		((TextView) findViewById(R.id.console)).setTextSize(Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(this).getString("textsize_console", "14")));
@@ -1635,7 +1631,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      */
     public void saveSketch() {
     	//If we cannot write to the external storage (and the user wants to), make sure to inform the user
-    	if(!externalStorageWritable() && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("internal_storage_sketchbook", false)) {
+    	if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
+				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
             	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
@@ -1720,7 +1717,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     
     public void copyToSketchbook() {
     	//If we cannot write to the external storage (and the user wants to), make sure to inform the user
-    	if(!externalStorageWritable() && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("internal_storage_sketchbook", false)) {
+		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
+				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
             	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
@@ -3209,7 +3207,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	 */
 	private boolean externalStorageWritable() {
 		String state = Environment.getExternalStorageState();
-		if(Environment.MEDIA_MOUNTED.equals(state)) return true;
+		if (Environment.MEDIA_MOUNTED.equals(state)) return true;
 		else return false;
 	}
 	
@@ -3442,33 +3440,38 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	 * @param msg
 	 */
 	public void postConsole(String msg) {
+		// Check to see if we've suspended messages
+		if (FLAG_SUSPEND_OUT_STREAM.get() && !PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_debug_global_verbose_output", false)) {
+			return;
+		}
+		
 		final TextView tv = (TextView) findViewById(R.id.console);
 		
-		//Add the text
+		//	Add the text
 		tv.append(msg);
 		
 		final ScrollView scroll = ((ScrollView) findViewById(R.id.console_scroller));
 		final HorizontalScrollView scrollX = ((HorizontalScrollView) findViewById(R.id.console_scroller_x));
 		
-		//Scroll to the bottom (if the user has this feature enabled)
+		//	Scroll to the bottom (if the user has this feature enabled)
 		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_scroll_lock", true))
 			scroll.post(new Runnable() {
 				@Override
 				public void run() {
-					//Scroll to the bottom
+					//	Scroll to the bottom
 					scroll.fullScroll(ScrollView.FOCUS_DOWN);
 					
 					scrollX.post(new Runnable() {
 						public void run() {
-							//Don't scroll horizontally at all...
-							//TODO This doesn't really work
+							//	Don't scroll horizontally at all...
+							//	TODO This doesn't really work
 							scrollX.scrollTo(0, 0);
 						}
 					});
 			}});
 	}
 	
-	//Listener class for managing message area drag events
+	//	Listener class for managing message area drag events
 	public class MessageTouchListener implements android.view.View.OnLongClickListener, android.view.View.OnTouchListener {
 		private boolean pressed;
 		private int touchOff;
@@ -3482,7 +3485,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			
 			pressed = false;
 			
-			//Store necessary views globally
+			//	Store necessary views globally
 			code = findViewById(R.id.code_scroller);
 			console = findViewById(R.id.console_scroller);
 			content = findViewById(R.id.content);
@@ -3491,11 +3494,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		@SuppressWarnings("deprecation")
 		@Override
 		public boolean onTouch(View view, MotionEvent event) {
-			//Don't resize the console if there is no console to speak of
+			//	Don't resize the console if there is no console to speak of
 			if(keyboardVisible)
 				return false;
 			
-			//Get the offset relative to the touch
+			//	Get the offset relative to the touch
 			if(event.getAction() == MotionEvent.ACTION_DOWN)
 				touchOff = (int) event.getY();
 			
@@ -3505,10 +3508,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 					if(message == -1)
 						message = findViewById(R.id.message).getHeight();
 					
-					//Calculate maximum possible code view height
+					//	Calculate maximum possible code view height
 					int maxCode = content.getHeight() - message - tabBar.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
 					
-					//Find relative movement for this event
+					//	Find relative movement for this event
 					int y = (int) event.getY() - touchOff;
 					
 					//Calculate the new dimensions of the console
@@ -3518,10 +3521,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 					if(consoleDim > maxCode)
 						consoleDim = maxCode;
 					
-					//Calculate the new dimensions of the code view
+					//	Calculate the new dimensions of the code view
 					int codeDim = maxCode - consoleDim;
 					
-					//Set the new dimensions
+					//	Set the new dimensions
 					code.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim));
 					console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
 					
@@ -3538,7 +3541,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 					LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
 					TextView messageArea = (TextView) findViewById(R.id.message);
 					
-					//Change the message area drawable and maintain styling
+					//	Change the message area drawable and maintain styling
 					if(errorMessage) {
 						buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
 						messageArea.setTextColor(getResources().getColor(R.color.error_text));
@@ -3557,7 +3560,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		@SuppressWarnings("deprecation")
 		@Override
 		public boolean onLongClick(View view) {
-			//Don't resize the console if there is no console to speak of
+			//	Don't resize the console if there is no console to speak of
 			if(keyboardVisible)
 				return false;
 			
@@ -3566,7 +3569,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
 			TextView messageArea = (TextView) findViewById(R.id.message);
 			
-			//Change the message area drawable and maintain styling
+			//	Change the message area drawable and maintain styling
 			if(errorMessage) {
 				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error_selected));
 				messageArea.setTextColor(getResources().getColor(R.color.error_text));
@@ -3575,7 +3578,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				messageArea.setTextColor(getResources().getColor(R.color.message_text));
 			}
 			
-			//Provide haptic feedback (if the user has vibrations enabled)
+			//	Provide haptic feedback (if the user has vibrations enabled)
 			if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_vibrate", true))
 				((android.os.Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(200); //200 millis
 			
@@ -3583,7 +3586,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		}
 	}
 	
-	//Custom console output stream, used for System.out and System.err
+	//	Custom console output stream, used for System.out and System.err
 	private class ConsoleStream extends OutputStream {
 		final byte single[] = new byte[1];
 		
@@ -3602,17 +3605,76 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		public void write(byte b[], int offset, int length) {
 			final String value = new String(b, offset, length);
 			
-			runOnUiThread(new Runnable() {
-				public void run() {
-					//Write the value to the console
-					postConsole(value);
-			}});
+			if (!(FLAG_SUSPEND_OUT_STREAM.get() &&
+					!PreferenceManager.getDefaultSharedPreferences(EditorActivity.this)
+							.getBoolean("pref_debug_global_verbose_output", false))) {
+				
+				runOnUiThread(new Runnable() {
+					public void run() {
+						//	Write the value to the console
+						postConsole(value);
+					}
+				});
+			}
 		}
 		
 		@Override
 		public void write(int b) {
 			single[0] = (byte) b;
 			write(single, 0, 1);
+		}
+	}
+	
+	// Upgrade Changes are used to run specific code that facilitates an app upgrade
+	
+	public abstract class UpgradeChange implements Runnable {
+		public int changeVersion;
+		
+		public UpgradeChange(int changeVersion) {
+			this.changeVersion = changeVersion;
+		}
+	}
+	
+	public void runUpgradeChanges(int from, int to) {
+		ArrayList<UpgradeChange> upgradeChanges = new ArrayList<UpgradeChange>();
+		
+		// Hard-coded list of changes that have occurred
+		
+		// v0.3.3 Alpha
+		
+		// Change preference "Delete old build folder" to "Keep build folder" (invert)
+		upgradeChanges.add(new UpgradeChange(13) {
+			@Override
+			public void run() {
+				SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(EditorActivity.this);
+				
+				if (prefs.contains("pref_build_discard")) {
+					SharedPreferences.Editor edit = prefs.edit();
+					edit.putBoolean("pref_build_folder_keep", !prefs.getBoolean("pref_build_discard", true));
+					edit.apply();
+				}
+			}
+		});
+		
+		// Update some of the default examples
+		upgradeChanges.add(new UpgradeChange(13) {
+			@Override
+			public void run() {
+				// Update default examples in a separate thread
+				new Thread(new Runnable() {
+					public void run() {
+						copyAssetFolder(getAssets(), "examples", getGlobalState().getStarterExamplesFolder().getAbsolutePath());
+					}
+				}).start();
+			}
+		});
+		
+		// Process changes
+		
+		for (UpgradeChange upgradeChange : upgradeChanges) {
+			if (from < upgradeChange.changeVersion && to >= upgradeChange.changeVersion) {
+				upgradeChange.run();
+			}
 		}
 	}
 }

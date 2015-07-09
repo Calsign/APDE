@@ -140,7 +140,7 @@ public class Build {
 	}
 	
 	public static void cleanUpPostLaunch(EditorActivity editor) {
-		if(PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_discard", true)) {
+		if(!PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_folder_keep", true)) {
 			//Delete the build folder
 			if (!deleteFile((new Build(((APDE) editor.getApplicationContext())).getBuildFolder()))) {
 				System.out.println("Failed to delete build folder");

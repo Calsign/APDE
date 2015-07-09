@@ -245,11 +245,14 @@ public class SettingsActivityHC extends PreferenceActivity {
 	}
 	
 	protected void updateSketchbookDrivePref(ListPreference sketchbookDrive, Preference sketchbookLocation, ArrayList<APDE.StorageDrive> drives) {
-		APDE.StorageDrive selected = drives.get(sketchbookDrive.findIndexOfValue(sketchbookDrive.getValue().toString()));
+		int selectedIndex = sketchbookDrive.findIndexOfValue(sketchbookDrive.getValue());
 		
-		if (selected == null) {
+		if (selectedIndex == -1) {
+			//Uh-oh
 			return;
 		}
+		
+		APDE.StorageDrive selected = drives.get(selectedIndex);
 		
 		sketchbookLocation.setEnabled(!(selected.type.equals(APDE.StorageDrive.StorageDriveType.INTERNAL) || selected.type.equals(APDE.StorageDrive.StorageDriveType.SECONDARY_EXTERNAL)));
 		sketchbookDrive.setSummary(selected.space + " " + selected.type.title);

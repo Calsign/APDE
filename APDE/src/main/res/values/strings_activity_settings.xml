@@ -32,8 +32,7 @@
     <string name="pref_build">Build</string>
     <string name="pref_build_internal_storage">Build on Internal Storage</string>
     <string name="pref_build_internal_storage_desc">May consume additional internal storage space</string>
-    <string name="pref_build_discard">Delete old Build Folder</string>
-    <string name="pref_build_discard_desc">For debugging purposes</string>
+    <string name="pref_build_folder_keep">Keep Build Folder</string>
     <string name="pref_vibrate_desc">May consume battery</string>
     <string name="override_tab_desc">Overrides tab for accessibility</string>
     <string name="inject_log_broadcaster">Inject Log Broadcaster</string>
@@ -83,5 +82,7 @@
     <string name="pref_whats_new_enable_desc">When APDE updates</string>
     <string name="pref_whats_new_display">View Recent Changes</string>
     <string name="pref_sketchbook_drive">Sketchbook Location</string>
+    <string name="pref_debug">Debug</string>
+    <string name="pref_debug_global_verbose_output">Global Verbose Output</string>
 
 </resources>

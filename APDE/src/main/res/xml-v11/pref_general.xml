@@ -45,4 +45,13 @@
             <extra android:name="resource" android:value="pref_examples" />
         </Preference>
     </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="pref_debug"
+        android:title="@string/pref_debug" >
+
+        <CheckBoxPreference
+            android:key="pref_debug_global_verbose_output"
+            android:title="@string/pref_debug_global_verbose_output" />
+    </PreferenceCategory>
 </PreferenceScreen>

@@ -12,16 +12,20 @@
         
         <CheckBoxPreference
             android:defaultValue="true"
-            android:key="pref_build_discard"
-            android:title="@string/pref_build_discard"
-            android:summary="@string/pref_build_discard_desc" />
-        
-        <CheckBoxPreference
-            android:defaultValue="true"
             android:key="inject_log_broadcaster"
             android:title="@string/inject_log_broadcaster"
             android:summary="@string/inject_log_broadcaster_desc" />
+    </PreferenceCategory>
     
+    <PreferenceCategory
+        android:key="pref_build_debug"
+        android:title="@string/pref_debug" >
+        
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="pref_build_folder_keep"
+            android:title="@string/pref_build_folder_keep" />
+        
         <CheckBoxPreference
             android:defaultValue="false"
             android:key="build_output_verbose"
