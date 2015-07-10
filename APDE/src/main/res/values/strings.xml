@@ -260,5 +260,7 @@
     <string name="whats_new">What\'s New</string>
     <string name="whats_new_more">More changes</string>
     <string name="whats_new_keep_showing">Show when APDE updates</string>
+    <string name="menu_copy_sketch">Copy Sketch</string>
+    <string name="copy_suffix">_copy</string>
 
 </resources>

@@ -349,18 +349,25 @@ public class SketchPropertiesActivity extends PreferenceActivity {
         
         switch(getGlobalState().getSketchLocationType()) {
     	case SKETCHBOOK:
+			menu.findItem(R.id.menu_save).setVisible(true);
+			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
+			menu.findItem(R.id.menu_copy_sketch).setVisible(true);
+			break;
     	case TEMPORARY:
     		menu.findItem(R.id.menu_save).setVisible(true);
     		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
+			menu.findItem(R.id.menu_copy_sketch).setVisible(false);
     		break;
     	case EXTERNAL:
     		menu.findItem(R.id.menu_save).setVisible(true);
     		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+			menu.findItem(R.id.menu_copy_sketch).setVisible(false);
     		break;
     	case EXAMPLE:
     	case LIBRARY_EXAMPLE:
     		menu.findItem(R.id.menu_save).setVisible(false);
     		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+			menu.findItem(R.id.menu_copy_sketch).setVisible(false);
     		break;
     	}
         
@@ -369,31 +376,34 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	
 	@Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch(item.getItemId()) {
-            case android.R.id.home:
-            	finish();
-                return true;
-            case R.id.menu_change_sketch_name:
-            	changeSketchName();
-            	return true;
-            case R.id.action_settings:
-            	launchSettings();
-            	return true;
-            case R.id.menu_save:
-            	saveSketch();
-            	return true;
-            case R.id.menu_copy_to_sketchbook:
-            	copyToSketchbook();
-            	return true;
-        	case R.id.menu_delete:
-        		deleteSketch();
-        		return true;
-        	case R.id.menu_new:
-        		newSketch();
-        		return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
+		switch(item.getItemId()) {
+		case android.R.id.home:
+			finish();
+			return true;
+		case R.id.menu_change_sketch_name:
+			changeSketchName();
+			return true;
+		case R.id.action_settings:
+			launchSettings();
+			return true;
+		case R.id.menu_save:
+			saveSketch();
+			return true;
+		case R.id.menu_copy_to_sketchbook:
+			copyToSketchbook();
+			return true;
+		case R.id.menu_delete:
+			deleteSketch();
+			return true;
+		case R.id.menu_new:
+			newSketch();
+			return true;
+		case R.id.menu_copy_sketch:
+			copySketch();
+			return true;
+		default:
+			return super.onOptionsItemSelected(item);
+		}
     }
 	
 	private void launchSettings() {
@@ -713,7 +723,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	
 	private void saveSketch() {
 		//If we cannot write to the external storage (and the user wants to), make sure to inform the user
-		if(!externalStorageWritable() && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("internal_storage_sketchbook", false)) {
+		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
+				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
             	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
@@ -770,7 +781,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	
 	private void copyToSketchbook() {
 		//If we cannot write to the external storage (and the user wants to), make sure to inform the user
-		if(!externalStorageWritable() && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("internal_storage_sketchbook", false)) {
+		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
+				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
 			.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
@@ -785,6 +797,61 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		getGlobalState().getEditor().copyToSketchbook();
 		
 		restartActivity();
+	}
+	
+	public void copySketch() {
+		//If we cannot write to the external storage (and the user wants to), make sure to inform the user
+		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
+				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
+					.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
+					.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+						}
+					}).show();
+
+			return;
+		}
+		
+		//The original sketch location
+		File oldLoc = getGlobalState().getSketchLocation();
+		
+		String before = getGlobalState().getSketchName();
+		//Append "_copy" to the sketch name so that they don't overlap
+		String after = before + getResources().getString(R.string.copy_suffix);
+		//Do the same thing to the path
+		String sketchPath = getGlobalState().getSketchPath() + getResources().getString(R.string.copy_suffix);
+		
+		//Obtain the location of the sketch
+		File sketchLoc = getGlobalState().getSketchLocation(sketchPath, APDE.SketchLocation.SKETCHBOOK);
+		
+		//Ensure that the sketch folder exists
+		sketchLoc.mkdirs();
+		
+		try {
+			APDE.copyFile(oldLoc, sketchLoc);
+			
+			//We need to add it to the recent list
+			getGlobalState().putRecentSketch(APDE.SketchLocation.SKETCHBOOK, sketchPath);
+			
+			getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
+			
+			//Make sure the code area is editable
+			((CodeEditText) getGlobalState().getEditor().findViewById(R.id.code)).setFocusable(true);
+			((CodeEditText) getGlobalState().getEditor().findViewById(R.id.code)).setFocusableInTouchMode(true);
+			
+			//Force the drawer to reload
+			getGlobalState().getEditor().forceDrawerReload();
+			getGlobalState().getEditor().supportInvalidateOptionsMenu();
+			getGlobalState().setSketchName(after);
+			
+			getGlobalState().getEditor().setSaved(true);
+		} catch (IOException e) {
+			//Inform the user of failure
+			getGlobalState().getEditor().error(getResources().getText(R.string.sketch_save_failure));
+		}
 	}
 	
 	private boolean externalStorageWritable() {
