@@ -1661,7 +1661,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	
     	//Obtain the location of the sketch
     	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.EXTERNAL) ?
-    			APDE.SketchLocation.EXTERNAL : APDE.SketchLocation.SKETCHBOOK);
+				APDE.SketchLocation.EXTERNAL : APDE.SketchLocation.SKETCHBOOK);
     	
     	//Ensure that the sketch folder exists
     	sketchLoc.mkdirs();
@@ -2432,16 +2432,39 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		button.setOnClickListener(new OnClickListener() {
 				@Override
 				public void onClick(View view) {
-					//A special check for the tab key... making special exceptions aren't exactly ideal, but this is probably the most concise solution (for now)...
+					// A special check for the tab key... making special exceptions aren't exactly ideal, but this is probably the most concise solution (for now)...
 					KeyEvent event = c.equals("\u2192") ? new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB) : new KeyEvent(android.os.SystemClock.uptimeMillis(), c, keyboardID, 0);
-					code.dispatchKeyEvent(event);
 					
-					//Provide haptic feedback (if the user has vibrations enabled)
+					boolean dispatched = false;
+					
+					if (extraHeaderView != null) {
+						// If the find/replace toolbar is open
+						
+						EditText findTextField = (EditText) extraHeaderView.findViewById(R.id.find_replace_find_text);
+						EditText replaceTextField = (EditText) extraHeaderView.findViewById(R.id.find_replace_replace_text);
+						
+						if (findTextField != null) {
+							if (findTextField.hasFocus()) {
+								findTextField.dispatchKeyEvent(event);
+								dispatched = true;
+							} else {
+								if (replaceTextField != null && replaceTextField.hasFocus()) {
+									replaceTextField.dispatchKeyEvent(event);
+									dispatched = true;
+								}
+							}
+						}
+					}
+					
+					if (!dispatched) {
+						code.dispatchKeyEvent(event);
+					}
+					
+					// Provide haptic feedback (if the user has vibrations enabled)
 					if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_vibrate", true))
 						((android.os.Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(10); //10 millis
 				}
     		});
-    		
     	}
     }
     
