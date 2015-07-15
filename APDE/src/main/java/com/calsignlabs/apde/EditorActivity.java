@@ -3663,22 +3663,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		
 		// Hard-coded list of changes that have occurred
 		
-		// v0.3.3 Alpha
-		
-		// Change preference "Delete old build folder" to "Keep build folder" (invert)
-		upgradeChanges.add(new UpgradeChange(13) {
-			@Override
-			public void run() {
-				SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(EditorActivity.this);
-				
-				if (prefs.contains("pref_build_discard")) {
-					SharedPreferences.Editor edit = prefs.edit();
-					edit.putBoolean("pref_build_folder_keep", !prefs.getBoolean("pref_build_discard", true));
-					edit.apply();
-				}
-			}
-		});
-		
+		// v0.3.3 Alpha pre-1
+
 		// Update some of the default examples
 		upgradeChanges.add(new UpgradeChange(13) {
 			@Override
@@ -3689,6 +3675,22 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 						copyAssetFolder(getAssets(), "examples", getGlobalState().getStarterExamplesFolder().getAbsolutePath());
 					}
 				}).start();
+			}
+		});
+		
+		// v0.3.3 Alpha pre-2
+		
+		// Change preference "Delete old build folder" to "Keep build folder" (invert)
+		upgradeChanges.add(new UpgradeChange(14) {
+			@Override
+			public void run() {
+				SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(EditorActivity.this);
+				
+				if (prefs.contains("pref_build_discard")) {
+					SharedPreferences.Editor edit = prefs.edit();
+					edit.putBoolean("pref_build_folder_keep", !prefs.getBoolean("pref_build_discard", true));
+					edit.apply();
+				}
 			}
 		});
 		

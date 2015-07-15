@@ -400,7 +400,9 @@ public class Build {
 		binFolder.mkdir();
 		dexedLibsFolder.mkdir();
 		
-		tmpFolder.mkdir();
+		if (!tmpFolder.exists()) {
+			tmpFolder.mkdir();
+		}
 		
 		//Make sure we have the latest version of the libraries folder
 		((APDE) editor.getApplicationContext()).rebuildLibraryList();
