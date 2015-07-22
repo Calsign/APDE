@@ -73,11 +73,7 @@ public class ColorSelector implements Tool {
 			AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
 			builder.setTitle(R.string.color_selector);
 			
-			if(android.os.Build.VERSION.SDK_INT >= 11) {
-				layout = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), R.layout.color_selector, null);
-			} else {
-				layout = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), R.layout.color_selector, null);
-			}
+			layout = (LinearLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.color_selector, null);
 				
 			colorSquare = (ColorSquare) layout.findViewById(R.id.color_square);
 			hueStrip = (HueStrip) layout.findViewById(R.id.hue_strip);

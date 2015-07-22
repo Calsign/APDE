@@ -57,7 +57,7 @@
 	                android:layout_alignParentRight="true"
 	                android:layout_marginLeft="6dp"
 	                android:contentDescription="@string/copy_hex"
-	                android:src="@drawable/ic_copy" />
+	                android:src="@drawable/ic_copy_white" />
 				
 	            <TextView
 	                android:id="@+id/hex"

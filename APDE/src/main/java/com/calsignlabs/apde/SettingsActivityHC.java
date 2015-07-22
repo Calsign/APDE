@@ -23,6 +23,7 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatDelegate;
 import android.support.v7.widget.Toolbar;
 import android.view.ContextThemeWrapper;
+import android.view.LayoutInflater;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -48,90 +49,9 @@ import java.util.Stack;
  * Settings activity for API level 11+
  */
 public class SettingsActivityHC extends PreferenceActivity {
-	//StackOverflow: http://stackoverflow.com/a/26705551/1628609
-	private AppCompatDelegate mDelegate;
-	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		getDelegate().installViewFactory();
-		getDelegate().onCreate(savedInstanceState);
 		super.onCreate(savedInstanceState);
-		
-		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-	}
-	
-	public ActionBar getSupportActionBar() {
-		return getDelegate().getSupportActionBar();
-	}
-	
-	public void setSupportActionBar(@Nullable Toolbar toolbar) {
-		getDelegate().setSupportActionBar(toolbar);
-	}
-	
-	@Override
-	public MenuInflater getMenuInflater() {
-		return getDelegate().getMenuInflater();
-	}
-	
-	@Override
-	public void setContentView(@LayoutRes int layoutResID) {
-		getDelegate().setContentView(layoutResID);
-	}
-	
-	@Override
-	public void setContentView(View view) {
-		getDelegate().setContentView(view);
-	}
-	
-	@Override
-	public void setContentView(View view, ViewGroup.LayoutParams params) {
-		getDelegate().setContentView(view, params);
-	}
-	
-	@Override
-	public void addContentView(View view, ViewGroup.LayoutParams params) {
-		getDelegate().addContentView(view, params);
-	}
-	
-	@Override
-	protected void onPostResume() {
-		super.onPostResume();
-		getDelegate().onPostResume();
-	}
-	
-	@Override
-	protected void onTitleChanged(CharSequence title, int color) {
-		super.onTitleChanged(title, color);
-		getDelegate().setTitle(title);
-	}
-	
-	@Override
-	public void onConfigurationChanged(Configuration newConfig) {
-		super.onConfigurationChanged(newConfig);
-		getDelegate().onConfigurationChanged(newConfig);
-	}
-	
-	@Override
-	protected void onStop() {
-		super.onStop();
-		getDelegate().onStop();
-	}
-	
-	@Override
-	protected void onDestroy() {
-		super.onDestroy();
-		getDelegate().onDestroy();
-	}
-	
-	public void invalidateOptionsMenu() {
-		getDelegate().invalidateOptionsMenu();
-	}
-	
-	private AppCompatDelegate getDelegate() {
-		if (mDelegate == null) {
-			mDelegate = AppCompatDelegate.create(this, null);
-		}
-		return mDelegate;
 	}
 	
 	@SuppressLint("NewApi")
@@ -139,7 +59,16 @@ public class SettingsActivityHC extends PreferenceActivity {
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
 		
-		getDelegate().onPostCreate(savedInstanceState);
+		// StackOverflow: http://stackoverflow.com/a/27455330/1628609
+		LinearLayout root = (LinearLayout) findViewById(android.R.id.list).getParent().getParent().getParent();
+		Toolbar toolbar = (Toolbar) LayoutInflater.from(this).inflate(R.layout.settings_toolbar, root, false);
+		root.addView(toolbar, 0);
+		toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				finish();
+			}
+		});
 		
 		getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
 	}

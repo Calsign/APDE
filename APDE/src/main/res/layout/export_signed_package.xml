@@ -27,7 +27,7 @@
                 android:layout_toLeftOf="@+id/keystore_new"
                 android:contentDescription="@string/keystore_file_select"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_select_file" />
+                android:src="@drawable/ic_folder_white" />
             
             <ImageButton
                 android:id="@id/keystore_new"
@@ -38,7 +38,7 @@
                 android:layout_alignTop="@id/keystore_file"
                 android:contentDescription="@string/keystore_new"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_new_holo_dark" />
+                android:src="@drawable/ic_new_white" />
             
             <AutoCompleteTextView
                 android:id="@id/keystore_file"
@@ -81,7 +81,7 @@
                 android:layout_toLeftOf="@+id/alias_new"
                 android:contentDescription="@string/certificate_info"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_info" />
+                android:src="@drawable/ic_info_white" />
             
             <ImageButton
                 android:id="@id/alias_new"
@@ -92,7 +92,7 @@
                 android:layout_alignTop="@+id/alias"
                 android:contentDescription="@string/alias_new"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_new_holo_dark" />
+                android:src="@drawable/ic_new_white" />
             
             <Spinner
                 android:id="@id/alias"

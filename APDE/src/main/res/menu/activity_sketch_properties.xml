@@ -4,7 +4,7 @@
     
     <item
         android:id="@+id/menu_change_sketch_name"
-        android:icon="@drawable/ic_action_edit"
+        android:icon="@drawable/ic_edit_white"
         app:showAsAction="ifRoom"
         android:showAsAction="ifRoom"
         android:title="@string/menu_change_sketch_name"/>

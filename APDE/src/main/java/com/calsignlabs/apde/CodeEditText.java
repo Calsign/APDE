@@ -186,7 +186,7 @@ public class CodeEditText extends EditText {
 				}
 				
 				EditorActivity editor = ((APDE) context.getApplicationContext()).getEditor();
-				FileMeta meta = editor.getCurrentFileMeta();
+				SketchFile meta = editor.getSelectedSketchFile();
 				
 				if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("pref_key_undo_redo", true)) {
 					if (!FLAG_NO_UNDO_SNAPSHOT) {

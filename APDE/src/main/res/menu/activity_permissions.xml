@@ -3,13 +3,14 @@
     
     <item
         android:id="@+id/menu_new_permission"
-        android:icon="@drawable/ic_action_name"
+        android:icon="@drawable/ic_new_white"
         app:showAsAction="ifRoom"
         android:showAsAction="ifRoom"
         android:title="@string/menu_new_permission" />
     <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
+        app:showAsAction="never"
         android:showAsAction="never"
         android:title="@string/action_settings" />
 </menu>

@@ -39,6 +39,7 @@ import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.ContextThemeWrapper;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -49,15 +50,13 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 public class SketchPropertiesActivity extends PreferenceActivity {
-	//StackOverflow: http://stackoverflow.com/a/26705551/1628609
-	private AppCompatDelegate mDelegate;
-	
 	//This is a number, that's all that matters
 	private static final int REQUEST_CHOOSER = 6283;
 	//This is another number - this time, it's for something else
@@ -77,106 +76,34 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		getDelegate().installViewFactory();
-		getDelegate().onCreate(savedInstanceState);
-		
 		super.onCreate(savedInstanceState);
 		
 		setContentView(R.layout.activity_sketch_properties);
 		
-//		if(android.os.Build.VERSION.SDK_INT >= 11) { //Yet another unfortunate casualty of AppCompat
-			getSupportActionBar().setTitle(getGlobalState().getSketchName());
-			getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-//		}
+		// StackOverflow: http://stackoverflow.com/a/27455330/1628609
+		LinearLayout root = (LinearLayout) findViewById(android.R.id.list).getParent().getParent().getParent();
+		Toolbar toolbar = (Toolbar) LayoutInflater.from(this).inflate(R.layout.settings_toolbar, root, false);
+		root.addView(toolbar, 0);
+		toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				finish();
+			}
+		});
+		
+		toolbar.setTitle(getGlobalState().getSketchName());
 		
 		getGlobalState().setProperties(this);
         
-//        getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
-	}
-	
-	private AppCompatDelegate getDelegate() {
-		if (mDelegate == null) {
-			mDelegate = AppCompatDelegate.create(this, null);
-		}
-		return mDelegate;
-	}
-	
-	public ActionBar getSupportActionBar() {
-		return getDelegate().getSupportActionBar();
-	}
-	
-	public void setSupportActionBar(@Nullable Toolbar toolbar) {
-		getDelegate().setSupportActionBar(toolbar);
+        getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
 	}
 	
 	@Override
-	public MenuInflater getMenuInflater() {
-		return getDelegate().getMenuInflater();
-	}
-	
-	@Override
-	public void setContentView(@LayoutRes int layoutResID) {
-		getDelegate().setContentView(layoutResID);
-	}
-	
-	@Override
-	public void setContentView(View view) {
-		getDelegate().setContentView(view);
-	}
-	
-	@Override
-	public void setContentView(View view, ViewGroup.LayoutParams params) {
-		getDelegate().setContentView(view, params);
-	}
-	
-	@Override
-	public void addContentView(View view, ViewGroup.LayoutParams params) {
-		getDelegate().addContentView(view, params);
-	}
-	
-	@Override
-	protected void onPostResume() {
-		super.onPostResume();
-		getDelegate().onPostResume();
-	}
-	
-	@Override
-	protected void onTitleChanged(CharSequence title, int color) {
-		super.onTitleChanged(title, color);
-		getDelegate().setTitle(title);
-	}
-	
-	@Override
-	public void onConfigurationChanged(Configuration newConfig) {
-		super.onConfigurationChanged(newConfig);
-		getDelegate().onConfigurationChanged(newConfig);
-	}
-	
-	@Override
-	protected void onDestroy() {
-		super.onDestroy();
-		getDelegate().onDestroy();
-	}
-	
-	public void invalidateOptionsMenu() {
-		getDelegate().invalidateOptionsMenu();
-	}
-	
-	@Override
-	protected void onPostCreate(Bundle savedInstanceState) {
+	public void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
-		getDelegate().onPostCreate(savedInstanceState);
 		
 		setupSimplePreferencesScreen();
 	}
-	
-	@Override
-    public void onStop() {
-		getGlobalState().getEditor().saveSketchForStop();
-    	
-    	super.onStop();
-		getDelegate().onStop();
-    }
 	
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -514,12 +441,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	public void launchChangeIcon() {
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setTitle(R.string.prop_change_icon);
-		
-		if (android.os.Build.VERSION.SDK_INT >= 11) {
-			changeIconLayout = (ScrollView) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog), R.layout.change_icon, null);
-		} else {
-			changeIconLayout = (ScrollView) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Dialog), R.layout.change_icon, null);
-		}
+
+		changeIconLayout = (ScrollView) View.inflate(new ContextThemeWrapper(this, R.style.Theme_AppCompat_Dialog), R.layout.change_icon, null);
 		
 		iconFile = (EditText) changeIconLayout.findViewById(R.id.change_icon_file);
 		final ImageButton iconFileSelect = (ImageButton) changeIconLayout.findViewById(R.id.change_icon_file_select);

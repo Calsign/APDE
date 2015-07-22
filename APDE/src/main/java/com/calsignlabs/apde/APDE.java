@@ -494,9 +494,9 @@ public class APDE extends Application {
     	return (CodeEditText) editor.findViewById(R.id.code);
     }
 	
-	public ScrollingTabContainerView getEditorTabBar() {
-		return editor.tabBar;
-	}
+//	public ScrollingTabContainerView getEditorTabBar() {
+//		return editor.tabBar;
+//	}
 	
 	/**
 	 * @return the location of the Sketchbook folder on the external storage
@@ -1350,5 +1350,13 @@ public class APDE extends Application {
 		//Some magic to put our own platform in place
 		Base.initPlatform();
 		AndroidPlatform.setDir(dir);
+	}
+	
+	public boolean getPref(String pref, boolean def) {
+		return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(pref, def);
+	}
+	
+	public String getPref(String pref, String def) {
+		return PreferenceManager.getDefaultSharedPreferences(this).getString(pref, def);
 	}
 }

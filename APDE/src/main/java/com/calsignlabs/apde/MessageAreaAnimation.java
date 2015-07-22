@@ -1,10 +1,11 @@
 package com.calsignlabs.apde;
 
 import android.view.View;
-import android.widget.LinearLayout.LayoutParams;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.Transformation;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 
 /**
  * Custom Animation class for animating the Message area transitions
@@ -47,8 +48,8 @@ public class MessageAreaAnimation extends Animation {
 		int consoleDim = maxCode - codeDim;
 		
 		//Set the new dimensions
-		code.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, codeDim));
-		console.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, consoleDim));
+		code.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, codeDim));
+		console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
 		
 		code.postInvalidate();
 		console.postInvalidate();

@@ -165,12 +165,8 @@ public class ExportSignedPackage implements Tool {
 		builder.setTitle(context.getResources().getText(R.string.export_signed_package));
 		
 		final ScrollView layout;
-		
-		if (android.os.Build.VERSION.SDK_INT >= 11) {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), R.layout.export_signed_package, null);
-		} else {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), R.layout.export_signed_package, null);
-		}
+
+		layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.export_signed_package, null);
 		
 		keystoreFile = (AutoCompleteTextView) layout.findViewById(R.id.keystore_file);
 		keystorePassword = (EditText) layout.findViewById(R.id.keystore_password);
@@ -406,11 +402,7 @@ public class ExportSignedPackage implements Tool {
 				
 				TableLayout infoLayout;
 				
-				if (android.os.Build.VERSION.SDK_INT >= 11) {
-					infoLayout = (TableLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), R.layout.certificate_info, null);
-				} else {
-					infoLayout = (TableLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), R.layout.certificate_info, null);
-				}
+				infoLayout = (TableLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.certificate_info, null);
 				
 				((TextView) infoLayout.findViewById(R.id.alias_name)).setText((String) alias.getSelectedItem());
 				((TextView) infoLayout.findViewById(R.id.certificate_expiration)).setText(new SimpleDateFormat(context.getResources().getString(R.string.date_format), Locale.US).format(certificate.getNotAfter()));
@@ -537,11 +529,7 @@ public class ExportSignedPackage implements Tool {
 		
 		final ScrollView layout;
 		
-		if (android.os.Build.VERSION.SDK_INT >= 11) {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), R.layout.create_keystore, null);
-		} else {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), R.layout.create_keystore, null);
-		}
+		layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.create_keystore, null);
 		
 		createKeystoreFile = (EditText) layout.findViewById(R.id.create_keystore_file);
 		createKeystorePassword = (EditText) layout.findViewById(R.id.create_keystore_password);
@@ -659,11 +647,7 @@ public class ExportSignedPackage implements Tool {
 		
 		final ScrollView layout;
 		
-		if (android.os.Build.VERSION.SDK_INT >= 11) {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), R.layout.create_alias, null);
-		} else {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), R.layout.create_alias, null);
-		}
+		layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.create_alias, null);
 		
 		createAliasAlias = (EditText) layout.findViewById(R.id.create_alias_alias);
 		createAliasPassword = (EditText) layout.findViewById(R.id.create_alias_password);

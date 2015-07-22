@@ -4,22 +4,22 @@
     
     <item
         android:id="@+id/menu_run"
-        android:icon="@drawable/ic_action_run"
+        android:icon="@drawable/ic_run_white"
         app:showAsAction="ifRoom"
         android:title="@string/menu_run" />
     <item
         android:id="@+id/menu_stop"
-        android:icon="@drawable/ic_action_stop"
+        android:icon="@drawable/ic_stop_white"
         app:showAsAction="ifRoom"
         android:title="@string/menu_stop" />
     <item
         android:id="@+id/menu_undo"
-        android:icon="@drawable/ic_undo"
+        android:icon="@drawable/ic_undo_white"
         app:showAsAction="ifRoom"
         android:title="@string/undo" />
     <item
         android:id="@+id/menu_redo"
-        android:icon="@drawable/ic_redo"
+        android:icon="@drawable/ic_redo_white"
         app:showAsAction="ifRoom"
         android:title="@string/redo" />
     <item

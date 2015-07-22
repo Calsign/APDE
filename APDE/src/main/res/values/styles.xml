@@ -31,6 +31,7 @@
         <item name="buttonBarButtonStyle">@style/ButtonBarButton</item>
         <item name="colorPrimary">@color/bar_overlay</item>
         <item name="android:windowNoTitle">true</item>
+        <item name="windowActionModeOverlay">true</item>
     </style>
     
     <style name="PreferencesTheme" parent="@style/FullscreenTheme">
@@ -38,6 +39,7 @@
         <item name="android:windowBackground">@color/activity_background</item>
         <item name="colorPrimary">@color/bar_overlay</item>
         <item name="android:windowNoTitle">true</item>
+        <item name="windowActionModeOverlay">true</item>
     </style>
     
     <style name="ButtonBar">

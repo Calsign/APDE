@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.preference.PreferenceManager;
+import android.support.v4.app.Fragment;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
@@ -19,7 +20,7 @@ import java.util.LinkedList;
  * Utility class for storing information about files
  * This started out as a meta... but is has grown to incorporate far more information than that
  */
-public class FileMeta implements Parcelable {
+public class SketchFile implements Parcelable {
 	//Filename meta
 	private String title;
 	private String suffix;
@@ -47,6 +48,10 @@ public class FileMeta implements Parcelable {
 	//Current scroll position;
 	protected int scrollX;
 	protected int scrollY;
+	
+	protected CodeAreaFragment fragment;
+
+	protected boolean isExample;
 	
 	public static class FileChange implements Parcelable {
 		public int changeIndex;
@@ -124,7 +129,9 @@ public class FileMeta implements Parcelable {
 		};
 	}
 	
-	public FileMeta(String title) {
+	public SketchFile(String title) {
+		initFragment();
+		
 		setTitle(title);
 		setSuffix(".pde");
 		
@@ -151,10 +158,12 @@ public class FileMeta implements Parcelable {
 		enabled = true;
 	}
 	
-	public FileMeta(String title, EditorActivity context) {
-		EditText code = ((EditText) context.findViewById(R.id.code));
-		HorizontalScrollView scrollerX = ((HorizontalScrollView) context.findViewById(R.id.code_scroller_x));
-		ScrollView scrollerY = ((ScrollView) context.findViewById(R.id.code_scroller));
+	public SketchFile(String title, EditorActivity context) {
+		initFragment();
+		
+		EditText code = fragment.getCodeEditText();
+		HorizontalScrollView scrollerX = fragment.getCodeScrollerX();
+		ScrollView scrollerY = fragment.getCodeScroller();
 		
 		setTitle(title);
 		setSuffix(".pde");
@@ -184,7 +193,9 @@ public class FileMeta implements Parcelable {
 //		System.out.println("setting tab " + title + ", scrollX: " + scrollX + ", scrollY: " + scrollY);
 	}
 	
-	public FileMeta(String title, String text, int selectionStart, int selectionEnd, int scrollX, int scrollY) {
+	public SketchFile(String title, String text, int selectionStart, int selectionEnd, int scrollX, int scrollY) {
+		initFragment();
+		
 		setTitle(title);
 		setSuffix(".pde");
 		
@@ -239,14 +250,14 @@ public class FileMeta implements Parcelable {
 		change.afterText = afterEnd - changeStart > 0 ? newText.substring(changeStart, afterEnd) : "";
 	}
 	
-	public FileChange getFileChange(EditorActivity context) {
-		EditText code = (EditText) context.findViewById(R.id.code);
+	public FileChange getFileChange() {
+		EditText code = fragment.getCodeEditText();
 		
 		String codeText = code.getText().toString();
 		
 		if (!text.equals(codeText)) {
-			HorizontalScrollView scrollerX = (HorizontalScrollView) context.findViewById(R.id.code_scroller_x);
-			ScrollView scrollerY = (ScrollView) context.findViewById(R.id.code_scroller);
+			HorizontalScrollView scrollerX = fragment.getCodeScrollerX();
+			ScrollView scrollerY = fragment.getCodeScroller();
 			
 			FileChange change = new FileChange();
 			
@@ -272,7 +283,7 @@ public class FileMeta implements Parcelable {
 	
 	public void update(EditorActivity context, boolean undoRedo) {
 		if (undoRedo) {
-			FileChange change = getFileChange(context);
+			FileChange change = getFileChange();
 			
 			if (change != null) {
 				clearRedo();
@@ -280,7 +291,7 @@ public class FileMeta implements Parcelable {
 				
 				applyUndoRedoLimit(context);
 				
-				text = ((EditText) context.findViewById(R.id.code)).getText().toString();
+				text = fragment.getCodeEditText().getText().toString();
 				
 				selectionStart = change.afterSelectionStart;
 				selectionEnd = change.afterSelectionEnd;
@@ -289,9 +300,9 @@ public class FileMeta implements Parcelable {
 				
 				context.supportInvalidateOptionsMenu();
 			} else {
-				EditText code = (EditText) context.findViewById(R.id.code);
-				HorizontalScrollView scrollerX = (HorizontalScrollView) context.findViewById(R.id.code_scroller_x);
-				ScrollView scrollerY = (ScrollView) context.findViewById(R.id.code_scroller);
+				EditText code = fragment.getCodeEditText();
+				HorizontalScrollView scrollerX = fragment.getCodeScrollerX();
+				ScrollView scrollerY = fragment.getCodeScroller();
 				
 				selectionStart = code.getSelectionStart();
 				selectionEnd = code.getSelectionEnd();
@@ -300,9 +311,9 @@ public class FileMeta implements Parcelable {
 				scrollY = scrollerY.getScrollY();
 			}
 		} else {
-			EditText code = (EditText) context.findViewById(R.id.code);
-			HorizontalScrollView scrollerX = (HorizontalScrollView) context.findViewById(R.id.code_scroller_x);
-			ScrollView scrollerY = (ScrollView) context.findViewById(R.id.code_scroller);
+			EditText code = fragment.getCodeEditText();
+			HorizontalScrollView scrollerX = fragment.getCodeScrollerX();
+			ScrollView scrollerY = fragment.getCodeScroller();
 			
 			text = code.getText().toString();
 			
@@ -493,9 +504,9 @@ public class FileMeta implements Parcelable {
 	}
 	
 	private void updateEditor(EditorActivity context) {
-		final CodeEditText code = ((CodeEditText) context.findViewById(R.id.code));
-		final HorizontalScrollView scrollerX = ((HorizontalScrollView) context.findViewById(R.id.code_scroller_x));
-		final ScrollView scrollerY = ((ScrollView) context.findViewById(R.id.code_scroller));
+		final CodeEditText code = fragment.getCodeEditText();
+		final HorizontalScrollView scrollerX = fragment.getCodeScrollerX();
+		final ScrollView scrollerY = fragment.getCodeScroller();
 		
 		//Update the code area text
 		code.setNoUndoText(getText());
@@ -763,6 +774,24 @@ public class FileMeta implements Parcelable {
 		preprocOffset += extra;
 	}
 	
+	private void initFragment() {
+		if (fragment == null) {
+			fragment = CodeAreaFragment.newInstance(this);
+		}
+	}
+	
+	public CodeAreaFragment getFragment() {
+		return fragment;
+	}
+	
+	public boolean isExample() {
+		return isExample;
+	}
+	
+	public void setExample(boolean isExample) {
+		this.isExample = isExample;
+	}
+	
 	//Only used when converting to a parcel
 	public int tabNum = -1;
 	
@@ -794,7 +823,9 @@ public class FileMeta implements Parcelable {
 		dest.writeInt(scrollY);
 	}
 	
-	private FileMeta(Parcel source) {
+	private SketchFile(Parcel source) {
+		initFragment();
+		
 		title = source.readString();
 		suffix = source.readString();
 		
@@ -819,15 +850,15 @@ public class FileMeta implements Parcelable {
 		scrollY = source.readInt();
 	}
 	
-	public static final Parcelable.Creator<FileMeta> CREATOR = new Parcelable.Creator<FileMeta>() {
+	public static final Parcelable.Creator<SketchFile> CREATOR = new Parcelable.Creator<SketchFile>() {
 		@Override
-		public FileMeta createFromParcel(Parcel source) {
-			return new FileMeta(source);
+		public SketchFile createFromParcel(Parcel source) {
+			return new SketchFile(source);
 		}
 		
 		@Override
-		public FileMeta[] newArray(int size) {
-			return new FileMeta[size];
+		public SketchFile[] newArray(int size) {
+			return new SketchFile[size];
 		}
 	};
 }

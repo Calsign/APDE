@@ -7,7 +7,9 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.view.ActionMode;
+import android.support.v7.widget.Toolbar;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
@@ -45,7 +47,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GitHistoryActivity extends ActionBarActivity {
+public class GitHistoryActivity extends AppCompatActivity {
 	private GitRepository repo;
 	private ArrayList<RevCommit> commits;
 	private ArrayList<CharSequence> commitMessages;
@@ -57,6 +59,10 @@ public class GitHistoryActivity extends ActionBarActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_git_history);
+		
+		Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+		toolbar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
+		setSupportActionBar(toolbar);
 		
 		getSupportActionBar().setHomeButtonEnabled(true);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -388,14 +394,22 @@ public class GitHistoryActivity extends ActionBarActivity {
 		
 		@Override
 		public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-			//http://stackoverflow.com/a/23533575
+			// StackOverflow: http://stackoverflow.com/a/23533575
 			if (rootView == null) {
 				rootView = inflater.inflate(R.layout.fragment_git_history_commit, container, false);
-			} else {
-				((ViewGroup) rootView.getParent()).removeView(rootView);
 			}
 			
 			return rootView;
+		}
+		
+		@Override
+		public void onDestroyView() {
+			// StackOverflow: http://stackoverflow.com/a/23533575
+			if (rootView.getParent() != null) {
+				((ViewGroup) rootView.getParent()).removeView(rootView);
+			}
+			
+			super.onDestroyView();
 		}
 		
 		@Override

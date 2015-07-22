@@ -14,6 +14,7 @@
         <item name="android:colorPrimaryDark">@color/bar_overlay_dark</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
+        <item name="windowActionModeOverlay">true</item>
     </style>
     
     <style name="PreferencesTheme" parent="@style/FullscreenTheme" >
@@ -23,6 +24,7 @@
         <item name="android:colorPrimaryDark">@color/bar_overlay_dark</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
+        <item name="windowActionModeOverlay">true</item>
     </style>
     
     <style name="PreferencesActionBarStyle" parent="android:style/Widget.Holo.ActionBar">

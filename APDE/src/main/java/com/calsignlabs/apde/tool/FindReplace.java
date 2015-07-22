@@ -26,7 +26,7 @@ import android.widget.ScrollView;
 import android.widget.Toast;
 
 import com.calsignlabs.apde.APDE;
-import com.calsignlabs.apde.FileMeta;
+import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.support.ScrollingTabContainerView;
@@ -229,24 +229,12 @@ public class FindReplace implements Tool {
 				contentView = ((LinearLayout) context.getEditor().findViewById(R.id.content));
 				
 				if (context.isExample()) {
-					if (android.os.Build.VERSION.SDK_INT >= 11) {
-						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo), R.layout.find_toolbar, null);
-					} else {
-						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme), R.layout.find_toolbar, null);
-					}
+					findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat), R.layout.find_toolbar, null);
 				} else {
-					if (android.os.Build.VERSION.SDK_INT >= 11) {
-						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo), R.layout.find_replace_toolbar, null);
-					} else {
-						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme), R.layout.find_replace_toolbar, null);
-					}
+					findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat), R.layout.find_replace_toolbar, null);
 				}
 				
-				if (android.os.Build.VERSION.SDK_INT >= 11) {
-					options = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo), R.layout.find_replace_options, null);
-				} else {
-					options = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme), R.layout.find_replace_options, null);
-				}
+				options = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.find_replace_options, null);
 				
 				findReplaceToolbar.requestLayout();
 				
@@ -336,14 +324,14 @@ public class FindReplace implements Tool {
 					public void onClick(View v) {
 						if (replaceBar.getVisibility() == View.GONE) {
 							replaceBar.setVisibility(View.VISIBLE);
-							expandCollapseButton.setImageResource(R.drawable.ic_caret_up);
+							expandCollapseButton.setImageResource(R.drawable.ic_caret_up_white);
 							
 							context.getEditor().refreshMessageAreaLocation();
 							
 							assignLongPressDescription(context, expandCollapseButton, R.string.collapse);
 						} else {
 							replaceBar.setVisibility(View.GONE);
-							expandCollapseButton.setImageResource(R.drawable.ic_caret_down);
+							expandCollapseButton.setImageResource(R.drawable.ic_caret_down_white);
 							
 							context.getEditor().refreshMessageAreaLocation();
 							
@@ -559,20 +547,20 @@ public class FindReplace implements Tool {
 					String selectionText = context.getCodeArea().getText().toString().substring(selectionStart, selectionEnd);
 					
 					findMatches = findMatches((caseSensitive.get() ? token : token.toLowerCase()), (caseSensitive.get() ? selectionText : selectionText.toLowerCase()),
-							context.getEditorTabBar().getSelectedTabIndex(), selectionStart);
+							context.getEditor().getSelectedCodeIndex(), selectionStart);
 					
 					break;
 				case CURRENT_TAB:
 					String currentTabText = context.getCodeArea().getText().toString();
 					
 					findMatches = findMatches((caseSensitive.get() ? token : token.toLowerCase()), (caseSensitive.get() ? currentTabText : currentTabText.toLowerCase()),
-							context.getEditorTabBar().getSelectedTabIndex(), 0);
+							context.getEditor().getSelectedCodeIndex(), 0);
 					
 					break;
 				case ALL_TABS:
 					findMatches = new ArrayList<FindMatch>();
 					
-					for (int i = 0; i < context.getEditorTabBar().getTabCount(); i ++) {
+					for (int i = 0; i < context.getEditor().getCodeCount(); i ++) {
 						String tabText = context.getEditor().getTabMetas()[i].getText();
 						
 						findMatches.addAll(findMatches((caseSensitive.get() ? token : token.toLowerCase()), (caseSensitive.get() ? tabText : tabText.toLowerCase()), i, 0));
@@ -627,8 +615,8 @@ public class FindReplace implements Tool {
 		
 		String caseToken = (caseSensitive.get() ? token : token.toLowerCase());
 		
-		int currentTab = context.getEditorTabBar().getSelectedTabIndex();
-		int tabCount = context.getEditorTabBar().getTabCount();
+		int currentTab = context.getEditor().getSelectedCodeIndex();
+		int tabCount = context.getEditor().getCodeCount();
 		
 		switch (scope.get()) {
 		case SELECTION:
@@ -685,7 +673,7 @@ public class FindReplace implements Tool {
 		context.getCodeArea().clearHighlights();
 		
 		for (FindMatch findMatch : findMatches) {
-			if (findMatch.tabNum == context.getEditorTabBar().getSelectedTabIndex()) {
+			if (findMatch.tabNum == context.getEditor().getSelectedCodeIndex()) {
 				context.getCodeArea().addHighlight(findMatch.position, findMatch.tokenLength, highlightAllPaint);
 			}
 		}
@@ -706,13 +694,13 @@ public class FindReplace implements Tool {
 			return;
 		}
 		
-		ScrollingTabContainerView tabBar = context.getEditorTabBar();
+//		ScrollingTabContainerView tabBar = context.getEditorTabBar();
 		boolean forward = direction.get().equals(Direction.FORWARD);
 		
-		int nextFindMatch = indexOfTextPos(tabBar.getSelectedTabIndex(), forward ? context.getCodeArea().getSelectionEnd() : context.getCodeArea().getSelectionStart(), forward);
+		int nextFindMatch = indexOfTextPos(context.getEditor().getSelectedCodeIndex(), forward ? context.getCodeArea().getSelectionEnd() : context.getCodeArea().getSelectionStart(), forward);
 		
 		if (nextFindMatch == -1 && scope.get().equals(Scope.ALL_TABS)) {
-			for (int i = tabBar.getSelectedTabIndex() + (forward ? 1 : -1); (forward ? i < tabBar.getTabCount() : i >= 0); i += (forward ? 1 : -1)) {
+			for (int i = context.getEditor().getSelectedCodeIndex() + (forward ? 1 : -1); (forward ? i < context.getEditor().getCodeCount() : i >= 0); i += (forward ? 1 : -1)) {
 				int matchIndex = indexOfTextPos(i, (forward ? 0 : context.getEditor().getTabMetas()[i].getText().length() - 1), forward);
 				
 				if (matchIndex != -1) {
@@ -722,7 +710,7 @@ public class FindReplace implements Tool {
 			}
 			
 			if (nextFindMatch == -1 && wrapAround.get()) {
-				for (int i = (forward ? 0 : tabBar.getTabCount() - 1); (forward ? i <= tabBar.getSelectedTabIndex() : i >= tabBar.getSelectedTabIndex()); i += (forward ? 1 : -1)) {
+				for (int i = (forward ? 0 : context.getEditor().getCodeCount() - 1); (forward ? i <= context.getEditor().getSelectedCodeIndex() : i >= context.getEditor().getSelectedCodeIndex()); i += (forward ? 1 : -1)) {
 					int matchIndex = indexOfTextPos(i, (forward ? 0 : context.getEditor().getTabMetas()[i].getText().length() - 1), forward);
 					
 					if (matchIndex != -1) {
@@ -756,10 +744,10 @@ public class FindReplace implements Tool {
 			return;
 		}
 		
-		ScrollingTabContainerView tabBar = context.getEditorTabBar();
+//		ScrollingTabContainerView tabBar = context.getEditorTabBar();
 		boolean forward = direction.get().equals(Direction.FORWARD);
 		
-		int cursorFindMatch = indexOfTextPos(tabBar.getSelectedTabIndex(), forward ? context.getCodeArea().getSelectionStart() : context.getCodeArea().getSelectionEnd(), forward);
+		int cursorFindMatch = indexOfTextPos(context.getEditor().getSelectedCodeIndex(), forward ? context.getCodeArea().getSelectionStart() : context.getCodeArea().getSelectionEnd(), forward);
 		
 		if (cursorFindMatch == -1 && wrapAround.get()) {
 			cursorFindMatch = forward ? 0 : findMatches.size() - 1;
@@ -801,8 +789,8 @@ public class FindReplace implements Tool {
 	
 	public void selectFindMatch(final FindMatch findMatch) {
 		//Select the correct tab
-		if (context.getEditorTabBar().getSelectedTabIndex() != findMatch.tabNum) {
-			context.getEditorTabBar().selectTab(findMatch.tabNum);
+		if (context.getEditor().getSelectedCodeIndex() != findMatch.tabNum) {
+			context.getEditor().selectCode(findMatch.tabNum);
 		}
 		
 		if (!highlightAll.get()) {
@@ -902,7 +890,7 @@ public class FindReplace implements Tool {
 //					Editable selectionText = Editable.Factory.getInstance().newEditable(context.getCodeArea().getText().toString().substring(selectionStart, selectionEnd));
 //					
 //					while (true) {
-//						FindMatch selectionFindMatch = findFirstMatch(find, selectionText.toString(), context.getEditorTabBar().getSelectedTabIndex(), selectionStart);
+//						FindMatch selectionFindMatch = findFirstMatch(find, selectionText.toString(), context.getEditor().getSelectedCodeIndex(), selectionStart);
 //						
 //						if (selectionFindMatch == null) {
 //							break;
@@ -920,7 +908,7 @@ public class FindReplace implements Tool {
 					Editable currentTabText = Editable.Factory.getInstance().newEditable(context.getCodeArea().getText());
 					
 					while (true) {
-						FindMatch currentTabFindMatch = findFirstMatch(find, currentTabText.toString(), context.getEditorTabBar().getSelectedTabIndex(), 0, 0);
+						FindMatch currentTabFindMatch = findFirstMatch(find, currentTabText.toString(), context.getEditor().getSelectedCodeIndex(), 0, 0);
 						
 						if (currentTabFindMatch == null) {
 							break;
@@ -937,10 +925,10 @@ public class FindReplace implements Tool {
 				case ALL_TABS:
 					int tabNum = 0;
 					
-					tabTexts = new Editable[context.getEditorTabBar().getTabCount()];
+					tabTexts = new Editable[context.getEditor().getCodeCount()];
 					
 					for (int i = 0; i < tabTexts.length; i ++) {
-						if (i == context.getEditorTabBar().getSelectedTabIndex()) {
+						if (i == context.getEditor().getSelectedCodeIndex()) {
 							tabTexts[i] = Editable.Factory.getInstance().newEditable(context.getCodeArea().getText());
 						} else {
 							tabTexts[i] = Editable.Factory.getInstance().newEditable(context.getEditor().getTabMetas()[i].getText());
@@ -951,7 +939,7 @@ public class FindReplace implements Tool {
 						FindMatch tabFindMatch = findFirstMatch(find, tabTexts[tabNum].toString(), tabNum, 0, 0);
 						
 						if (tabFindMatch == null) {
-							if (tabNum >= context.getEditorTabBar().getTabCount() - 1) {
+							if (tabNum >= context.getEditor().getCodeCount() - 1) {
 								break;
 							} else {
 								tabNum ++;
@@ -980,13 +968,13 @@ public class FindReplace implements Tool {
 					public void run() {
 						if (scope.get().equals(Scope.ALL_TABS)) {
 							for (int i = 0; i < finalOutputTexts.length; i ++) {
-								if (i == context.getEditorTabBar().getSelectedTabIndex()) {
+								if (i == context.getEditor().getSelectedCodeIndex()) {
 									context.getCodeArea().setUpdateText(finalOutputTexts[i].toString());
 								} else {
-									FileMeta fileMeta = context.getEditor().getTabMetas()[i];
+									SketchFile sketchFile = context.getEditor().getTabMetas()[i];
 									
 									if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("pref_key_undo_redo", true)) {
-										fileMeta.update(context.getEditor(), getFileChange(fileMeta, finalOutputTexts[i]));
+										sketchFile.update(context.getEditor(), getFileChange(sketchFile, finalOutputTexts[i]));
 									}
 								}
 							}
@@ -1008,10 +996,10 @@ public class FindReplace implements Tool {
 		});
 	}
 	
-	protected FileMeta.FileChange getFileChange(FileMeta meta, CharSequence newText) {
-		FileMeta.FileChange fileChange = new FileMeta.FileChange();
+	protected SketchFile.FileChange getFileChange(SketchFile meta, CharSequence newText) {
+		SketchFile.FileChange fileChange = new SketchFile.FileChange();
 		
-		FileMeta.getTextChange(fileChange, meta.getText(), newText.toString());
+		SketchFile.getTextChange(fileChange, meta.getText(), newText.toString());
 		
 		fileChange.beforeSelectionStart = meta.getSelectionStart();
 		fileChange.beforeSelectionEnd = meta.getSelectionEnd();

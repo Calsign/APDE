@@ -3,5 +3,5 @@
     <item
         android:id="@+id/menu_git_diff"
         android:title="@string/git_diff"
-        android:icon="@drawable/ic_git_diff" />
+        android:icon="@drawable/ic_diff_white" />
 </menu>
