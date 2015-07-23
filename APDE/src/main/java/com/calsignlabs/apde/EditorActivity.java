@@ -868,12 +868,18 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	
 	protected static Stack<String> getReleaseNotesStack(Context context) {
 		String fullText = APDE.readAssetFile(context, "whatsnew.txt");
-		//File is seperated human-readably...
+		// File is seperated human-readably...
 		List<String> releaseNotes = Arrays.asList(
-				fullText.split("\n------------------------------------------------------------------------\n"));
-		//Read most recent first
+				fullText.split("------------------------------------------------------------------------"));
+		
+		// Remove newlines at beginning and end
+		for (int i = 0; i < releaseNotes.size(); i ++) {
+			releaseNotes.set(i, releaseNotes.get(i).trim());
+		}
+		
+		// Read most recent first
 		Collections.reverse(releaseNotes);
-		//Make into a stack so that we can peel off items one at a time
+		// Make into a stack so that we can peel off items one at a time
 		final Stack<String> releaseNotesStack = new Stack<String>();
 		releaseNotesStack.addAll(releaseNotes);
 		

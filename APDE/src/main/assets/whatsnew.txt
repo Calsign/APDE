@@ -4,8 +4,9 @@ v0.3.3 Alpha
  - Basic Git integration
  - Find/replace
  - Support all external storage locations
- - Java 1.6 compiler compliance
  - What's new and about screens
+ - Java 1.6 compiler compliance
+ - AAPT build failure fixed
  - Library manager crash fixed
  - Conway example fixed
  - Lots of other bug fixes

@@ -140,7 +140,7 @@ public class GitHistoryActivity extends ActionBarActivity {
 			//You can't select the last item, "Empty Repository"
 			return;
 		}
-
+		
 		if ((getResources().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_XLARGE) {
 			commitListFragment.selectItem(num);
 		}
@@ -696,6 +696,8 @@ public class GitHistoryActivity extends ActionBarActivity {
 				}
 			});
 			
+			View diffHeader = getView().findViewById(R.id.git_history_diff_header);
+			
 			if (commit != null) {
 				PersonIdent commitAuthor = commit.getAuthorIdent();
 				String name = commitAuthor.getName();
@@ -726,7 +728,6 @@ public class GitHistoryActivity extends ActionBarActivity {
 				authorView.setText(author);
 				timestampView.setText(timestamp);
 				
-				View diffHeader = getView().findViewById(R.id.git_history_diff_header);
 				diffHeader.setVisibility(View.VISIBLE);
 				
 				if (!shortMessage.equals(fullMessage)) {
@@ -748,6 +749,8 @@ public class GitHistoryActivity extends ActionBarActivity {
 					authorView.setOnClickListener(messageToggleListener);
 					timestampView.setOnClickListener(messageToggleListener);
 				}
+			} else {
+				diffHeader.setVisibility(View.GONE);
 			}
 			
 			//If there aren't any changes, let the user know

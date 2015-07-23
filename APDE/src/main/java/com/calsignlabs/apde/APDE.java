@@ -294,31 +294,36 @@ public class APDE extends Application {
 	 * @return whether or not the directory contains any sketches
 	 */
 	public boolean containsSketches(File directory, String[] ignoreFilenames) {
-		//Sanity check...
-		if(!directory.isDirectory()) {
+		// Sanity check...
+		if (!directory.isDirectory()) {
 			return false;
 		}
 		
-		//Make sure we don't want to ignore this directory
-		for(String ignore : ignoreFilenames) {
-			if(directory.getName().equals(ignore)) {
+		// Make sure we don't want to ignore this directory
+		for (String ignore : ignoreFilenames) {
+			if (directory.getName().equals(ignore)) {
 				return false;
 			}
 		}
 		
-		//Let's check this folder first...
-		if(validSketch(directory)) {
+		// Let's check this folder first...
+		if (validSketch(directory)) {
 			return true;
 		}
 		
 		File[] contents = directory.listFiles();
 		
-		//Check the subfolders
-		for(File file : contents) {
-			if(file.isDirectory()) {
-				if(validSketch(file)) {
+		if (contents == null) {
+			// This occasionally happens when probing Android secure directories...
+			return false;
+		}
+		
+		// Check the subfolders
+		for (File file : contents) {
+			if (file.isDirectory()) {
+				if (validSketch(file)) {
 					return true;
-				} else if(containsSketches(file)) {
+				} else if (containsSketches(file)) {
 					return true;
 				}
 			}
@@ -332,22 +337,27 @@ public class APDE extends Application {
 	 * @return whether or not the given folder is a valid sketch folder
 	 */
 	public boolean validSketch(File sketchFolder) {
-		//Sanity check
-		if((!sketchFolder.exists()) || (!sketchFolder.isDirectory())) {
+		// Sanity check
+		if ((!sketchFolder.exists()) || (!sketchFolder.isDirectory())) {
 			return false;
 		}
 		
 		File[] contents = sketchFolder.listFiles();
 		
-		for(File file : contents) {
-			//Get the file extension
+		if (contents == null) {
+			// This occasionally happens when probing Android secure directories...
+			return false;
+		}
+		
+		for (File file : contents) {
+			// Get the file extension
 			String filename = file.getName();
 			int lastDot = filename.lastIndexOf('.');
 			String extension = lastDot != -1 ? filename.substring(lastDot) : "";
 			
-			//Check for .PDE
-			if(extension.equalsIgnoreCase(".pde")) {
-				//We have our match
+			// Check for .PDE
+			if (extension.equalsIgnoreCase(".pde")) {
+				// We have our match
 				return true;
 			}
 		}
@@ -735,38 +745,38 @@ public class APDE extends Application {
 					
 					try {
 						GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
-
+						
 						// Check to see if an update is available
 						if (!examplesRepo.exists() || (examplesRepo.exists() && examplesRepo.canPull())) {
 							examplesRepo.close();
-
+							
 							// Yucky multi-threading
 							editor.runOnUiThread(new Runnable() {
 								public void run() {
 									AlertDialog.Builder builder = new AlertDialog.Builder(editor);
-
+									
 									builder.setTitle(R.string.update_examples_dialog_title);
-
+									
 									LinearLayout layout = (LinearLayout) View.inflate(APDE.this, R.layout.examples_update_dialog, null);
-
+									
 									final CheckBox dontShowAgain = (CheckBox) layout.findViewById(R.id.examples_update_dialog_dont_show_again);
 									final TextView disableWarning = (TextView) layout.findViewById(R.id.examples_update_dialog_disable_warning);
-
+									
 									builder.setView(layout);
-
+									
 									builder.setPositiveButton(R.string.update, new DialogInterface.OnClickListener() {
 										@Override
 										public void onClick(DialogInterface dialog, int which) {
 											if (dontShowAgain.isChecked()) {
 												// "Close"
-
+												
 												// Disable examples updates
 												SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(APDE.this).edit();
 												edit.putBoolean("update_examples", false);
 												edit.apply();
 											} else {
 												// "Update"
-
+												
 												// This kicks off yet another thread
 												updateExamplesRepo();
 											}
@@ -778,18 +788,21 @@ public class APDE extends Application {
 										public void onClick(DialogInterface dialog, int which) {
 										}
 									});
-
+									
 									AlertDialog dialog = builder.create();
 									dialog.show();
-
+									
 									final Button updateButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
-
+									final Button cancelButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
+									
 									dontShowAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 										@Override
 										public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 											disableWarning.setVisibility(isChecked ? View.VISIBLE : View.GONE);
 											// Change the behavior if the user wants to get rid of this dialog...
 											updateButton.setText(isChecked ? R.string.close : R.string.update);
+											// Hide the cancel button so that it's unambiguous
+											cancelButton.setEnabled(!isChecked);
 										}
 									});
 								}
@@ -919,7 +932,8 @@ public class APDE extends Application {
 			
 			builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
 				@Override
-				public void onClick(DialogInterface dialog, int which) {}
+				public void onClick(DialogInterface dialog, int which) {
+				}
 			});
 			
 			builder.create().show();
