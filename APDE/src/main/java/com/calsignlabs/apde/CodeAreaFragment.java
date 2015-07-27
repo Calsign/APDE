@@ -94,19 +94,19 @@ public class CodeAreaFragment extends Fragment {
 //        	private boolean dragged = false;
 //        	private float startX, startY;
 			private MotionEvent startEvent;
-
+			
 			@Override
 			public boolean onTouch(View v, MotionEvent event) {
 				if (getGlobalState().isExample()) {
 					return false;
 				}
-
+				
 				//Make the keyboard visible (if the user doesn't have a hardware keyboard)
 				if (!getGlobalState().getEditor().keyboardVisible && !PreferenceManager.getDefaultSharedPreferences(getGlobalState()).getBoolean("use_hardware_keyboard", false)) {
 					InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
 					imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
 				}
-
+				
 				//Make sure that the scroll area can still scroll
 				return false;
 			}
@@ -157,6 +157,9 @@ public class CodeAreaFragment extends Fragment {
 	
 	@Override
 	public void onDestroyView() {
+		// Make sure we save our state
+		sketchFile.update(getGlobalState().getEditor(), getGlobalState().getPref("pref_key_undo_redo", true));
+		
 		// Don't want to leak the Activity!
 		code = null;
 		codeScroller = null;

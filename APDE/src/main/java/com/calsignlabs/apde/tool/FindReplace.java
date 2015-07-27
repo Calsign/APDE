@@ -6,15 +6,20 @@ import android.content.SharedPreferences;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.preference.PreferenceManager;
+import android.support.v4.view.ViewPager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.DisplayMetrics;
+import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -29,7 +34,7 @@ import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
-import com.calsignlabs.apde.support.ScrollingTabContainerView;
+import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.task.Task;
 
 import java.util.ArrayList;
@@ -238,12 +243,36 @@ public class FindReplace implements Tool {
 				
 				findReplaceToolbar.requestLayout();
 				
+				context.getEditor().initCodeAreaAndConsoleDimensions();
+				
 				findReplaceToolbar.post(new Runnable() {
 					@Override
 					public void run() {
 						contentView.addView(findReplaceToolbar, 0, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+						findReplaceToolbar.getLayoutParams().height = 0; // We want to animate in
 						context.getEditor().setExtraHeaderView(findReplaceToolbar);
-						context.getEditor().refreshMessageAreaLocation();
+//						context.getEditor().refreshMessageAreaLocation();
+						
+						float height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40, context.getResources().getDisplayMetrics());
+						
+						ViewPager codePager = context.getEditor().getCodePager();
+						ScrollView console = context.getEditor().getConsoleScroller();
+						
+						findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, 0, LinearLayout.LayoutParams.MATCH_PARENT, height));
+						
+						ResizeAnimation<LinearLayout> resizeCode;
+						ResizeAnimation<LinearLayout> resizeConsole;
+						if (codePager.getHeight() >= height) {
+							resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight(), LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
+							resizeConsole = null;
+						} else {
+							resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0, false);
+							resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight()), false);
+						}
+						codePager.startAnimation(resizeCode);
+						if (resizeConsole != null) {
+							console.startAnimation(resizeConsole);
+						}
 					}
 				});
 				
@@ -322,21 +351,70 @@ public class FindReplace implements Tool {
 				expandCollapseButton.setOnClickListener(new ImageButton.OnClickListener() {
 					@Override
 					public void onClick(View v) {
+						float height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40, context.getResources().getDisplayMetrics());
+						
+						if (findReplaceToolbar.getHeight() != height && findReplaceToolbar.getHeight() != height * 2) {
+							// Don't open or close if we're still animating
+							return;
+						}
+						
+						ViewPager codePager = context.getEditor().getCodePager();
+						
+						RotateAnimation rotate = new RotateAnimation(180f, 360f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+						rotate.setInterpolator(new AccelerateDecelerateInterpolator());
+						rotate.setRepeatCount(0);
+						rotate.setDuration(200);
+						
 						if (replaceBar.getVisibility() == View.GONE) {
 							replaceBar.setVisibility(View.VISIBLE);
 							expandCollapseButton.setImageResource(R.drawable.ic_caret_up_white);
 							
-							context.getEditor().refreshMessageAreaLocation();
+//							context.getEditor().refreshMessageAreaLocation();
 							
 							assignLongPressDescription(context, expandCollapseButton, R.string.collapse);
+							
+							findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, height, LinearLayout.LayoutParams.MATCH_PARENT, height * 2));
+							
+							ScrollView console = context.getEditor().getConsoleScroller();
+							
+							ResizeAnimation<LinearLayout> resizeCode;
+							ResizeAnimation<LinearLayout> resizeConsole;
+							if (codePager.getHeight() >= height) {
+								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
+								resizeConsole = null;
+							} else {
+								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0, false);
+								resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight()), false);
+							}
+							codePager.startAnimation(resizeCode);
+							if (resizeConsole != null) {
+								console.startAnimation(resizeConsole);
+							}
 						} else {
-							replaceBar.setVisibility(View.GONE);
 							expandCollapseButton.setImageResource(R.drawable.ic_caret_down_white);
 							
-							context.getEditor().refreshMessageAreaLocation();
+//							context.getEditor().refreshMessageAreaLocation();
 							
 							assignLongPressDescription(context, expandCollapseButton, R.string.expand);
+							
+							ResizeAnimation<LinearLayout> resize = new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, height * 2, LinearLayout.LayoutParams.MATCH_PARENT, height);
+							resize.setAnimationListener(new Animation.AnimationListener() {
+								@Override
+								public void onAnimationStart(Animation animation) {}
+								
+								@Override
+								public void onAnimationEnd(Animation animation) {
+									replaceBar.setVisibility(View.GONE);
+								}
+								
+								@Override
+								public void onAnimationRepeat(Animation animation) {}
+							});
+							findReplaceToolbar.startAnimation(resize);
+							codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() + height));
 						}
+						
+						expandCollapseButton.startAnimation(rotate);
 					}
 				});
 				
@@ -410,13 +488,30 @@ public class FindReplace implements Tool {
 	
 	public void close() {
 		if (findReplaceToolbar != null) {
-			contentView.removeView(findReplaceToolbar);
-			context.getEditor().setExtraHeaderView(null);
-			context.getEditor().refreshMessageAreaLocation();
-
-			clearHighlights();
-
-			context.getCodeArea().removeTextChangedListener(codeWatcher);
+			ViewPager codePager = context.getEditor().getCodePager();
+			
+			ResizeAnimation<LinearLayout> resize = new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0);
+			resize.setAnimationListener(new Animation.AnimationListener() {
+				@Override
+				public void onAnimationStart(Animation animation) {
+				}
+				
+				@Override
+				public void onAnimationEnd(Animation animation) {
+					contentView.removeView(findReplaceToolbar);
+					context.getEditor().setExtraHeaderView(null);
+//					context.getEditor().refreshMessageAreaLocation();
+					
+					clearHighlights();
+					
+					context.getCodeArea().removeTextChangedListener(codeWatcher);
+				}
+				
+				@Override
+				public void onAnimationRepeat(Animation animation) {}
+			});
+			findReplaceToolbar.startAnimation(resize);
+			codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() + findReplaceToolbar.getHeight()));
 		}
 	}
 	
@@ -694,7 +789,6 @@ public class FindReplace implements Tool {
 			return;
 		}
 		
-//		ScrollingTabContainerView tabBar = context.getEditorTabBar();
 		boolean forward = direction.get().equals(Direction.FORWARD);
 		
 		int nextFindMatch = indexOfTextPos(context.getEditor().getSelectedCodeIndex(), forward ? context.getCodeArea().getSelectionEnd() : context.getCodeArea().getSelectionStart(), forward);
@@ -744,7 +838,6 @@ public class FindReplace implements Tool {
 			return;
 		}
 		
-//		ScrollingTabContainerView tabBar = context.getEditorTabBar();
 		boolean forward = direction.get().equals(Direction.FORWARD);
 		
 		int cursorFindMatch = indexOfTextPos(context.getEditor().getSelectedCodeIndex(), forward ? context.getCodeArea().getSelectionStart() : context.getCodeArea().getSelectionEnd(), forward);

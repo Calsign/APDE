@@ -672,15 +672,7 @@ public class GitRepository {
 	}
 	
 	private View inflateLayout(Context context, int layoutId) {
-		View layout;
-		
-		if(android.os.Build.VERSION.SDK_INT >= 11) {
-			layout = (View) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), layoutId, null);
-		} else {
-			layout = (View) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), layoutId, null);
-		}
-		
-		return layout;
+		return View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), layoutId, null);
 	}
 	
 	private void showLayoutAlert(Activity context, int titleId, View layout, int positiveButtonTitleId, DialogInterface.OnClickListener positiveListener) {

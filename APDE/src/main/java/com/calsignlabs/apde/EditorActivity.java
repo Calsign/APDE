@@ -12,7 +12,6 @@ import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
-import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
@@ -21,19 +20,13 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBar.Tab;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutCompat;
 import android.support.v7.widget.Toolbar;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 import android.view.DragEvent;
-import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -47,6 +40,9 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -66,7 +62,7 @@ import com.astuetz.PagerSlidingTabStrip;
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.support.PopupMenu;
-import com.calsignlabs.apde.support.ScrollingTabContainerView;
+import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
 import com.ipaulpro.afilechooser.utils.FileUtils;
@@ -85,9 +81,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Stack;
 
@@ -102,8 +96,6 @@ public class EditorActivity extends AppCompatActivity {
 	//List of key bindings for hardware / bluetooth keyboards
 	private HashMap<String, KeyBinding> keyBindings;
 	
-	//Custom tab implementation - EVERYTHING ABOUT THIS IS HACKY
-//	public ScrollingTabContainerView tabBar;
 	public ViewPager codePager;
 	public FragmentPagerAdapter codePagerAdapter;
 	
@@ -213,9 +205,6 @@ public class EditorActivity extends AppCompatActivity {
 		//Initialize the list of tabs
 //        tabs = new HashMap<Tab, SketchFile>();
 		tabs = new ArrayList<SketchFile>();
-		
-        //Initialize the custom tab bar
-//        tabBar = new ScrollingTabContainerView(getSupportActionBar().getThemedContext(), this);
         
 		codePager = (ViewPager) findViewById(R.id.code_pager);
 		codePagerAdapter = new FragmentPagerAdapter(getSupportFragmentManager()) {
@@ -615,15 +604,22 @@ public class EditorActivity extends AppCompatActivity {
 						View code = getSelectedCodeAreaScroller();
 						View content = findViewById(R.id.content);
 
-						if (firstResize)
+						if (firstResize) {
 							firstResize = false;
-						else
+						} else {
 							oldCodeHeight = code.getHeight();
-
-						//Start the custom animation TODO make the keyboard appearance prettier
-						messageArea.startAnimation(new MessageAreaAnimation(code, console, messageArea,
-								oldCodeHeight, content.getHeight() - message - codeTabStrip.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0), content.getHeight()));
-
+						}
+						
+						int totalHeight = content.getHeight() - message - codeTabStrip.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+						
+						if (totalHeight > oldCodeHeight) {
+							codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, totalHeight));
+							console.startAnimation(new ResizeAnimation<LinearLayout>(console, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0));
+						} else {
+							codePager.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, totalHeight));
+							console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
+						}
+						
 						//Remove the focus from the Message slider if it has it and maintain styling
 						if (errorMessage) {
 							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
@@ -656,11 +652,14 @@ public class EditorActivity extends AppCompatActivity {
 						View messageArea = findViewById(R.id.message);
 						View codeArea = getSelectedCodeAreaScroller();
 						View consoleArea = findViewById(R.id.console_scroller);
-
-						//Start the custom animation TODO make the keyboard appearance prettier
-						messageArea.startAnimation(new MessageAreaAnimation(codeArea, consoleArea, messageArea, codeArea.getLayoutParams().height, oldCodeHeight,
-								findViewById(R.id.content).getHeight() - codeTabStrip.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
-
+						
+						ViewGroup content = (ViewGroup) findViewById(R.id.content);
+						
+						int totalHeight = content.getHeight() - message - codeTabStrip.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+						
+						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight));
+						consoleArea.startAnimation(new ResizeAnimation<LinearLayout>(consoleArea, ResizeAnimation.DEFAULT, codeArea.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight));
+						
 						keyboardVisible = false;
 
 						if (oldCodeHeight > 0) {
@@ -871,8 +870,24 @@ public class EditorActivity extends AppCompatActivity {
 		return releaseNotesStack;
 	}
 	
+	public PagerSlidingTabStrip getCodeTabStrip() {
+		return codeTabStrip;
+	}
+	
+	public ViewPager getCodePager() {
+		return codePager;
+	}
+	
+	public ScrollView getConsoleScroller() {
+		return (ScrollView) findViewById(R.id.console_scroller);
+	}
+	
 	public void setExtraHeaderView(View headerView) {
 		extraHeaderView = headerView;
+	}
+	
+	public View getExtraHeaderView() {
+		return extraHeaderView;
 	}
     
     @Override
@@ -1484,7 +1499,7 @@ public class EditorActivity extends AppCompatActivity {
 			saveSketch();
 			break;
 		case TEMPORARY:
-			saveSketchTemp();
+//			saveSketchTemp();
 			break;
 		}
 	}
@@ -1540,7 +1555,8 @@ public class EditorActivity extends AppCompatActivity {
 		}
 		
 		if(sketchLocation.equals(APDE.SketchLocation.TEMPORARY)) {
-			return loadSketchTemp();
+			return false;
+//			return loadSketchTemp();
 		}
 		
 		//Get the sketch location
@@ -1583,7 +1599,7 @@ public class EditorActivity extends AppCompatActivity {
     			if (suffix.equals("pde")) {
     				//Build a Tab Meta object
     				SketchFile meta = new SketchFile("");
-    				meta.readData(this, file.getAbsolutePath());
+    				meta.readData(file.getAbsolutePath());
     				meta.setTitle(prefix);
 					meta.setExample(getGlobalState().isExample());
     				
@@ -1592,7 +1608,7 @@ public class EditorActivity extends AppCompatActivity {
     			} else if (suffix.equals("java")) {
     				//Build a Tab Meta object
     				SketchFile meta = new SketchFile("");
-    				meta.readData(this, file.getAbsolutePath());
+    				meta.readData(file.getAbsolutePath());
     				meta.setTitle(prefix);
     				meta.setSuffix(".java");
 					meta.setExample(getGlobalState().isExample());
@@ -1693,14 +1709,17 @@ public class EditorActivity extends AppCompatActivity {
 	    	
 			// Update all tabs
 			for (int i = 0; i < tabs.size(); i ++) {
-				tabs.get(i).update(this, getGlobalState().getPref("pref_key_undo_redo", true));
+				// Not all of the tabs are loaded at once
+				if (tabs.get(i).getFragment().getCodeEditText() != null) {
+					tabs.get(i).update(this, getGlobalState().getPref("pref_key_undo_redo", true));
+				}
 			}
 			
 	    	// Iterate through the SketchFiles...
 	    	for(SketchFile meta : tabs) {
 	    		if (meta.enabled()) {
 	    			// ...and write them to the sketch folder
-	    			if (!meta.writeData(getApplicationContext(), sketchLoc.getPath() + "/")) {
+	    			if (!meta.writeData(sketchLoc.getPath() + "/")) {
 	    				success = false;
 	    			}
 	    		}
@@ -1914,122 +1933,122 @@ public class EditorActivity extends AppCompatActivity {
     	}
     }
     
-    //Save the sketch into temp storage
-    public void saveSketchTemp() {
-    	//Erase previously stored files
-    	File[] files = getFilesDir().listFiles();
-    	for(File file : files)
-    		file.delete();
-    	
-    	String sketchPath = getGlobalState().getSketchName();
-    	writeTempFile("sketchPath.txt", sketchPath);
-    	
-    	String sketchLocation = getGlobalState().getSketchLocationType().toString();
-    	writeTempFile("sketchLocation.txt", sketchLocation);
-    	
-    	//Preserve tab order upon re-launch
-    	String tabList = "";
-    	for(int i = 0; i < getCodeCount(); i ++) {
-//			String tabName = ((TextView) ((LinearLayoutCompat) tabBar.getTabView(i)).getChildAt(0)).getText().toString();
-			String tabName = tabs.get(getSelectedCodeIndex()).getTitle();
-			
-			//If it's a .PDE file, make sure to add the suffix
-    		if(tabName.split(".").length <= 1)
-    			tabName += ".pde";
-    		
-    		//Add the tab to the list
-    		tabList += tabName + "\n";
-    	}
-    	
-    	//Save the names of the tabs
-    	writeTempFile("sketchFileNames.txt", tabList);
-    	
-    	if(getCodeCount() > 0) {
-    		//Update the current tab
-//    		tabs.put(tabBar.getSelectedTab(), new SketchFile(tabBar.getSelectedTab().getText().toString(), this));
-    		tabs.get(getSelectedCodeIndex()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
-    	}
-    	
-    	//Iterate through the FileMetas...
-    	for(SketchFile meta : tabs)
-    		//...and write them to the sketch folder
-    		meta.writeDataTemp(getApplicationContext());
-    	
-    	setSaved(true);
-    }
+//    //Save the sketch into temp storage
+//    public void saveSketchTemp() {
+//    	//Erase previously stored files
+//    	File[] files = getFilesDir().listFiles();
+//    	for(File file : files)
+//    		file.delete();
+//    	
+//    	String sketchPath = getGlobalState().getSketchName();
+//    	writeTempFile("sketchPath.txt", sketchPath);
+//    	
+//    	String sketchLocation = getGlobalState().getSketchLocationType().toString();
+//    	writeTempFile("sketchLocation.txt", sketchLocation);
+//    	
+//    	//Preserve tab order upon re-launch
+//    	String tabList = "";
+//    	for(int i = 0; i < getCodeCount(); i ++) {
+////			String tabName = ((TextView) ((LinearLayoutCompat) tabBar.getTabView(i)).getChildAt(0)).getText().toString();
+//			String tabName = tabs.get(getSelectedCodeIndex()).getTitle();
+//			
+//			//If it's a .PDE file, make sure to add the suffix
+//    		if(tabName.split(".").length <= 1)
+//    			tabName += ".pde";
+//    		
+//    		//Add the tab to the list
+//    		tabList += tabName + "\n";
+//    	}
+//    	
+//    	//Save the names of the tabs
+//    	writeTempFile("sketchFileNames.txt", tabList);
+//    	
+//    	if(getCodeCount() > 0) {
+//    		//Update the current tab
+////    		tabs.put(tabBar.getSelectedTab(), new SketchFile(tabBar.getSelectedTab().getText().toString(), this));
+//    		tabs.get(getSelectedCodeIndex()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
+//    	}
+//    	
+//    	//Iterate through the FileMetas...
+//    	for(SketchFile meta : tabs)
+//    		//...and write them to the sketch folder
+//    		meta.writeDataTemp(getApplicationContext());
+//    	
+//    	setSaved(true);
+//    }
     
-    /**
-     * Loads a sketch from the temp folder
-     * 
-     * @return success
-     */
-    public boolean loadSketchTemp() {
-    	boolean success;
-    	
-    	try {
-    		//Read the sketch path
-    		String sketchPath = readTempFile("sketchPath.txt");
-    		APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(readTempFile("sketchLocation.txt"));
-    		
-    		getGlobalState().selectSketch(sketchPath, sketchLocation);
-    		
-    		//Read the list of tabs
-    		String[] files = readTempFile("sketchFileNames.txt").split("\n");
-    		
-    		//Iterate through the files
-    		for(String filename : files) {
-    			File file = new File(filename);
-    			
-    			//Split the filename into prefix and suffix
-    			String[] folders = file.getPath().split("/");
-    			String[] parts = folders[folders.length - 1].split("\\.");
-    			//If the filename isn't formatted properly, skip this file
-    			if(parts.length != 2)
-    				continue;
-    			
-    			//Retrieve the prefix and suffix
-    			String prefix = parts[parts.length - 2];
-    			String suffix = parts[parts.length - 1];
-    			
-    			//Check to see if it's a .PDE file
-    			if (suffix.equals("pde")) {
-    				//Build a Tab Meta object
-    				SketchFile meta = new SketchFile("");
-    				meta.readTempData(this, file.getName());
-    				meta.setTitle(prefix);
-    				
-    				//Add the tab
-    				addTab(meta);
-    			} else if (suffix.equals("java")) {
-    				//Build a Tab Meta object
-    				SketchFile meta = new SketchFile("");
-    				meta.readTempData(this, file.getName());
-    				meta.setTitle(prefix);
-    				meta.setSuffix(".java");
-    				
-    				//Add the tab
-    				addTab(meta);
-    			}
-    		}
-    		
-    		//Automatically select and load the first tab
-//    		tabBar.selectLoadDefaultTab();
-    		selectCode(0);
-			
-    		success = true;
-    	} catch(Exception e) { //Errors...
-    		e.printStackTrace();
-    		
-    		success = false;
-    	}
-		
-		if (success) {
-			//Close Find/Replace (if it's open)
-			((FindReplace) getGlobalState().getPackageToToolTable().get(FindReplace.PACKAGE_NAME)).close();
-		}
-    	
-    	return success;
-    }
+//    /**
+//     * Loads a sketch from the temp folder
+//     * 
+//     * @return success
+//     */
+//    public boolean loadSketchTemp() {
+//    	boolean success;
+//    	
+//    	try {
+//    		//Read the sketch path
+//    		String sketchPath = readTempFile("sketchPath.txt");
+//    		APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(readTempFile("sketchLocation.txt"));
+//    		
+//    		getGlobalState().selectSketch(sketchPath, sketchLocation);
+//    		
+//    		//Read the list of tabs
+//    		String[] files = readTempFile("sketchFileNames.txt").split("\n");
+//    		
+//    		//Iterate through the files
+//    		for(String filename : files) {
+//    			File file = new File(filename);
+//    			
+//    			//Split the filename into prefix and suffix
+//    			String[] folders = file.getPath().split("/");
+//    			String[] parts = folders[folders.length - 1].split("\\.");
+//    			//If the filename isn't formatted properly, skip this file
+//    			if(parts.length != 2)
+//    				continue;
+//    			
+//    			//Retrieve the prefix and suffix
+//    			String prefix = parts[parts.length - 2];
+//    			String suffix = parts[parts.length - 1];
+//    			
+//    			//Check to see if it's a .PDE file
+//    			if (suffix.equals("pde")) {
+//    				//Build a Tab Meta object
+//    				SketchFile meta = new SketchFile("");
+//    				meta.readTempData(this, file.getName());
+//    				meta.setTitle(prefix);
+//    				
+//    				//Add the tab
+//    				addTab(meta);
+//    			} else if (suffix.equals("java")) {
+//    				//Build a Tab Meta object
+//    				SketchFile meta = new SketchFile("");
+//    				meta.readTempData(this, file.getName());
+//    				meta.setTitle(prefix);
+//    				meta.setSuffix(".java");
+//    				
+//    				//Add the tab
+//    				addTab(meta);
+//    			}
+//    		}
+//    		
+//    		//Automatically select and load the first tab
+////    		tabBar.selectLoadDefaultTab();
+//    		selectCode(0);
+//			
+//    		success = true;
+//    	} catch(Exception e) { //Errors...
+//    		e.printStackTrace();
+//    		
+//    		success = false;
+//    	}
+//		
+//		if (success) {
+//			//Close Find/Replace (if it's open)
+//			((FindReplace) getGlobalState().getPackageToToolTable().get(FindReplace.PACKAGE_NAME)).close();
+//		}
+//    	
+//    	return success;
+//    }
     
     /**
      * Write text to a temp file
@@ -2367,10 +2386,10 @@ public class EditorActivity extends AppCompatActivity {
      */
     public void toggleCharInserts(View view) {
     	//Don't do anything if the user has disabled the character insert tray
-		if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true))
+		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true))
 			return;
     	
-    	if(!keyboardVisible)
+    	if (!keyboardVisible)
 			return;
     	
     	charInserts = !charInserts;
@@ -2378,7 +2397,7 @@ public class EditorActivity extends AppCompatActivity {
     	//Update the global reference
     	toggleCharInserts = (ImageButton) view;
     	
-    	if(charInserts) {
+    	if (charInserts) {
     		//Build the character inserts tray
             reloadCharInserts();
     		
@@ -2389,17 +2408,53 @@ public class EditorActivity extends AppCompatActivity {
     }
     
     protected void showCharInserts() {
-    	((ImageButton) toggleCharInserts).setImageResource(errorMessage ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_right_black);
-		((TextView) findViewById(R.id.message)).setVisibility(View.GONE);
-		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.VISIBLE);
+		TextView messageView = (TextView) findViewById(R.id.message);
+		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
+		
+		View buffer = findViewById(R.id.buffer);
+		
+		View sep = findViewById(R.id.toggle_char_inserts_separator);
+		
+		toggleCharInserts.setImageResource(errorMessage ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_right_black);
+//		((TextView) findViewById(R.id.message)).setVisibility(View.GONE);
+//		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.VISIBLE);
+		
+		int total = buffer.getWidth() - sep.getWidth() - toggleCharInserts.getWidth();
+		
+		RotateAnimation rotate = new RotateAnimation(180f, 360f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+		rotate.setInterpolator(new AccelerateDecelerateInterpolator());
+		rotate.setRepeatCount(0);
+		rotate.setDuration(200);
+		
+		messageView.startAnimation(new ResizeAnimation<LinearLayout>(messageView, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0, ResizeAnimation.DEFAULT));
+		charInsertTray.startAnimation(new ResizeAnimation<LinearLayout>(charInsertTray, 0, buffer.getHeight(), total, buffer.getHeight()));
+		toggleCharInserts.startAnimation(rotate);
 		
 		charInserts = true;
     }
-    
+	
     protected void hideCharInserts() {
-    	((ImageButton) toggleCharInserts).setImageResource(errorMessage ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
-		((TextView) findViewById(R.id.message)).setVisibility(View.VISIBLE);
-		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.GONE);
+		TextView messageView = (TextView) findViewById(R.id.message);
+		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
+		
+		View buffer = findViewById(R.id.buffer);
+		
+		View sep = findViewById(R.id.toggle_char_inserts_separator);
+	
+		toggleCharInserts.setImageResource(errorMessage ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
+//		((TextView) findViewById(R.id.message)).setVisibility(View.VISIBLE);
+//		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.GONE);
+		
+		int total = buffer.getWidth() - sep.getWidth() - toggleCharInserts.getWidth();
+		
+		RotateAnimation rotate = new RotateAnimation(180f, 360f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+		rotate.setInterpolator(new AccelerateDecelerateInterpolator());
+		rotate.setRepeatCount(0);
+		rotate.setDuration(200);
+		
+		messageView.startAnimation(new ResizeAnimation<LinearLayout>(messageView, 0, buffer.getHeight(), total, buffer.getHeight()));
+		charInsertTray.startAnimation(new ResizeAnimation<LinearLayout>(charInsertTray, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0, ResizeAnimation.DEFAULT));
+		toggleCharInserts.startAnimation(rotate);
 		
 		charInserts = false;
     }
@@ -2709,6 +2764,14 @@ public class EditorActivity extends AppCompatActivity {
     		}
     	});
     }
+	
+	public void initCodeAreaAndConsoleDimensions() {
+		ScrollView console = getConsoleScroller();
+		
+		// Initialize in case we have the layout weights instead of actual values
+		codePager.getLayoutParams().height = codePager.getHeight();
+		console.getLayoutParams().height = console.getHeight();
+	}
 	
 	/**
 	 * Fix inconsistencies in the vertical distribution of the content area views
@@ -3590,7 +3653,7 @@ public class EditorActivity extends AppCompatActivity {
 					int codeDim = maxCode - consoleDim;
 					
 					//Set the new dimensions
-					getSelectedCodeArea().setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim));
+					codePager.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim));
 					console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
 					
 					firstResize = false;

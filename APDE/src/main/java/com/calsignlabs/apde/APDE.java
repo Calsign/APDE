@@ -26,7 +26,6 @@ import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.support.AndroidPlatform;
-import com.calsignlabs.apde.support.ScrollingTabContainerView;
 import com.calsignlabs.apde.task.TaskManager;
 import com.calsignlabs.apde.tool.AutoFormat;
 import com.calsignlabs.apde.tool.ColorSelector;
@@ -493,10 +492,6 @@ public class APDE extends Application {
 	public CodeEditText getCodeArea() {
     	return (CodeEditText) editor.findViewById(R.id.code);
     }
-	
-//	public ScrollingTabContainerView getEditorTabBar() {
-//		return editor.tabBar;
-//	}
 	
 	/**
 	 * @return the location of the Sketchbook folder on the external storage

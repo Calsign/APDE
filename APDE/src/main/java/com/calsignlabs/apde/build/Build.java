@@ -1544,7 +1544,7 @@ public class Build {
 					// (i.e. on Android) we'll have to add one
 					
 					if(packageMatch == null && packageName == null) {
-						meta.writeData(editor.getApplicationContext(), srcFolder.getAbsolutePath() + File.separator + filename); //TODO does this actually do what we want?
+						meta.writeData(srcFolder.getAbsolutePath() + File.separator + filename); //TODO does this actually do what we want?
 						//sc.copyTo(new File(srcFolder, filename));
 					} else {
 						if(packageMatch == null) {

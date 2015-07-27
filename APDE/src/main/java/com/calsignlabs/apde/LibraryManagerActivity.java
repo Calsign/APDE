@@ -229,11 +229,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		
 		ScrollView layout;
 		
-		if(android.os.Build.VERSION.SDK_INT >= 11) {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog), R.layout.dx_dexer_tool, null);
-		} else {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Dialog), R.layout.dx_dexer_tool, null);
-		}
+		layout = (ScrollView) View.inflate(new ContextThemeWrapper(this, R.style.Theme_AppCompat_Dialog), R.layout.dx_dexer_tool, null);
 		
 		dxDexerInputFile = (EditText) layout.findViewById(R.id.dx_dexer_input_file);
 		dxDexerOutputFile = (EditText) layout.findViewById(R.id.dx_dexer_output_file);
