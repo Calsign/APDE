@@ -41,6 +41,8 @@ import android.widget.TextView;
 import com.calsignlabs.apde.support.CustomListPreference;
 import com.calsignlabs.apde.support.StockPreferenceFragment;
 
+import org.jraf.android.backport.switchwidget.SwitchPreference;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -75,7 +77,7 @@ public class SettingsActivityHC extends PreferenceActivity {
 	
 	@SuppressLint("NewApi")
 	public void checkPreferences(PreferenceFragment frag) {
-		CheckBoxPreference hardwareKeyboard = ((CheckBoxPreference) frag.findPreference("use_hardware_keyboard"));
+		SwitchPreference hardwareKeyboard = ((SwitchPreference) frag.findPreference("use_hardware_keyboard"));
 		
 		if(hardwareKeyboard != null) {
 			hardwareKeyboard.setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
@@ -100,7 +102,7 @@ public class SettingsActivityHC extends PreferenceActivity {
 				((PreferenceCategory) frag.findPreference("pref_general_settings")).removePreference(vibrator);
 		}
 		
-		final CheckBoxPreference enableUndoRedo = (CheckBoxPreference) frag.findPreference("pref_key_undo_redo");
+		final SwitchPreference enableUndoRedo = (SwitchPreference) frag.findPreference("pref_key_undo_redo");
 		
 		if (enableUndoRedo != null) {
 			enableUndoRedo.setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {

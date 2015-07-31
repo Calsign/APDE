@@ -3,12 +3,12 @@
         android:key="pref_code_assistance_settings"
         android:title="@string/pref_code_assistance" >
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="auto_indent"
             android:title="@string/auto_indent" />
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:dependency="auto_indent"
             android:key="curly_brace_insertion"

@@ -14,12 +14,12 @@
             android:singleLine="true"
             android:title="@string/pref_textsize_title" />
 
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="syntax_highlight"
             android:title="@string/pref_syntax_highlight" />
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="override_tab"
             android:title="@string/override_tab"
@@ -30,12 +30,12 @@
         android:key="pref_key_character_tray"
         android:title="@string/title_activity_character_tray_settings" >
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="char_inserts"
             android:title="@string/char_inserts" />
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="char_inserts_include_numbers"
             android:title="@string/char_inserts_include_numbers"
@@ -46,7 +46,7 @@
         android:key="pref_key_undo_redo_settings"
         android:title="@string/undo_redo_settings" >
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="pref_key_undo_redo"
             android:title="@string/pref_undo_redo" />
@@ -75,7 +75,7 @@
             android:singleLine="true"
             android:title="@string/pref_textsize_title" />
 
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="pref_scroll_lock"
             android:summary="@string/pref_scroll_lock_desc"

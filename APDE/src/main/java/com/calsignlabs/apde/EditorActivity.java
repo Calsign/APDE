@@ -603,7 +603,7 @@ public class EditorActivity extends AppCompatActivity {
 						View console = findViewById(R.id.console_scroller);
 						View code = getSelectedCodeAreaScroller();
 						View content = findViewById(R.id.content);
-
+						
 						if (firstResize) {
 							firstResize = false;
 						} else {
@@ -680,16 +680,25 @@ public class EditorActivity extends AppCompatActivity {
 				}
 			}
 		});
+		
+		// Set up character insert tray toggle
+		toggleCharInserts = (ImageButton) findViewById(R.id.toggle_char_inserts);
+		toggleCharInserts.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				toggleCharInserts();
+			}
+		});
         
-        //Load default key bindings TODO load user's custom key bindings
-        //Also, do this after we initialize the console so that we can get error reports
+        // Load default key bindings TODO load user's custom key bindings
+        // Also, do this after we initialize the console so that we can get error reports
         
         keyBindings = new HashMap<String, KeyBinding>();
         
         try {
-        	//Use Processing's XML for simplicity
+        	// Use Processing's XML for simplicity
 			loadKeyBindings(new XML(getResources().getAssets().open("default_key_bindings.xml")));
-		} catch (IOException e) { //Errors... who cares, anyway?
+		} catch (IOException e) { // Errors... who cares, anyway?
 			e.printStackTrace();
 		} catch (ParserConfigurationException e) {
 			e.printStackTrace();
@@ -920,19 +929,24 @@ public class EditorActivity extends AppCompatActivity {
     
     @Override
     protected void onRestoreInstanceState(Bundle icicle) {
-    	if(icicle != null) {
+    	if (icicle != null) {
     		//Restore the selected tab (this should only happen when the screen rotates)
     		selectCode(icicle.getInt("selected_tab"));
     		
     		//Refresh the syntax highlighter AGAIN so that it can take into account the restored selected tab
     		//The tokens end up getting refreshed 3+ times on a rotation... but it doesn't seem to have much of an impact on performance, so it's fine for now
 //			getSelectedCodeArea().flagRefreshTokens();
-
+			
 			Parcelable[] tabMetaParcels = icicle.getParcelableArray("tabs");
 			
 			//Fix an all-too-common crash report that hides the stack trace that we really want
+			loadTabs:
 			if (tabMetaParcels instanceof SketchFile[]) {
 				SketchFile[] tabMetas = (SketchFile[]) tabMetaParcels;
+				
+				if (tabs.size() > 0 && tabMetas[0].equals(tabs.get(0))) {
+					break loadTabs;
+				}
 				
 				for (SketchFile tabMeta : tabMetas) {
 //					tabs.put(tabBar.getTab(tabMeta.tabNum), tabMeta);
@@ -1419,15 +1433,18 @@ public class EditorActivity extends AppCompatActivity {
 	
 	@Override
 	public void onPause() {
-		//Make sure to save the sketch
+		// Make sure to save the sketch
 		saveSketchForStop();
+		
+		// We do this to avoid messing up the *very* delicate console/code area resizing stuff
+		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
 		
 		super.onPause();
 	}
 	
 	@Override
 	public void onStop() {
-		//Make sure to save the sketch
+		// Make sure to save the sketch
 		saveSketchForStop();
 		
 		super.onStop();
@@ -1580,7 +1597,6 @@ public class EditorActivity extends AppCompatActivity {
 //    		tabBar.removeAllTabs();
 			codePagerAdapter.notifyDataSetChanged();
     		//This method is necessary, too
-    		removeAllTabs();
     		
     		//Cycle through the files
     		for(File file : files) {
@@ -2378,32 +2394,24 @@ public class EditorActivity extends AppCompatActivity {
                 return super.onOptionsItemSelected(item);
         }
     }
-    
-    /**
-     * This function is called by the XML-defined special character insertion tray toggler.
-     * 
-     * @param view the button that was clicked
-     */
-    public void toggleCharInserts(View view) {
+	
+    public void toggleCharInserts() {
     	//Don't do anything if the user has disabled the character insert tray
-		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true))
+		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true)) {
 			return;
+		}
     	
-    	if (!keyboardVisible)
+    	if (!keyboardVisible) {
 			return;
-    	
-    	charInserts = !charInserts;
-    	
-    	//Update the global reference
-    	toggleCharInserts = (ImageButton) view;
+		}
     	
     	if (charInserts) {
-    		//Build the character inserts tray
-            reloadCharInserts();
-    		
-            showCharInserts();
+			hideCharInserts();
     	} else {
-            hideCharInserts();
+			//Build the character inserts tray
+			reloadCharInserts();
+		
+			showCharInserts();
     	}
     }
     
@@ -2434,6 +2442,11 @@ public class EditorActivity extends AppCompatActivity {
     }
 	
     protected void hideCharInserts() {
+		if (!(keyboardVisible && charInserts)) {
+			// No need to hide them if they're already hidden
+			return;
+		}
+		
 		TextView messageView = (TextView) findViewById(R.id.message);
 		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
 		
@@ -2442,8 +2455,6 @@ public class EditorActivity extends AppCompatActivity {
 		View sep = findViewById(R.id.toggle_char_inserts_separator);
 	
 		toggleCharInserts.setImageResource(errorMessage ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
-//		((TextView) findViewById(R.id.message)).setVisibility(View.VISIBLE);
-//		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.GONE);
 		
 		int total = buffer.getWidth() - sep.getWidth() - toggleCharInserts.getWidth();
 		
@@ -2458,6 +2469,17 @@ public class EditorActivity extends AppCompatActivity {
 		
 		charInserts = false;
     }
+	
+	public void hideCharInsertsNoAnimation() {
+		TextView messageView = (TextView) findViewById(R.id.message);
+		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
+		
+		toggleCharInserts.setImageResource(errorMessage ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
+		messageView.setVisibility(View.VISIBLE);
+		charInsertTray.setVisibility(View.GONE);
+		
+		charInserts = false;
+	}
     
     /**
      * Set up the character inserts tray.
@@ -2601,7 +2623,7 @@ public class EditorActivity extends AppCompatActivity {
     	//Update message area height
     	correctMessageAreaHeight();
     	
-    	hideCharInserts();
+    	hideCharInsertsNoAnimation();
     }
     
     /**
@@ -2623,7 +2645,7 @@ public class EditorActivity extends AppCompatActivity {
 				//Update message area height
 				correctMessageAreaHeight();
 
-				hideCharInserts();
+				hideCharInsertsNoAnimation();
 			}
 		});
     }
@@ -2654,7 +2676,7 @@ public class EditorActivity extends AppCompatActivity {
     	//Update message area height
     	correctMessageAreaHeight();
     	
-    	hideCharInserts();
+    	hideCharInsertsNoAnimation();
     }
     
     /**
@@ -2676,7 +2698,7 @@ public class EditorActivity extends AppCompatActivity {
 				//Update message area height
 				correctMessageAreaHeight();
 
-				hideCharInserts();
+				hideCharInsertsNoAnimation();
 			}
 		});
     }
@@ -3059,7 +3081,10 @@ public class EditorActivity extends AppCompatActivity {
 			getSelectedSketchFile().disable();
     		//Remove the tab
 //    		tabBar.removeSelectedTab();
-			tabs.remove(getSelectedCodeIndex());
+			
+			// We have to do this whole hop-skip thing because of peculiarities in the PagerSlidingTabStrip library...
+			selectCode(getSelectedCodeIndex() - 1);
+			tabs.remove(getSelectedCodeIndex() + 1);
 			codePagerAdapter.notifyDataSetChanged();
 //	    	tabs.remove(cur);
 	    	
@@ -3089,21 +3114,6 @@ public class EditorActivity extends AppCompatActivity {
 	    	//Inform the user in the message area
 	    	message(getResources().getText(R.string.tab_deleted));
     	}
-    }
-    
-    /**
-     * Force remove all tabs
-     */
-    public void removeAllTabs() {
-    	//Note: This method is used because it seems that nothing else works.
-    	
-//    	Iterator<Tab> it = tabs.keySet().iterator();
-//    	while(it.hasNext()) {
-//			it.next();
-//    		it.remove();
-//    	}
-		
-		tabs.clear();
     }
     
     //Called internally to create an input dialog

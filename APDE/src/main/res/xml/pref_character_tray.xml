@@ -4,12 +4,12 @@
         android:key="pref_key_character_tray"
         android:title="@string/title_activity_character_tray_settings" >
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="char_inserts"
             android:title="@string/char_inserts" />
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="char_inserts_include_numbers"
             android:title="@string/char_inserts_include_numbers"

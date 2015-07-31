@@ -49,4 +49,5 @@ dependencies {
     compile 'com.android.support:support-v4:22.2.0'
     compile 'com.android.support:appcompat-v7:22.2.0'
     compile 'com.jpardogo.materialtabstrip:library:1.1.0'
+    compile 'org.jraf:android-switch-backport:2.0.1'
 }

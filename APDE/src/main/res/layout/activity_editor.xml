@@ -80,8 +80,7 @@
                     android:scaleType="centerInside"
                     android:contentDescription="@string/toggle_char_inserts"
                     android:src="@drawable/ic_caret_left_black"
-                    style="@style/Widget.AppCompat.ActionButton"
-                    android:onClick="toggleCharInserts" />
+                    style="@style/Widget.AppCompat.ActionButton" />
             </LinearLayout>
 
             <!-- Use ScrollView(s) for smooth scrolling -->

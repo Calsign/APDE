@@ -4,25 +4,25 @@
         android:key="pref_build"
         android:title="@string/pref_build" >
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="pref_build_internal_storage"
             android:title="@string/pref_build_internal_storage"
             android:summary="@string/pref_build_internal_storage_desc" />
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="pref_build_discard"
             android:title="@string/pref_build_discard"
             android:summary="@string/pref_build_discard_desc" />
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="inject_log_broadcaster"
             android:title="@string/inject_log_broadcaster"
             android:summary="@string/inject_log_broadcaster_desc" />
     
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="false"
             android:key="build_output_verbose"
             android:title="@string/build_output_verbose" />

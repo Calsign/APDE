@@ -35,9 +35,9 @@ public class CodeAreaFragment extends Fragment {
 		
 		return fragment;
 	}
-
+	
 	public CodeAreaFragment() {}
-
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -50,19 +50,14 @@ public class CodeAreaFragment extends Fragment {
 	@Override
 	public void onResume() {
 		super.onResume();
-
-		getCodeEditText().setupCustomActionMode();
 		
-		getCodeEditText().flagRefreshTokens();
-		getCodeEditText().refreshTextSize();
-
 		//Correctly size the code area
-
+		
 		int minWidth;
 		int maxWidth;
-
+		
 		//Let's try and do things correctly for once
-		if(android.os.Build.VERSION.SDK_INT >= 13) {
+		if (android.os.Build.VERSION.SDK_INT >= 13) {
 			Point point = new Point();
 			getActivity().getWindowManager().getDefaultDisplay().getSize(point);
 			maxWidth = point.x;
@@ -73,8 +68,9 @@ public class CodeAreaFragment extends Fragment {
 		minWidth = maxWidth - (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
 		
 		getCodeEditText().setMinimumWidth(minWidth);
-		codeScrollerX.setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
-
+		codeScrollerX.getLayoutParams().width = maxWidth;
+		codeScroller.getLayoutParams().width = maxWidth;
+		
 		//Detect touch events
 		getCodeEditText().setOnTouchListener(new EditText.OnTouchListener() {
 			@Override
@@ -83,7 +79,7 @@ public class CodeAreaFragment extends Fragment {
 				if (PreferenceManager.getDefaultSharedPreferences(getActivity().getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
 					getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 				}
-
+				
 				return false;
 			}
 		});
@@ -123,6 +119,12 @@ public class CodeAreaFragment extends Fragment {
 		
 		getCodeEditText().setFocusable(editable);
 		getCodeEditText().setFocusableInTouchMode(editable);
+		
+		getCodeEditText().setupCustomActionMode();
+		getCodeEditText().setupTextListener();
+		
+		getCodeEditText().refreshTextSize();
+		getCodeEditText().flagRefreshTokens();
 	}
 	
 	public CodeEditText getCodeEditText() {

@@ -4,7 +4,7 @@
         android:key="pref_key_undo_redo_settings"
         android:title="@string/undo_redo_settings" >
         
-        <CheckBoxPreference
+        <org.jraf.android.backport.switchwidget.SwitchPreference
             android:defaultValue="true"
             android:key="pref_key_undo_redo"
             android:title="@string/pref_undo_redo" />

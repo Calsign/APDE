@@ -43,27 +43,29 @@ public class CodeEditText extends EditText {
 	private Context context;
 	private float textSize = 14;
 	
-	//Paints that will always be used
+	// Paints that will always be used
 	private static Paint lineHighlight;
 	private static Paint bracketMatch;
 	private static Paint blackPaint;
 	private static Paint whitePaint;
 	
-	//Lists of styles
+	// Lists of styles
 	public static HashMap<String, TextPaint> styles;
 	public static ArrayList<Keyword> syntax;
 	
-	//The default indentation (two spaces)
+	// The default indentation (two spaces)
 	public static final String indent = "  ";
 	
-	//Syntax highlighter information
+	// Syntax highlighter information
 	protected Token[] tokens;
 	protected int matchingBracket;
 	
-	//Highlight
+	// Highlight
 	ArrayList<Highlight> highlights;
 	
-	//Whether or not we need to update the tokens AGAIN
+	// Whether or not the syntax highlighter is currently running
+	private AtomicBoolean updatingTokens;
+	// Whether or not we need to update the tokens AGAIN
 	private AtomicBoolean flagRefreshTokens;
 	
 	public class Highlight {
@@ -118,6 +120,7 @@ public class CodeEditText extends EditText {
 	
 	private void init() {
 		flagRefreshTokens = new AtomicBoolean();
+		updatingTokens = new AtomicBoolean();
 		
 		//Get rid of extra spacing at the top and bottom
 		setIncludeFontPadding(false);
@@ -692,23 +695,23 @@ public class CodeEditText extends EditText {
 		float lineHeight = getLineHeight();
 		int currentLine = getCurrentLine();
 		
-		if(isFocused()) {
-			//Draw line highlight around the line that the cursor is on
+		if (isFocused()) {
+			// Draw line highlight around the line that the cursor is on
 			canvas.drawRect(getScrollX(), currentLine * lineHeight, canvas.getWidth() + getScrollX(), (currentLine + 1) * lineHeight, lineHighlight);
 		}
 		
-		//Draw base text
+		// Draw base text
 		super.onDraw(canvas);
 		
-		//If the syntax highlighter hasn't run yet...
-		//Make sure this doesn't break
-		if(tokens == null) {
+		// If the syntax highlighter hasn't run yet...
+		// Make sure this doesn't break
+		if (tokens == null) {
 			//Check again
 			invalidate();
 			return;
 		}
 		
-		if(PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
+		if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
 			//ScrollView doesn't like to let us know when it has scrolled...
 //			ScrollView scroller = (ScrollView) ((APDE) context.getApplicationContext()).getEditor().findViewById(R.id.code_scroller);
 			int topVis = 0;//(int) Math.max(scroller.getScrollY() / getLineHeight() - 1, 0); //inclusive
@@ -760,7 +763,11 @@ public class CodeEditText extends EditText {
 	 * Call this function to force the tokens to update AGAIN after the current / next update cycle has completed
 	 */
 	public void flagRefreshTokens() {
-		flagRefreshTokens.set(true);
+		if (updatingTokens.get()) {
+			flagRefreshTokens.set(true);
+		} else {
+			updateTokens();
+		}
 	}
 	
 	public synchronized void updateTokens() {
@@ -772,6 +779,8 @@ public class CodeEditText extends EditText {
 		
 		new Thread(new Runnable() {
 			public void run() {
+				updatingTokens.set(true);
+				
 				Token[] tempTokens = splitTokens(text, 0, new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '"', '\'', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' '});
 				
 				for(int i = 0; i < tempTokens.length; i ++) {
@@ -898,6 +907,8 @@ public class CodeEditText extends EditText {
 					clearTokens();
 				
 				postInvalidate();
+				
+				updatingTokens.set(false);
 				
 				//Check to see if we have updated the text AGAIN since starting this update
 				//We shouldn't get too much recursion...
@@ -1060,7 +1071,7 @@ public class CodeEditText extends EditText {
 		clearHighlights();
 	}
 	
-	public Keyword getKeyword(String text, boolean function) {
+	public synchronized Keyword getKeyword(String text, boolean function) {
 		for(Keyword keyword : syntax)
 			if(keyword.name().equals(text) && keyword.function() == function)
 				return keyword;

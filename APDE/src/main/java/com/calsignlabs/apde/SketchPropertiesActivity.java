@@ -31,20 +31,14 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
-import android.support.annotation.LayoutRes;
-import android.support.annotation.Nullable;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatDelegate;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -56,7 +50,7 @@ import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-public class SketchPropertiesActivity extends PreferenceActivity {
+public class SketchPropertiesActivity extends PreferenceActivity implements Toolbar.OnMenuItemClickListener {
 	//This is a number, that's all that matters
 	private static final int REQUEST_CHOOSER = 6283;
 	//This is another number - this time, it's for something else
@@ -73,6 +67,8 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	//The change icon dialog "OK" button
 	private Button changeIconOK;
 	
+	private Toolbar toolbar;
+	
 	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -82,14 +78,18 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 		
 		// StackOverflow: http://stackoverflow.com/a/27455330/1628609
 		LinearLayout root = (LinearLayout) findViewById(android.R.id.list).getParent().getParent().getParent();
-		Toolbar toolbar = (Toolbar) LayoutInflater.from(this).inflate(R.layout.settings_toolbar, root, false);
+		toolbar = (Toolbar) LayoutInflater.from(this).inflate(R.layout.settings_toolbar, root, false);
 		root.addView(toolbar, 0);
+		
 		toolbar.setNavigationOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				finish();
 			}
 		});
+		
+		initOptionsMenu(toolbar.getMenu());
+		toolbar.setOnMenuItemClickListener(this);
 		
 		toolbar.setTitle(getGlobalState().getSketchName());
 		
@@ -343,36 +343,7 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 	
 	@Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.activity_sketch_properties, menu);
-        
-        if(getGlobalState().isExample()) {
-        	//Don't let them mess with the examples!
-        	menu.findItem(R.id.menu_change_sketch_name).setVisible(false);
-        	menu.findItem(R.id.menu_delete).setVisible(false);
-        } else {
-        	menu.findItem(R.id.menu_change_sketch_name).setVisible(true);
-        	menu.findItem(R.id.menu_delete).setVisible(true);
-        }
-        
-        //Not using this - we have "Export Eclipse Project" and "Export Signed Package" tools now
-        menu.findItem(R.id.menu_export).setVisible(false);
-        
-        switch(getGlobalState().getSketchLocationType()) {
-    	case SKETCHBOOK:
-    	case TEMPORARY:
-    		menu.findItem(R.id.menu_save).setVisible(true);
-    		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
-    		break;
-    	case EXTERNAL:
-    		menu.findItem(R.id.menu_save).setVisible(true);
-    		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
-    		break;
-    	case EXAMPLE:
-    	case LIBRARY_EXAMPLE:
-    		menu.findItem(R.id.menu_save).setVisible(false);
-    		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
-    		break;
-    	}
+        initOptionsMenu(menu);
         
         return true;
     }
@@ -405,6 +376,44 @@ public class SketchPropertiesActivity extends PreferenceActivity {
                 return super.onOptionsItemSelected(item);
         }
     }
+	
+	private void initOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.activity_sketch_properties, menu);
+		
+		if(getGlobalState().isExample()) {
+			//Don't let them mess with the examples!
+			menu.findItem(R.id.menu_change_sketch_name).setVisible(false);
+			menu.findItem(R.id.menu_delete).setVisible(false);
+		} else {
+			menu.findItem(R.id.menu_change_sketch_name).setVisible(true);
+			menu.findItem(R.id.menu_delete).setVisible(true);
+		}
+		
+		//Not using this - we have "Export Eclipse Project" and "Export Signed Package" tools now
+		menu.findItem(R.id.menu_export).setVisible(false);
+		
+		switch(getGlobalState().getSketchLocationType()) {
+		case SKETCHBOOK:
+		case TEMPORARY:
+			menu.findItem(R.id.menu_save).setVisible(true);
+			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
+			break;
+		case EXTERNAL:
+			menu.findItem(R.id.menu_save).setVisible(true);
+			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+			break;
+		case EXAMPLE:
+		case LIBRARY_EXAMPLE:
+			menu.findItem(R.id.menu_save).setVisible(false);
+			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+			break;
+		}
+	}
+	
+	@Override
+	public boolean onMenuItemClick(MenuItem item) {
+		return onOptionsItemSelected(item);
+	}
 	
 	private void launchSettings() {
 		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
@@ -845,8 +854,10 @@ public class SketchPropertiesActivity extends PreferenceActivity {
 			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
 			getGlobalState().getEditor().newSketch();
 			
-			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
-				getActionBar().setTitle(getGlobalState().getSketchName());
+//			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
+//				getActionBar().setTitle(getGlobalState().getSketchName());
+			
+			toolbar.setTitle(getGlobalState().getSketchName());
 			
 			finish();
 		}
@@ -866,9 +877,11 @@ public class SketchPropertiesActivity extends PreferenceActivity {
     			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
     			getGlobalState().getEditor().newSketch();
     			
-    			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
-    				getActionBar().setTitle(getGlobalState().getSketchName());
+//    			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
+//    				getActionBar().setTitle(getGlobalState().getSketchName());
     			
+				toolbar.setTitle(getGlobalState().getSketchName());
+				
     			finish();
     		}
     	});

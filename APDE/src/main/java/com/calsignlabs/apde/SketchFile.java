@@ -4,7 +4,6 @@ import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.preference.PreferenceManager;
-import android.support.v4.app.Fragment;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
@@ -859,4 +858,15 @@ public class SketchFile implements Parcelable {
 			return new SketchFile[size];
 		}
 	};
+	
+	@Override
+	public boolean equals(Object other) {
+		if (!(other instanceof SketchFile)) {
+			return false;
+		}
+		
+		SketchFile otherSketchFile = (SketchFile) other;
+		
+		return otherSketchFile.getFilename().equals(getFilename()) && otherSketchFile.getText().equals(getText());
+	}
 }
