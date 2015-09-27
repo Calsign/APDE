@@ -667,12 +667,12 @@ public class Build {
 			System.out.println("Available cores: " + numCores);
 		}
 		
-		//Position Independent Executables (PIE) were first supported in Jelly Bean 4.1 (API level 16)
-		//In Android 5.0, they are required
-		//Android versions before 4.1 still need the old binary...
+		// Position Independent Executables (PIE) were first supported in Jelly Bean 4.1 (API level 16)
+		// In Android 5.0, they are required
+		// Android versions before 4.1 still need the old binary...
 		boolean usePie = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN;
 		
-		//Get the correct AAPT binary for this processor architecture
+		// Get the correct AAPT binary for this processor architecture
 		switch (arch) {
 		case "mip":
 			aaptName = "aapt-binaries/aapt-mips";
@@ -690,10 +690,22 @@ public class Build {
 			break;
 		case "arm":
 		default:
-			//Default to ARM, just in case
+			// Default to ARM, just in case
 			
 			if (usePie) {
-				aaptName = "aapt-binaries/aapt-arm-pie";
+				// Check to see if the user wants to use the old, pre-0.3.3 AAPT PIE binary.
+				// This is for debugging... because for some reason, the new one that was
+				// supposed to fix incompatibilities with some devices is - wait for it -
+				// incompatible with some devices. This seems to be a pattern.
+				if (PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_aapt_binary", false)) {
+					aaptName = "aapt-binaries/aapt-arm-pie-old";
+					
+					if (verbose) {
+						System.out.println("Using pre-0.3.3 AAPT binary");
+					}
+				} else {
+					aaptName = "aapt-binaries/aapt-arm-pie";
+				}
 				
 				if (verbose) {
 					System.out.println("Using position independent executable (PIE) AAPT binary");
@@ -703,6 +715,9 @@ public class Build {
 			}
 			break;
 		}
+		
+		// TODO: Only re-copy AAPT if we need to
+		// Note: Make sure that it gets re-copied if the user changes the pre-0.3.3 preference
 		
 		File aaptLoc = new File(tmpFolder, "aapt"); //Use the same name for the destination so that the hyphens aren't an issue
 		
@@ -729,7 +744,7 @@ public class Build {
 			int code = chmodProcess.waitFor();
 			
 			if (code != 0) {
-				System.err.println("Unable to make AAPT executable, error code " + code);
+				System.err.println("Unable to make AAPT executable, error code: " + code);
 				
 				cleanUpError();
 				return;

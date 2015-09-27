@@ -84,5 +84,7 @@
     <string name="pref_sketchbook_drive">Sketchbook Location</string>
     <string name="pref_debug">Debug</string>
     <string name="pref_debug_global_verbose_output">Global Verbose Output</string>
+    <string name="pref_build_aapt_binary">Use pre-v0.3.3 AAPT Binary</string>
+    <string name="pref_build_aapt_binary_desc">Potential fix for devices where v0.3.3 broke the build process</string>
 
 </resources>

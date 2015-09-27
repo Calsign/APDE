@@ -20,6 +20,11 @@
     <PreferenceCategory
         android:key="pref_build_debug"
         android:title="@string/pref_debug" >
+    
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="build_output_verbose"
+            android:title="@string/build_output_verbose" />
         
         <CheckBoxPreference
             android:defaultValue="false"
@@ -27,8 +32,9 @@
             android:title="@string/pref_build_folder_keep" />
         
         <CheckBoxPreference
-            android:defaultValue="false"
-            android:key="build_output_verbose"
-            android:title="@string/build_output_verbose" />
+            android:key="pref_build_aapt_binary"
+            android:title="@string/pref_build_aapt_binary"
+            android:summary="@string/pref_build_aapt_binary_desc"
+            android:defaultValue="false" />
     </PreferenceCategory>
 </PreferenceScreen>

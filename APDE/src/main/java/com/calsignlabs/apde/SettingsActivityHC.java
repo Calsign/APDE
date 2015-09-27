@@ -23,7 +23,6 @@ import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
@@ -89,6 +88,18 @@ public class SettingsActivityHC extends PreferenceActivity {
 					return true;
 				}
 			});
+		}
+		
+		Preference useOldAaptBinary = frag.findPreference("pref_build_aapt_binary");
+		
+		if (useOldAaptBinary != null) {
+			boolean usePie = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN;
+			boolean isArm = android.os.Build.CPU_ABI.startsWith("arm");
+			
+			// Disable the "Use pre-0.3.3 AAPT Binary" debug preference on devices that don't seem to have these types of issues
+			if (!(usePie && isArm)) {
+				((PreferenceCategory) frag.findPreference("pref_build_debug")).removePreference(useOldAaptBinary);
+			}
 		}
 		
 		Preference version = frag.findPreference("pref_about_version");

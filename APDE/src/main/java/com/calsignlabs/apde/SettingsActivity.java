@@ -14,6 +14,7 @@ import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
+import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.view.MenuItem;
@@ -126,9 +127,9 @@ public class SettingsActivity extends PreferenceActivity {
 		//Hide the "Enable Vibration" preference if the vibrator isn't available
 		
 		Vibrator vibrate = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-		if(Build.VERSION.SDK_INT >= 11)
+		if (Build.VERSION.SDK_INT >= 11)
 			//This only works on API >= 11
-			if(!vibrate.hasVibrator())
+			if (!vibrate.hasVibrator())
 				getPreferenceScreen().removePreference(findPreference("pref_vibrate"));
 		else
 			// getSystemService(VIBRATOR_SERVICE) on API < 11 returns null if the vibrator isn't available
@@ -149,6 +150,16 @@ public class SettingsActivity extends PreferenceActivity {
 				return true;
 			}
 		});
+		
+		Preference useOldAaptBinary = getPreferenceScreen().findPreference("pref_build_aapt_binary");
+		
+		boolean usePie = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN;
+		boolean isArm = android.os.Build.CPU_ABI.startsWith("arm");
+		
+		// Disable the "Use pre-0.3.3 AAPT Binary" debug preference on devices that don't seem to have these types of issues
+		if (!(usePie && isArm)) {
+			((PreferenceCategory) getPreferenceScreen().findPreference("pref_build_debug")).removePreference(useOldAaptBinary);
+		}
 		
 		Preference version = findPreference("pref_about_version");
 		
