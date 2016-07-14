@@ -1,9 +1,7 @@
 package com.calsignlabs.apde;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Point;
-import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
@@ -19,8 +17,6 @@ import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 
 public class CodeAreaFragment extends Fragment {
-//	protected OnFragmentInteractionListener mListener;
-	
 	protected SketchFile sketchFile;
 	
 	protected CodeEditText code;
@@ -53,23 +49,24 @@ public class CodeAreaFragment extends Fragment {
 		
 		//Correctly size the code area
 		
-		int minWidth;
-		int maxWidth;
+		int fullWidth;
+		int fullHeight = getGlobalState().getEditor().getCodePager().getHeight() - getGlobalState().getEditor().getCodeTabStrip().getHeight();
 		
 		//Let's try and do things correctly for once
 		if (android.os.Build.VERSION.SDK_INT >= 13) {
 			Point point = new Point();
 			getActivity().getWindowManager().getDefaultDisplay().getSize(point);
-			maxWidth = point.x;
+			fullWidth = point.x;
 		} else {
-			maxWidth = getActivity().getWindowManager().getDefaultDisplay().getWidth();
+			fullWidth = getActivity().getWindowManager().getDefaultDisplay().getWidth();
 		}
 		
-		minWidth = maxWidth - (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
+		int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
 		
-		getCodeEditText().setMinimumWidth(minWidth);
-		codeScrollerX.getLayoutParams().width = maxWidth;
-		codeScroller.getLayoutParams().width = maxWidth;
+		int minWidth = fullWidth - padding;
+		int minHeight = fullWidth - padding;
+		
+		getCodeEditText().setMinWidth(minWidth);
 		
 		//Detect touch events
 		getCodeEditText().setOnTouchListener(new EditText.OnTouchListener() {
@@ -84,41 +81,48 @@ public class CodeAreaFragment extends Fragment {
 			}
 		});
 		
-		//Forward touch events to the code area so that the user can select anywhere
 		codeScroller.setOnTouchListener(new View.OnTouchListener() {
-			//Meta data from the current touch event
-//        	private boolean dragged = false;
-//        	private float startX, startY;
-			private MotionEvent startEvent;
+			private static final int MAX_CLICK_DURATION = 200;
+			private static final int MAX_DISTANCE = 10;
+			
+			private float initialX, initialY;
 			
 			@Override
-			public boolean onTouch(View v, MotionEvent event) {
-				if (getGlobalState().isExample()) {
-					return false;
+			public boolean onTouch(View view, MotionEvent motionEvent) {
+				int maxDist = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, MAX_DISTANCE, getResources().getDisplayMetrics());
+				
+				switch (motionEvent.getAction()) {
+				case MotionEvent.ACTION_UP:
+					if (motionEvent.getEventTime() - motionEvent.getDownTime() <= MAX_CLICK_DURATION
+							&& sqDistLessThan(motionEvent.getX(), motionEvent.getY(), initialX, initialY, maxDist)) {
+						if (!getGlobalState().isExample()) {
+							// Make the keyboard visible (if the user doesn't have a hardware keyboard)
+							if (!getGlobalState().getEditor().keyboardVisible && !PreferenceManager.getDefaultSharedPreferences(getGlobalState()).getBoolean("use_hardware_keyboard", false)) {
+								InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+								imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+							}
+							
+							// Set selection
+							getCodeEditText().setSelection(getCodeEditText().getText().length());
+							getCodeEditText().requestFocus();
+						}
+					}
+					break;
+				case MotionEvent.ACTION_DOWN:
+					initialX = motionEvent.getX();
+					initialY = motionEvent.getY();
+					break;
 				}
 				
-				//Make the keyboard visible (if the user doesn't have a hardware keyboard)
-				if (!getGlobalState().getEditor().keyboardVisible && !PreferenceManager.getDefaultSharedPreferences(getGlobalState()).getBoolean("use_hardware_keyboard", false)) {
-					InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
-					imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
-				}
-				
-				//Make sure that the scroll area can still scroll
 				return false;
+			}
+			
+			private boolean sqDistLessThan(float x1, float y1, float x2, float y2, float dist) {
+				return (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1) <= dist * dist;
 			}
 		});
 		
-		final View activityRootView = getGlobalState().getEditor().findViewById(R.id.content);
-		
-		getCodeEditText().setMinimumWidth(activityRootView.getWidth());
-		getCodeEditText().setMinWidth(activityRootView.getWidth());
-		
-		getCodeEditText().setText(sketchFile.getText());
-		
-		boolean editable = !sketchFile.isExample();
-		
-		getCodeEditText().setFocusable(editable);
-		getCodeEditText().setFocusableInTouchMode(editable);
+		updateWithSketchFile();
 		
 		getCodeEditText().setupCustomActionMode();
 		getCodeEditText().setupTextListener();
@@ -169,27 +173,21 @@ public class CodeAreaFragment extends Fragment {
 		
 		super.onDestroyView();
 	}
-
-//	@Override
-//	public void onAttach(Activity activity) {
-//		super.onAttach(activity);
-//		
-//		try {
-//			mListener = (OnFragmentInteractionListener) activity;
-//		} catch (ClassCastException e) {
-//			throw new ClassCastException(activity.toString()
-//					+ " must implement OnFragmentInteractionListener");
-//		}
-//	}
-//
-//	@Override
-//	public void onDetach() {
-//		super.onDetach();
-//		
-//		mListener = null;
-//	}
-//	
-//	public interface OnFragmentInteractionListener {
-//		void onFragmentInteraction();
-//	}
+	
+	public boolean isInitialized() {
+		return code != null;
+	}
+	
+	public void setSketchFile(SketchFile sketchFile) {
+		this.sketchFile = sketchFile;
+	}
+	
+	public void updateWithSketchFile() {
+		getCodeEditText().setText(sketchFile.getText());
+		
+		boolean editable = !sketchFile.isExample();
+		
+		getCodeEditText().setFocusable(editable);
+		getCodeEditText().setFocusableInTouchMode(editable);
+	}
 }

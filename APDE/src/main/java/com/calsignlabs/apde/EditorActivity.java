@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Point;
@@ -16,12 +17,16 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
 import android.preference.PreferenceManager;
+import android.support.design.widget.TabLayout;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.PopupMenu;
 import android.support.v7.widget.Toolbar;
 import android.util.SparseArray;
 import android.util.TypedValue;
@@ -58,10 +63,8 @@ import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.astuetz.PagerSlidingTabStrip;
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.Manifest;
-import com.calsignlabs.apde.support.PopupMenu;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
@@ -97,12 +100,11 @@ public class EditorActivity extends AppCompatActivity {
 	private HashMap<String, KeyBinding> keyBindings;
 	
 	public ViewPager codePager;
-	public FragmentPagerAdapter codePagerAdapter;
+	public FragmentStatePagerAdapter codePagerAdapter;
 	
-	protected PagerSlidingTabStrip codeTabStrip;
+	protected TabLayout codeTabStrip;
 	
 	//List of tabs
-//	private HashMap<Tab, SketchFile> tabs;
 	protected ArrayList<SketchFile> tabs;
 	
 	//Whether or not the sketch has been saved TODO this isn't even being used right now
@@ -203,11 +205,10 @@ public class EditorActivity extends AppCompatActivity {
 		getGlobalState().initTaskManager();
 
 		//Initialize the list of tabs
-//        tabs = new HashMap<Tab, SketchFile>();
 		tabs = new ArrayList<SketchFile>();
         
 		codePager = (ViewPager) findViewById(R.id.code_pager);
-		codePagerAdapter = new FragmentPagerAdapter(getSupportFragmentManager()) {
+		codePagerAdapter = new FragmentStatePagerAdapter(getSupportFragmentManager()) {
 			@Override
 			public int getCount() {
 				return tabs.size();
@@ -222,32 +223,34 @@ public class EditorActivity extends AppCompatActivity {
 			public Fragment getItem(int position) {
 				return tabs.get(position).getFragment();
 			}
+			
+			@Override
+			public int getItemPosition(Object object) {
+				// This forces the ViewPager to get new fragments every time we call notifyDataSetChanged()
+				// This is necessary so that we don't reuse the same fragments, because reusing the
+				// same fragments means that they will contain the same code which is... not good
+				return POSITION_NONE;
+			}
 		};
 		codePager.setAdapter(codePagerAdapter);
 		
-		codeTabStrip = (PagerSlidingTabStrip) findViewById(R.id.code_pager_tabs);
-		codeTabStrip.setAllCaps(false);
+		codeTabStrip = (TabLayout) findViewById(R.id.code_pager_tabs);
 		codeTabStrip.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
-		codeTabStrip.setIndicatorColor(getResources().getColor(R.color.holo_select));
-		codeTabStrip.setOnTabReselectedListener(new PagerSlidingTabStrip.OnTabReselectedListener() {
+		codeTabStrip.setSelectedTabIndicatorColor(getResources().getColor(R.color.holo_select));
+		codeTabStrip.setSelectedTabIndicatorHeight((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, getResources().getDisplayMetrics()));
+		codeTabStrip.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
 			@Override
-			public void onTabReselected(int i) {
-				EditorActivity.this.onTabReselected(((LinearLayout) codeTabStrip.getChildAt(0)).getChildAt(i), i);
+			public void onTabSelected(TabLayout.Tab tab) {}
+			
+			@Override
+			public void onTabUnselected(TabLayout.Tab tab) {}
+			
+			@Override
+			public void onTabReselected(TabLayout.Tab tab) {
+				View anchor = ((LinearLayout) codeTabStrip.getChildAt(0)).getChildAt(tab.getPosition());
+				EditorActivity.this.onTabReselected(anchor);
 			}
 		});
-		
-        //Set the tab bar to the proper height
-        TypedValue tv = new TypedValue();
-        getTheme().resolveAttribute(android.support.v7.appcompat.R.attr.actionBarSize, tv, true);
-        int actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data, getResources().getDisplayMetrics());
-//        tabBar.setContentHeight(actionBarHeight);
-        
-        //Add the tab bar at the top of the layout
-//        ((LinearLayout) findViewById(R.id.content)).addView(tabBar, 0, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-//        tabBar.setAllowCollapse(false);
-        
-        //Set the tab bar background color
-//        tabBar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
 		
         //Load all of the permissions
         Manifest.loadPermissions(this);
@@ -275,18 +278,6 @@ public class EditorActivity extends AppCompatActivity {
         if (!loadSketchStart()) {
 			addDefaultTab(getGlobalState().getSketchName());
 		}
-        
-        //Make the code area able to detect its own text changing
-//        ((CodeEditText) findViewById(R.id.code)).setupTextListener();
-        
-//        //Detect text changes for determining whether or not the sketch has been saved
-//        ((EditText) findViewById(R.id.code)).addTextChangedListener(new TextWatcher(){
-//            public void afterTextChanged(Editable s) {
-//                if(isSaved()) setSaved(false);
-//            }
-//            public void beforeTextChanged(CharSequence s, int start, int count, int after){}
-//            public void onTextChanged(CharSequence s, int start, int before, int count){}
-//        });
         
         //Check for an app update
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -483,88 +474,9 @@ public class EditorActivity extends AppCompatActivity {
         //Enable the home button, the "home as up" will actually get replaced by the drawer toggle button
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-		
-//        final ScrollView codeScroller = (ScrollView) findViewById(R.id.code_scroller);
-//        final HorizontalScrollView codeScrollerX = (HorizontalScrollView) findViewById(R.id.code_scroller_x);
-//        final EditText code = (EditText) findViewById(R.id.code);
         
         //Obtain the root view
         final View activityRootView = findViewById(R.id.content);
-        
-//        final GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.OnGestureListener() {
-//        	final static int FLING_THRESHOLD = 2;
-//        	final static double ANGLE_THRESHOLD = Math.PI / 2; //45 degrees +/- the horizontal
-//        	
-//			@Override
-//			public boolean onSingleTapUp(MotionEvent e) {
-//				return false;
-//			}
-//			@Override
-//			public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-//				return false;
-//			}
-//			@Override
-//			public boolean onDown(MotionEvent e) {
-//				return false;
-//			}
-//			@Override
-//			public void onShowPress(MotionEvent e) {}
-//			@Override
-//			public void onLongPress(MotionEvent e) {}
-//			
-//			@Override
-//			public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-//        		if (twoFingerSwipe) {
-//        			int selectedTab = getSelectedCodeIndex();
-//        			
-//        			//Let's steer clear of undefined
-//        			if (velocityX == 0) {
-//        				return false;
-//        			}
-//        			
-//        			//Obtain the angle, make sure that 0 < theta < 2 * PI
-//        			double theta = (Math.atan2(velocityY, velocityX) + Math.PI * 2) % Math.PI * 2;
-//        			
-//        			//Make sure that the angle is within the allowed region
-//        			if ((theta > ANGLE_THRESHOLD && theta < Math.PI * 2 - ANGLE_THRESHOLD)) {
-//        				return false;
-//        			}
-//        			
-//        			if (velocityX >= FLING_THRESHOLD) {
-//        				if (selectedTab > 0) {
-//        					selectCode(selectedTab - 1);
-//        				}
-//        				return true;
-//        			} else if (velocityX <= -FLING_THRESHOLD) {
-//        				if (selectedTab < getCodeCount() - 1) {
-//							selectCode(selectedTab + 1);
-//        				}
-//        				return true;
-//        			}
-//        		}
-//        		
-//				return false;
-//			}
-//		});
-        
-//        codeScrollerX.setOnTouchListener(new View.OnTouchListener() {
-//			@Override
-//			public boolean onTouch(View v, MotionEvent event) {
-//				twoFingerSwipe = twoFingerSwipe || event.getPointerCount() == 2;
-//				
-//				boolean swipeSuccess = gestureDetector.onTouchEvent(event);
-//				
-//				if (event.getAction() == MotionEvent.ACTION_UP) {
-//					twoFingerSwipe = false;
-//				}
-//				
-//				return swipeSuccess || twoFingerSwipe;
-//			}
-//		});
-        
-        //Make the code area fill the width of the screen
-//        code.setMinimumWidth(activityRootView.getWidth());
-//        code.setMinWidth(activityRootView.getWidth());
         
         //Detect software keyboard open / close events
         //StackOverflow: http://stackoverflow.com/questions/2150078/how-to-check-visibility-of-software-keyboard-in-android
@@ -584,18 +496,24 @@ public class EditorActivity extends AppCompatActivity {
 					imm.hideSoftInputFromWindow(activityRootView.getWindowToken(), 0);
 					return;
 				}
-
+				
 				if (oldCodeHeight == -1) {
 					oldCodeHeight = getSelectedCodeAreaScroller().getHeight();
 				}
-
+				
 				if (heightDiff > 100) { //If the difference is bigger than 100, it's probably the keyboard
+					
+					// An important note for understanding the following code:
+					// The tab bar is actually inside the code area pager, so the height of "code"
+					// includes the height of the tab bar
+					
 					if (!keyboardVisible) {
 						keyboardVisible = true;
-
-						if (message == -1)
-							message = findViewById(R.id.message).getHeight();
-
+						
+						if (message == -1) {
+							message = findViewById(R.id.buffer).getHeight();
+						}
+						
 						//Configure the layout for the keyboard
 
 						LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
@@ -610,7 +528,7 @@ public class EditorActivity extends AppCompatActivity {
 							oldCodeHeight = code.getHeight();
 						}
 						
-						int totalHeight = content.getHeight() - message - codeTabStrip.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
 						
 						if (totalHeight > oldCodeHeight) {
 							codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, totalHeight));
@@ -648,32 +566,32 @@ public class EditorActivity extends AppCompatActivity {
 				} else {
 					if (keyboardVisible) {
 						//Configure the layout for the absence of the keyboard
-
+						
 						View messageArea = findViewById(R.id.message);
 						View codeArea = getSelectedCodeAreaScroller();
 						View consoleArea = findViewById(R.id.console_scroller);
 						
 						ViewGroup content = (ViewGroup) findViewById(R.id.content);
 						
-						int totalHeight = content.getHeight() - message - codeTabStrip.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
 						
-						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight));
-						consoleArea.startAnimation(new ResizeAnimation<LinearLayout>(consoleArea, ResizeAnimation.DEFAULT, codeArea.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight));
+						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight + codeTabStrip.getHeight(), false));
+						consoleArea.startAnimation(new ResizeAnimation<LinearLayout>(consoleArea, ResizeAnimation.DEFAULT, codeArea.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight - codeTabStrip.getHeight(), false));
 						
 						keyboardVisible = false;
-
+						
 						if (oldCodeHeight > 0) {
 							consoleWasHidden = false;
 						}
-
+						
 						//Remove any unnecessary focus from the code area
 						getSelectedCodeArea().clearFocus();
 						getSelectedCodeArea().matchingBracket = -1;
-
+						
 						//Update the character insert tray
 						toggleCharInserts.setVisibility(View.GONE);
 						findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.GONE);
-
+						
 						findViewById(R.id.message).setVisibility(View.VISIBLE);
 						findViewById(R.id.char_insert_tray).setVisibility(View.GONE);
 					}
@@ -801,8 +719,37 @@ public class EditorActivity extends AppCompatActivity {
 		}
 		
 		codePagerAdapter.notifyDataSetChanged();
-		codeTabStrip.setViewPager(codePager);
+		codeTabStrip.setupWithViewPager(codePager);
     }
+	
+	@Override
+	public void onStart() {
+		super.onStart();
+		
+		APDE.StorageDrive.StorageDriveType storageDriveType = getGlobalState().getSketchbookStorageDrive().type;
+		
+		if (storageDriveType.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL) || storageDriveType.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)) {
+			// Make sure we have WRITE_EXTERNAL_STORAGE
+			if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+				// We have to request it...
+				// TODO Explain why to the user?
+				ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
+			}
+		}
+	}
+	
+	protected final int PERMISSIONS_REQUEST_CODE = 42;
+	
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+		switch (requestCode) {
+		case PERMISSIONS_REQUEST_CODE:
+			if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+				// TODO Explain that we NEED this permission!
+			}
+			break;
+		}
+	}
 	
 	public int getSelectedCodeIndex() {
 		return codePager.getCurrentItem();
@@ -869,7 +816,7 @@ public class EditorActivity extends AppCompatActivity {
 		String fullText = APDE.readAssetFile(context, "whatsnew.txt");
 		//File is seperated human-readably...
 		List<String> releaseNotes = Arrays.asList(
-				fullText.split("\n------------------------------------------------------------------------\n"));
+				fullText.split("(\\r\\n|\\n|\\r)------------------------------------------------------------------------(\\r\\n|\\n|\\r)"));
 		//Read most recent first
 		Collections.reverse(releaseNotes);
 		//Make into a stack so that we can peel off items one at a time
@@ -879,7 +826,7 @@ public class EditorActivity extends AppCompatActivity {
 		return releaseNotesStack;
 	}
 	
-	public PagerSlidingTabStrip getCodeTabStrip() {
+	public TabLayout getCodeTabStrip() {
 		return codeTabStrip;
 	}
 	
@@ -1567,85 +1514,97 @@ public class EditorActivity extends AppCompatActivity {
 	 */
 	public boolean loadSketch(String sketchPath, APDE.SketchLocation sketchLocation) {
 		if (sketchLocation == null) {
-			//Something bad happened
+			// Something bad happened
 			return false;
 		}
 		
-		if(sketchLocation.equals(APDE.SketchLocation.TEMPORARY)) {
+		if (sketchLocation.equals(APDE.SketchLocation.TEMPORARY)) {
 			return false;
 //			return loadSketchTemp();
 		}
 		
-		//Get the sketch location
+		// Get the sketch location
     	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, sketchLocation);
     	boolean success;
     	
-    	//Ensure that the sketch folder exists and is a directory
-    	if(sketchLoc.exists() && sketchLoc.isDirectory()) {
+    	// Ensure that the sketch folder exists and is a directory
+    	if (sketchLoc.exists() && sketchLoc.isDirectory()) {
     		getGlobalState().selectSketch(sketchPath, sketchLocation);
     		
-    		//Get all the files in the directory
+    		// Get all the files in the directory
     		File[] files = sketchLoc.listFiles();
     		
-    		//Why do we need this...?
-    		for(SketchFile meta : tabs) {
+    		// Why do we need this...?
+    		for (SketchFile meta : tabs) {
 				meta.disable();
 			}
     		
-    		//Get rid of any tabs
+    		// Get rid of any tabs
     		tabs.clear();
 //    		tabBar.removeAllTabs();
-			codePagerAdapter.notifyDataSetChanged();
-    		//This method is necessary, too
-    		
-    		//Cycle through the files
-    		for(File file : files) {
-    			//Split the filename into prefix and suffix
+    		// This method is necessary, too
+			
+    		// Cycle through the files
+    		for (File file : files) {
+    			// Split the filename into prefix and suffix
     			String[] folders = file.getPath().split("/");
     			String[] parts = folders[folders.length - 1].split("\\.");
-    			//If the filename isn't formatted properly, skip this file
+    			// If the filename isn't formatted properly, skip this file
     			if(parts.length != 2)
     				continue;
     			
-    			//Retrieve the prefix and suffix
+    			// Retrieve the prefix and suffix
     			String prefix = parts[parts.length - 2];
     			String suffix = parts[parts.length - 1];
     			
-    			//Check to see if it's a .PDE file
+    			// Check to see if it's a .PDE file
     			if (suffix.equals("pde")) {
-    				//Build a Tab Meta object
+    				// Build a Tab Meta object
     				SketchFile meta = new SketchFile("");
     				meta.readData(file.getAbsolutePath());
     				meta.setTitle(prefix);
 					meta.setExample(getGlobalState().isExample());
-    				
-    				//Add the tab
-    				addTab(meta);
+					
+					// Add the tab
+					addTabWithoutPagerUpdate(meta);
+					
+					meta.getFragment().setSketchFile(meta);
+//					System.out.println("initialized: " + meta.getFragment().isInitialized());
+//					if (meta.getFragment().isInitialized()) {
+//						meta.forceFragmentUpdate();
+//					}
     			} else if (suffix.equals("java")) {
-    				//Build a Tab Meta object
+    				// Build a Tab Meta object
     				SketchFile meta = new SketchFile("");
     				meta.readData(file.getAbsolutePath());
     				meta.setTitle(prefix);
     				meta.setSuffix(".java");
 					meta.setExample(getGlobalState().isExample());
     				
-    				//Add the tab
+    				// Add the tab
     				addTab(meta);
+					
+					if (meta.getFragment().isInitialized()) {
+						meta.forceFragmentUpdate();
+					}
     			}
     		}
+		
+			codePagerAdapter.notifyDataSetChanged();
     		
-//    		//Update the code area
+//    		// Update the code area
 //    		if(getCodeCount() > 0)
 //    			((CodeEditText) findViewById(R.id.code)).setNoUndoText(tabs.get(getSelectedCodeIndex()).getText());
 //    		else
 //    			((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
     		
-    		//Get rid of previous syntax highlighter data
+			
+    		// Get rid of previous syntax highlighter data
 //    		((CodeEditText) findViewById(R.id.code)).clearTokens();
     		
     		success = true;
     		
-    		//Automatically selects and loads the new tab
+    		// Automatically selects and loads the new tab
 //    		tabBar.selectLoadDefaultTab();
 			selectCode(0);
     	} else {
@@ -1653,7 +1612,7 @@ public class EditorActivity extends AppCompatActivity {
     	}
     	
     	if(success) {
-			//Close Find/Replace (if it's open)
+			// Close Find/Replace (if it's open)
 			((FindReplace) getGlobalState().getPackageToToolTable().get(FindReplace.PACKAGE_NAME)).close();
 			
 //    		if(getGlobalState().isExample()) {
@@ -2488,8 +2447,9 @@ public class EditorActivity extends AppCompatActivity {
 		if(!keyboardVisible)
 			return;
 		
-    	if(message == -1)
-    		message = findViewById(R.id.message).getHeight();
+    	if(message == -1) {
+			message = findViewById(R.id.buffer).getHeight();
+		}
     	
     	//Get a reference to the button container
     	LinearLayout container = ((LinearLayout) findViewById(R.id.char_insert_tray_list));
@@ -2751,36 +2711,35 @@ public class EditorActivity extends AppCompatActivity {
     	}
     }
     
-    //Called internally to correct issues with 2-line messages vs 1-line messages (and maybe some other issues)
+    // Called internally to correct issues with 2-line messages vs 1-line messages (and maybe some other issues)
     protected void correctMessageAreaHeight() {
     	final TextView messageArea = (TextView) findViewById(R.id.message);
     	
-    	//Update the message area's height
+    	// Update the message area's height
     	messageArea.requestLayout();
     	
-    	//Check back in later when the height has updated...
+    	// Check back in later when the height has updated...
     	messageArea.post(new Runnable() {
     		public void run() {
-    			//...and update the console's height...
+    			// ...and update the console's height...
     			
-    			//We need to use this in case the message area is partially off the screen
-    			//This is the DESIRED height, not the ACTUAL height
+    			// We need to use this in case the message area is partially off the screen
+    			// This is the DESIRED height, not the ACTUAL height
     			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
     			
-    			//Obtain some references
+    			// Obtain some references
     			View console = findViewById(R.id.console_scroller);
-    			View code = getSelectedCodeAreaScroller();
     			View content = findViewById(R.id.content);
-    			
+				
 				if (isSelectedCodeAreaInitialized()) {
-					//We can't shrink the console if it's hidden (like when the keyboard is visible)...
-					//...so shrink the code area instead
+					// We can't shrink the console if it's hidden (like when the keyboard is visible)...
+					// ...so shrink the code area instead
 					if (console.getHeight() <= 0) {
-						code.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-								content.getHeight() - codeTabStrip.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+						codePager.setLayoutParams(new LinearLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+								content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
 					} else {
 						console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-								content.getHeight() - code.getHeight() - codeTabStrip.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+								content.getHeight() - codePager.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
 					}
 				}
     		}
@@ -2893,12 +2852,16 @@ public class EditorActivity extends AppCompatActivity {
 		});
     }
 	
+	protected void addTabWithoutPagerUpdate(SketchFile sketchFile) {
+		tabs.add(sketchFile);
+	}
+	
 	public void addTab(SketchFile sketchFile) {
 		tabs.add(sketchFile);
 		codePagerAdapter.notifyDataSetChanged();
 	}
 	
-	public void onTabReselected(View view, int pos) {
+	public void onTabReselected(View view) {
 		if(!drawerOpen && !getGlobalState().isExample()) {
 			PopupMenu popup = new PopupMenu(getGlobalState().getEditor(), view);
 			
@@ -3022,7 +2985,7 @@ public class EditorActivity extends AppCompatActivity {
 	 */
     private void renameTab() {
     	if(tabs.size() > 0 && !getGlobalState().isExample())
-    		createInputDialog(getResources().getString(R.string.tab_rename_dialog_title), getResources().getString(R.string.tab_rename_dialog_message), getSelectedSketchFile().getText().toString(), RENAME_TAB);
+    		createInputDialog(getResources().getString(R.string.tab_rename_dialog_title), getResources().getString(R.string.tab_rename_dialog_message), getSelectedSketchFile().getTitle(), RENAME_TAB);
     }
     
     /**
@@ -3085,7 +3048,6 @@ public class EditorActivity extends AppCompatActivity {
 			// We have to do this whole hop-skip thing because of peculiarities in the PagerSlidingTabStrip library...
 			selectCode(getSelectedCodeIndex() - 1);
 			tabs.remove(getSelectedCodeIndex() + 1);
-			codePagerAdapter.notifyDataSetChanged();
 //	    	tabs.remove(cur);
 	    	
 	    	//If there are no more tabs
@@ -3105,12 +3067,13 @@ public class EditorActivity extends AppCompatActivity {
 	    		//Force remove all tabs
 //	    		tabBar.removeAllTabs();
 	    		tabs.clear();
-				codePagerAdapter.notifyDataSetChanged();
 	    		
 	    		//Force action menu refresh
 	    		supportInvalidateOptionsMenu();
 	    	}
-	    	
+		
+			codePagerAdapter.notifyDataSetChanged();
+			
 	    	//Inform the user in the message area
 	    	message(getResources().getText(R.string.tab_deleted));
     	}
@@ -3480,9 +3443,9 @@ public class EditorActivity extends AppCompatActivity {
 	
 	//Called internally to open the Settings activity
 	private void launchSettings() {
-		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
-			startActivity(new Intent(this, SettingsActivity.class));
-		else
+//		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
+//			startActivity(new Intent(this, SettingsActivity.class));
+//		else
 			startActivity(new Intent(this, SettingsActivityHC.class));
 	}
 	
@@ -3643,8 +3606,13 @@ public class EditorActivity extends AppCompatActivity {
 			if(pressed) {
 				switch(event.getAction()) {
 				case MotionEvent.ACTION_MOVE:
-					if(message == -1)
-						message = findViewById(R.id.message).getHeight();
+					if(message == -1) {
+						message = findViewById(R.id.buffer).getHeight();
+					}
+					
+					// An important note for understanding the following code:
+					// The tab bar is actually inside the code area pager, so the height of "code"
+					// includes the height of the tab bar
 					
 					//Calculate maximum possible code view height
 					int maxCode = content.getHeight() - message - codeTabStrip.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
@@ -3654,16 +3622,18 @@ public class EditorActivity extends AppCompatActivity {
 					
 					//Calculate the new dimensions of the console
 					int consoleDim = console.getHeight() - y;
-					if(consoleDim < 0)
+					if(consoleDim < 0) {
 						consoleDim = 0;
-					if(consoleDim > maxCode)
+					}
+					if(consoleDim > maxCode) {
 						consoleDim = maxCode;
+					}
 					
 					//Calculate the new dimensions of the code view
 					int codeDim = maxCode - consoleDim;
 					
 					//Set the new dimensions
-					codePager.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim));
+					codePager.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim + codeTabStrip.getHeight()));
 					console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
 					
 					firstResize = false;

@@ -6,7 +6,9 @@ import android.content.SharedPreferences;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.preference.PreferenceManager;
+import android.support.design.widget.TabLayout;
 import android.support.v4.view.ViewPager;
+import android.support.v7.widget.SwitchCompat;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.DisplayMetrics;
@@ -20,7 +22,6 @@ import android.view.Window;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
-import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -31,9 +32,9 @@ import android.widget.ScrollView;
 import android.widget.Toast;
 
 import com.calsignlabs.apde.APDE;
-import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.task.Task;
 
@@ -253,6 +254,8 @@ public class FindReplace implements Tool {
 						context.getEditor().setExtraHeaderView(findReplaceToolbar);
 //						context.getEditor().refreshMessageAreaLocation();
 						
+						TabLayout codeTabStrip = context.getEditor().getCodeTabStrip();
+						
 						float height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40, context.getResources().getDisplayMetrics());
 						
 						ViewPager codePager = context.getEditor().getCodePager();
@@ -262,12 +265,12 @@ public class FindReplace implements Tool {
 						
 						ResizeAnimation<LinearLayout> resizeCode;
 						ResizeAnimation<LinearLayout> resizeConsole;
-						if (codePager.getHeight() >= height) {
+						if (codePager.getHeight() - codeTabStrip.getHeight() >= height) {
 							resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight(), LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
 							resizeConsole = null;
 						} else {
-							resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0, false);
-							resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight()), false);
+							resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codeTabStrip.getHeight(), false);
+							resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight() + codeTabStrip.getHeight()), false);
 						}
 						codePager.startAnimation(resizeCode);
 						if (resizeConsole != null) {
@@ -301,13 +304,13 @@ public class FindReplace implements Tool {
 				//TODO Selection scope isn't currently implemented... too many issues
 				scopeSelection.setVisibility(View.GONE);
 				
-				CheckBox highlightAllCheckBox = (CheckBox) options.findViewById(R.id.find_replace_options_highlight_all);
-				CheckBox wrapAroundCheckBox = (CheckBox) options.findViewById(R.id.find_replace_options_wrap_around);
-				CheckBox caseSensitiveCheckBox = (CheckBox) options.findViewById(R.id.find_replace_options_case_sensitive);
-				CheckBox regExpCheckBox = (CheckBox) options.findViewById(R.id.find_replace_options_reg_exp);
+				SwitchCompat highlightAllCheckBox = (SwitchCompat) options.findViewById(R.id.find_replace_options_highlight_all);
+				SwitchCompat wrapAroundCheckBox = (SwitchCompat) options.findViewById(R.id.find_replace_options_wrap_around);
+				SwitchCompat caseSensitiveCheckBox = (SwitchCompat) options.findViewById(R.id.find_replace_options_case_sensitive);
+				SwitchCompat regExpCheckBox = (SwitchCompat) options.findViewById(R.id.find_replace_options_reg_exp);
 				
 				//TODO Regular Expressions aren't currently implemented
-				regExpCheckBox.setVisibility(View.GONE);
+				options.findViewById(R.id.find_replace_options_reg_exp_container).setVisibility(View.GONE);
 				
 				assignLongPressDescription(context, findButton, R.string.find);
 				assignLongPressDescription(context, replaceButton, R.string.replace_and_find);
@@ -319,7 +322,7 @@ public class FindReplace implements Tool {
 				assignEnumRadioGroup(context, "direction", 0, new RadioButton[]{directionForward, directionBackward}, new Direction[]{Direction.FORWARD, Direction.BACKWARD}, direction);
 				assignEnumRadioGroup(context, "scope", 1, new RadioButton[]{scopeSelection, scopeCurrentTab, scopeAllTabs}, new Scope[]{Scope.SELECTION, Scope.CURRENT_TAB, Scope.ALL_TABS}, scope);
 				
-				assignBooleanCheckBox(context, "highlight_all", false, highlightAllCheckBox, highlightAll, new CompoundButton.OnCheckedChangeListener() {
+				assignBooleanSwitch(context, "highlight_all", false, highlightAllCheckBox, highlightAll, new CompoundButton.OnCheckedChangeListener() {
 					@Override
 					public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 						if (isChecked) {
@@ -332,14 +335,14 @@ public class FindReplace implements Tool {
 						addSelectedFindMatchHighlight();
 					}
 				});
-				assignBooleanCheckBox(context, "wrap_around", true, wrapAroundCheckBox, wrapAround, null);
-				assignBooleanCheckBox(context, "case_sensitive", false, caseSensitiveCheckBox, caseSensitive, new CompoundButton.OnCheckedChangeListener() {
+				assignBooleanSwitch(context, "wrap_around", true, wrapAroundCheckBox, wrapAround, null);
+				assignBooleanSwitch(context, "case_sensitive", false, caseSensitiveCheckBox, caseSensitive, new CompoundButton.OnCheckedChangeListener() {
 					@Override
 					public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 						find(findTextField.getText().toString(), false);
 					}
 				});
-				assignBooleanCheckBox(context, "reg_exp", false, regExpCheckBox, regExp, null);
+				assignBooleanSwitch(context, "reg_exp", false, regExpCheckBox, regExp, null);
 				
 				closeButton.setOnClickListener(new ImageButton.OnClickListener() {
 					@Override
@@ -371,6 +374,8 @@ public class FindReplace implements Tool {
 							
 //							context.getEditor().refreshMessageAreaLocation();
 							
+							TabLayout codeTabStrip = context.getEditor().getCodeTabStrip();
+							
 							assignLongPressDescription(context, expandCollapseButton, R.string.collapse);
 							
 							findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, height, LinearLayout.LayoutParams.MATCH_PARENT, height * 2));
@@ -379,12 +384,12 @@ public class FindReplace implements Tool {
 							
 							ResizeAnimation<LinearLayout> resizeCode;
 							ResizeAnimation<LinearLayout> resizeConsole;
-							if (codePager.getHeight() >= height) {
+							if (codePager.getHeight() - codeTabStrip.getHeight() >= height) {
 								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
 								resizeConsole = null;
 							} else {
-								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0, false);
-								resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight()), false);
+								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codeTabStrip.getHeight(), false);
+								resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight() + codeTabStrip.getHeight()), false);
 							}
 							codePager.startAnimation(resizeCode);
 							if (resizeConsole != null) {
@@ -528,12 +533,12 @@ public class FindReplace implements Tool {
 		});
 	}
 	
-	protected void assignBooleanCheckBox(final APDE context, final String key, final boolean defaultValue, final CheckBox checkBox, final MutableBoolean value, final CompoundButton.OnCheckedChangeListener listener) {
+	protected void assignBooleanSwitch(final APDE context, final String key, final boolean defaultValue, final SwitchCompat switchCompat, final MutableBoolean value, final CompoundButton.OnCheckedChangeListener listener) {
 		boolean savedValue = getPreferences(context).getBoolean(key, defaultValue);
 		value.set(savedValue);
-		checkBox.setChecked(savedValue);
+		switchCompat.setChecked(savedValue);
 		
-		checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+		switchCompat.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 				value.set(isChecked);

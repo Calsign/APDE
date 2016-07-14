@@ -1,13 +1,5 @@
 <resources>
-
-    <!-- Strings related to Settings -->
-
-
-    <!-- Example General settings -->
-
-    <!-- Example settings for Data & Sync -->
-
-    <!-- Example settings for Notifications -->
+	
     <string name="pref_textsize_default">14</string>
     <string name="pref_textsize_title">Font Size</string>
     <string name="pref_syntax_highlight">Syntax Highlighting</string>
@@ -38,8 +30,8 @@
     <string name="override_tab_desc">Overrides tab for accessibility</string>
     <string name="inject_log_broadcaster">Inject Log Broadcaster</string>
     <string name="inject_log_broadcaster_desc">Allows console to display sketch output</string>
-    <string name="undo_redo_settings">Undo / Redo</string>
-    <string name="pref_undo_redo">Enable Undo / Redo</string>
+    <string name="undo_redo_settings">Undo/Redo</string>
+    <string name="pref_undo_redo">Enable Undo/Redo</string>
     <string name="pref_undo_redo_keep">Keep Entries</string>
     <string-array name="undo_redo_keep_entries">
         <item>All</item>
@@ -83,5 +75,19 @@
     <string name="pref_whats_new_enable_desc">When APDE updates</string>
     <string name="pref_whats_new_display">View Recent Changes</string>
     <string name="pref_sketchbook_drive">Sketchbook Location</string>
+    <string-array name="settings_headers">
+		<item>@string/pref_general</item>
+		<item>@string/pref_editor</item>
+		<item>@string/pref_build</item>
+		<item>@string/pref_code_assistance</item>
+		<item>@string/pref_about</item>
+	</string-array>
+	<string-array name="settings_headers_fragments">
+		<item>pref_general</item>
+		<item>pref_editor</item>
+		<item>pref_build</item>
+		<item>pref_code_assistance</item>
+		<item>pref_about</item>
+	</string-array>
 
 </resources>

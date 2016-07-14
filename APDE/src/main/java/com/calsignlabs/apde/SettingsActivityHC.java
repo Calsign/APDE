@@ -3,36 +3,36 @@ package com.calsignlabs.apde;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.preference.CheckBoxPreference;
-import android.preference.ListPreference;
-import android.preference.Preference;
-import android.preference.PreferenceActivity;
-import android.preference.PreferenceCategory;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceManager;
-import android.support.annotation.LayoutRes;
-import android.support.annotation.Nullable;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatDelegate;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.preference.CheckBoxPreference;
+import android.support.v7.preference.ListPreference;
+import android.support.v7.preference.Preference;
+import android.support.v7.preference.PreferenceCategory;
+import android.support.v7.preference.PreferenceManager;
+import android.support.v7.preference.PreferenceScreen;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
@@ -40,44 +40,102 @@ import android.widget.TextView;
 
 import com.calsignlabs.apde.support.CustomListPreference;
 import com.calsignlabs.apde.support.StockPreferenceFragment;
-
-import org.jraf.android.backport.switchwidget.SwitchPreference;
+import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompat;
+import com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Stack;
 
 /**
  * Settings activity for API level 11+
  */
-public class SettingsActivityHC extends PreferenceActivity {
+public class SettingsActivityHC extends AppCompatActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback, PreferenceFragmentCompat.OnPreferenceStartScreenCallback {
+	private static final String STATE_MULTI_PANE = "stateIsMultiPane";
+	
+	private static boolean wasMultiPaneAtStart;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
+		setContentView(R.layout.activity_settings);
+		
+		if (savedInstanceState == null) {
+			addHeadersFragment();
+			if (isMultiPane()) {
+				addFirstSettingsFragment();
+			}
+			
+			Log.d("testing... ", "no icicle");
+		} else {
+			boolean wasMultiPane = savedInstanceState.getBoolean(STATE_MULTI_PANE);
+			
+			// I tried this, but I can't remove the headers fragment from the backstack when
+			// switching from multi-pane to single-pane... so we're just resetting to the beginning
+			
+//			if (isMultiPane() && !wasMultiPane) {
+//				addHeadersFragment();
+//				
+//				if (getSupportFragmentManager().findFragmentById(R.id.settings_fragment_container) instanceof SettingsHeadersFragment) {
+//					addFirstSettingsFragment();
+//				}
+//			} else if (!isMultiPane() && wasMultiPane) {
+//				clearFragmentBackstack();
+//				addHeadersFragment();
+//			}
+			
+			// Orientation change
+			if (isMultiPane() != wasMultiPane) {
+				clearFragmentBackstack();
+				addHeadersFragment();
+				if (isMultiPane()) {
+					addFirstSettingsFragment();
+				}
+			}
+		}
+		
+		wasMultiPaneAtStart = isMultiPane();
 	}
 	
-	@SuppressLint("NewApi")
+	@Override
+	public void onSaveInstanceState(Bundle icicle) {
+		// By the time we execute this, the orientation change has already happened...
+		// so we need to use the state from when the activity was initialized
+		icicle.putBoolean(STATE_MULTI_PANE, wasMultiPaneAtStart);
+		
+		super.onSaveInstanceState(icicle);
+	}
+	
+	protected void clearFragmentBackstack() {
+		getSupportFragmentManager().popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+		getSupportFragmentManager().executePendingTransactions();
+	}
+	
 	@Override
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
 		
-		// StackOverflow: http://stackoverflow.com/a/27455330/1628609
-		LinearLayout root = (LinearLayout) findViewById(android.R.id.list).getParent().getParent().getParent();
-		Toolbar toolbar = (Toolbar) LayoutInflater.from(this).inflate(R.layout.settings_toolbar, root, false);
-		root.addView(toolbar, 0);
-		toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+		((Toolbar) findViewById(R.id.toolbar)).setNavigationOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				finish();
+				if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+					getSupportFragmentManager().popBackStack();
+				} else {
+					finish();
+				}
 			}
 		});
 		
 		getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
 	}
 	
+	public boolean isMultiPane() {
+		return getResources().getBoolean(R.bool.tablet_multi_pane);
+	}
+	
 	@SuppressLint("NewApi")
-	public void checkPreferences(PreferenceFragment frag) {
-		SwitchPreference hardwareKeyboard = ((SwitchPreference) frag.findPreference("use_hardware_keyboard"));
+	public void checkPreferences(PreferenceFragmentCompat frag) {
+		SwitchPreferenceCompat hardwareKeyboard = ((SwitchPreferenceCompat) frag.findPreference("use_hardware_keyboard"));
 		
 		if(hardwareKeyboard != null) {
 			hardwareKeyboard.setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
@@ -102,7 +160,7 @@ public class SettingsActivityHC extends PreferenceActivity {
 				((PreferenceCategory) frag.findPreference("pref_general_settings")).removePreference(vibrator);
 		}
 		
-		final SwitchPreference enableUndoRedo = (SwitchPreference) frag.findPreference("pref_key_undo_redo");
+		final SwitchPreferenceCompat enableUndoRedo = (SwitchPreferenceCompat) frag.findPreference("pref_key_undo_redo");
 		
 		if (enableUndoRedo != null) {
 			enableUndoRedo.setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
@@ -324,11 +382,7 @@ public class SettingsActivityHC extends PreferenceActivity {
 		
 		RelativeLayout layout;
 		
-		if (android.os.Build.VERSION.SDK_INT >= 11) {
-			layout = (RelativeLayout) View.inflate(new ContextThemeWrapper(activity, android.R.style.Theme_Holo_Dialog), R.layout.whats_new, null);
-		} else {
-			layout = (RelativeLayout) View.inflate(new ContextThemeWrapper(activity, android.R.style.Theme_Dialog), R.layout.whats_new, null);
-		}
+		layout = (RelativeLayout) View.inflate(new ContextThemeWrapper(activity, R.style.Theme_AppCompat_Dialog), R.layout.whats_new, null);
 		
 		final ListView list = (ListView) layout.findViewById(R.id.whats_new_list);
 		final Button loadMore = (Button) layout.findViewById(R.id.whats_new_more);
@@ -408,12 +462,6 @@ public class SettingsActivityHC extends PreferenceActivity {
 		}
 	};
 	
-	@SuppressLint("NewApi")
-	@Override
-	public void onBuildHeaders(List<Header> target) {
-		loadHeadersFromResource(R.xml.pref_headers, target);
-	}
-	
 	//StackOverflow: http://stackoverflow.com/questions/19973034/isvalidfragment-android-api-19
 	public boolean isValidFragment(String fragmentName) {
 		return StockPreferenceFragment.class.getName().equals(fragmentName);
@@ -429,4 +477,161 @@ public class SettingsActivityHC extends PreferenceActivity {
                 return super.onOptionsItemSelected(item);
         }
     }
+	
+	protected void addHeadersFragment() {
+		Fragment existingFragment = getSupportFragmentManager().findFragmentById(R.id.settings_fragment_container);
+		
+		SettingsHeadersFragment newFragment = new SettingsHeadersFragment();
+		FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+		transaction.add(isMultiPane() ? R.id.settings_list_fragment_container : R.id.settings_fragment_container, newFragment);
+		
+		if (!isMultiPane() && existingFragment != null) {
+			transaction.remove(existingFragment);
+		}
+		
+		transaction.commit();
+	}
+	
+	protected void addFirstSettingsFragment() {
+		Bundle args = new Bundle(1);
+		args.putString("resource", getResources().getStringArray(R.array.settings_headers_fragments)[0]);
+		
+		Fragment existingFragment = getSupportFragmentManager().findFragmentById(R.id.settings_fragment_container);
+		
+		StockPreferenceFragment newFragment = new StockPreferenceFragment();
+		newFragment.setArguments(args);
+		
+		FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+		
+		if (existingFragment != null) {
+			transaction.remove(existingFragment);
+		}
+		
+		transaction.add(R.id.settings_fragment_container, newFragment);
+		transaction.commit();
+	}
+	
+	@Override
+	public boolean onPreferenceStartFragment(android.support.v7.preference.PreferenceFragmentCompat preferenceFragmentCompat, Preference preference) {
+		// This is only ever called from a settings screen, not from the headers fragment
+		
+		StockPreferenceFragment newFragment = new StockPreferenceFragment();
+		newFragment.setArguments(preference.getExtras());
+		
+		FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+		transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
+		
+		transaction.remove(preferenceFragmentCompat);
+		
+		transaction.add(R.id.settings_fragment_container, newFragment);
+		transaction.addToBackStack(null);
+		
+		transaction.commit();
+		
+		return true;
+	}
+	
+	public void selectSettingsFragment(String preferencesXml) {
+		Bundle args = new Bundle(1);
+		args.putString("resource", preferencesXml);
+		
+		StockPreferenceFragment newFragment = new StockPreferenceFragment();
+		newFragment.setArguments(args);
+		
+		FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+		transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
+		
+		transaction.remove(getSupportFragmentManager().findFragmentById(R.id.settings_fragment_container));
+		
+		transaction.add(R.id.settings_fragment_container, newFragment);
+		if (!isMultiPane()) {
+			transaction.addToBackStack(null);
+		}
+		
+		transaction.commit();
+	}
+	
+	@Override
+	public boolean onPreferenceStartScreen(android.support.v7.preference.PreferenceFragmentCompat preferenceFragmentCompat, PreferenceScreen preferenceScreen) {
+		return false;
+	}
+	
+	public static class SettingsHeadersFragment extends Fragment {
+		private View rootView;
+		
+		@Override
+		public void onCreate(Bundle savedInstanceState) {
+			super.onCreate(savedInstanceState);
+		}
+		
+		@Override
+		public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+			if (rootView == null) {
+				rootView = inflater.inflate(R.layout.fragment_settings_headers, container, false);
+			}
+			
+			return rootView;
+		}
+		
+		public ListView getListView() {
+			return (ListView) rootView;
+		}
+		
+		public SettingsActivityHC getSettingsActivity() {
+			return (SettingsActivityHC) getActivity();
+		}
+		
+		public void onStart() {
+			super.onStart();
+			
+			final String[] headers = getResources().getStringArray(R.array.settings_headers);
+			final String[] headersFragments = getResources().getStringArray(R.array.settings_headers_fragments);
+			
+			getListView().setAdapter(new BaseAdapter() {
+				@Override
+				public int getCount() {
+					return headers.length;
+				}
+				
+				@Override
+				public Object getItem(int position) {
+					return headers[position];
+				}
+				
+				@Override
+				public long getItemId(int position) {
+					return position;
+				}
+				
+				@Override
+				public View getView(int position, View convertView, ViewGroup parent) {
+					if (convertView == null) {
+						LayoutInflater inflater = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+						convertView = inflater.inflate(R.layout.settings_headers_list_item, parent, false);
+					}
+					
+					((TextView) convertView).setText(headers[position]);
+					
+					return convertView;
+				}
+			});
+			
+			getListView().setOnItemClickListener(new AdapterView.OnItemClickListener() {
+				@Override
+				public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
+					if (getSettingsActivity().isMultiPane()) {
+						view.setSelected(true);
+					}
+					
+					getSettingsActivity().selectSettingsFragment(headersFragments[position]);
+				}
+			});
+			
+			if (getSettingsActivity().isMultiPane()) {
+				getListView().setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+				getListView().setSelection(0);
+				getListView().setItemChecked(0, true);
+			}
+		}
+	}
 }

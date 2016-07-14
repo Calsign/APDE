@@ -21,7 +21,7 @@
         <item name="windowActionModeOverlay">true</item>
     </style>
     
-    <style name="PreferencesTheme" parent="android:Theme.Holo">
+    <style name="PreferencesTheme" parent="@style/PreferenceFixTheme.NoActionBar">
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowBackground">@color/activity_background</item>
         <item name="android:actionBarStyle">@style/PreferencesActionBarStyle</item>
@@ -29,7 +29,7 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         <item name="windowActionModeOverlay">true</item>
-        <item name="asb_switchPreferenceStyle">@style/asb_Preference.SwitchPreference</item>
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
     </style>
     
     <style name="FullscreenActionBarStyle" parent="Widget.AppCompat.ActionBar">

@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <PreferenceCategory
+<android.support.v7.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <android.support.v7.preference.PreferenceCategory
         android:key="pref_key_undo_redo_settings"
         android:title="@string/undo_redo_settings" >
         
-        <org.jraf.android.backport.switchwidget.SwitchPreference
+        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="pref_key_undo_redo"
             android:title="@string/pref_undo_redo" />
         
-        <ListPreference
+        <android.support.v7.preference.ListPreference
             android:key="pref_key_undo_redo_keep"
             android:title="@string/pref_undo_redo_keep"
             android:entries="@array/undo_redo_keep_entries"
             android:entryValues="@array/undo_redo_keep_entry_values"
             android:defaultValue="@string/undo_redo_keep_default_value"
             android:dependency="pref_key_undo_redo" />
-    </PreferenceCategory>
-</PreferenceScreen>
+    </android.support.v7.preference.PreferenceCategory>
+</android.support.v7.preference.PreferenceScreen>

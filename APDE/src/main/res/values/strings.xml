@@ -260,5 +260,11 @@
     <string name="whats_new">What\'s New</string>
     <string name="whats_new_more">More changes</string>
     <string name="whats_new_keep_showing">Show when APDE updates</string>
+    <string name="red_initial">R:</string>
+    <string name="green_initial">G:</string>
+    <string name="blue_initial">B:</string>
+    <string name="hue_initial">H:</string>
+    <string name="saturation_initial">S:</string>
+    <string name="brightness_initial">B:</string>
 
 </resources>

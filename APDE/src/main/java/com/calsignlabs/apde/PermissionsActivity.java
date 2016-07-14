@@ -1,8 +1,5 @@
 package com.calsignlabs.apde;
 
-import com.calsignlabs.apde.build.Manifest;
-import com.calsignlabs.apde.build.Permission;
-
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -26,6 +23,9 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.build.Permission;
 
 public class PermissionsActivity extends AppCompatActivity {
 	private boolean[] checked;
@@ -248,11 +248,11 @@ public class PermissionsActivity extends AppCompatActivity {
     }
 	
 	private void launchSettings() {
-		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB) {
-			startActivity(new Intent(this, SettingsActivity.class));
-		} else {
+//		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB) {
+//			startActivity(new Intent(this, SettingsActivity.class));
+//		} else {
 			startActivity(new Intent(this, SettingsActivityHC.class));
-		}
+//		}
 	}
 	
 	public void newPermission() {

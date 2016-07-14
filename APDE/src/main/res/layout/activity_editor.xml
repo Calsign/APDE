@@ -1,174 +1,178 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical" >
-
-    <android.support.v7.widget.Toolbar
-             android:id="@+id/toolbar"
-             android:layout_width="match_parent"
-             android:layout_height="wrap_content" />
-
-    <android.support.v4.widget.DrawerLayout android:id="@+id/drawer"
-                                            android:layout_width="match_parent"
-                                            android:layout_height="match_parent" >
-
-        <LinearLayout android:id="@+id/content"
-                      android:layout_width="match_parent"
-                      android:layout_height="match_parent"
-                      android:background="#FFFFFF"
-                      tools:context=".APDE"
-                      android:orientation="vertical" >
-            
-            <com.astuetz.PagerSlidingTabStrip
-                android:id="@+id/code_pager_tabs"
-                android:layout_width="match_parent"
-                android:layout_height="48dp" />
-            
-            <android.support.v4.view.ViewPager
-                android:id="@+id/code_pager"
-                android:layout_width="match_parent"
-                android:layout_weight="3"
-                android:layout_height="0dp" />
-
-            <LinearLayout
-                android:id="@+id/buffer"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:background="@drawable/back" >
-
-                <TextView
-                    android:id="@+id/message"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:padding="10dp"
-                    android:text=""
-                    android:textColor="#000000" />
-
-                <HorizontalScrollView
-                    android:id="@+id/char_insert_tray"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:visibility="gone" >
-
-                    <LinearLayout
-                        android:id="@+id/char_insert_tray_list"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal" />
-                </HorizontalScrollView>
-
-                <View
-                    android:id="@+id/toggle_char_inserts_separator"
-                    android:layout_width="1dp"
-                    android:layout_height="fill_parent"
-                    android:background="@color/toggle_char_inserts_separator"
-                    android:layout_margin="3dp"
-                    android:visibility="gone" />
-
-                <ImageButton
-                    android:id="@+id/toggle_char_inserts"
-                    android:layout_width="wrap_content"
-                    android:layout_height="fill_parent"
-                    android:layout_gravity="center"
-                    android:adjustViewBounds="true"
-                    android:scaleType="centerInside"
-                    android:contentDescription="@string/toggle_char_inserts"
-                    android:src="@drawable/ic_caret_left_black"
-                    style="@style/Widget.AppCompat.ActionButton" />
-            </LinearLayout>
-
-            <!-- Use ScrollView(s) for smooth scrolling -->
-            <ScrollView android:id="@+id/console_scroller"
-                        android:layout_weight="1"
-                        android:background="@drawable/back_console"
-                        android:layout_width="fill_parent"
-                        android:layout_height="0dp"
-                        android:scrollbars="vertical"
-                        android:fadeScrollbars="false" >
-
-                <HorizontalScrollView android:id="@+id/console_scroller_x"
-                                      android:layout_width="fill_parent"
-                                      android:layout_height="wrap_content" >
-
-                    <!-- TODO make text selectable... disabled it because it was causing some problems -->
-                    <TextView android:id="@+id/console"
-                              android:layout_width="wrap_content"
-                              android:layout_height="wrap_content"
-                              android:padding="10dp"
-                              android:textColor="#FFFFFF"
-                              android:textIsSelectable="true"
-                              android:textSize="14sp"
-                              android:fontFamily="monospace"
-                              android:typeface="monospace" />
-                </HorizontalScrollView>
-            </ScrollView>
-        </LinearLayout>
-
-        <RelativeLayout android:id="@+id/drawer_wrapper"
-                        android:layout_width="260dp"
-                        android:layout_height="match_parent"
-                        android:layout_gravity="start" >
-
-            <ListView android:id="@+id/drawer_list"
-                      android:layout_width="match_parent"
-                      android:layout_height="match_parent"
-                      android:layout_above="@+id/folder_actions"
-                      android:choiceMode="singleChoice"
-                      android:divider="#CCCCCC"
-                      android:dividerHeight="0.5dp"
-                      android:background="#EEEEEE"
-                      android:headerDividersEnabled="true" />
-
-            <LinearLayout android:id="@id/folder_actions"
-                          android:layout_width="match_parent"
-                          android:layout_height="wrap_content"
-                          android:layout_alignParentBottom="true"
-                          android:visibility="gone"
-                          android:background="#EEEEEE" >
-
-                <ImageView android:id="@+id/new_folder"
-                           android:layout_width="0dp"
-                           android:layout_height="wrap_content"
-                           android:layout_weight="1"
-                           android:src="@drawable/ic_new_black"
-                           android:contentDescription="@string/new_folder"
-                           android:background="@color/holo_select_light"
-                           android:padding="8dp" />
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="match_parent"
-                    android:background="#CCCCCC" />
-
-                <ImageView android:id="@+id/edit_folder"
-                           android:layout_width="0dp"
-                           android:layout_height="wrap_content"
-                           android:layout_weight="1"
-                           android:src="@drawable/ic_edit_black"
-                           android:contentDescription="@string/edit_folder"
-                           android:background="@color/holo_select_light"
-                           android:padding="8dp" />
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="match_parent"
-                    android:background="#CCCCCC" />
-
-                <ImageView android:id="@+id/delete_folder"
-                           android:layout_width="0dp"
-                           android:layout_height="wrap_content"
-                           android:layout_weight="1"
-                           android:src="@drawable/ic_delete_black"
-                           android:contentDescription="@string/delete_folder"
-                           android:background="@color/red_select_light"
-                           android:padding="8dp" />
-            </LinearLayout>
-        </RelativeLayout>
-    </android.support.v4.widget.DrawerLayout>
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:orientation="vertical">
+	
+	<android.support.v7.widget.Toolbar
+		android:id="@+id/toolbar"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content" />
+	
+	<android.support.v4.widget.DrawerLayout android:id="@+id/drawer"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent" >
+		
+		<LinearLayout android:id="@+id/content"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:background="#FFFFFF"
+			tools:context=".APDE"
+			android:orientation="vertical" >
+			
+			<android.support.v4.view.ViewPager
+				android:id="@+id/code_pager"
+				android:layout_width="match_parent"
+				android:layout_weight="3"
+				android:layout_height="0dp">
+                
+                <android.support.design.widget.TabLayout
+					style="@style/CodeTabStrip"
+                    android:id="@+id/code_pager_tabs"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+					app:tabMode="scrollable" />
+            </android.support.v4.view.ViewPager>
+			
+			<LinearLayout
+				android:id="@+id/buffer"
+				android:layout_width="fill_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:background="@drawable/back" >
+				
+				<TextView
+					android:id="@+id/message"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:padding="10dp"
+					android:text=""
+					android:textColor="#000000" />
+				
+				<HorizontalScrollView
+					android:id="@+id/char_insert_tray"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:visibility="gone" >
+					
+					<LinearLayout
+						android:id="@+id/char_insert_tray_list"
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:orientation="horizontal" />
+				</HorizontalScrollView>
+				
+				<View
+					android:id="@+id/toggle_char_inserts_separator"
+					android:layout_width="1dp"
+					android:layout_height="fill_parent"
+					android:background="@color/toggle_char_inserts_separator"
+					android:layout_margin="3dp"
+					android:visibility="gone" />
+				
+				<ImageButton
+					android:id="@+id/toggle_char_inserts"
+					android:layout_width="wrap_content"
+					android:layout_height="fill_parent"
+					android:layout_gravity="center"
+					android:adjustViewBounds="true"
+					android:scaleType="centerInside"
+					android:contentDescription="@string/toggle_char_inserts"
+					android:src="@drawable/ic_caret_left_black"
+					style="@style/Widget.AppCompat.ActionButton" />
+			</LinearLayout>
+			
+			<!-- Use ScrollView(s) for smooth scrolling -->
+			<ScrollView android:id="@+id/console_scroller"
+				android:layout_weight="1"
+				android:background="@drawable/back_console"
+				android:layout_width="fill_parent"
+				android:layout_height="0dp"
+				android:scrollbars="vertical"
+				android:fadeScrollbars="false" >
+				
+				<HorizontalScrollView android:id="@+id/console_scroller_x"
+					android:layout_width="fill_parent"
+					android:layout_height="wrap_content" >
+					
+					<!-- TODO make text selectable... disabled it because it was causing some problems -->
+					<TextView android:id="@+id/console"
+						android:layout_width="wrap_content"
+						android:layout_height="wrap_content"
+						android:padding="10dp"
+						android:textColor="#FFFFFF"
+						android:textIsSelectable="true"
+						android:textSize="14sp"
+						android:fontFamily="monospace"
+						android:typeface="monospace" />
+				</HorizontalScrollView>
+			</ScrollView>
+		</LinearLayout>
+		
+		<RelativeLayout android:id="@+id/drawer_wrapper"
+			android:layout_width="260dp"
+			android:layout_height="match_parent"
+			android:layout_gravity="start" >
+			
+			<ListView android:id="@+id/drawer_list"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent"
+				android:layout_above="@+id/folder_actions"
+				android:choiceMode="singleChoice"
+				android:divider="#CCCCCC"
+				android:dividerHeight="0.5dp"
+				android:background="#EEEEEE"
+				android:headerDividersEnabled="true" />
+			
+			<LinearLayout android:id="@id/folder_actions"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_alignParentBottom="true"
+				android:visibility="gone"
+				android:background="#EEEEEE" >
+				
+				<ImageView android:id="@+id/new_folder"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:src="@drawable/ic_new_black"
+					android:contentDescription="@string/new_folder"
+					android:background="@color/holo_select_light"
+					android:padding="8dp" />
+				
+				<View
+					android:layout_width="1dp"
+					android:layout_height="match_parent"
+					android:background="#CCCCCC" />
+				
+				<ImageView android:id="@+id/edit_folder"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:src="@drawable/ic_edit_black"
+					android:contentDescription="@string/edit_folder"
+					android:background="@color/holo_select_light"
+					android:padding="8dp" />
+				
+				<View
+					android:layout_width="1dp"
+					android:layout_height="match_parent"
+					android:background="#CCCCCC" />
+				
+				<ImageView android:id="@+id/delete_folder"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:src="@drawable/ic_delete_black"
+					android:contentDescription="@string/delete_folder"
+					android:background="@color/red_select_light"
+					android:padding="8dp" />
+			</LinearLayout>
+		</RelativeLayout>
+	</android.support.v4.widget.DrawerLayout>
 </LinearLayout>

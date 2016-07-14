@@ -1,10 +1,10 @@
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <PreferenceCategory
+<android.support.v7.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <android.support.v7.preference.PreferenceCategory
         android:key="pref_key_storage_settings"
         android:title="@string/pref_editor" >
 
         <!-- maxLength sets the max number of characters... don't want font sizes of 1000!!! -->
-        <EditTextPreference
+        <com.takisoft.fix.support.v7.preference.EditTextPreference
             android:defaultValue="@string/pref_textsize_default"
             android:inputType="number"
             android:key="textsize"
@@ -14,12 +14,12 @@
             android:singleLine="true"
             android:title="@string/pref_textsize_title" />
 
-        <org.jraf.android.backport.switchwidget.SwitchPreference
+        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="syntax_highlight"
             android:title="@string/pref_syntax_highlight" />
         
-        <org.jraf.android.backport.switchwidget.SwitchPreference
+        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="override_tab"
             android:title="@string/override_tab"
@@ -35,28 +35,28 @@
                 android:targetPackage="com.calsignlabs.apde" />
         </Preference> -->
         <!-- Use this for now... -->
-        <Preference
+        <android.support.v7.preference.Preference
             android:title="@string/title_activity_character_tray_settings"
             android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >
             
             <extra android:name="resource" android:value="pref_character_tray" />
-        </Preference>
+        </android.support.v7.preference.Preference>
         
         <!-- Undo / redo settings -->
-        <Preference
+        <android.support.v7.preference.Preference
             android:title="@string/undo_redo_settings"
             android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >
             
             <extra android:name="resource" android:value="pref_undo_redo" />
-        </Preference>
-    </PreferenceCategory>
+        </android.support.v7.preference.Preference>
+    </android.support.v7.preference.PreferenceCategory>
     
-    <PreferenceCategory
+    <android.support.v7.preference.PreferenceCategory
         android:key="pref_console"
         android:title="@string/pref_console" >
 
         <!-- maxLength sets the max number of characters... don't want font sizes of 1000!!! -->
-        <EditTextPreference
+        <com.takisoft.fix.support.v7.preference.EditTextPreference
             android:defaultValue="@string/pref_textsize_default"
             android:inputType="number"
             android:key="textsize_console"
@@ -66,10 +66,10 @@
             android:singleLine="true"
             android:title="@string/pref_textsize_title" />
 
-        <org.jraf.android.backport.switchwidget.SwitchPreference
+        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="pref_scroll_lock"
             android:summary="@string/pref_scroll_lock_desc"
             android:title="@string/pref_scroll_lock" />
-    </PreferenceCategory>
-</PreferenceScreen>
+    </android.support.v7.preference.PreferenceCategory>
+</android.support.v7.preference.PreferenceScreen>

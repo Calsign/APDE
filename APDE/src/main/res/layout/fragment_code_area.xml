@@ -1,21 +1,21 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" 
-             xmlns:tools="http://schemas.android.com/tools" 
-             android:layout_width="match_parent" 
-             android:layout_height="match_parent" 
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             xmlns:tools="http://schemas.android.com/tools"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
              tools:context="com.calsignlabs.apde.CodeAreaFragment">
-
+    
     <!-- Use ScrollView(s) for smooth scrolling -->
     <ScrollView android:id="@+id/code_scroller"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scrollbars="vertical"
                 android:background="#FFFFFF"
-                android:fadeScrollbars="false" >
-
+                android:fadeScrollbars="false">
+        
         <HorizontalScrollView android:id="@+id/code_scroller_x"
-                              android:layout_width="wrap_content"
-                              android:layout_height="wrap_content" >
-
+                              android:layout_width="match_parent"
+                              android:layout_height="wrap_content">
+            
             <!-- Padding for the code area -->
             <LinearLayout android:id="@+id/code_padding"
                           android:layout_width="wrap_content"
@@ -24,7 +24,7 @@
                           android:paddingBottom="10dp"
                           android:paddingLeft="10dp"
                           android:paddingRight="10dp" >
-
+                
                 <!-- privateImeOptions="nm" means "no microphone" -->
                 <com.calsignlabs.apde.CodeEditText android:id="@+id/code"
                                                    android:inputType="text|textNoSuggestions|textMultiLine"

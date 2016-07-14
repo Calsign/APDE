@@ -2,11 +2,9 @@ package com.calsignlabs.apde.vcs;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.view.ActionMode;
 import android.support.v7.widget.Toolbar;
@@ -27,7 +25,6 @@ import android.widget.Toast;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.R;
-import com.calsignlabs.apde.SettingsActivity;
 import com.calsignlabs.apde.SettingsActivityHC;
 
 import org.eclipse.jgit.diff.DiffEntry;
@@ -85,7 +82,7 @@ public class GitHistoryActivity extends AppCompatActivity {
 			commitDiffFragment = (CommitDiffFragment) getSupportFragmentManager().getFragment(savedInstanceState, "commitDiff");
 		}
 		
-		if ((getResources().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_XLARGE) {
+		if (getResources().getBoolean(R.bool.tablet_multi_pane)) {
 			if (commitListFragment == null) {
 				commitListFragment = new CommitListFragment();
 				loadFragment(commitListFragment, R.id.git_history_commit_list_frame, false);
@@ -101,6 +98,10 @@ public class GitHistoryActivity extends AppCompatActivity {
 				loadFragment(commitListFragment, R.id.git_history_frame, false);
 			}
 		}
+	}
+	
+	public boolean isMultiPane() {
+		return getResources().getBoolean(R.bool.tablet_multi_pane);
 	}
 	
 	@Override
@@ -147,7 +148,7 @@ public class GitHistoryActivity extends AppCompatActivity {
 			return;
 		}
 
-		if ((getResources().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_XLARGE) {
+		if (isMultiPane()) {
 			commitListFragment.selectItem(num);
 		}
 		
@@ -155,7 +156,7 @@ public class GitHistoryActivity extends AppCompatActivity {
 	}
 	
 	protected void diffCommits(int a, int b, final RevCommit commit) {
-		if (!((getResources().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_XLARGE)) {
+		if (!(isMultiPane())) {
 			commitDiffFragment = new CommitDiffFragment();
 			loadFragment(commitDiffFragment, R.id.git_history_frame, true);
 		}
@@ -377,9 +378,9 @@ public class GitHistoryActivity extends AppCompatActivity {
 	}
 	
 	private void launchSettings() {
-		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
-			startActivity(new Intent(this, SettingsActivity.class));
-		else
+//		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
+//			startActivity(new Intent(this, SettingsActivity.class));
+//		else
 			startActivity(new Intent(this, SettingsActivityHC.class));
 	}
 	
@@ -648,7 +649,7 @@ public class GitHistoryActivity extends AppCompatActivity {
 			}
 		}
 	}
-	
+	 
 	public static class CommitDiffFragment extends Fragment {
 		private View rootView;
 		

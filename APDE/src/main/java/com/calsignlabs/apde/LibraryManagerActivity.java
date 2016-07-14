@@ -1,16 +1,5 @@
 package com.calsignlabs.apde;
 
-import java.io.File;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import com.calsignlabs.apde.contrib.ContributionManager;
-import com.calsignlabs.apde.contrib.Library;
-import com.calsignlabs.apde.support.CustomProgressDialog;
-import com.calsignlabs.apde.support.PopupMenu;
-import com.ipaulpro.afilechooser.utils.FileUtils;
-
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -22,8 +11,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.PopupMenu;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.Html;
@@ -44,6 +33,16 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import com.calsignlabs.apde.contrib.ContributionManager;
+import com.calsignlabs.apde.contrib.Library;
+import com.calsignlabs.apde.support.CustomProgressDialog;
+import com.ipaulpro.afilechooser.utils.FileUtils;
+
+import java.io.File;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class LibraryManagerActivity extends AppCompatActivity {
 	//All potential archive / compressed file extensions (hopefully) TODO Yes, I realize that the list currently contains one item.
@@ -411,9 +410,9 @@ public class LibraryManagerActivity extends AppCompatActivity {
 	}
 	
 	private void launchSettings() {
-		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
-			startActivity(new Intent(this, SettingsActivity.class));
-		else
+//		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
+//			startActivity(new Intent(this, SettingsActivity.class));
+//		else
 			startActivity(new Intent(this, SettingsActivityHC.class));
 	}
 	

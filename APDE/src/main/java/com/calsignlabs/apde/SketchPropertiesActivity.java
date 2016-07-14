@@ -1,15 +1,5 @@
 package com.calsignlabs.apde;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.Locale;
-import java.util.Map.Entry;
-
-import com.calsignlabs.apde.build.Manifest;
-import com.ipaulpro.afilechooser.utils.FileUtils;
-
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
@@ -49,6 +39,16 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import com.calsignlabs.apde.build.Manifest;
+import com.ipaulpro.afilechooser.utils.FileUtils;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Locale;
+import java.util.Map.Entry;
 
 public class SketchPropertiesActivity extends PreferenceActivity implements Toolbar.OnMenuItemClickListener {
 	//This is a number, that's all that matters
@@ -416,9 +416,9 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 	}
 	
 	private void launchSettings() {
-		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
-			startActivity(new Intent(this, SettingsActivity.class));
-		else
+//		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
+//			startActivity(new Intent(this, SettingsActivity.class));
+//		else
 			startActivity(new Intent(this, SettingsActivityHC.class));
 	}
 	

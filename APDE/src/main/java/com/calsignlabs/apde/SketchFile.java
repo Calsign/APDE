@@ -115,7 +115,7 @@ public class SketchFile implements Parcelable {
 			afterScrollY = source.readInt();
 		}
 		
-		public static final Parcelable.Creator<FileChange> SOURCE = new Parcelable.Creator<FileChange>() {
+		public static final Parcelable.Creator<FileChange> CREATOR = new Parcelable.Creator<FileChange>() {
 			@Override
 			public FileChange createFromParcel(Parcel source) {
 				return new FileChange(source);
@@ -252,6 +252,10 @@ public class SketchFile implements Parcelable {
 	public FileChange getFileChange() {
 		EditText code = fragment.getCodeEditText();
 		
+		if (code == null) {
+			return null;
+		}
+		
 		String codeText = code.getText().toString();
 		
 		if (!text.equals(codeText)) {
@@ -303,11 +307,19 @@ public class SketchFile implements Parcelable {
 				HorizontalScrollView scrollerX = fragment.getCodeScrollerX();
 				ScrollView scrollerY = fragment.getCodeScroller();
 				
-				selectionStart = code.getSelectionStart();
-				selectionEnd = code.getSelectionEnd();
-				
-				scrollX = scrollerX.getScrollX();
-				scrollY = scrollerY.getScrollY();
+				if (code == null) {
+					selectionStart = 0;
+					selectionEnd = 0;
+					
+					scrollX = 0;
+					scrollY = 0;
+				} else {
+					selectionStart = code.getSelectionStart();
+					selectionEnd = code.getSelectionEnd();
+					
+					scrollX = scrollerX.getScrollX();
+					scrollY = scrollerY.getScrollY();
+				}
 			}
 		} else {
 			EditText code = fragment.getCodeEditText();
@@ -775,6 +787,11 @@ public class SketchFile implements Parcelable {
 		if (fragment == null) {
 			fragment = CodeAreaFragment.newInstance(this);
 		}
+	}
+	
+	public void forceFragmentUpdate() {
+		fragment.setSketchFile(this);
+		fragment.updateWithSketchFile();
 	}
 	
 	public CodeAreaFragment getFragment() {

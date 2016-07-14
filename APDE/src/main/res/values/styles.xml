@@ -34,13 +34,15 @@
         <item name="windowActionModeOverlay">true</item>
     </style>
     
-    <style name="PreferencesTheme" parent="@style/FullscreenTheme">
+    <style name="PreferencesTheme" parent="@style/PreferenceFixTheme.NoActionBar">
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowBackground">@color/activity_background</item>
+        <item name="buttonBarStyle">@style/ButtonBar</item>
+        <item name="buttonBarButtonStyle">@style/ButtonBarButton</item>
         <item name="colorPrimary">@color/bar_overlay</item>
         <item name="android:windowNoTitle">true</item>
         <item name="windowActionModeOverlay">true</item>
-        <item name="asb_switchPreferenceStyle">@style/asb_Preference.SwitchPreference</item>
+		<item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
     </style>
     
     <style name="ButtonBar">
@@ -51,4 +53,26 @@
     </style>
     
     <style name="ButtonBarButton"></style>
+    
+    <!-- http://stackoverflow.com/a/31309996 -->
+    <style name="CodeTabStrip" parent="Widget.Design.TabLayout">
+        <item name="tabTextAppearance">@style/CodeTabStripTextAppearance</item>
+    </style>
+    
+    <style name="CodeTabStripTextAppearance" parent="TextAppearance.Design.Tab">
+        <item name="textAllCaps">false</item>
+    </style>
+    
+    <style name="PreferenceThemeOverlay">
+        <item name="preferenceScreenStyle">@style/Preference.PreferenceScreen</item>
+        <item name="preferenceFragmentStyle">@style/PreferenceFragment</item>
+        <item name="preferenceCategoryStyle">@style/Preference.Category</item>
+        <item name="preferenceStyle">@style/Preference</item>
+        <item name="preferenceInformationStyle">@style/Preference.Information</item>
+        <item name="checkBoxPreferenceStyle">@style/Preference.CheckBoxPreference</item>
+        <item name="switchPreferenceCompatStyle">@style/Preference.SwitchPreferenceCompat</item>
+        <item name="dialogPreferenceStyle">@style/Preference.DialogPreference</item>
+        <item name="editTextPreferenceStyle">@style/Preference.DialogPreference.EditTextPreference</item>
+        <item name="preferenceFragmentListStyle">@style/PreferenceFragmentList</item>
+    </style>
 </resources>

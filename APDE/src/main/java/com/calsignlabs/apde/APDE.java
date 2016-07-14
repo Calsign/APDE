@@ -387,13 +387,23 @@ public class APDE extends Application {
 			}
 		});
 		
+		// This happens if the user didn't give the WRITE_EXTERNAL_STORAGE permission...
+		// Perhaps put an error message to this effect here?
+		if (contents == null) {
+			//Let the user know that the folder is empty...
+			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
+			System.out.println("failed - contents null");
+			
+			return output;
+		}
+		
 		//Cycle through the files
-		for(File file : contents) {
+		for (File file : contents) {
 			//Check to see if this folder has anything worth our time
-			if(validSketch(file)) {
+			if (validSketch(file)) {
 				output.add(new FileNavigatorAdapter.FileItem(file.getName(), FileNavigatorAdapter.FileItemType.SKETCH, itemsDraggable, false,
 						new SketchMeta(location.getLocation(), location.getPath() + "/" + file.getName())));
-			} else if(containsSketches(file)) {
+			} else if (containsSketches(file)) {
 				output.add(new FileNavigatorAdapter.FileItem(file.getName(), FileNavigatorAdapter.FileItemType.FOLDER, itemsDraggable, itemsDraggable,
 						new SketchMeta(location.getLocation(), location.getPath() + "/" + file.getName())));
 			}
@@ -515,17 +525,27 @@ public class APDE extends Application {
 			
 			SharedPreferences.Editor edit = prefs.edit();
 			edit.putString(storageDrivePref, path);
-			edit.commit();
+			edit.apply();
 		} else if (!prefs.contains(storageDrivePref)) {
 			// Or... if there is nothing set, use the default
 			
 			SharedPreferences.Editor edit = prefs.edit();
 			edit.putString(storageDrivePref, getDefaultSketchbookStorageDrive(storageDrives).root.toString());
-			edit.commit();
+			edit.apply();
 		}
 		
+		String externalStoragePath = "pref_sketchbook_location";
+		
 		StorageDrive savedDrive = getStorageDriveByRoot(storageDrives, prefs.getString(storageDrivePref, ""));
-		String externalPath = prefs.getString("pref_sketchbook_location", DEFAULT_SKETCHBOOK_LOCATION);
+		String externalPath = prefs.getString(externalStoragePath, "");
+		
+		// Don't let the user set their sketchbook folder to be the root of their internal storage.
+		// What if they want that? They really don't. I don't think it works.
+		if (externalPath.equals("")) {
+			SharedPreferences.Editor edit = prefs.edit();
+			edit.putString(externalStoragePath, DEFAULT_SKETCHBOOK_LOCATION);
+			edit.apply();
+		}
 		
 		if (savedDrive == null) {
 			// The drive has probably been removed
@@ -535,7 +555,7 @@ public class APDE extends Application {
 			
 			SharedPreferences.Editor edit = prefs.edit();
 			edit.putString(storageDrivePref, getDefaultSketchbookStorageDrive(storageDrives).root.toString());
-			edit.commit();
+			edit.apply();
 			
 			savedDrive = getStorageDriveByRoot(storageDrives, prefs.getString(storageDrivePref, ""));
 		}
@@ -550,6 +570,15 @@ public class APDE extends Application {
 			default:
 				return null;
 		}
+	}
+	
+	public StorageDrive getSketchbookStorageDrive() {
+		ArrayList<StorageDrive> storageDrives = getStorageLocations();
+		
+		StorageDrive storageDrive = getStorageDriveByRoot(storageDrives, PreferenceManager.getDefaultSharedPreferences(this).getString("pref_sketchbook_drive", ""));
+		
+		// Will be null on devices without an external storage
+		return storageDrive != null ? storageDrive : getDefaultSketchbookStorageDrive(storageDrives);
 	}
 	
 	public ArrayList<StorageDrive> getStorageLocations() {
