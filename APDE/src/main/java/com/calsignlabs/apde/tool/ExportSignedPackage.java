@@ -1,5 +1,40 @@
 package com.calsignlabs.apde.tool;
 
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
+import android.preference.PreferenceManager;
+import android.support.v7.app.AlertDialog;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.ContextThemeWrapper;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.TableLayout;
+import android.widget.TextView;
+
+import com.calsignlabs.apde.APDE;
+import com.calsignlabs.apde.EditorActivity;
+import com.calsignlabs.apde.KeyBinding;
+import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.build.Build;
+import com.ipaulpro.afilechooser.utils.FileUtils;
+
+import org.spongycastle.asn1.x509.X509Name;
+import org.spongycastle.jce.X509Principal;
+import org.spongycastle.jce.provider.BouncyCastleProvider;
+import org.spongycastle.x509.X509V3CertificateGenerator;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -37,41 +72,6 @@ import javax.security.auth.x500.X500Principal;
 
 import kellinwood.security.zipsigner.optional.JksKeyStore;
 import kellinwood.security.zipsigner.optional.LoadKeystoreException;
-
-import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.net.Uri;
-import android.preference.PreferenceManager;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.ContextThemeWrapper;
-import android.view.MenuItem;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.ScrollView;
-import android.widget.Spinner;
-import android.widget.TableLayout;
-import android.widget.TextView;
-
-import org.spongycastle.asn1.x509.X509Name;
-import org.spongycastle.jce.X509Principal;
-import org.spongycastle.jce.provider.BouncyCastleProvider;
-import org.spongycastle.x509.X509V3CertificateGenerator;
-
-import com.calsignlabs.apde.APDE;
-import com.calsignlabs.apde.EditorActivity;
-import com.calsignlabs.apde.KeyBinding;
-import com.calsignlabs.apde.R;
-import com.calsignlabs.apde.build.Build;
-import com.ipaulpro.afilechooser.utils.FileUtils;
 
 /**
  * Exports the current sketch as an Eclipse-compatible Android project

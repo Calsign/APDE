@@ -1,13 +1,7 @@
 package com.calsignlabs.apde;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Locale;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.Context;
@@ -18,6 +12,7 @@ import android.graphics.Canvas;
 import android.graphics.Point;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.support.v7.app.AlertDialog;
 import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -32,6 +27,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Locale;
 
 /**
  * An adapter used for the file browser navigation drawer.
@@ -425,7 +425,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		AlertDialog.Builder builder = new AlertDialog.Builder(((APDE) context.getApplicationContext()).getEditor());
 		
 		builder.setTitle(String.format(Locale.US, context.getResources().getString(isSketch ? R.string.rename_sketch_title : R.string.rename_folder_title), dragItem.getText()));
-		builder.setMessage(String.format(Locale.US, context.getResources().getString(isSketch ? R.string.rename_sketch_message : R.string.rename_folder_message), dragItem.getText()));
+		builder.setMessage(context.getResources().getString(isSketch ? R.string.rename_sketch_message : R.string.rename_folder_message));
 		
     	final EditText input = new EditText(context);
     	input.setSingleLine();

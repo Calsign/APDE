@@ -1,7 +1,6 @@
 package com.calsignlabs.apde.tool;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
@@ -13,6 +12,7 @@ import android.graphics.Paint.Style;
 import android.graphics.PorterDuff;
 import android.graphics.Shader;
 import android.graphics.drawable.GradientDrawable;
+import android.support.v7.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;

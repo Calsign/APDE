@@ -1,9 +1,7 @@
 package com.calsignlabs.apde.tool;
 
-import java.io.File;
-
-import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.support.v7.app.AlertDialog;
 import android.view.MenuItem;
 import android.widget.TextView;
 
@@ -11,6 +9,8 @@ import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.build.Build;
+
+import java.io.File;
 
 /**
  * Exports the current sketch as an Eclipse-compatible Android project
