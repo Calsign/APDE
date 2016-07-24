@@ -9,6 +9,7 @@
     <string name="menu_run">Run</string>
     <string name="menu_stop">Stop</string>
     <string name="menu_new">New Sketch</string>
+    <string name="menu_rename">Rename Sketch</string>
     <string name="menu_tab_new">New Tab</string>
     <string name="menu_tab_rename">Rename Tab</string>
     <string name="menu_tab_delete">Delete Tab</string>

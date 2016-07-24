@@ -360,9 +360,6 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
             case R.id.action_settings:
             	launchSettings();
             	return true;
-            case R.id.menu_save:
-            	saveSketch();
-            	return true;
             case R.id.menu_copy_to_sketchbook:
             	copyToSketchbook();
             	return true;
@@ -395,16 +392,13 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		switch(getGlobalState().getSketchLocationType()) {
 		case SKETCHBOOK:
 		case TEMPORARY:
-			menu.findItem(R.id.menu_save).setVisible(true);
 			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
 			break;
 		case EXTERNAL:
-			menu.findItem(R.id.menu_save).setVisible(true);
 			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
 			break;
 		case EXAMPLE:
 		case LIBRARY_EXAMPLE:
-			menu.findItem(R.id.menu_save).setVisible(false);
 			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
 			break;
 		}
@@ -746,11 +740,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 			alert.setTitle(R.string.sketch_name_dialog_title);
 			alert.setMessage(R.string.sketch_name_dialog_message);
 			
-			final EditText input = new EditText(this);
-			input.setSingleLine();
-			input.setText(getGlobalState().getSketchName());
-			input.selectAll();
-			alert.setView(input);
+			final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
 			
 			alert.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
 				public void onClick(DialogInterface dialog, int whichButton) {
@@ -876,10 +866,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
     			
     			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
     			getGlobalState().getEditor().newSketch();
-    			
-//    			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
-//    				getActionBar().setTitle(getGlobalState().getSketchName());
-    			
+				
 				toolbar.setTitle(getGlobalState().getSketchName());
 				
     			finish();
@@ -889,12 +876,8 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
     	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {}
     	});
-    	
-    	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
-    	AlertDialog dialog = alert.create();
-    	if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-    	dialog.show();
+		
+    	alert.create().show();
 	}
 	
 	private void changeSketchName() {
@@ -912,14 +895,10 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
     	
-    	alert.setTitle(R.string.change_sketch_name_dialog_title);
-    	alert.setMessage(R.string.change_sketch_name_dialog_message);
-    	
-    	final EditText input = new EditText(this);
-    	input.setSingleLine();
-    	input.setText(getGlobalState().getSketchName());
-    	input.selectAll();
-    	alert.setView(input);
+    	alert.setTitle(String.format(Locale.US, getResources().getString(R.string.rename_sketch_title), getGlobalState().getSketchName()));
+    	alert.setMessage(R.string.rename_sketch_message);
+		
+		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
     	
     	alert.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {

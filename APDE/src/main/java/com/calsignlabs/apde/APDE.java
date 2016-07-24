@@ -16,9 +16,12 @@ import android.os.StatFs;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AlertDialog;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -925,8 +928,9 @@ public class APDE extends Application {
 		
 		//TODO Maybe run in a separate thread if the file size is large enough?
 		
-		if(moveFolder(sourceFile, destFile) && selected) {
+		if (moveFolder(sourceFile, destFile) && selected) {
 			selectSketch(dest.getPath(), dest.getLocation());
+			putRecentSketch(dest.getLocation(), dest.getPath());
 		}
 		
 		editor.forceDrawerReload();
@@ -1073,7 +1077,7 @@ public class APDE extends Application {
 		
 		String data = "";
 		
-		for(int i = 0; i < sketches.length; i ++) {
+		for (int i = 0; i < sketches.length; i ++) {
 			data += sketches[i].getLocation().toString() + "," + sketches[i].getPath() + ",\n";
 		}
 		
@@ -1382,5 +1386,31 @@ public class APDE extends Application {
 	
 	public String getPref(String pref, String def) {
 		return PreferenceManager.getDefaultSharedPreferences(this).getString(pref, def);
+	}
+	
+	public EditText createAlertDialogEditText(Activity context, AlertDialog.Builder builder, String content, boolean selectAll) {
+		final EditText input = new EditText(context);
+		input.setSingleLine();
+		input.setText(content);
+		if (selectAll) {
+			input.selectAll();
+		}
+		
+		// http://stackoverflow.com/a/27776276/
+		FrameLayout frameLayout = new FrameLayout(context);
+		FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+		
+		// http://stackoverflow.com/a/35211225/
+		float dpi = getResources().getDisplayMetrics().density;
+		params.leftMargin = (int) (19 * dpi);
+		params.topMargin = (int) (5 * dpi);
+		params.rightMargin = (int) (14 * dpi);
+		params.bottomMargin = (int) (5 * dpi);
+		
+		frameLayout.addView(input, params);
+		
+		builder.setView(frameLayout);
+		
+		return input;
 	}
 }

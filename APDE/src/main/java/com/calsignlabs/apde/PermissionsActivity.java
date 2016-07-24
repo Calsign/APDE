@@ -261,9 +261,9 @@ public class PermissionsActivity extends AppCompatActivity {
 		build.setTitle(R.string.new_permission_dialog_title);
 		build.setMessage(R.string.new_permission_dialog_message);
 		
-		final EditText input = new EditText(this);
-    	input.setSingleLine();
-    	build.setView(input);
+		APDE global = (APDE) getApplicationContext();
+		
+		final EditText input = global.createAlertDialogEditText(this, build, "", false);
 		
 		build.setPositiveButton(R.string.create, new android.content.DialogInterface.OnClickListener() {
 			@Override

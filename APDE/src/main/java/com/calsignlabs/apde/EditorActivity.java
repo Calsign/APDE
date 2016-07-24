@@ -85,6 +85,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Stack;
 
@@ -98,6 +99,8 @@ import processing.data.XML;
 public class EditorActivity extends AppCompatActivity {
 	//List of key bindings for hardware / bluetooth keyboards
 	private HashMap<String, KeyBinding> keyBindings;
+	
+	public Toolbar toolbar;
 	
 	public ViewPager codePager;
 	public FragmentStatePagerAdapter codePagerAdapter;
@@ -165,7 +168,7 @@ public class EditorActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
 		
-		Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+		toolbar = (Toolbar) findViewById(R.id.toolbar);
 		toolbar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
 		setSupportActionBar(toolbar);
 		
@@ -488,9 +491,9 @@ public class EditorActivity extends AppCompatActivity {
 				Rect r = new Rect();
 				activityRootView.getWindowVisibleDisplayFrame(r);
 				int heightDiff = activityRootView.getRootView().getHeight() - (r.bottom - r.top);
-
-				//Hide the soft keyboard if it's trying to show its dirty face...
-				//...and the user doesn't want it
+				
+				// Hide the soft keyboard if it's trying to show its dirty face...
+				// ...and the user doesn't want it
 				if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
 					InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 					imm.hideSoftInputFromWindow(activityRootView.getWindowToken(), 0);
@@ -498,7 +501,7 @@ public class EditorActivity extends AppCompatActivity {
 				}
 				
 				if (oldCodeHeight == -1) {
-					oldCodeHeight = getSelectedCodeAreaScroller().getHeight();
+					oldCodeHeight = codePager.getHeight();
 				}
 				
 				if (heightDiff > 100) { //If the difference is bigger than 100, it's probably the keyboard
@@ -519,13 +522,12 @@ public class EditorActivity extends AppCompatActivity {
 						LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
 						TextView messageArea = (TextView) findViewById(R.id.message);
 						View console = findViewById(R.id.console_scroller);
-						View code = getSelectedCodeAreaScroller();
 						View content = findViewById(R.id.content);
 						
 						if (firstResize) {
 							firstResize = false;
 						} else {
-							oldCodeHeight = code.getHeight();
+							oldCodeHeight = codePager.getHeight();
 						}
 						
 						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
@@ -548,15 +550,19 @@ public class EditorActivity extends AppCompatActivity {
 							buffer.setBackgroundColor(getResources().getColor(R.color.message_back));
 							messageArea.setTextColor(getResources().getColor(R.color.message_text));
 						}
-
-						((CodeEditText) findViewById(R.id.code)).updateBracketMatch();
-
+						
+						CodeEditText codeArea = getSelectedCodeArea();
+						
+						if (codeArea != null) {
+							codeArea.updateBracketMatch();
+						}
+						
 						//Don't do anything if the user has disabled the character insert tray
 						if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true)) {
 							//Update the character insert tray
 							toggleCharInserts.setVisibility(View.VISIBLE);
 							findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.VISIBLE);
-
+							
 							if (charInserts) {
 								findViewById(R.id.message).setVisibility(View.GONE);
 								findViewById(R.id.char_insert_tray).setVisibility(View.VISIBLE);
@@ -567,7 +573,6 @@ public class EditorActivity extends AppCompatActivity {
 					if (keyboardVisible) {
 						//Configure the layout for the absence of the keyboard
 						
-						View messageArea = findViewById(R.id.message);
 						View codeArea = getSelectedCodeAreaScroller();
 						View consoleArea = findViewById(R.id.console_scroller);
 						
@@ -575,8 +580,8 @@ public class EditorActivity extends AppCompatActivity {
 						
 						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
 						
-						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight + codeTabStrip.getHeight(), false));
-						consoleArea.startAnimation(new ResizeAnimation<LinearLayout>(consoleArea, ResizeAnimation.DEFAULT, codeArea.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight - codeTabStrip.getHeight(), false));
+						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight, false));
+						consoleArea.startAnimation(new ResizeAnimation<LinearLayout>(consoleArea, ResizeAnimation.DEFAULT, codeArea.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight, false));
 						
 						keyboardVisible = false;
 						
@@ -764,19 +769,19 @@ public class EditorActivity extends AppCompatActivity {
 	}
 	
 	public boolean isSelectedCodeAreaInitialized() {
-		return getSelectedSketchFile().getFragment().getCodeEditText() != null;
+		return getSelectedSketchFile() != null && getSelectedSketchFile().getFragment().getCodeEditText() != null;
 	}
 	
 	public CodeEditText getSelectedCodeArea() {
-		return getSelectedSketchFile().getFragment().getCodeEditText();
+		return getSelectedSketchFile() != null ? getSelectedSketchFile().getFragment().getCodeEditText() : null;
 	}
 	
 	public ScrollView getSelectedCodeAreaScroller() {
-		return getSelectedSketchFile().getFragment().getCodeScroller();
+		return getSelectedSketchFile() != null ? getSelectedSketchFile().getFragment().getCodeScroller() : null;
 	}
 	
 	public SketchFile getSelectedSketchFile() {
-		return tabs.get(getSelectedCodeIndex());
+		return tabs.size() > 0 ? tabs.get(getSelectedCodeIndex()) : null;
 	}
 	
 	/**
@@ -1271,6 +1276,52 @@ public class EditorActivity extends AppCompatActivity {
 			getSupportActionBar().setTitle(getGlobalState().getSketchName());
 		}
     }
+	
+	/**
+	 * Open the rename sketch AlertDialog
+	 */
+	public void launchRenameSketch() {
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		
+		alert.setTitle(String.format(Locale.US, getResources().getString(R.string.rename_sketch_title), getGlobalState().getSketchName()));
+		alert.setMessage(R.string.rename_sketch_message);
+		
+		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
+		
+		alert.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {
+				String sketchName = input.getText().toString();
+				
+				if (validateSketchName(sketchName) && !sketchName.equals(getGlobalState().getSketchName())) {
+					getGlobalState().setSketchName(sketchName);
+					
+					APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
+					APDE.SketchMeta dest = new APDE.SketchMeta(source.getLocation(), source.getParent() + "/" + sketchName);
+					
+					getGlobalState().moveFolder(source, dest, EditorActivity.this);
+				}
+				
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+				}
+			}
+		});
+		
+		alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+				}
+			}
+		});
+		
+		// Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
+		AlertDialog dialog = alert.create();
+		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+			dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+		}
+		dialog.show();
+	}
     
     /**
      * Called when the user selects "Load Sketch" - this will open the navigation drawer
@@ -1787,6 +1838,7 @@ public class EditorActivity extends AppCompatActivity {
     	}
     }
     
+	// TODO this will be deleted
     private void changeSketchNameForSave() {
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
     	
@@ -1884,6 +1936,31 @@ public class EditorActivity extends AppCompatActivity {
 		}
 		
 		return true;
+	}
+	
+	public void launchDeleteSketchConfirmationDialog() {
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		
+		alert.setTitle(String.format(Locale.US, getResources().getString(R.string.delete_sketch_dialog_title), getGlobalState().getSketchName()));
+		alert.setMessage(String.format(Locale.US, getResources().getString(R.string.delete_sketch_dialog_message), getGlobalState().getSketchName()));
+		
+		alert.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+			@SuppressLint("NewApi")
+			public void onClick(DialogInterface dialog, int whichButton) {
+				deleteSketch();
+				
+				getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
+				newSketch();
+				
+				toolbar.setTitle(getGlobalState().getSketchName());
+			}
+		});
+		
+		alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {}
+		});
+		
+		alert.create().show();
 	}
     
     /**
@@ -2167,9 +2244,9 @@ public class EditorActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.activity_editor, menu);
         
         if(drawerOpen) {
-        	//If the drawer is visible
+        	// If the drawer is visible
         	
-        	//Make sure to hide all of the sketch-specific action items
+        	// Make sure to hide all of the sketch-specific action items
         	menu.findItem(R.id.menu_run).setVisible(false);
         	menu.findItem(R.id.menu_stop).setVisible(false);
         	menu.findItem(R.id.menu_undo).setVisible(false);
@@ -2177,6 +2254,8 @@ public class EditorActivity extends AppCompatActivity {
         	menu.findItem(R.id.menu_tab_delete).setVisible(false);
         	menu.findItem(R.id.menu_tab_rename).setVisible(false);
         	menu.findItem(R.id.menu_save).setVisible(false);
+			menu.findItem(R.id.menu_delete).setVisible(false);
+			menu.findItem(R.id.menu_rename).setVisible(false);
         	menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
         	menu.findItem(R.id.menu_new).setVisible(false);
         	menu.findItem(R.id.menu_load).setVisible(false);
@@ -2184,13 +2263,13 @@ public class EditorActivity extends AppCompatActivity {
         	menu.findItem(R.id.menu_tools).setVisible(false);
         	menu.findItem(R.id.menu_sketch_properties).setVisible(false);
         	
-        	//Make sure to hide the sketch name
+        	// Make sure to hide the sketch name
         	getSupportActionBar().setTitle(R.string.app_name);
         } else {
-        	if(getCodeCount() > 0) {
-        		//If the drawer is closed and there are tabs
+        	if (getCodeCount() > 0) {
+        		// If the drawer is closed and there are tabs
         		
-        		//Make sure to make the tab actions visible
+        		// Make sure to make the tab actions visible
             	menu.findItem(R.id.menu_run).setVisible(true);
             	menu.findItem(R.id.menu_stop).setVisible(true);
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
@@ -2198,7 +2277,7 @@ public class EditorActivity extends AppCompatActivity {
             	
             	menu.findItem(R.id.menu_tools).setVisible(true);
             	
-            	if(getGlobalState().isExample()) {
+            	if (getGlobalState().isExample()) {
             		menu.findItem(R.id.menu_undo).setVisible(false);
                 	menu.findItem(R.id.menu_redo).setVisible(false);
             	} else {
@@ -2211,9 +2290,9 @@ public class EditorActivity extends AppCompatActivity {
             		}
             	}
             } else {
-            	//If the drawer is closed and there are no tabs
+            	// If the drawer is closed and there are no tabs
             	
-            	//Make sure to make the tab actions invisible
+            	// Make sure to make the tab actions invisible
             	menu.findItem(R.id.menu_run).setVisible(false);
     	    	menu.findItem(R.id.menu_stop).setVisible(false);
     	    	menu.findItem(R.id.menu_undo).setVisible(false);
@@ -2223,26 +2302,32 @@ public class EditorActivity extends AppCompatActivity {
             	menu.findItem(R.id.menu_tools).setVisible(false);
             }
         	
-        	//Enable / disable undo / redo buttons
+        	// Enable/disable undo/redo buttons
         	SketchFile meta = getSelectedSketchFile();
         	menu.findItem(R.id.menu_undo).setEnabled(meta != null ? meta.canUndo() : false);
         	menu.findItem(R.id.menu_redo).setEnabled(meta != null ? meta.canRedo() : false);
         	
-        	//Make sure to make all of the sketch-specific actions visible
+        	// Make sure to make all of the sketch-specific actions visible
         	
-        	switch(getGlobalState().getSketchLocationType()) {
+        	switch (getGlobalState().getSketchLocationType()) {
         	case SKETCHBOOK:
         	case TEMPORARY:
         		menu.findItem(R.id.menu_save).setVisible(true);
+				menu.findItem(R.id.menu_delete).setVisible(true);
+				menu.findItem(R.id.menu_rename).setVisible(true);
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
         		break;
         	case EXTERNAL:
         		menu.findItem(R.id.menu_save).setVisible(true);
+				menu.findItem(R.id.menu_delete).setVisible(true);
+				menu.findItem(R.id.menu_rename).setVisible(false);
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
         		break;
         	case EXAMPLE:
         	case LIBRARY_EXAMPLE:
         		menu.findItem(R.id.menu_save).setVisible(false);
+				menu.findItem(R.id.menu_delete).setVisible(false);
+				menu.findItem(R.id.menu_rename).setVisible(false);
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
         		break;
         	}
@@ -2256,15 +2341,16 @@ public class EditorActivity extends AppCompatActivity {
         	getSupportActionBar().setTitle(getGlobalState().getSketchName());
         }
         
-        //Disable these buttons because they appear when the tab is pressed
-        //Not getting rid of them completely in case we want to change things in the future
+        // Disable these buttons because they appear when the tab is pressed
+        // Not getting rid of them completely in case we want to change things in the future
         menu.findItem(R.id.menu_tab_new).setVisible(false);
         menu.findItem(R.id.menu_tab_delete).setVisible(false);
     	menu.findItem(R.id.menu_tab_rename).setVisible(false);
     	
-    	//So that the user can add a tab if there are none
-    	if(getCodeCount() <= 0 && !getGlobalState().isExample())
-    		menu.findItem(R.id.menu_tab_new).setVisible(true);
+    	// So that the user can add a tab if there are none
+    	if (getCodeCount() <= 0 && !getGlobalState().isExample()) {
+			menu.findItem(R.id.menu_tab_new).setVisible(true);
+		}
     	
         return true;
     }
@@ -2322,6 +2408,9 @@ public class EditorActivity extends AppCompatActivity {
             case R.id.menu_save:
             	saveSketch();
             	return true;
+			case R.id.menu_rename:
+				launchRenameSketch();
+				return true;
             case R.id.menu_copy_to_sketchbook:
             	copyToSketchbook();
             	return true;
@@ -2331,6 +2420,9 @@ public class EditorActivity extends AppCompatActivity {
             case R.id.menu_load:
             	loadSketch();
             	return true;
+			case R.id.menu_delete:
+				launchDeleteSketchConfirmationDialog();
+				return true;
             case R.id.menu_settings:
             	launchSettings();
             	return true;
@@ -3087,21 +3179,18 @@ public class EditorActivity extends AppCompatActivity {
     	//Set the title and message
     	alert.setTitle(title);
     	alert.setMessage(message);
-    	
-    	//Create an input field
-    	final EditText input = new EditText(this);
-    	input.setSingleLine();
-    	input.setText(currentName);
-    	input.selectAll();
-    	
-    	//Add the input field
-    	alert.setView(input);
+		
+		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, currentName, true);
     	
     	//Add the "OK" button
     	alert.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {
     			String value = input.getText().toString();
     			checkInputDialog(key, true, value);
+				
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+				}
     		}
     	});
     	
@@ -3109,13 +3198,18 @@ public class EditorActivity extends AppCompatActivity {
     	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {
     			checkInputDialog(key, false, "");
+				
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+				}
     		}
     	});
     	
     	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
     	AlertDialog dialog = alert.create();
-    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+			dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+		}
     	dialog.show();
     }
     

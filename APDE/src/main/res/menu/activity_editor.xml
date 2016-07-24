@@ -32,6 +32,14 @@
         android:orderInCategory="100"
         app:showAsAction="never"
         android:title="@string/menu_settings" />
+	<item
+		android:id="@+id/menu_new"
+		app:showAsAction="never"
+		android:title="@string/menu_new" />
+	<item
+		android:id="@+id/menu_load"
+		app:showAsAction="never"
+		android:title="@string/menu_open" />
     <item
         android:id="@+id/menu_save"
         app:showAsAction="never"
@@ -40,14 +48,13 @@
         android:id="@+id/menu_copy_to_sketchbook"
         app:showAsAction="never"
         android:title="@string/copy_to_sketchbook" />
-    <item
-        android:id="@+id/menu_new"
-        app:showAsAction="never"
-        android:title="@string/menu_new" />
-    <item
-        android:id="@+id/menu_load"
-        app:showAsAction="never"
-        android:title="@string/menu_open" />
+	<item
+		android:id="@+id/menu_rename"
+		app:showAsAction="never"
+		android:title="@string/menu_rename" />
+	<item android:id="@+id/menu_delete"
+		  app:showAsAction="never"
+		  android:title="@string/menu_delete" />
     <item
         android:id="@+id/menu_tab_new"
         app:showAsAction="never"

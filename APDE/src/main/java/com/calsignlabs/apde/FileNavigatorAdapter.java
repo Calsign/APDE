@@ -360,14 +360,9 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		
 		builder.setTitle(R.string.move_to_new_folder_title);
 		builder.setMessage(R.string.move_to_new_folder_descrption);
+    	
+		final EditText input = global.createAlertDialogEditText(global.getEditor(), builder, "", false);
 		
-    	final EditText input = new EditText(context);
-    	input.setSingleLine();
-    	input.setText("");
-    	input.selectAll();
-    	
-    	builder.setView(input);
-    	
 		builder.setPositiveButton(R.string.create, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
@@ -427,12 +422,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		builder.setTitle(String.format(Locale.US, context.getResources().getString(isSketch ? R.string.rename_sketch_title : R.string.rename_folder_title), dragItem.getText()));
 		builder.setMessage(context.getResources().getString(isSketch ? R.string.rename_sketch_message : R.string.rename_folder_message));
 		
-    	final EditText input = new EditText(context);
-    	input.setSingleLine();
-    	input.setText(dragItem.getText());
-    	input.selectAll();
-    	
-    	builder.setView(input);
+		final EditText input = global.createAlertDialogEditText(global.getEditor(), builder, dragItem.getText(), true);
 		
 		builder.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
 			@Override
