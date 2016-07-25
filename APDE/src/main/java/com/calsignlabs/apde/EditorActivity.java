@@ -3437,15 +3437,8 @@ public class EditorActivity extends AppCompatActivity {
 		this.saved = saved;
 	}
 	
-//	/**
-//	 * @return a map of tabs to their metas
-//	 */
-//	public HashMap<Tab, SketchFile> getTabs() {
-//		return tabs;
-//	}
-
 	/**
-	 * @return a map of tabs to their metas
+	 * @return an ArrayList of SketchFile tabs
 	 */
 	public ArrayList<SketchFile> getSketchFiles() {
 		return tabs;

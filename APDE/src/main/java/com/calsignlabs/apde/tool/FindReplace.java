@@ -782,8 +782,9 @@ public class FindReplace implements Tool {
 	}
 	
 	public void clearHighlights() {
-		context.getCodeArea().clearHighlights();
-		context.getCodeArea().invalidate();
+		for (SketchFile sketchFile : context.getEditor().getSketchFiles()) {
+			sketchFile.clearHighlightsIfInitialized();
+		}
 	}
 	
 	public void nextFindMatch() {
@@ -1065,15 +1066,21 @@ public class FindReplace implements Tool {
 					@Override
 					public void run() {
 						if (scope.get().equals(Scope.ALL_TABS)) {
+							SketchFile[] tabMetas = context.getEditor().getTabMetas();
+							
 							for (int i = 0; i < finalOutputTexts.length; i ++) {
 								if (i == context.getEditor().getSelectedCodeIndex()) {
 									context.getCodeArea().setUpdateText(finalOutputTexts[i].toString());
 								} else {
-									SketchFile sketchFile = context.getEditor().getTabMetas()[i];
+									SketchFile sketchFile = tabMetas[i];
 									
 									if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("pref_key_undo_redo", true)) {
 										sketchFile.update(context.getEditor(), getFileChange(sketchFile, finalOutputTexts[i]));
 									}
+									
+									// With the new ViewPager as part of Material design, the two tabs adjacent
+									// to the current tab are kept loaded, so we need to force them to update
+									sketchFile.forceReloadTextIfInitialized();
 								}
 							}
 						} else {

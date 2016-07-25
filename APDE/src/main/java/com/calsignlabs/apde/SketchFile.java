@@ -712,6 +712,19 @@ public class SketchFile implements Parcelable {
 		fragment.updateWithSketchFile();
 	}
 	
+	public void forceReloadTextIfInitialized() {
+		if (fragment != null && fragment.isInitialized()) {
+			fragment.updateWithSketchFile();
+		}
+	}
+	
+	public void clearHighlightsIfInitialized() {
+		if (fragment != null && fragment.isInitialized()) {
+			fragment.getCodeEditText().clearHighlights();
+			fragment.getCodeEditText().invalidate();
+		}
+	}
+	
 	public CodeAreaFragment getFragment() {
 		return fragment;
 	}
