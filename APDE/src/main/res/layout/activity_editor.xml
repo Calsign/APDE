@@ -145,7 +145,7 @@
 					android:background="@color/holo_select_light"
 					android:padding="8dp" />
 				
-				<View
+				<View android:id="@+id/hover_actions_first_divider"
 					android:layout_width="1dp"
 					android:layout_height="match_parent"
 					android:background="#CCCCCC" />

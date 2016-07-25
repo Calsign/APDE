@@ -47,7 +47,7 @@
     <string name="save_sketch">Save</string>
     <string name="dont_save_sketch">Don\'t Save</string>
     <string name="delete_sketch_dialog_title">Delete \&quot;%1$s\&quot;?</string>
-    <string name="delete_sketch_dialog_message">Are you sure you want to delete sketch \&quot;%1$s\&quot;?</string>
+    <string name="delete_sketch_dialog_message">Are you sure you want to delete \&quot;%1$s\&quot;?</string>
     <string name="name_invalid_same_title">Error: This tab already exists!</string>
     <string name="tab_new_dialog_title">New Tab</string>
     <string name="tab_new_dialog_message">Enter the name for the new tab:</string>
@@ -106,6 +106,7 @@
     <string name="sketches">Sketches</string>
     <string name="examples">Examples</string>
     <string name="library_examples">Library Examples</string>
+    <string name="temporary">Temporary</string>
     <string name="recent">Recent</string>
     <string name="copy_to_sketchbook">Copy to Sketchbook</string>
     <string name="color_selector">Color Selector</string>
@@ -130,11 +131,14 @@
     <string name="delete_folder">Delete Folder</string>
     <string name="delete_folder_dialog_message">Are you sure you want to delete folder \&quot;%1$s\&quot;?</string>
     <string name="move_to_new_folder_title">Move to New Folder</string>
-    <string name="move_to_new_folder_descrption">Enter the name for the new folder:</string>
-    <string name="rename_sketch_title">Rename Sketch \&quot;%1$s\&quot;</string>
+    <string name="move_to_new_folder_description">Enter the name for the new folder:</string>
+    <string name="rename_sketch_title">Rename \&quot;%1$s\&quot;</string>
     <string name="rename_sketch_message">Enter the new name for the sketch:</string>
     <string name="rename_folder_title">Rename Folder \&quot;%1$s\&quot;</string>
     <string name="rename_folder_message">Enter the new name for the folder:</string>
+    <string name="move_temp_to_sketchbook_title">Move to Sketchbook</string>
+	<string name="move_temp_to_sketchbook_message">Move \&quot;%1$s\&quot; from temporary storage to the Sketchbook?</string>
+	<string name="move">Move</string>
     <string name="rename">Rename</string>
     <string name="invalid_name">Invalid Name</string>
     <string name="invalid_name_folder_no_text">Folder names must contain text!</string>

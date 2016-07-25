@@ -57,10 +57,13 @@ import java.io.InputStream;
 import java.math.RoundingMode;
 import java.nio.channels.FileChannel;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 
 import processing.app.Base;
 
@@ -71,7 +74,10 @@ import processing.app.Base;
 public class APDE extends Application {
 	public static final String DEFAULT_SKETCHBOOK_LOCATION = "Sketchbook";
 	public static final String LIBRARIES_FOLDER = "libraries";
-	public static final String DEFAULT_SKETCH_NAME = "sketch";
+	
+	public static final String DEFAULT_SKETCH_TAB = "sketch";
+	
+	public static final String LAST_TEMPORARY_SKETCH_NAME_PREF = "last_temporary_sketch_name";
 	
 	public static final String EXAMPLES_REPO = "https://github.com/Calsign/APDE-examples.git";
 	
@@ -93,7 +99,7 @@ public class APDE extends Application {
 		EXAMPLE, // An example on the the internal storage
 		LIBRARY_EXAMPLE, // An example packaged with a (contributed) library
 		EXTERNAL, // A sketch located on the file system (not in the sketchbook)
-		TEMPORARY; // A sketch that has yet to be saved
+		TEMPORARY; // A sketch in the temporary internal storage directory
 		
 		@Override
 		public String toString() {
@@ -141,6 +147,8 @@ public class APDE extends Application {
 				return context.getResources().getString(R.string.examples);
 			case LIBRARY_EXAMPLE:
 				return context.getResources().getString(R.string.library_examples);
+			case TEMPORARY:
+				return context.getResources().getString(R.string.temporary);
 			default:
 				return "";
 			}
@@ -216,11 +224,12 @@ public class APDE extends Application {
 		this.sketchPath = sketchPath;
 		this.sketchLocation = sketchLocation;
 		
-		if(sketchLocation.equals(SketchLocation.TEMPORARY)) {
-			setSketchName(DEFAULT_SKETCH_NAME);
-		} else {
-			setSketchName(getSketchLocation().getName());
-		}
+		setSketchName(getSketchLocation().getName());
+	}
+	
+	public void selectNewTempSketch() {
+		selectSketch("/" + getNextTemporarySketchName(), SketchLocation.TEMPORARY);
+		putPref(LAST_TEMPORARY_SKETCH_NAME_PREF, getSketchName());
 	}
 	
 	/**
@@ -370,7 +379,7 @@ public class APDE extends Application {
 				new SketchMeta(location.getLocation(), location.getParent())));
 		
 		//Sanity check...
-		if(!directory.isDirectory()) {
+		if(directory == null || !directory.isDirectory()) {
 			//Let the user know that the folder is empty...
 			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
 			
@@ -427,6 +436,90 @@ public class APDE extends Application {
 		return output;
 	}
 	
+	public String getNextTemporarySketchName() {
+		String lastName = getPref(LAST_TEMPORARY_SKETCH_NAME_PREF, "");
+		
+		SimpleDateFormat tempNameFormat = new SimpleDateFormat("yyyyMMdd", Locale.US);
+		String currentDateStr = tempNameFormat.format(new Date());
+		
+		String lastDateStr = "";
+		String lastIter = "";
+		
+		// Temporary names are formatted "sketch_yyyyMMdda", where "a" is the iteration for
+		// keeping track of multiple sketches on the same day
+		
+		if (lastName.length() > 0) {
+			lastDateStr = lastName.substring(7, 15);
+			lastIter = lastName.substring(15);
+		}
+		
+		String currentIter = "";
+		
+		if (lastDateStr.equals(currentDateStr)) {
+			// We need to iterate
+			
+			currentIter = numToBase26(base26ToNum(lastIter) + 1);
+		} else {
+			// This is the first temp sketch today, so start from "a" again
+			currentIter = numToBase26(1);
+		}
+		
+		return "sketch_" + currentDateStr + currentIter;
+	}
+	
+	/**
+	 * Convert numbers >= 0 into base 26 represented by letters, e.g.:<br />
+	 *   0 -> a<br />
+	 *   1 -> b<br />
+	 *   ...<br />
+	 *   25 -> z<br />
+	 *   26 -> aa<br />
+	 *   27 -> ab<br />
+	 *   ...<br />
+	 * 
+	 * @param num
+	 * @return
+	 */
+	private String numToBase26(int num) {
+		if (num >= 1) {
+			if (num > 26) {
+				return numToBase26((num - 1) / 26) + Character.toString(numToBase26Digit((num - 1) % 26 + 1));
+			} else {
+				return Character.toString(numToBase26Digit(num));
+			}
+		} else {
+			return "";
+		}
+	}
+	
+	private int base26ToNum(String base26) {
+		int total = 0;
+		for (int c = 0; c < base26.length(); c ++) {
+			total += base26DigitToNum(base26.charAt(c)) * Math.pow(26, base26.length() - c - 1);
+		}
+		return total;
+	}
+	
+	/**
+	 * Convert numbers 1-26 into letters a-z
+	 * 
+	 * @param num
+	 * @return
+	 */
+	private char numToBase26Digit(int num) {
+		return num >= 1 && num <= 26 ? (char) (96 + num) : ' ';
+	}
+	
+	/**
+	 * Convert base 26 digits into decimal numbers
+	 * 
+	 * @param digit
+	 * @return
+	 */
+	private int base26DigitToNum(char digit) {
+		return digit >= 'a' && digit <= 'z' ? (int) digit - 96 : -1;
+	}
+	
 	/**
 	 * @return the location of the current sketch, be it a sketch, an example, or something else
 	 */
@@ -442,6 +535,8 @@ public class APDE extends Application {
 			return new File(getLibrariesFolder(), sketchPath);
 		case EXTERNAL:
 			return new File(sketchPath);
+		case TEMPORARY:
+			return new File(getTemporarySketchesFolder(), sketchPath);
 		default:
 			// Maybe a temporary sketch...
 			return null;
@@ -463,6 +558,8 @@ public class APDE extends Application {
 			return new File(getLibrariesFolder(), sketchPath);
 		case EXTERNAL:
 			return new File(sketchPath);
+		case TEMPORARY:
+			return new File(getTemporarySketchesFolder(), sketchPath);
 		default:
 			// Uh-oh...
 			return null;
@@ -503,7 +600,7 @@ public class APDE extends Application {
 	 * @return a reference to the code area
 	 */
 	public CodeEditText getCodeArea() {
-    	return (CodeEditText) editor.findViewById(R.id.code);
+		return getEditor().getSelectedCodeArea();
     }
 	
 	/**
@@ -698,6 +795,10 @@ public class APDE extends Application {
 	
 	public File getExamplesRepoFolder() {
 		return getDir("examples_repo", 0);
+	}
+	
+	public File getTemporarySketchesFolder() {
+		return getDir("temporary", 0);
 	}
 	
 	/**
@@ -905,7 +1006,7 @@ public class APDE extends Application {
 		final File destFile = getSketchLocation(dest.getPath(), dest.getLocation());
 		
 		final boolean isSketch = validSketch(sourceFile);
-		final boolean selected = getSketchLocationType().equals(SketchLocation.TEMPORARY) ? false : getSketchLocation().equals(getSketchLocation(source.getPath(), source.getLocation()));
+		final boolean selected = getSketchLocation().equals(getSketchLocation(source.getPath(), source.getLocation()));
 		
 		//Let's not overwrite anything...
 		//TODO Maybe give the user options to replace / keep both in the new location?
@@ -1386,6 +1487,12 @@ public class APDE extends Application {
 	
 	public String getPref(String pref, String def) {
 		return PreferenceManager.getDefaultSharedPreferences(this).getString(pref, def);
+	}
+	
+	public void putPref(String pref, String val) {
+		SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(this).edit();
+		edit.putString(pref, val);
+		edit.apply();
 	}
 	
 	public EditText createAlertDialogEditText(Activity context, AlertDialog.Builder builder, String content, boolean selectAll) {

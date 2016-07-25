@@ -22,6 +22,10 @@
         app:showAsAction="never"
         android:title="@string/copy_to_sketchbook" />
     <item
+        android:id="@+id/menu_move_to_sketchbook"
+        app:showAsAction="never"
+        android:title="@string/move_temp_to_sketchbook_title" />
+    <item
         android:id="@+id/menu_delete"
         app:showAsAction="never"
         android:title="@string/menu_delete"/>

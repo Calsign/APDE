@@ -160,10 +160,6 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 	}
 	
 	public static void updatePrefs(APDE global) {
-		//Don't try if this is a temporary sketch... it will crash and burn
-		if(global.isTemp())
-			return;
-		
 		Manifest mf = global.getManifest();
 		
 		SharedPreferences.Editor edit = global.getSharedPreferences(global.getSketchName(), 0).edit();
@@ -242,6 +238,11 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 			}
 		});
 		
+		if (getGlobalState().isTemp()) {
+			// We can't show the sketch folder of a temp sketch because it's in the internal storage
+			launchSketchFolder.setEnabled(false);
+		}
+		
 		Preference launchChangeIcon = (Preference) findPreference("prop_change_icon");
 		launchChangeIcon.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
 			@Override
@@ -251,8 +252,8 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 			}
 		});
 		
-		//If this is an example... or if this is a temporary sketch...
-		if(getGlobalState().isExample() || getGlobalState().isTemp()) {
+		//If this is an example...
+		if(getGlobalState().isExample()) {
         	//...disable all of the preferences
         	findPreference("prop_manifest").setEnabled(false);
         	findPreference("prop_sketch_folder").setEnabled(false);
@@ -264,10 +265,6 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		prefListener = new OnSharedPreferenceChangeListener() {
 			@Override
 			public void onSharedPreferenceChanged(SharedPreferences pref, String key) {
-				//If this is the temporary sketch, bail out
-				if(getGlobalState().isTemp())
-					return;
-				
 				Manifest mf = getGlobalState().getManifest();
 				
 				if(key.equals("prop_pretty_name"))
@@ -363,6 +360,9 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
             case R.id.menu_copy_to_sketchbook:
             	copyToSketchbook();
             	return true;
+			case R.id.menu_move_to_sketchbook:
+				moveToSketchbook();
+				return true;
         	case R.id.menu_delete:
         		deleteSketch();
         		return true;
@@ -377,29 +377,34 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 	private void initOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.activity_sketch_properties, menu);
 		
-		if(getGlobalState().isExample()) {
-			//Don't let them mess with the examples!
-			menu.findItem(R.id.menu_change_sketch_name).setVisible(false);
-			menu.findItem(R.id.menu_delete).setVisible(false);
-		} else {
-			menu.findItem(R.id.menu_change_sketch_name).setVisible(true);
-			menu.findItem(R.id.menu_delete).setVisible(true);
-		}
-		
 		//Not using this - we have "Export Eclipse Project" and "Export Signed Package" tools now
 		menu.findItem(R.id.menu_export).setVisible(false);
 		
 		switch(getGlobalState().getSketchLocationType()) {
 		case SKETCHBOOK:
+			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
+			menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
+			menu.findItem(R.id.menu_change_sketch_name).setVisible(true);
+			menu.findItem(R.id.menu_delete).setVisible(true);
+			break;
 		case TEMPORARY:
 			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
+			menu.findItem(R.id.menu_move_to_sketchbook).setVisible(true);
+			menu.findItem(R.id.menu_change_sketch_name).setVisible(false);
+			menu.findItem(R.id.menu_delete).setVisible(true);
 			break;
 		case EXTERNAL:
 			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+			menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
+			menu.findItem(R.id.menu_change_sketch_name).setVisible(true);
+			menu.findItem(R.id.menu_delete).setVisible(true);
 			break;
 		case EXAMPLE:
 		case LIBRARY_EXAMPLE:
 			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+			menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
+			menu.findItem(R.id.menu_change_sketch_name).setVisible(false);
+			menu.findItem(R.id.menu_delete).setVisible(false);
 			break;
 		}
 	}
@@ -734,42 +739,6 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
     		return;
     	}
 		
-		if(getGlobalState().getSketchName().equals(APDE.DEFAULT_SKETCH_NAME)) {
-			AlertDialog.Builder alert = new AlertDialog.Builder(this);
-			
-			alert.setTitle(R.string.sketch_name_dialog_title);
-			alert.setMessage(R.string.sketch_name_dialog_message);
-			
-			final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
-			
-			alert.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int whichButton) {
-					String after = input.getText().toString();
-					
-					if(FileNavigatorAdapter.validateSketchName(after, SketchPropertiesActivity.this)) {
-						getGlobalState().setSketchName(after);
-						
-						//We have to save before we do this... because it reads from the file system
-						saveSketch();
-						getGlobalState().getEditor().forceDrawerReload();
-					}
-				}
-			});
-			
-			alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int whichButton) {
-				}
-			});
-			
-			//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
-			AlertDialog dialog = alert.create();
-			if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-				dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-			dialog.show();
-			
-			return;
-		}
-		
 		getGlobalState().getEditor().saveSketch();
 	}
 	
@@ -792,6 +761,50 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		restartActivity();
 	}
 	
+	private void moveToSketchbook() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		
+		builder.setTitle(R.string.move_temp_to_sketchbook_title);
+		builder.setMessage(String.format(Locale.US, getResources().getString(R.string.move_temp_to_sketchbook_message), getGlobalState().getSketchName()));
+		
+		builder.setPositiveButton(R.string.move, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
+				APDE.SketchMeta dest = new APDE.SketchMeta(APDE.SketchLocation.SKETCHBOOK, "/" + source.getName());
+				
+				// Let's not overwrite anything...
+				// TODO Maybe give the user options to replace / keep both in the new location?
+				// We don't need that much right now, they can deal with things manually...
+				if (getGlobalState().getSketchLocation(dest.getPath(), dest.getLocation()).exists()) {
+					AlertDialog.Builder builder = new AlertDialog.Builder(SketchPropertiesActivity.this);
+					
+					builder.setTitle(R.string.cannot_move_sketch_title);
+					builder.setMessage(R.string.cannot_move_folder_message);
+					
+					builder.setPositiveButton(getResources().getString(R.string.ok), new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {}
+					});
+					
+					builder.create().show();
+					
+					return;
+				}
+				
+				getGlobalState().moveFolder(source, dest, SketchPropertiesActivity.this);
+				
+				restartActivity();
+			}
+		});
+		
+		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {}
+		});
+		
+		builder.create().show();
+	}
+	
 	private boolean externalStorageWritable() {
 		String state = Environment.getExternalStorageState();
 		if (Environment.MEDIA_MOUNTED.equals(state)) return true;
@@ -800,57 +813,15 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 	
 	@SuppressLint("NewApi")
 	private void newSketch() {
-		if(getGlobalState().isTemp()) {
-			AlertDialog.Builder alert = new AlertDialog.Builder(this);
-	    	
-	    	alert.setTitle(R.string.save_sketch_dialog_title);
-	    	alert.setMessage(R.string.save_sketch_dialog_message);
-	    	
-	    	alert.setPositiveButton(R.string.save_sketch, new DialogInterface.OnClickListener() {
-	    		public void onClick(DialogInterface dialog, int whichButton) {
-	    			//Save the sketch
-	    			getGlobalState().getEditor().autoSave();
-	    			
-	    			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
-	    			getGlobalState().getEditor().newSketch();
-	    			
-	    			finish();
-	    	}});
-	    	
-	    	//TODO neutral and negative seem mixed up, uncertain of correct implementation - current set up is for looks
-	    	alert.setNeutralButton(R.string.dont_save_sketch, new DialogInterface.OnClickListener() {
-	    		public void onClick(DialogInterface dialog, int whichButton) {
-	    			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
-	    			getGlobalState().getEditor().newSketch();
-	    			
-	    			finish();
-	    		}
-	    	});
-	    	
-	    	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-	    		public void onClick(DialogInterface dialog, int whichButton) {}
-	    	});
-	    	
-	    	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
-	    	AlertDialog dialog = alert.create();
-	    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
-	    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-	    	}
-	    	dialog.show();
-		} else {
-			//Save the sketch
-			getGlobalState().getEditor().autoSave();
-			
-			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
-			getGlobalState().getEditor().newSketch();
-			
-//			if(android.os.Build.VERSION.SDK_INT >= 11) //Yet another unfortunate casualty of AppCompat
-//				getActionBar().setTitle(getGlobalState().getSketchName());
-			
-			toolbar.setTitle(getGlobalState().getSketchName());
-			
-			finish();
-		}
+		//Save the sketch
+		getGlobalState().getEditor().autoSave();
+		
+		getGlobalState().selectNewTempSketch();
+		getGlobalState().getEditor().newSketch();
+		
+		toolbar.setTitle(getGlobalState().getSketchName());
+		
+		finish();
 	}
 	
 	private void deleteSketch() {
@@ -864,7 +835,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 			public void onClick(DialogInterface dialog, int whichButton) {
     			getGlobalState().getEditor().deleteSketch();
     			
-    			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
+    			getGlobalState().selectNewTempSketch();
     			getGlobalState().getEditor().newSketch();
 				
 				toolbar.setTitle(getGlobalState().getSketchName());
@@ -933,11 +904,6 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
     					
     					//We have to save before we do this... because it reads from the file system
     					getGlobalState().getEditor().forceDrawerReload();
-    					
-    					break;
-    				case TEMPORARY:
-    					getGlobalState().selectSketch(sketchPathPrefix + after, APDE.SketchLocation.TEMPORARY);
-    					getGlobalState().setSketchName(after);
     					
     					break;
 					default:

@@ -636,43 +636,6 @@ public class SketchFile implements Parcelable {
 		return success;
 	}
 	
-//	/**
-//	 * Write this file to the temp directory
-//	 * 
-//	 * @param context
-//	 * @return success
-//	 */
-//	public boolean writeDataTemp(Context context) {
-//		//Create the output stream
-//		BufferedOutputStream outputStream = null;
-//		String filename = title + suffix;
-//		boolean success;
-//		
-//		try {
-//			//Write the data
-//			outputStream = new BufferedOutputStream(context.openFileOutput(filename, Context.MODE_PRIVATE));
-//			outputStream.write(getText().getBytes());
-//			
-//			success = true;
-//		} catch (Exception e) { //Errors
-//			e.printStackTrace();
-//			
-//			success = false;
-//			
-//		} finally {
-//			//Close the output stream
-//			if(outputStream != null) {
-//				try {
-//					outputStream.close();
-//				} catch (IOException e) {
-//					e.printStackTrace();
-//				}
-//			}
-//		}
-//		
-//		return success;
-//	}
-	
 	/**
 	 * Loads data from the specified path into this meta object
 	 *
@@ -716,51 +679,6 @@ public class SketchFile implements Parcelable {
 		
 		return success;
 	}
-	
-//	/**
-//	 * Loads data from the specified temp file into this meta object
-//	 * 
-//	 * @param context
-//	 * @param filename
-//	 * @return
-//	 */
-//	public boolean readTempData(Context context, String filename) {
-//		//Create the input stream
-//		BufferedInputStream inputStream = null;
-//    	String output = "";
-//    	boolean success;
-//    	
-//		try {
-//			//Load the data
-//			
-//			inputStream = new BufferedInputStream(context.openFileInput(filename));
-//			
-//			byte[] contents = new byte[1024];
-//			int bytesRead = 0;
-//			
-//			while((bytesRead = inputStream.read(contents)) != -1)
-//				output += new String(contents, 0, bytesRead);
-//			
-//			//Set the data
-//			text = output;
-//			
-//			success = true;
-//		} catch(Exception e) { //Errors
-//			e.printStackTrace();
-//			
-//			success = false;
-//		} finally {
-//			//Close the input stream
-//			try {
-//				if(inputStream != null)
-//					inputStream.close();
-//			} catch (IOException e) {
-//				e.printStackTrace();
-//			}
-//		}
-//		
-//		return success;
-//	}
 	
 	/**
 	 * @return
