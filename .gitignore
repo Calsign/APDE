@@ -2,6 +2,7 @@ aFileChooser/build/**
 APDE/build/**
 build/**
 .gradle/
+.idea
 .idea/copyright/
 .idea/libraries/
 .idea/dictionaries/
