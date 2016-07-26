@@ -2,25 +2,35 @@
 <resources>
     <!--
         Base application theme for API 11+. This theme completely replaces
-        AppBaseTheme from res/values/styles.xml on API 11+ devices.
+        AppBaseTheme from res/values/styles.xml on API 11+ devices.
+
     -->
     <style name="AppBaseTheme" parent="Theme.AppCompat">
         <!-- API 11 theme customizations can go here. -->
     </style>
     
-    <style name="FullscreenTheme" parent="Theme.AppCompat">
+    <style name="FullscreenTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="android:actionBarStyle">@style/FullscreenActionBarStyle</item>
         <item name="android:windowActionBarOverlay">false</item>
-        <item name="android:windowBackground">@color/bar_overlay</item>
+        <item name="android:windowBackground">@color/activity_background</item>
         <item name="buttonBarStyle">?android:attr/buttonBarStyle</item>
         <item name="buttonBarButtonStyle">?android:attr/buttonBarButtonStyle</item>
+        <item name="colorPrimary">@color/bar_overlay</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="windowActionModeOverlay">true</item>
+        <item name="alertDialogTheme">@style/Theme.AppCompat.Dialog.Alert</item>
     </style>
     
-    <style name="PreferencesTheme" parent="android:Theme.Holo">
+    <style name="PreferencesTheme" parent="@style/PreferenceFixTheme.NoActionBar">
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowBackground">@color/activity_background</item>
-        <item name="android:windowActionBar">true</item>
         <item name="android:actionBarStyle">@style/PreferencesActionBarStyle</item>
+        <item name="colorPrimary">@color/bar_overlay</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="windowActionModeOverlay">true</item>
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
     </style>
     
     <style name="FullscreenActionBarStyle" parent="Widget.AppCompat.ActionBar">

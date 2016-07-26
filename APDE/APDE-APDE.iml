@@ -85,8 +85,15 @@
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/bundles" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/classes" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/dependency-cache" />
-      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/appcompat-v7/20.0.0/jars" />
-      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/support-v4/21.0.3/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/animated-vector-drawable/24.0.0/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/appcompat-v7/24.0.0/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/design/24.0.0/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/preference-v14/24.0.0/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/preference-v7/24.0.0/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/recyclerview-v7/24.0.0/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/support-v4/24.0.0/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.android.support/support-vector-drawable/24.0.0/jars" />
+      <excludeFolder url="file://$MODULE_DIR$/build/intermediates/exploded-aar/com.takisoft.fix/preference-v7/24.0.0.1/jars" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/incremental" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/incremental-classes" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/incremental-runtime-classes" />
@@ -107,27 +114,34 @@
       <excludeFolder url="file://$MODULE_DIR$/build/outputs" />
       <excludeFolder url="file://$MODULE_DIR$/build/tmp" />
     </content>
-    <orderEntry type="jdk" jdkName="Android API 21 Platform" jdkType="Android SDK" />
+    <orderEntry type="jdk" jdkName="Android API 24 Platform" jdkType="Android SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" exported="" name="preference-v14-24.0.0" level="project" />
+    <orderEntry type="library" exported="" name="animated-vector-drawable-24.0.0" level="project" />
     <orderEntry type="library" exported="" name="zipsigner-lib-1.17" level="project" />
-    <orderEntry type="library" exported="" name="ecj" level="project" />
     <orderEntry type="library" exported="" name="dx" level="project" />
     <orderEntry type="library" exported="" name="pde" level="project" />
     <orderEntry type="library" exported="" name="zipsigner-lib-optional-1.17" level="project" />
-    <orderEntry type="library" exported="" name="support-v4-21.0.3" level="project" />
+    <orderEntry type="library" exported="" name="android-core" level="project" />
+    <orderEntry type="library" exported="" name="sdklib" level="project" />
+    <orderEntry type="library" exported="" name="pkix-1.51.0.0" level="project" />
+    <orderEntry type="library" exported="" name="support-v4-24.0.0" level="project" />
+    <orderEntry type="library" exported="" name="core-1.51.0.0" level="project" />
+    <orderEntry type="library" exported="" name="prov-1.51.0.0" level="project" />
+    <orderEntry type="library" exported="" name="support-vector-drawable-24.0.0" level="project" />
+    <orderEntry type="library" exported="" name="ecj" level="project" />
+    <orderEntry type="library" exported="" name="support-annotations-24.0.0" level="project" />
     <orderEntry type="library" exported="" name="antlr" level="project" />
     <orderEntry type="library" exported="" name="kellinwood-logging-lib-1.1" level="project" />
     <orderEntry type="library" exported="" name="org.eclipse.jgit-3.5.2.201411120430-r" level="project" />
     <orderEntry type="library" exported="" name="kellinwood-logging-android-1.4" level="project" />
-    <orderEntry type="library" exported="" name="sdklib" level="project" />
-    <orderEntry type="library" exported="" name="android-core" level="project" />
-    <orderEntry type="library" exported="" name="pkix-1.51.0.0" level="project" />
+    <orderEntry type="library" exported="" name="recyclerview-v7-24.0.0" level="project" />
     <orderEntry type="library" exported="" name="jsch-0.1.51" level="project" />
-    <orderEntry type="library" exported="" name="support-annotations-21.0.3" level="project" />
+    <orderEntry type="library" exported="" name="preference-v7-24.0.0" level="project" />
     <orderEntry type="library" exported="" name="zipio-lib-1.8" level="project" />
-    <orderEntry type="library" exported="" name="appcompat-v7-20.0.0" level="project" />
-    <orderEntry type="library" exported="" name="core-1.51.0.0" level="project" />
-    <orderEntry type="library" exported="" name="prov-1.51.0.0" level="project" />
+    <orderEntry type="library" exported="" name="appcompat-v7-24.0.0" level="project" />
+    <orderEntry type="library" exported="" name="preference-v7-24.0.0.1" level="project" />
+    <orderEntry type="library" exported="" name="design-24.0.0" level="project" />
     <orderEntry type="module" module-name="aFileChooser" exported="" />
   </component>
 </module>

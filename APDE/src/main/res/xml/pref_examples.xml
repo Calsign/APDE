@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <PreferenceCategory
+<android.support.v7.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <android.support.v7.preference.PreferenceCategory
         android:key="pref_key_examples"
         android:title="@string/pref_examples" >
         
-        <CheckBoxPreference
+        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="update_examples"
             android:title="@string/enable_update_examples" />
         
-        <CheckBoxPreference
+        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="false"
             android:key="update_examples_mobile_data"
             android:title="@string/enable_update_examples_mobile_data"
             android:summary="@string/enable_update_examples_mobile_data_desc"
             android:dependency="update_examples" />
         
-        <Preference
+        <android.support.v7.preference.Preference
             android:key="update_examples_download_now"
             android:title="@string/update_examples_download_now"
             android:dependency="update_examples" />
-    </PreferenceCategory>
-</PreferenceScreen>
+    </android.support.v7.preference.PreferenceCategory>
+</android.support.v7.preference.PreferenceScreen>

@@ -1,18 +1,6 @@
 package com.calsignlabs.apde;
 
-import java.io.File;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import com.calsignlabs.apde.contrib.ContributionManager;
-import com.calsignlabs.apde.contrib.Library;
-import com.calsignlabs.apde.support.CustomProgressDialog;
-import com.calsignlabs.apde.support.PopupMenu;
-import com.ipaulpro.afilechooser.utils.FileUtils;
-
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -22,7 +10,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.PopupMenu;
+import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
@@ -43,7 +34,17 @@ import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-public class LibraryManagerActivity extends ActionBarActivity {
+import com.calsignlabs.apde.contrib.ContributionManager;
+import com.calsignlabs.apde.contrib.Library;
+import com.calsignlabs.apde.support.CustomProgressDialog;
+import com.ipaulpro.afilechooser.utils.FileUtils;
+
+import java.io.File;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class LibraryManagerActivity extends AppCompatActivity {
 	//All potential archive / compressed file extensions (hopefully) TODO Yes, I realize that the list currently contains one item.
 	public static String[] zipExtensions = {".zip"};
 	
@@ -66,6 +67,10 @@ public class LibraryManagerActivity extends ActionBarActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_library_manager);
+		
+		Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+		toolbar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
+		setSupportActionBar(toolbar);
 		
 		getSupportActionBar().setHomeButtonEnabled(true);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -223,11 +228,7 @@ public class LibraryManagerActivity extends ActionBarActivity {
 		
 		ScrollView layout;
 		
-		if(android.os.Build.VERSION.SDK_INT >= 11) {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog), R.layout.dx_dexer_tool, null);
-		} else {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Dialog), R.layout.dx_dexer_tool, null);
-		}
+		layout = (ScrollView) View.inflate(new ContextThemeWrapper(this, R.style.Theme_AppCompat_Dialog), R.layout.dx_dexer_tool, null);
 		
 		dxDexerInputFile = (EditText) layout.findViewById(R.id.dx_dexer_input_file);
 		dxDexerOutputFile = (EditText) layout.findViewById(R.id.dx_dexer_output_file);
@@ -409,9 +410,9 @@ public class LibraryManagerActivity extends ActionBarActivity {
 	}
 	
 	private void launchSettings() {
-		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
-			startActivity(new Intent(this, SettingsActivity.class));
-		else
+//		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
+//			startActivity(new Intent(this, SettingsActivity.class));
+//		else
 			startActivity(new Intent(this, SettingsActivityHC.class));
 	}
 	

@@ -1,21 +1,27 @@
 package com.calsignlabs.apde.tool;
 
-import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.preference.PreferenceManager;
+import android.support.design.widget.TabLayout;
+import android.support.v4.view.ViewPager;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.widget.SwitchCompat;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.DisplayMetrics;
+import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.CheckBox;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -26,10 +32,10 @@ import android.widget.ScrollView;
 import android.widget.Toast;
 
 import com.calsignlabs.apde.APDE;
-import com.calsignlabs.apde.FileMeta;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
-import com.calsignlabs.apde.support.ScrollingTabContainerView;
+import com.calsignlabs.apde.SketchFile;
+import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.task.Task;
 
 import java.util.ArrayList;
@@ -229,33 +235,47 @@ public class FindReplace implements Tool {
 				contentView = ((LinearLayout) context.getEditor().findViewById(R.id.content));
 				
 				if (context.isExample()) {
-					if (android.os.Build.VERSION.SDK_INT >= 11) {
-						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo), R.layout.find_toolbar, null);
-					} else {
-						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme), R.layout.find_toolbar, null);
-					}
+					findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat), R.layout.find_toolbar, null);
 				} else {
-					if (android.os.Build.VERSION.SDK_INT >= 11) {
-						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo), R.layout.find_replace_toolbar, null);
-					} else {
-						findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme), R.layout.find_replace_toolbar, null);
-					}
+					findReplaceToolbar = (LinearLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat), R.layout.find_replace_toolbar, null);
 				}
 				
-				if (android.os.Build.VERSION.SDK_INT >= 11) {
-					options = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo), R.layout.find_replace_options, null);
-				} else {
-					options = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme), R.layout.find_replace_options, null);
-				}
+				options = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.find_replace_options, null);
 				
 				findReplaceToolbar.requestLayout();
+				
+				context.getEditor().initCodeAreaAndConsoleDimensions();
 				
 				findReplaceToolbar.post(new Runnable() {
 					@Override
 					public void run() {
 						contentView.addView(findReplaceToolbar, 0, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+						findReplaceToolbar.getLayoutParams().height = 0; // We want to animate in
 						context.getEditor().setExtraHeaderView(findReplaceToolbar);
-						context.getEditor().refreshMessageAreaLocation();
+//						context.getEditor().refreshMessageAreaLocation();
+						
+						TabLayout codeTabStrip = context.getEditor().getCodeTabStrip();
+						
+						float height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40, context.getResources().getDisplayMetrics());
+						
+						ViewPager codePager = context.getEditor().getCodePager();
+						ScrollView console = context.getEditor().getConsoleScroller();
+						
+						findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, 0, LinearLayout.LayoutParams.MATCH_PARENT, height));
+						
+						ResizeAnimation<LinearLayout> resizeCode;
+						ResizeAnimation<LinearLayout> resizeConsole;
+						if (codePager.getHeight() - codeTabStrip.getHeight() >= height) {
+							resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight(), LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
+							resizeConsole = null;
+						} else {
+							resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codeTabStrip.getHeight(), false);
+							resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight() + codeTabStrip.getHeight()), false);
+						}
+						codePager.startAnimation(resizeCode);
+						if (resizeConsole != null) {
+							console.startAnimation(resizeConsole);
+						}
 					}
 				});
 				
@@ -284,13 +304,13 @@ public class FindReplace implements Tool {
 				//TODO Selection scope isn't currently implemented... too many issues
 				scopeSelection.setVisibility(View.GONE);
 				
-				CheckBox highlightAllCheckBox = (CheckBox) options.findViewById(R.id.find_replace_options_highlight_all);
-				CheckBox wrapAroundCheckBox = (CheckBox) options.findViewById(R.id.find_replace_options_wrap_around);
-				CheckBox caseSensitiveCheckBox = (CheckBox) options.findViewById(R.id.find_replace_options_case_sensitive);
-				CheckBox regExpCheckBox = (CheckBox) options.findViewById(R.id.find_replace_options_reg_exp);
+				SwitchCompat highlightAllCheckBox = (SwitchCompat) options.findViewById(R.id.find_replace_options_highlight_all);
+				SwitchCompat wrapAroundCheckBox = (SwitchCompat) options.findViewById(R.id.find_replace_options_wrap_around);
+				SwitchCompat caseSensitiveCheckBox = (SwitchCompat) options.findViewById(R.id.find_replace_options_case_sensitive);
+				SwitchCompat regExpCheckBox = (SwitchCompat) options.findViewById(R.id.find_replace_options_reg_exp);
 				
 				//TODO Regular Expressions aren't currently implemented
-				regExpCheckBox.setVisibility(View.GONE);
+				options.findViewById(R.id.find_replace_options_reg_exp_container).setVisibility(View.GONE);
 				
 				assignLongPressDescription(context, findButton, R.string.find);
 				assignLongPressDescription(context, replaceButton, R.string.replace_and_find);
@@ -302,7 +322,7 @@ public class FindReplace implements Tool {
 				assignEnumRadioGroup(context, "direction", 0, new RadioButton[]{directionForward, directionBackward}, new Direction[]{Direction.FORWARD, Direction.BACKWARD}, direction);
 				assignEnumRadioGroup(context, "scope", 1, new RadioButton[]{scopeSelection, scopeCurrentTab, scopeAllTabs}, new Scope[]{Scope.SELECTION, Scope.CURRENT_TAB, Scope.ALL_TABS}, scope);
 				
-				assignBooleanCheckBox(context, "highlight_all", false, highlightAllCheckBox, highlightAll, new CompoundButton.OnCheckedChangeListener() {
+				assignBooleanSwitch(context, "highlight_all", false, highlightAllCheckBox, highlightAll, new CompoundButton.OnCheckedChangeListener() {
 					@Override
 					public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 						if (isChecked) {
@@ -315,14 +335,14 @@ public class FindReplace implements Tool {
 						addSelectedFindMatchHighlight();
 					}
 				});
-				assignBooleanCheckBox(context, "wrap_around", true, wrapAroundCheckBox, wrapAround, null);
-				assignBooleanCheckBox(context, "case_sensitive", false, caseSensitiveCheckBox, caseSensitive, new CompoundButton.OnCheckedChangeListener() {
+				assignBooleanSwitch(context, "wrap_around", true, wrapAroundCheckBox, wrapAround, null);
+				assignBooleanSwitch(context, "case_sensitive", false, caseSensitiveCheckBox, caseSensitive, new CompoundButton.OnCheckedChangeListener() {
 					@Override
 					public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 						find(findTextField.getText().toString(), false);
 					}
 				});
-				assignBooleanCheckBox(context, "reg_exp", false, regExpCheckBox, regExp, null);
+				assignBooleanSwitch(context, "reg_exp", false, regExpCheckBox, regExp, null);
 				
 				closeButton.setOnClickListener(new ImageButton.OnClickListener() {
 					@Override
@@ -334,21 +354,72 @@ public class FindReplace implements Tool {
 				expandCollapseButton.setOnClickListener(new ImageButton.OnClickListener() {
 					@Override
 					public void onClick(View v) {
+						float height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40, context.getResources().getDisplayMetrics());
+						
+						if (findReplaceToolbar.getHeight() != height && findReplaceToolbar.getHeight() != height * 2) {
+							// Don't open or close if we're still animating
+							return;
+						}
+						
+						ViewPager codePager = context.getEditor().getCodePager();
+						
+						RotateAnimation rotate = new RotateAnimation(180f, 360f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+						rotate.setInterpolator(new AccelerateDecelerateInterpolator());
+						rotate.setRepeatCount(0);
+						rotate.setDuration(200);
+						
 						if (replaceBar.getVisibility() == View.GONE) {
 							replaceBar.setVisibility(View.VISIBLE);
-							expandCollapseButton.setImageResource(R.drawable.ic_caret_up);
+							expandCollapseButton.setImageResource(R.drawable.ic_caret_up_white);
 							
-							context.getEditor().refreshMessageAreaLocation();
+//							context.getEditor().refreshMessageAreaLocation();
+							
+							TabLayout codeTabStrip = context.getEditor().getCodeTabStrip();
 							
 							assignLongPressDescription(context, expandCollapseButton, R.string.collapse);
-						} else {
-							replaceBar.setVisibility(View.GONE);
-							expandCollapseButton.setImageResource(R.drawable.ic_caret_down);
 							
-							context.getEditor().refreshMessageAreaLocation();
+							findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, height, LinearLayout.LayoutParams.MATCH_PARENT, height * 2));
+							
+							ScrollView console = context.getEditor().getConsoleScroller();
+							
+							ResizeAnimation<LinearLayout> resizeCode;
+							ResizeAnimation<LinearLayout> resizeConsole;
+							if (codePager.getHeight() - codeTabStrip.getHeight() >= height) {
+								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
+								resizeConsole = null;
+							} else {
+								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codeTabStrip.getHeight(), false);
+								resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight() + codeTabStrip.getHeight()), false);
+							}
+							codePager.startAnimation(resizeCode);
+							if (resizeConsole != null) {
+								console.startAnimation(resizeConsole);
+							}
+						} else {
+							expandCollapseButton.setImageResource(R.drawable.ic_caret_down_white);
+							
+//							context.getEditor().refreshMessageAreaLocation();
 							
 							assignLongPressDescription(context, expandCollapseButton, R.string.expand);
+							
+							ResizeAnimation<LinearLayout> resize = new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, height * 2, LinearLayout.LayoutParams.MATCH_PARENT, height);
+							resize.setAnimationListener(new Animation.AnimationListener() {
+								@Override
+								public void onAnimationStart(Animation animation) {}
+								
+								@Override
+								public void onAnimationEnd(Animation animation) {
+									replaceBar.setVisibility(View.GONE);
+								}
+								
+								@Override
+								public void onAnimationRepeat(Animation animation) {}
+							});
+							findReplaceToolbar.startAnimation(resize);
+							codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() + height));
 						}
+						
+						expandCollapseButton.startAnimation(rotate);
 					}
 				});
 				
@@ -422,13 +493,30 @@ public class FindReplace implements Tool {
 	
 	public void close() {
 		if (findReplaceToolbar != null) {
-			contentView.removeView(findReplaceToolbar);
-			context.getEditor().setExtraHeaderView(null);
-			context.getEditor().refreshMessageAreaLocation();
-
-			clearHighlights();
-
-			context.getCodeArea().removeTextChangedListener(codeWatcher);
+			ViewPager codePager = context.getEditor().getCodePager();
+			
+			ResizeAnimation<LinearLayout> resize = new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0);
+			resize.setAnimationListener(new Animation.AnimationListener() {
+				@Override
+				public void onAnimationStart(Animation animation) {
+				}
+				
+				@Override
+				public void onAnimationEnd(Animation animation) {
+					contentView.removeView(findReplaceToolbar);
+					context.getEditor().setExtraHeaderView(null);
+//					context.getEditor().refreshMessageAreaLocation();
+					
+					clearHighlights();
+					
+					context.getCodeArea().removeTextChangedListener(codeWatcher);
+				}
+				
+				@Override
+				public void onAnimationRepeat(Animation animation) {}
+			});
+			findReplaceToolbar.startAnimation(resize);
+			codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() + findReplaceToolbar.getHeight()));
 		}
 	}
 	
@@ -445,12 +533,12 @@ public class FindReplace implements Tool {
 		});
 	}
 	
-	protected void assignBooleanCheckBox(final APDE context, final String key, final boolean defaultValue, final CheckBox checkBox, final MutableBoolean value, final CompoundButton.OnCheckedChangeListener listener) {
+	protected void assignBooleanSwitch(final APDE context, final String key, final boolean defaultValue, final SwitchCompat switchCompat, final MutableBoolean value, final CompoundButton.OnCheckedChangeListener listener) {
 		boolean savedValue = getPreferences(context).getBoolean(key, defaultValue);
 		value.set(savedValue);
-		checkBox.setChecked(savedValue);
+		switchCompat.setChecked(savedValue);
 		
-		checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+		switchCompat.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 				value.set(isChecked);
@@ -559,20 +647,20 @@ public class FindReplace implements Tool {
 					String selectionText = context.getCodeArea().getText().toString().substring(selectionStart, selectionEnd);
 					
 					findMatches = findMatches((caseSensitive.get() ? token : token.toLowerCase()), (caseSensitive.get() ? selectionText : selectionText.toLowerCase()),
-							context.getEditorTabBar().getSelectedTabIndex(), selectionStart);
+							context.getEditor().getSelectedCodeIndex(), selectionStart);
 					
 					break;
 				case CURRENT_TAB:
 					String currentTabText = context.getCodeArea().getText().toString();
 					
 					findMatches = findMatches((caseSensitive.get() ? token : token.toLowerCase()), (caseSensitive.get() ? currentTabText : currentTabText.toLowerCase()),
-							context.getEditorTabBar().getSelectedTabIndex(), 0);
+							context.getEditor().getSelectedCodeIndex(), 0);
 					
 					break;
 				case ALL_TABS:
 					findMatches = new ArrayList<FindMatch>();
 					
-					for (int i = 0; i < context.getEditorTabBar().getTabCount(); i ++) {
+					for (int i = 0; i < context.getEditor().getCodeCount(); i ++) {
 						String tabText = context.getEditor().getTabMetas()[i].getText();
 						
 						findMatches.addAll(findMatches((caseSensitive.get() ? token : token.toLowerCase()), (caseSensitive.get() ? tabText : tabText.toLowerCase()), i, 0));
@@ -627,8 +715,8 @@ public class FindReplace implements Tool {
 		
 		String caseToken = (caseSensitive.get() ? token : token.toLowerCase());
 		
-		int currentTab = context.getEditorTabBar().getSelectedTabIndex();
-		int tabCount = context.getEditorTabBar().getTabCount();
+		int currentTab = context.getEditor().getSelectedCodeIndex();
+		int tabCount = context.getEditor().getCodeCount();
 		
 		switch (scope.get()) {
 		case SELECTION:
@@ -685,7 +773,7 @@ public class FindReplace implements Tool {
 		context.getCodeArea().clearHighlights();
 		
 		for (FindMatch findMatch : findMatches) {
-			if (findMatch.tabNum == context.getEditorTabBar().getSelectedTabIndex()) {
+			if (findMatch.tabNum == context.getEditor().getSelectedCodeIndex()) {
 				context.getCodeArea().addHighlight(findMatch.position, findMatch.tokenLength, highlightAllPaint);
 			}
 		}
@@ -694,8 +782,9 @@ public class FindReplace implements Tool {
 	}
 	
 	public void clearHighlights() {
-		context.getCodeArea().clearHighlights();
-		context.getCodeArea().invalidate();
+		for (SketchFile sketchFile : context.getEditor().getSketchFiles()) {
+			sketchFile.clearHighlightsIfInitialized();
+		}
 	}
 	
 	public void nextFindMatch() {
@@ -706,13 +795,12 @@ public class FindReplace implements Tool {
 			return;
 		}
 		
-		ScrollingTabContainerView tabBar = context.getEditorTabBar();
 		boolean forward = direction.get().equals(Direction.FORWARD);
 		
-		int nextFindMatch = indexOfTextPos(tabBar.getSelectedTabIndex(), forward ? context.getCodeArea().getSelectionEnd() : context.getCodeArea().getSelectionStart(), forward);
+		int nextFindMatch = indexOfTextPos(context.getEditor().getSelectedCodeIndex(), forward ? context.getCodeArea().getSelectionEnd() : context.getCodeArea().getSelectionStart(), forward);
 		
 		if (nextFindMatch == -1 && scope.get().equals(Scope.ALL_TABS)) {
-			for (int i = tabBar.getSelectedTabIndex() + (forward ? 1 : -1); (forward ? i < tabBar.getTabCount() : i >= 0); i += (forward ? 1 : -1)) {
+			for (int i = context.getEditor().getSelectedCodeIndex() + (forward ? 1 : -1); (forward ? i < context.getEditor().getCodeCount() : i >= 0); i += (forward ? 1 : -1)) {
 				int matchIndex = indexOfTextPos(i, (forward ? 0 : context.getEditor().getTabMetas()[i].getText().length() - 1), forward);
 				
 				if (matchIndex != -1) {
@@ -722,7 +810,7 @@ public class FindReplace implements Tool {
 			}
 			
 			if (nextFindMatch == -1 && wrapAround.get()) {
-				for (int i = (forward ? 0 : tabBar.getTabCount() - 1); (forward ? i <= tabBar.getSelectedTabIndex() : i >= tabBar.getSelectedTabIndex()); i += (forward ? 1 : -1)) {
+				for (int i = (forward ? 0 : context.getEditor().getCodeCount() - 1); (forward ? i <= context.getEditor().getSelectedCodeIndex() : i >= context.getEditor().getSelectedCodeIndex()); i += (forward ? 1 : -1)) {
 					int matchIndex = indexOfTextPos(i, (forward ? 0 : context.getEditor().getTabMetas()[i].getText().length() - 1), forward);
 					
 					if (matchIndex != -1) {
@@ -756,10 +844,9 @@ public class FindReplace implements Tool {
 			return;
 		}
 		
-		ScrollingTabContainerView tabBar = context.getEditorTabBar();
 		boolean forward = direction.get().equals(Direction.FORWARD);
 		
-		int cursorFindMatch = indexOfTextPos(tabBar.getSelectedTabIndex(), forward ? context.getCodeArea().getSelectionStart() : context.getCodeArea().getSelectionEnd(), forward);
+		int cursorFindMatch = indexOfTextPos(context.getEditor().getSelectedCodeIndex(), forward ? context.getCodeArea().getSelectionStart() : context.getCodeArea().getSelectionEnd(), forward);
 		
 		if (cursorFindMatch == -1 && wrapAround.get()) {
 			cursorFindMatch = forward ? 0 : findMatches.size() - 1;
@@ -801,8 +888,8 @@ public class FindReplace implements Tool {
 	
 	public void selectFindMatch(final FindMatch findMatch) {
 		//Select the correct tab
-		if (context.getEditorTabBar().getSelectedTabIndex() != findMatch.tabNum) {
-			context.getEditorTabBar().selectTab(findMatch.tabNum);
+		if (context.getEditor().getSelectedCodeIndex() != findMatch.tabNum) {
+			context.getEditor().selectCode(findMatch.tabNum);
 		}
 		
 		if (!highlightAll.get()) {
@@ -902,7 +989,7 @@ public class FindReplace implements Tool {
 //					Editable selectionText = Editable.Factory.getInstance().newEditable(context.getCodeArea().getText().toString().substring(selectionStart, selectionEnd));
 //					
 //					while (true) {
-//						FindMatch selectionFindMatch = findFirstMatch(find, selectionText.toString(), context.getEditorTabBar().getSelectedTabIndex(), selectionStart);
+//						FindMatch selectionFindMatch = findFirstMatch(find, selectionText.toString(), context.getEditor().getSelectedCodeIndex(), selectionStart);
 //						
 //						if (selectionFindMatch == null) {
 //							break;
@@ -920,7 +1007,7 @@ public class FindReplace implements Tool {
 					Editable currentTabText = Editable.Factory.getInstance().newEditable(context.getCodeArea().getText());
 					
 					while (true) {
-						FindMatch currentTabFindMatch = findFirstMatch(find, currentTabText.toString(), context.getEditorTabBar().getSelectedTabIndex(), 0, 0);
+						FindMatch currentTabFindMatch = findFirstMatch(find, currentTabText.toString(), context.getEditor().getSelectedCodeIndex(), 0, 0);
 						
 						if (currentTabFindMatch == null) {
 							break;
@@ -937,10 +1024,10 @@ public class FindReplace implements Tool {
 				case ALL_TABS:
 					int tabNum = 0;
 					
-					tabTexts = new Editable[context.getEditorTabBar().getTabCount()];
+					tabTexts = new Editable[context.getEditor().getCodeCount()];
 					
 					for (int i = 0; i < tabTexts.length; i ++) {
-						if (i == context.getEditorTabBar().getSelectedTabIndex()) {
+						if (i == context.getEditor().getSelectedCodeIndex()) {
 							tabTexts[i] = Editable.Factory.getInstance().newEditable(context.getCodeArea().getText());
 						} else {
 							tabTexts[i] = Editable.Factory.getInstance().newEditable(context.getEditor().getTabMetas()[i].getText());
@@ -951,7 +1038,7 @@ public class FindReplace implements Tool {
 						FindMatch tabFindMatch = findFirstMatch(find, tabTexts[tabNum].toString(), tabNum, 0, 0);
 						
 						if (tabFindMatch == null) {
-							if (tabNum >= context.getEditorTabBar().getTabCount() - 1) {
+							if (tabNum >= context.getEditor().getCodeCount() - 1) {
 								break;
 							} else {
 								tabNum ++;
@@ -979,15 +1066,21 @@ public class FindReplace implements Tool {
 					@Override
 					public void run() {
 						if (scope.get().equals(Scope.ALL_TABS)) {
+							SketchFile[] tabMetas = context.getEditor().getTabMetas();
+							
 							for (int i = 0; i < finalOutputTexts.length; i ++) {
-								if (i == context.getEditorTabBar().getSelectedTabIndex()) {
+								if (i == context.getEditor().getSelectedCodeIndex()) {
 									context.getCodeArea().setUpdateText(finalOutputTexts[i].toString());
 								} else {
-									FileMeta fileMeta = context.getEditor().getTabMetas()[i];
+									SketchFile sketchFile = tabMetas[i];
 									
 									if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("pref_key_undo_redo", true)) {
-										fileMeta.update(context.getEditor(), getFileChange(fileMeta, finalOutputTexts[i]));
+										sketchFile.update(context.getEditor(), getFileChange(sketchFile, finalOutputTexts[i]));
 									}
+									
+									// With the new ViewPager as part of Material design, the two tabs adjacent
+									// to the current tab are kept loaded, so we need to force them to update
+									sketchFile.forceReloadTextIfInitialized();
 								}
 							}
 						} else {
@@ -1008,10 +1101,10 @@ public class FindReplace implements Tool {
 		});
 	}
 	
-	protected FileMeta.FileChange getFileChange(FileMeta meta, CharSequence newText) {
-		FileMeta.FileChange fileChange = new FileMeta.FileChange();
+	protected SketchFile.FileChange getFileChange(SketchFile meta, CharSequence newText) {
+		SketchFile.FileChange fileChange = new SketchFile.FileChange();
 		
-		FileMeta.getTextChange(fileChange, meta.getText(), newText.toString());
+		SketchFile.getTextChange(fileChange, meta.getText(), newText.toString());
 		
 		fileChange.beforeSelectionStart = meta.getSelectionStart();
 		fileChange.beforeSelectionEnd = meta.getSelectionEnd();

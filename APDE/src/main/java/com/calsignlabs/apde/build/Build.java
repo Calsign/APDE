@@ -19,7 +19,7 @@ import android.preference.PreferenceManager;
 import com.android.sdklib.build.ApkBuilder;
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.EditorActivity;
-import com.calsignlabs.apde.FileMeta;
+import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.contrib.Library;
 
@@ -62,7 +62,7 @@ public class Build {
 	private EditorActivity editor;
 	
 	public String sketchName;
-	private FileMeta[] tabs;
+	private SketchFile[] tabs;
 	
 	private File buildFolder;
 	private File srcFolder;
@@ -241,7 +241,7 @@ public class Build {
 			
 			//Combine all of the tabs to check for size
 			String combinedText = "";
-			for(FileMeta tab : tabs)
+			for(SketchFile tab : tabs)
 				combinedText += tab.getText();
 			preproc.initSketchSize(combinedText, editor);
 			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false, false);
@@ -451,7 +451,7 @@ public class Build {
 			
 			//Combine all of the tabs to check for size
 			String combinedText = "";
-			for(FileMeta tab : tabs)
+			for(SketchFile tab : tabs)
 				combinedText += tab.getText();
 			preproc.initSketchSize(combinedText, editor);
 			sketchClassName = preprocess(srcFolder, packageName, preproc, false, debug && injectLogBroadcaster);
@@ -1255,7 +1255,7 @@ public class Build {
 //		
 //		// first check to see if it's a .java file
 //		for(int i = 0; i < tabs.length; i++) {
-//			FileMeta meta = tabs[i];
+//			SketchFile meta = tabs[i];
 //			
 //			if(meta.getSuffix().equals("java")) {
 //				if(dotJavaFilename.equals(meta.getFilename())) {
@@ -1274,7 +1274,7 @@ public class Build {
 //		// this section searches through the list of .pde files
 //		codeIndex = 0;
 //		for(int i = 0; i < tabs.length; i++) {
-//			FileMeta meta = tabs[i];
+//			SketchFile meta = tabs[i];
 //			
 //			if(meta.getSuffix().equals("pde")) {
 //				if(meta.getPreprocOffset() <= dotJavaLine) {
@@ -1318,7 +1318,7 @@ public class Build {
 		
 		StringBuilder bigCode = new StringBuilder();
 		int bigCount = 0;
-		for(FileMeta meta : tabs) {
+		for(SketchFile meta : tabs) {
 			if(meta.getSuffix().equals(".pde")) {
 				meta.setPreprocOffset(bigCount);
 				bigCode.append(meta.getText());
@@ -1456,7 +1456,7 @@ public class Build {
 
 				int errorFile = 0;
 				for (int i = 1; i < tabs.length; i++) {
-					FileMeta meta = tabs[i];
+					SketchFile meta = tabs[i];
 					if(meta.getSuffix().equals(".pde") && (meta.getPreprocOffset() < errorLine))
 						errorFile = i;
 				}
@@ -1539,7 +1539,7 @@ public class Build {
 
 		// 3. then loop over the code[] and save each .java file
 
-		for(FileMeta meta : tabs) {
+		for(SketchFile meta : tabs) {
 			if(meta.getSuffix().equals(".java")) {
 				// In most cases, no pre-processing services necessary for Java files.
 				// Just write the the contents of 'program' to a .java file
@@ -1561,7 +1561,7 @@ public class Build {
 					// (i.e. on Android) we'll have to add one
 					
 					if(packageMatch == null && packageName == null) {
-						meta.writeData(editor.getApplicationContext(), srcFolder.getAbsolutePath() + File.separator + filename); //TODO does this actually do what we want?
+						meta.writeData(srcFolder.getAbsolutePath() + File.separator + filename); //TODO does this actually do what we want?
 						//sc.copyTo(new File(srcFolder, filename));
 					} else {
 						if(packageMatch == null) {
@@ -1664,7 +1664,7 @@ public class Build {
 	
 	protected int findErrorFile(int errorLine) {
 		for (int i = tabs.length - 1; i > 0; i --) {
-			FileMeta meta = tabs[i];
+			SketchFile meta = tabs[i];
 			if (meta.getSuffix().equals(".pde") && (meta.getPreprocOffset() <= errorLine)) {
 				// keep looping until the errorLine is past the offset
 				return i;

@@ -1,5 +1,6 @@
 <resources>
     <color name="bar_overlay">#31426C</color>
+    <color name="bar_overlay_dark">#ff273557</color>
     <color name="current_line">#CCCCCC</color>
     <color name="message_back">#AAAAAA</color>
     <color name="error_back">#89440F</color>

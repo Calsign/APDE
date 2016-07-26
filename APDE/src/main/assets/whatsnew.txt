@@ -1,15 +1,13 @@
 v0.3.3 Alpha
 
  - Large set of examples (must be downloaded)
- - Basic Git integration
- - Find/replace
+ - Git integration
+ - Find/Replace
  - Support all external storage locations
- - What's new and about screens
  - Java 1.6 compiler compliance
- - AAPT build failure fixed
+ - What's new and about screens
  - Library manager crash fixed
  - Conway example fixed
- - Lots of other bug fixes
 
 Note: This release adds the permissions INTERNET and 
 ACCESS_NETWORK_STATE that are required for the examples and Git.
@@ -18,7 +16,7 @@ ACCESS_NETWORK_STATE that are required for the examples and Git.
 
 v0.3.2 Alpha
 
- - Undo/redo
+ - Undo/Redo
  - Android 5.0 (Lollipop) support
  - Console output
  - Improved build system

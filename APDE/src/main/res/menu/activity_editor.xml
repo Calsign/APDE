@@ -4,22 +4,22 @@
     
     <item
         android:id="@+id/menu_run"
-        android:icon="@drawable/ic_action_run"
+        android:icon="@drawable/ic_run_white"
         app:showAsAction="ifRoom"
         android:title="@string/menu_run" />
     <item
         android:id="@+id/menu_stop"
-        android:icon="@drawable/ic_action_stop"
+        android:icon="@drawable/ic_stop_white"
         app:showAsAction="ifRoom"
         android:title="@string/menu_stop" />
     <item
         android:id="@+id/menu_undo"
-        android:icon="@drawable/ic_undo"
+        android:icon="@drawable/ic_undo_white"
         app:showAsAction="ifRoom"
         android:title="@string/undo" />
     <item
         android:id="@+id/menu_redo"
-        android:icon="@drawable/ic_redo"
+        android:icon="@drawable/ic_redo_white"
         app:showAsAction="ifRoom"
         android:title="@string/redo" />
     <item
@@ -32,6 +32,14 @@
         android:orderInCategory="100"
         app:showAsAction="never"
         android:title="@string/menu_settings" />
+	<item
+		android:id="@+id/menu_new"
+		app:showAsAction="never"
+		android:title="@string/menu_new" />
+	<item
+		android:id="@+id/menu_load"
+		app:showAsAction="never"
+		android:title="@string/menu_open" />
     <item
         android:id="@+id/menu_save"
         app:showAsAction="never"
@@ -40,14 +48,17 @@
         android:id="@+id/menu_copy_to_sketchbook"
         app:showAsAction="never"
         android:title="@string/copy_to_sketchbook" />
-    <item
-        android:id="@+id/menu_new"
-        app:showAsAction="never"
-        android:title="@string/menu_new" />
-    <item
-        android:id="@+id/menu_load"
-        app:showAsAction="never"
-        android:title="@string/menu_open" />
+	<item
+		android:id="@+id/menu_move_to_sketchbook"
+		app:showAsAction="never"
+		android:title="@string/move_temp_to_sketchbook_title" />
+	<item
+		android:id="@+id/menu_rename"
+		app:showAsAction="never"
+		android:title="@string/menu_rename" />
+	<item android:id="@+id/menu_delete"
+		  app:showAsAction="never"
+		  android:title="@string/menu_delete" />
     <item
         android:id="@+id/menu_tab_new"
         app:showAsAction="never"

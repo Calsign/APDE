@@ -1,5 +1,40 @@
 package com.calsignlabs.apde.tool;
 
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
+import android.preference.PreferenceManager;
+import android.support.v7.app.AlertDialog;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.ContextThemeWrapper;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.TableLayout;
+import android.widget.TextView;
+
+import com.calsignlabs.apde.APDE;
+import com.calsignlabs.apde.EditorActivity;
+import com.calsignlabs.apde.KeyBinding;
+import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.build.Build;
+import com.ipaulpro.afilechooser.utils.FileUtils;
+
+import org.spongycastle.asn1.x509.X509Name;
+import org.spongycastle.jce.X509Principal;
+import org.spongycastle.jce.provider.BouncyCastleProvider;
+import org.spongycastle.x509.X509V3CertificateGenerator;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -37,41 +72,6 @@ import javax.security.auth.x500.X500Principal;
 
 import kellinwood.security.zipsigner.optional.JksKeyStore;
 import kellinwood.security.zipsigner.optional.LoadKeystoreException;
-
-import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.net.Uri;
-import android.preference.PreferenceManager;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.ContextThemeWrapper;
-import android.view.MenuItem;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.ScrollView;
-import android.widget.Spinner;
-import android.widget.TableLayout;
-import android.widget.TextView;
-
-import org.spongycastle.asn1.x509.X509Name;
-import org.spongycastle.jce.X509Principal;
-import org.spongycastle.jce.provider.BouncyCastleProvider;
-import org.spongycastle.x509.X509V3CertificateGenerator;
-
-import com.calsignlabs.apde.APDE;
-import com.calsignlabs.apde.EditorActivity;
-import com.calsignlabs.apde.KeyBinding;
-import com.calsignlabs.apde.R;
-import com.calsignlabs.apde.build.Build;
-import com.ipaulpro.afilechooser.utils.FileUtils;
 
 /**
  * Exports the current sketch as an Eclipse-compatible Android project
@@ -136,19 +136,9 @@ public class ExportSignedPackage implements Tool {
     		break;
     	case SKETCHBOOK:
     	case EXTERNAL:
+		case TEMPORARY:
     		context.getEditor().saveSketch();
     		break;
-    	case TEMPORARY:
-    		//If the sketch has yet to be saved, inform the user
-    		AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
-    		builder.setTitle(context.getResources().getText(R.string.save_sketch_before_run_dialog_title))
-    		.setMessage(context.getResources().getText(R.string.save_sketch_before_run_dialog_message)).setCancelable(false)
-    		.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-    			@Override
-    			public void onClick(DialogInterface dialog, int which) {}
-    		}).show();
-    		
-    		return;
     	}
 		
 		//Don't try to export if we're already exporting...
@@ -165,12 +155,8 @@ public class ExportSignedPackage implements Tool {
 		builder.setTitle(context.getResources().getText(R.string.export_signed_package));
 		
 		final ScrollView layout;
-		
-		if (android.os.Build.VERSION.SDK_INT >= 11) {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), R.layout.export_signed_package, null);
-		} else {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), R.layout.export_signed_package, null);
-		}
+
+		layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.export_signed_package, null);
 		
 		keystoreFile = (AutoCompleteTextView) layout.findViewById(R.id.keystore_file);
 		keystorePassword = (EditText) layout.findViewById(R.id.keystore_password);
@@ -406,11 +392,7 @@ public class ExportSignedPackage implements Tool {
 				
 				TableLayout infoLayout;
 				
-				if (android.os.Build.VERSION.SDK_INT >= 11) {
-					infoLayout = (TableLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), R.layout.certificate_info, null);
-				} else {
-					infoLayout = (TableLayout) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), R.layout.certificate_info, null);
-				}
+				infoLayout = (TableLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.certificate_info, null);
 				
 				((TextView) infoLayout.findViewById(R.id.alias_name)).setText((String) alias.getSelectedItem());
 				((TextView) infoLayout.findViewById(R.id.certificate_expiration)).setText(new SimpleDateFormat(context.getResources().getString(R.string.date_format), Locale.US).format(certificate.getNotAfter()));
@@ -537,11 +519,7 @@ public class ExportSignedPackage implements Tool {
 		
 		final ScrollView layout;
 		
-		if (android.os.Build.VERSION.SDK_INT >= 11) {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), R.layout.create_keystore, null);
-		} else {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), R.layout.create_keystore, null);
-		}
+		layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.create_keystore, null);
 		
 		createKeystoreFile = (EditText) layout.findViewById(R.id.create_keystore_file);
 		createKeystorePassword = (EditText) layout.findViewById(R.id.create_keystore_password);
@@ -659,11 +637,7 @@ public class ExportSignedPackage implements Tool {
 		
 		final ScrollView layout;
 		
-		if (android.os.Build.VERSION.SDK_INT >= 11) {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Holo_Dialog), R.layout.create_alias, null);
-		} else {
-			layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, android.R.style.Theme_Dialog), R.layout.create_alias, null);
-		}
+		layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.create_alias, null);
 		
 		createAliasAlias = (EditText) layout.findViewById(R.id.create_alias_alias);
 		createAliasPassword = (EditText) layout.findViewById(R.id.create_alias_password);

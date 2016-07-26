@@ -1,36 +1,106 @@
 package com.calsignlabs.apde;
 
-import com.calsignlabs.apde.build.Manifest;
-import com.calsignlabs.apde.build.Permission;
-
-import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.Button;
-import android.widget.CheckedTextView;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-public class PermissionsActivity extends ActionBarActivity {
+import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.build.Permission;
+
+public class PermissionsActivity extends AppCompatActivity {
 	private boolean[] checked;
+	
+	private PermissionAdapter adapter;
+	
+	protected class PermissionAdapter extends BaseAdapter {
+		@Override
+		public int getCount() {
+			return Manifest.permissions.size();
+		}
+		
+		@Override
+		public Permission getItem(int position) {
+			return Manifest.permissions.get(position);
+		}
+		
+		@Override
+		public long getItemId(int i) {
+			return i;
+		}
+		
+		@Override
+		public View getView(final int position, View convertView, ViewGroup parent) {
+			if (convertView == null) {
+				LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+				convertView = inflater.inflate(R.layout.permissions_list_item, parent, false);
+			}
+			
+			final RelativeLayout layout = (RelativeLayout) convertView;
+			final TextView label = (TextView) layout.findViewById(R.id.permissions_list_item_label);
+			final CheckBox check = (CheckBox) layout.findViewById(R.id.permissions_list_item_checkbox);
+			
+			label.setText(Manifest.permissions.get(position).name());
+			check.setChecked(checked[position]);
+			
+			View.OnClickListener onClickListener = new View.OnClickListener() {
+				@Override
+				public void onClick(View view) {
+					boolean ck = !checked[position];
+					
+					checked[position] = ck;
+					check.setChecked(ck);
+				}
+			};
+			
+			View.OnLongClickListener onLongClickListener = new View.OnLongClickListener() {
+				@Override
+				public boolean onLongClick(View view) {
+					showPermissionDescDialog(position);
+					
+					return true;
+				}
+			};
+			
+			layout.setOnClickListener(onClickListener);
+			label.setOnClickListener(onClickListener);
+			check.setOnClickListener(onClickListener);
+			
+			layout.setOnLongClickListener(onLongClickListener);
+			label.setOnLongClickListener(onLongClickListener);
+			check.setOnLongClickListener(onLongClickListener);
+			
+			return convertView;
+		}
+	};
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_permissions);
+		
+		Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+		toolbar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
+		setSupportActionBar(toolbar);
 		
 		getSupportActionBar().setHomeButtonEnabled(true);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -47,42 +117,35 @@ public class PermissionsActivity extends ActionBarActivity {
 		permsList.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
 		permsList.setItemsCanFocus(false);
 		
-		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.permissions_list_item);
+		checked = new boolean[Manifest.permissions.size()];
+		for (int i = 0; i < checked.length; i ++) {
+			checked[i] = false;
+		}
+		loadData();
 		
-		for(Permission perm : Manifest.permissions)
-			adapter.add(perm.name());
-		
+		adapter = new PermissionAdapter();
 		permsList.setAdapter(adapter);
 		
-		checked = new boolean[permsList.getCount()];
-		
-		//is this necessary?
-		for(int i = 0; i < checked.length; i ++)
-			checked[i] = false;
-		
-		permsList.setOnItemClickListener(new android.widget.ListView.OnItemClickListener() {
-			@Override
-			public void onItemClick(AdapterView<?> adapt, View view, int pos, long id) {
-				CheckedTextView check = ((CheckedTextView) view);
-				
-				boolean ck = !checked[pos];
-				
-				checked[pos] = ck;
-				
-				//Dispatch the touch event to the child... this is awfully hacky
-				MotionEvent me = MotionEvent.obtain(0, 0, 0, 0, 0, 0);
-				check.onTouchEvent(me);
-				me.recycle();
-		}});
-		
-		permsList.setOnItemLongClickListener (new android.widget.AdapterView.OnItemLongClickListener() {
-			public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-				showPermissionDescDialog(position);
-				return true;
-			}
-		});
-		
-		loadData();
+//		permsList.setOnItemClickListener(new android.widget.ListView.OnItemClickListener() {
+//			@Override
+//			public void onItemClick(AdapterView<?> adapt, View view, int pos, long id) {
+//				RelativeLayout item = (RelativeLayout) view;
+//				CheckBox check = (CheckBox) item.findViewById(R.id.permissions_list_item_checkbox);
+//				
+//				boolean ck = !checked[pos];
+//				
+//				checked[pos] = ck;
+//				
+//				check.setChecked(true);
+//			}
+//		});
+//		
+//		permsList.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
+//			public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+//				showPermissionDescDialog(position);
+//				return true;
+//			}
+//		});
 	}
 	
 	//Displays a permission description dialog
@@ -120,7 +183,7 @@ public class PermissionsActivity extends ActionBarActivity {
 							saveData();
 							
 							Manifest.removeCustomPermission(perm, getApplicationContext());
-							refreshPermissions();
+							adapter.notifyDataSetChanged();
 							
 							dialog.dismiss();
 							
@@ -185,10 +248,11 @@ public class PermissionsActivity extends ActionBarActivity {
     }
 	
 	private void launchSettings() {
-		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
-			startActivity(new Intent(this, SettingsActivity.class));
-		else
+//		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB) {
+//			startActivity(new Intent(this, SettingsActivity.class));
+//		} else {
 			startActivity(new Intent(this, SettingsActivityHC.class));
+//		}
 	}
 	
 	public void newPermission() {
@@ -197,9 +261,9 @@ public class PermissionsActivity extends ActionBarActivity {
 		build.setTitle(R.string.new_permission_dialog_title);
 		build.setMessage(R.string.new_permission_dialog_message);
 		
-		final EditText input = new EditText(this);
-    	input.setSingleLine();
-    	build.setView(input);
+		APDE global = (APDE) getApplicationContext();
+		
+		final EditText input = global.createAlertDialogEditText(this, build, "", false);
 		
 		build.setPositiveButton(R.string.create, new android.content.DialogInterface.OnClickListener() {
 			@Override
@@ -208,38 +272,31 @@ public class PermissionsActivity extends ActionBarActivity {
 				
 				Manifest.addCustomPermission(input.getText().toString(), getResources().getString(R.string.custom_perm), getApplicationContext());
 				Manifest.sortPermissions();
-				refreshPermissions();
+				adapter.notifyDataSetChanged();
 				
 				loadData();
 		}});
 		build.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-    		public void onClick(DialogInterface dialog, int whichButton) {
-    	}});
+			public void onClick(DialogInterface dialog, int whichButton) {
+			}
+		});
 		
 		AlertDialog alert = build.create();
-		if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
 			alert.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+		}
 		alert.show();
-	}
-	
-	//Reloads the list of permissions
-	public void refreshPermissions() {
-		@SuppressWarnings("unchecked")
-		ArrayAdapter<String> adapter = (ArrayAdapter<String>) ((ListView) findViewById(R.id.permissions_list)).getAdapter();
-		adapter.clear();
-		
-		for(Permission perm : Manifest.permissions)
-			adapter.add(perm.name());
 	}
 	
 	public void setData(String data) {
 		clearChecks();
 		
-		if(data.length() <= 0)
+		if (data.length() <= 0) {
 			return;
+		}
 		
 		String[] tokens = data.split(",");
-		for(String token : tokens) {
+		for (String token : tokens) {
 			int index = token.lastIndexOf(".");
 			checkItem(token.substring(index != -1 ? index + 1 : 0), true);
 		}
@@ -249,11 +306,13 @@ public class PermissionsActivity extends ActionBarActivity {
 	 * @return the selected values, separated by commas
 	 */
 	public String getData() {
-		//Combine all values
+		// Combine all values
 		String out = "";
-		for(int i = 0; i < checked.length; i ++)
-			if(checked[i])
+		for (int i = 0; i < checked.length; i ++) {
+			if (checked[i]) {
 				out += (Manifest.permissions.get(i)).consumableValue() + ",";
+			}
+		}
 		
 		return out;
 	}
@@ -263,15 +322,18 @@ public class PermissionsActivity extends ActionBarActivity {
 		permsList.clearChoices();
 		permsList.requestLayout();
 		
-		checked = new boolean[permsList.getCount()];
+		for (int i = 0; i < checked.length; i ++) {
+			checked[i] = false;
+		}
 	}
 	
 	public void checkItem(String value, boolean ck) {
 		int index = permissionsPos(value);
 		
 		//We have a problem
-		if(index == -1)
+		if (index == -1) {
 			return;
+		}
 		
 		checked[index] = ck;
 		
@@ -281,9 +343,11 @@ public class PermissionsActivity extends ActionBarActivity {
 	
 	//Get the location of the permission in the list
 	private int permissionsPos(String name) {
-		for(int i = 0; i < Manifest.permissions.size(); i ++)
-			if(((Manifest.permissions.get(i)).name()).equals(name))
+		for (int i = 0; i < Manifest.permissions.size(); i ++) {
+			if (((Manifest.permissions.get(i)).name()).equals(name)) {
 				return i;
+			}
+		}
 		
 		return -1;
 	}

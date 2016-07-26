@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- This is the API 10 file, apparently Gingerbread don't like ActionBar button stylization:
-         style="@style/Widget.AppCompat.Light.ActionButton"
-     ...so this line has been removed from all of the ImageButtons. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/find_replace_toolbar"
     android:layout_width="match_parent"
@@ -18,31 +15,34 @@
             android:id="@+id/find_replace_find"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_find"
+            android:src="@drawable/ic_find_white"
             android:layout_alignTop="@+id/find_replace_find_text"
             android:layout_alignBottom="@id/find_replace_find_text"
             android:layout_toLeftOf="@+id/find_replace_more_options"
-            android:contentDescription="@string/find" />
+            android:contentDescription="@string/find"
+            style="@style/Widget.AppCompat.Light.ActionButton" />
         
         <ImageButton
             android:id="@id/find_replace_more_options"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/abc_ic_menu_moreoverflow_normal_holo_dark"
+            android:src="@drawable/ic_more_horiz_white"
             android:layout_alignTop="@id/find_replace_find_text"
             android:layout_alignBottom="@id/find_replace_find_text"
             android:layout_toLeftOf="@+id/find_replace_close"
-            android:contentDescription="@string/more_options" />
+            android:contentDescription="@string/more_options"
+            style="@style/Widget.AppCompat.Light.ActionButton" />
         
         <ImageButton
             android:id="@id/find_replace_close"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_close"
+            android:src="@drawable/ic_close_white"
             android:layout_alignTop="@id/find_replace_find_text"
             android:layout_alignBottom="@id/find_replace_find_text"
             android:layout_alignParentRight="true"
-            android:contentDescription="@string/close" />
+            android:contentDescription="@string/close"
+            style="@style/Widget.AppCompat.Light.ActionButton" />
         
         <EditText
             android:id="@id/find_replace_find_text"
@@ -68,7 +68,8 @@
             android:layout_alignTop="@+id/find_replace_replace_text"
             android:layout_alignBottom="@id/find_replace_replace_text"
             android:layout_toLeftOf="@+id/find_replace_all"
-            android:contentDescription="@string/replace_and_find" />
+            android:contentDescription="@string/replace_and_find"
+            style="@style/Widget.AppCompat.Light.ActionButton" />
         
         <ImageButton
             android:id="@id/find_replace_all"
@@ -78,7 +79,8 @@
             android:layout_alignTop="@id/find_replace_replace_text"
             android:layout_alignBottom="@id/find_replace_replace_text"
             android:layout_toLeftOf="@+id/find_replace_expand_collapse_wrapper"
-            android:contentDescription="@string/replace_all" />
+            android:contentDescription="@string/replace_all"
+            style="@style/Widget.AppCompat.Light.ActionButton" />
 
         <!-- Wrapper layout so that we can change the background
              without getting rid of the fancy button press drawables -->
@@ -95,8 +97,9 @@
                 android:id="@+id/find_replace_expand_collapse"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_caret_down"
-                android:contentDescription="@string/expand_collapse" />
+                android:src="@drawable/ic_caret_down_white"
+                android:contentDescription="@string/expand_collapse"
+                style="@style/Widget.AppCompat.Light.ActionButton" />
         </FrameLayout>
         
         <EditText

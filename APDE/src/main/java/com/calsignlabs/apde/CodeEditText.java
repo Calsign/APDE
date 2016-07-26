@@ -43,27 +43,30 @@ public class CodeEditText extends EditText {
 	private Context context;
 	private float textSize = 14;
 	
-	//Paints that will always be used
+	// Paints that will always be used
 	private static Paint lineHighlight;
 	private static Paint bracketMatch;
 	private static Paint blackPaint;
 	private static Paint whitePaint;
 	
-	//Lists of styles
+	// Lists of styles
 	public static HashMap<String, TextPaint> styles;
-	public static ArrayList<Keyword> syntax;
+	public static Keyword[] syntax;
+	protected static AtomicBoolean syntaxLoaded = new AtomicBoolean(false);
 	
-	//The default indentation (two spaces)
+	// The default indentation (two spaces)
 	public static final String indent = "  ";
 	
-	//Syntax highlighter information
+	// Syntax highlighter information
 	protected Token[] tokens;
 	protected int matchingBracket;
 	
-	//Highlight
+	// Highlight
 	ArrayList<Highlight> highlights;
 	
-	//Whether or not we need to update the tokens AGAIN
+	// Whether or not the syntax highlighter is currently running
+	private AtomicBoolean updatingTokens;
+	// Whether or not we need to update the tokens AGAIN
 	private AtomicBoolean flagRefreshTokens;
 	
 	public class Highlight {
@@ -118,6 +121,7 @@ public class CodeEditText extends EditText {
 	
 	private void init() {
 		flagRefreshTokens = new AtomicBoolean();
+		updatingTokens = new AtomicBoolean();
 		
 		//Get rid of extra spacing at the top and bottom
 		setIncludeFontPadding(false);
@@ -145,9 +149,6 @@ public class CodeEditText extends EditText {
 		//Initialize the list of styles
 		styles = new HashMap<String, TextPaint>();
 		
-		//Initialize the syntax map
-		syntax = new ArrayList<Keyword>();
-		
 		//Load the default syntax
 		try {
 			//Processing's XML is easier to work with... TODO maybe implement native XML?
@@ -165,99 +166,109 @@ public class CodeEditText extends EditText {
 		highlights = new ArrayList<Highlight>();
 	}
 	
+	private TextWatcher textListener = null;
+	private OnKeyListener keyListener = null;
+	
 	public void setupTextListener() {
-		addTextChangedListener(new TextWatcher() {
-			private String oldText;
-			private EditType lastEditType = EditType.NONE;
-			private long lastUpdate = 0;
-			
-			@Override
-			public void afterTextChanged(Editable editable) {
-				//Unfortunately, this appears to be the only way to detect character presses in all situations: reading the text directly...
-				
-				String text = getText().toString();
-				
-				//Compare the old text and the new text
-				//TODO: Does this check fail in any corner cases (like mass-text insertion / deletion)?
-				if(text.length() == oldText.length() + 1 && getSelectionStart() > 0) {
-					char pressedChar = text.charAt(getSelectionStart() - 1);
-					
-					pressKeys(String.valueOf(pressedChar));
-				}
-				
-				EditorActivity editor = ((APDE) context.getApplicationContext()).getEditor();
-				FileMeta meta = editor.getCurrentFileMeta();
-				
-				if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("pref_key_undo_redo", true)) {
-					if (!FLAG_NO_UNDO_SNAPSHOT) {
-						meta.clearRedo();
-						
-						EditType editType;
-						
-						int lenDif = text.length() - oldText.length();
-						
-						switch (lenDif) {
-						case 1:
-							editType = flagEnter ? EditType.ENTER : EditType.CHAR;
-							break;
-						case -1:
-							editType = flagEnter ? EditType.ENTER : EditType.DELETE;
-							break;
-						default:
-							editType = flagEnter ? EditType.ENTER : (flagTab ? EditType.TAB : EditType.BATCH);
-							break;
-						}
-						
-						meta.update(editor, true);
-						
-						if (editType.equals(lastEditType) && SystemClock.uptimeMillis() - lastUpdate < UNDO_UPDATE_TIME) {
-							//If this is the same edit type (and not too much time has passed), merge it with the last
-							//We have to use .uptimeMillis() because .threadTimeMillis() doesn't run continuously - the thread pauses...
-							meta.mergeTop();
-						}
-						
-						lastUpdate = SystemClock.uptimeMillis();
-						
-						lastEditType = editType;
-					} else {
-						lastEditType = EditType.NONE;
-					}
-				} else {
-					if (!FLAG_NO_UNDO_SNAPSHOT) {
-						meta.update(editor, false);
-					}
-				}
-			}
-			
-			@Override
-			public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-				oldText = getText().toString();
-			}
-			
-			@Override
-			public void onTextChanged(CharSequence s, int start, int before, int count) {
-				updateTokens();
-			}
-		});
+		// We check for null to prevent re-adding the listeners when the fragment is re-created
 		
-		//Detect enter key presses... regardless of whether or not the user is using a hardware keyboard
-		setOnKeyListener(new OnKeyListener() {
-			@Override
-			public boolean onKey(View view, int keyCode, KeyEvent event) {
-				//We don't need this check now... but I'll leave it here just in case...
+		if (textListener == null) {
+			textListener = new TextWatcher() {
+				private String oldText;
+				private EditType lastEditType = EditType.NONE;
+				private long lastUpdate = 0;
+				
+				@Override
+				public void afterTextChanged(Editable editable) {
+					// Unfortunately, this appears to be the only way to detect character presses in all situations: reading the text directly...
+					
+					String text = getText().toString();
+					
+					// Compare the old text and the new text
+					// TODO: Does this check fail in any corner cases (like mass-text insertion / deletion)?
+					if (text.length() == oldText.length() + 1 && getSelectionStart() > 0) {
+						char pressedChar = text.charAt(getSelectionStart() - 1);
+						
+						pressKeys(String.valueOf(pressedChar));
+					}
+					
+					EditorActivity editor = ((APDE) context.getApplicationContext()).getEditor();
+					SketchFile meta = editor.getSelectedSketchFile();
+					
+					if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("pref_key_undo_redo", true)) {
+						if (!FLAG_NO_UNDO_SNAPSHOT) {
+							meta.clearRedo();
+							
+							EditType editType;
+							
+							int lenDif = text.length() - oldText.length();
+							
+							switch (lenDif) {
+								case 1:
+									editType = flagEnter ? EditType.ENTER : EditType.CHAR;
+									break;
+								case -1:
+									editType = flagEnter ? EditType.ENTER : EditType.DELETE;
+									break;
+								default:
+									editType = flagEnter ? EditType.ENTER : (flagTab ? EditType.TAB : EditType.BATCH);
+									break;
+							}
+							
+							meta.update(editor, true);
+							
+							if (editType.equals(lastEditType) && SystemClock.uptimeMillis() - lastUpdate < UNDO_UPDATE_TIME) {
+								//If this is the same edit type (and not too much time has passed), merge it with the last
+								//We have to use .uptimeMillis() because .threadTimeMillis() doesn't run continuously - the thread pauses...
+								meta.mergeTop();
+							}
+							
+							lastUpdate = SystemClock.uptimeMillis();
+							
+							lastEditType = editType;
+						} else {
+							lastEditType = EditType.NONE;
+						}
+					} else {
+						if (!FLAG_NO_UNDO_SNAPSHOT) {
+							meta.update(editor, false);
+						}
+					}
+				}
+				
+				@Override
+				public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+					oldText = getText().toString();
+				}
+				
+				@Override
+				public void onTextChanged(CharSequence s, int start, int before, int count) {
+					updateTokens();
+				}
+			};
+			
+			addTextChangedListener(textListener);
+		}
+		
+		if (keyListener == null) {
+			//Detect enter key presses... regardless of whether or not the user is using a hardware keyboard
+			keyListener = new OnKeyListener() {
+				@Override
+				public boolean onKey(View view, int keyCode, KeyEvent event) {
+					//We don't need this check now... but I'll leave it here just in case...
 //				//Retrieve the character that was pressed (hopefully...)
 //				//This doesn't work for all cases, though...
 //				char pressedChar = (char) event.getUnicodeChar(event.getMetaState());
 //				
 //				if(pressedChar != 0)
 //					pressKeys(String.valueOf(pressedChar));
-				
-				//We only want to check key down events...
-				//...otherwise we get two events for every press because we have down and up
-				if(event.getAction() != KeyEvent.ACTION_DOWN)
-					return false;
-				
-				//We don't need this check, either...
+					
+					//We only want to check key down events...
+					//...otherwise we get two events for every press because we have down and up
+					if (event.getAction() != KeyEvent.ACTION_DOWN)
+						return false;
+					
+					//We don't need this check, either...
 //				if(keyCode == KeyEvent.KEYCODE_ENTER) {
 //					post(new Runnable() {
 //						public void run() {
@@ -265,21 +276,24 @@ public class CodeEditText extends EditText {
 //						}
 //					});
 //				}
-				
-				//Override default TAB key behavior
-				if(keyCode == KeyEvent.KEYCODE_TAB && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("override_tab", true)) {
-					if (!FLAG_NO_UNDO_SNAPSHOT) {
-						flagTab = true;
-					}
-					getText().insert(getSelectionStart(), "  ");
-					flagTab = false;
 					
-					return true;
+					//Override default TAB key behavior
+					if (keyCode == KeyEvent.KEYCODE_TAB && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("override_tab", true)) {
+						if (!FLAG_NO_UNDO_SNAPSHOT) {
+							flagTab = true;
+						}
+						getText().insert(getSelectionStart(), "  ");
+						flagTab = false;
+						
+						return true;
+					}
+					
+					return false;
 				}
-				
-				return false;
-			}
-		});
+			};
+			
+			setOnKeyListener(keyListener);
+		}
 		
 		updateTokens();
 	}
@@ -371,7 +385,10 @@ public class CodeEditText extends EditText {
 		
 		//Get the list of defined keywords
 		XML[] keywords = xml.getChild("keywords").getChildren();
-		for(XML keyword : keywords) {
+		syntax = new Keyword[keywords.length];
+		for (int i = 0; i < keywords.length; i ++) {
+			XML keyword = keywords[i];
+			
 			//Make sure that this is a "keyword" element
 			if(!keyword.getName().equals("keyword"))
 				continue;
@@ -386,8 +403,10 @@ public class CodeEditText extends EditText {
 				continue;
 			
 			//Add the keyword
-			syntax.add(new Keyword(name, styles.get(style), function));
+			syntax[i] = new Keyword(name, styles.get(style), function);
 		}
+		
+		syntaxLoaded.set(true);
 	}
 	
 	@Override
@@ -444,13 +463,13 @@ public class CodeEditText extends EditText {
     }
 	
 	public void pressKeys(String pressed) {
-		//Detect the ENTER key
-		if(pressed.length() == 1 && pressed.charAt(0) == '\n') {
+		// Detect the ENTER key
+		if (pressed.length() == 1 && pressed.charAt(0) == '\n') {
 			pressEnter();
 		}
 		
-		//Automatically add a closing brace (if the user has enabled curly brace insertion)
-		if(pressed.charAt(0) == '{' && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("curly_brace_insertion", true)) {
+		// Automatically add a closing brace (if the user has enabled curly brace insertion)
+		if (pressed.charAt(0) == '{' && PreferenceManager.getDefaultSharedPreferences(context).getBoolean("curly_brace_insertion", true)) {
 			getText().insert(getSelectionStart(), "}");
 			setSelection(getSelectionStart() - 1);
 		}
@@ -692,23 +711,23 @@ public class CodeEditText extends EditText {
 		float lineHeight = getLineHeight();
 		int currentLine = getCurrentLine();
 		
-		if(isFocused()) {
-			//Draw line highlight around the line that the cursor is on
+		if (isFocused()) {
+			// Draw line highlight around the line that the cursor is on
 			canvas.drawRect(getScrollX(), currentLine * lineHeight, canvas.getWidth() + getScrollX(), (currentLine + 1) * lineHeight, lineHighlight);
 		}
 		
-		//Draw base text
+		// Draw base text
 		super.onDraw(canvas);
 		
-		//If the syntax highlighter hasn't run yet...
-		//Make sure this doesn't break
-		if(tokens == null) {
+		// If the syntax highlighter hasn't run yet...
+		// Make sure this doesn't break
+		if (tokens == null) {
 			//Check again
 			invalidate();
 			return;
 		}
 		
-		if(PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
+		if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("syntax_highlight", true)) {
 			//ScrollView doesn't like to let us know when it has scrolled...
 //			ScrollView scroller = (ScrollView) ((APDE) context.getApplicationContext()).getEditor().findViewById(R.id.code_scroller);
 			int topVis = 0;//(int) Math.max(scroller.getScrollY() / getLineHeight() - 1, 0); //inclusive
@@ -760,7 +779,11 @@ public class CodeEditText extends EditText {
 	 * Call this function to force the tokens to update AGAIN after the current / next update cycle has completed
 	 */
 	public void flagRefreshTokens() {
-		flagRefreshTokens.set(true);
+		if (updatingTokens.get()) {
+			flagRefreshTokens.set(true);
+		} else {
+			updateTokens();
+		}
 	}
 	
 	public synchronized void updateTokens() {
@@ -772,6 +795,8 @@ public class CodeEditText extends EditText {
 		
 		new Thread(new Runnable() {
 			public void run() {
+				updatingTokens.set(true);
+				
 				Token[] tempTokens = splitTokens(text, 0, new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '"', '\'', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' '});
 				
 				for(int i = 0; i < tempTokens.length; i ++) {
@@ -899,6 +924,8 @@ public class CodeEditText extends EditText {
 				
 				postInvalidate();
 				
+				updatingTokens.set(false);
+				
 				//Check to see if we have updated the text AGAIN since starting this update
 				//We shouldn't get too much recursion...
 				if(flagRefreshTokens.get()) {
@@ -993,6 +1020,10 @@ public class CodeEditText extends EditText {
 		}
 		
 		protected void display(Canvas canvas) {
+			if (paint == null) { // TODO this is SERIOUSLY fishy
+				return;
+			}
+			
 			float lineHeight = getLineHeight();
 			float lineOffset = -getLayout().getLineDescent(0); //AH-HA! This is the metric that we need...
 			float xOffset = getCompoundPaddingLeft(); //TODO hopefully no one uses Arabic (right-aligned localities)... because getCompoundPaddingStart() was introduced in a later API level
@@ -1029,11 +1060,15 @@ public class CodeEditText extends EditText {
 		
 		ArrayList<TextPaint> styleList = new ArrayList<TextPaint>(styles.values());
 		
-		for(TextPaint paint : styleList)
+		for (TextPaint paint : styleList) {
 			paint.setTextSize(scaledTextSize);
+		}
 		
-		for(Keyword keyword : syntax)
-			keyword.paint().setTextSize(scaledTextSize);
+		for (Keyword keyword : syntax) {
+			if (keyword != null) { // TODO figure out what's going on here
+				keyword.paint().setTextSize(scaledTextSize);
+			}
+		}
 	}
 	
 	public void setUpdateText(String text) {
@@ -1061,9 +1096,15 @@ public class CodeEditText extends EditText {
 	}
 	
 	public Keyword getKeyword(String text, boolean function) {
-		for(Keyword keyword : syntax)
-			if(keyword.name().equals(text) && keyword.function() == function)
-				return keyword;
+		if (syntaxLoaded.get()) {
+			for (Keyword keyword : syntax) {
+				if (keyword != null) {
+					if (keyword.name().equals(text) && keyword.function() == function) {
+						return keyword;
+					}
+				}
+			}
+		}
 		
 		return null;
 	}

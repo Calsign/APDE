@@ -1,13 +1,7 @@
 package com.calsignlabs.apde;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Locale;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.Context;
@@ -18,6 +12,7 @@ import android.graphics.Canvas;
 import android.graphics.Point;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.support.v7.app.AlertDialog;
 import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -32,6 +27,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Locale;
 
 /**
  * An adapter used for the file browser navigation drawer.
@@ -214,6 +214,9 @@ public class FileNavigatorAdapter extends BaseAdapter {
 	
 	@SuppressLint("NewApi")
 	public static void startDrag(final FileItem item, final View view) {
+		// Either Sketchbook or Temporary
+		final boolean temp = item.getSketch().getLocation().equals(APDE.SketchLocation.TEMPORARY);
+		
 		ClipData dragData = new ClipData(new ClipDescription(item.getText(), new String[] {ClipDescription.MIMETYPE_TEXT_PLAIN}), new ClipData.Item(item.toString()));
 		
 		//Draw relative to the touch
@@ -232,11 +235,15 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		
 		view.startDrag(dragData, dragShadow, item.toString(), 0);
 		
-		//Unfortunately, we have to to all of this every time...
+		//Unfortunately, we have to do all of this every time...
 		
 		folderActions = (LinearLayout) ((APDE) context.getApplicationContext()).getEditor().findViewById(R.id.folder_actions);
+		View newFolderAction = folderActions.findViewById(R.id.new_folder);
+		View editFolderAction = folderActions.findViewById(R.id.edit_folder);
+		View deleteFolderAction = folderActions.findViewById(R.id.delete_folder);
+		View firstDivider = folderActions.findViewById(R.id.hover_actions_first_divider);
 		
-		folderActions.findViewById(R.id.new_folder).setOnDragListener(new View.OnDragListener() {
+		newFolderAction.setOnDragListener(new View.OnDragListener() {
 			@Override
 			public boolean onDrag(View view, DragEvent event) {
 				switch(event.getAction()) {
@@ -260,7 +267,11 @@ public class FileNavigatorAdapter extends BaseAdapter {
 					return true;
 					
 				case DragEvent.ACTION_DROP:
-					actionNewFolder();
+					if (temp) {
+						actionMoveToSketchbook();
+					} else {
+						actionNewFolder();
+					}
 					return true;
 					
 				case DragEvent.ACTION_DRAG_ENDED:
@@ -273,7 +284,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			}
 		});
 		
-		folderActions.findViewById(R.id.edit_folder).setOnDragListener(new View.OnDragListener() {
+		editFolderAction.setOnDragListener(new View.OnDragListener() {
 			@Override
 			public boolean onDrag(View view, DragEvent event) {
 				switch(event.getAction()) {
@@ -310,7 +321,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			}
 		});
 		
-		folderActions.findViewById(R.id.delete_folder).setOnDragListener(new View.OnDragListener() {
+		deleteFolderAction.setOnDragListener(new View.OnDragListener() {
 			@Override
 			public boolean onDrag(View view, DragEvent event) {
 				switch(event.getAction()) {
@@ -347,6 +358,14 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			}
 		});
 		
+		if (temp) {
+			editFolderAction.setVisibility(View.GONE);
+			firstDivider.setVisibility(View.GONE);
+		} else {
+			editFolderAction.setVisibility(View.VISIBLE);
+			firstDivider.setVisibility(View.VISIBLE);
+		}
+		
 		folderActions.setVisibility(View.VISIBLE);
 		
 		dragItem = item;
@@ -359,15 +378,10 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		AlertDialog.Builder builder = new AlertDialog.Builder(((APDE) context.getApplicationContext()).getEditor());
 		
 		builder.setTitle(R.string.move_to_new_folder_title);
-		builder.setMessage(R.string.move_to_new_folder_descrption);
+		builder.setMessage(R.string.move_to_new_folder_description);
+    	
+		final EditText input = global.createAlertDialogEditText(global.getEditor(), builder, "", false);
 		
-    	final EditText input = new EditText(context);
-    	input.setSingleLine();
-    	input.setText("");
-    	input.selectAll();
-    	
-    	builder.setView(input);
-    	
 		builder.setPositiveButton(R.string.create, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
@@ -417,6 +431,40 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		dialog.show();
 	}
 	
+	private static void actionMoveToSketchbook() {
+		final APDE global = (APDE) context.getApplicationContext();
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(((APDE) context.getApplicationContext()).getEditor());
+		
+		builder.setTitle(R.string.move_temp_to_sketchbook_title);
+		builder.setMessage(String.format(Locale.US, context.getResources().getString(R.string.move_temp_to_sketchbook_message), dragItem.getText()));
+		
+		builder.setPositiveButton(R.string.move, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				APDE.SketchMeta source = dragItem.getSketch();
+				APDE.SketchMeta dest = new APDE.SketchMeta(APDE.SketchLocation.SKETCHBOOK, "/" + source.getName());
+				
+				// Let's not overwrite anything...
+				// TODO Maybe give the user options to replace / keep both in the new location?
+				// We don't need that much right now, they can deal with things manually...
+				if (global.getSketchLocation(dest.getPath(), dest.getLocation()).exists()) {
+					showDialog(R.string.cannot_move_sketch_title, R.string.cannot_move_folder_message, global.getEditor());
+					
+					return;
+				}
+				
+				global.moveFolder(source, dest, global.getEditor());
+			}
+		});
+		
+		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {}
+		});
+		
+		builder.create().show();
+	}
+	
 	private static void actionEditFolder() {
 		final boolean isSketch = dragItem.getType().equals(FileItemType.SKETCH);
 		
@@ -425,14 +473,9 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		AlertDialog.Builder builder = new AlertDialog.Builder(((APDE) context.getApplicationContext()).getEditor());
 		
 		builder.setTitle(String.format(Locale.US, context.getResources().getString(isSketch ? R.string.rename_sketch_title : R.string.rename_folder_title), dragItem.getText()));
-		builder.setMessage(String.format(Locale.US, context.getResources().getString(isSketch ? R.string.rename_sketch_message : R.string.rename_folder_message), dragItem.getText()));
+		builder.setMessage(context.getResources().getString(isSketch ? R.string.rename_sketch_message : R.string.rename_folder_message));
 		
-    	final EditText input = new EditText(context);
-    	input.setSingleLine();
-    	input.setText(dragItem.getText());
-    	input.selectAll();
-    	
-    	builder.setView(input);
+		final EditText input = global.createAlertDialogEditText(global.getEditor(), builder, dragItem.getText(), true);
 		
 		builder.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
 			@Override
@@ -497,7 +540,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 				boolean draggingFolderContainsSelected = draggedLocation.equals(selectedLocation) && selectedPath.startsWith(draggedPath + "/");
 				
 				if(draggingIsSelected || draggingFolderContainsSelected) {
-	    			global.selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
+	    			global.selectNewTempSketch();
 	    			global.getEditor().newSketch();
 	    			
 	    			global.getEditor().getSupportActionBar().setTitle(global.getSketchName());
@@ -563,11 +606,11 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			return false;
 		}
 		
-		//We can't have the name "sketch"
-		if (name.equals(APDE.DEFAULT_SKETCH_NAME)) {
-			showDialog(R.string.invalid_name, R.string.invalid_name_sketch_sketch, activityContext);
-			return false;
-		}
+//		//We can't have the name "sketch"
+//		if (name.equals(APDE.DEFAULT_SKETCH_NAME)) {
+//			showDialog(R.string.invalid_name, R.string.invalid_name_sketch_sketch, activityContext);
+//			return false;
+//		}
 		
 		return true;
 	}

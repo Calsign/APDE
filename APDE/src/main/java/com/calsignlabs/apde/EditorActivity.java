@@ -1,34 +1,37 @@
 package com.calsignlabs.apde;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
-import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
 import android.preference.PreferenceManager;
-import android.support.v4.app.ActionBarDrawerToggle;
+import android.support.design.widget.TabLayout;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBar.Tab;
-import android.support.v7.app.ActionBarActivity;
-import android.text.Editable;
-import android.text.TextWatcher;
+import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.PopupMenu;
+import android.support.v7.widget.Toolbar;
 import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 import android.view.DragEvent;
-import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -40,9 +43,11 @@ import android.view.View;
 import android.view.View.MeasureSpec;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.view.ViewGroup.LayoutParams;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -60,8 +65,7 @@ import android.widget.TextView;
 
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.Manifest;
-import com.calsignlabs.apde.support.PopupMenu;
-import com.calsignlabs.apde.support.ScrollingTabContainerView;
+import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
 import com.ipaulpro.afilechooser.utils.FileUtils;
@@ -80,9 +84,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -94,15 +97,19 @@ import processing.data.XML;
 /**
  * This is the editor, or the main activity of APDE
  */
-public class EditorActivity extends ActionBarActivity implements ScrollingTabContainerView.TabListener {
+public class EditorActivity extends AppCompatActivity {
 	//List of key bindings for hardware / bluetooth keyboards
 	private HashMap<String, KeyBinding> keyBindings;
 	
-	//Custom tab implementation - EVERYTHING ABOUT THIS IS HACKY
-	public ScrollingTabContainerView tabBar;
+	public Toolbar toolbar;
+	
+	public ViewPager codePager;
+	public FragmentStatePagerAdapter codePagerAdapter;
+	
+	protected TabLayout codeTabStrip;
 	
 	//List of tabs
-	private HashMap<Tab, FileMeta> tabs;
+	protected ArrayList<SketchFile> tabs;
 	
 	//Whether or not the sketch has been saved TODO this isn't even being used right now
 	private boolean saved;
@@ -116,7 +123,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	private boolean drawerRecentSketch;
 	
 	//Used for adjusting the display to accomodate for the keyboard
-	private boolean keyboardVisible;
+	protected boolean keyboardVisible;
 	private boolean firstResize = true; //this is a makeshift arrangement (hopefully)
 	private int oldCodeHeight = -1;
 	private boolean consoleWasHidden = false;
@@ -163,6 +170,10 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
 		
+		toolbar = (Toolbar) findViewById(R.id.toolbar);
+		toolbar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
+		setSupportActionBar(toolbar);
+		
 		// Create custom output / error streams for the console
 		outStream = new PrintStream(new ConsoleStream());
 		errStream = new PrintStream(new ConsoleStream());
@@ -200,22 +211,54 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		
 		// Make sure that we have a good sketchbook folder to use
 		getGlobalState().getSketchbookDrive();
+		
+		//Initialize the list of tabs
+		tabs = new ArrayList<SketchFile>();
         
-        // Initialize the custom tab bar
-        tabBar = new ScrollingTabContainerView(getSupportActionBar().getThemedContext(), this);
-        
-        // Set the tab bar to the proper height
-        TypedValue tv = new TypedValue();
-        getTheme().resolveAttribute(android.support.v7.appcompat.R.attr.actionBarSize, tv, true);
-        int actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data, getResources().getDisplayMetrics());
-        tabBar.setContentHeight(actionBarHeight);
-        
-        // Add the tab bar at the top of the layout
-        ((LinearLayout) findViewById(R.id.content)).addView(tabBar, 0, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-        tabBar.setAllowCollapse(false);
-        
-        // Set the tab bar background color
-        tabBar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
+		codePager = (ViewPager) findViewById(R.id.code_pager);
+		codePagerAdapter = new FragmentStatePagerAdapter(getSupportFragmentManager()) {
+			@Override
+			public int getCount() {
+				return tabs.size();
+			}
+			
+			@Override
+			public CharSequence getPageTitle(int position) {
+				return tabs.get(position).getTitle();
+			}
+			
+			@Override
+			public Fragment getItem(int position) {
+				return tabs.get(position).getFragment();
+			}
+			
+			@Override
+			public int getItemPosition(Object object) {
+				// This forces the ViewPager to get new fragments every time we call notifyDataSetChanged()
+				// This is necessary so that we don't reuse the same fragments, because reusing the
+				// same fragments means that they will contain the same code which is... not good
+				return POSITION_NONE;
+			}
+		};
+		codePager.setAdapter(codePagerAdapter);
+		
+		codeTabStrip = (TabLayout) findViewById(R.id.code_pager_tabs);
+		codeTabStrip.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
+		codeTabStrip.setSelectedTabIndicatorColor(getResources().getColor(R.color.holo_select));
+		codeTabStrip.setSelectedTabIndicatorHeight((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, getResources().getDisplayMetrics()));
+		codeTabStrip.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+			@Override
+			public void onTabSelected(TabLayout.Tab tab) {}
+			
+			@Override
+			public void onTabUnselected(TabLayout.Tab tab) {}
+			
+			@Override
+			public void onTabReselected(TabLayout.Tab tab) {
+				View anchor = ((LinearLayout) codeTabStrip.getChildAt(0)).getChildAt(tab.getPosition());
+				EditorActivity.this.onTabReselected(anchor);
+			}
+		});
 		
         // Load all of the permissions
         Manifest.loadPermissions(this);
@@ -227,9 +270,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         findViewById(R.id.buffer).setOnLongClickListener(messageListener);
         findViewById(R.id.buffer).setOnTouchListener(messageListener);
         
-        // Initialize the list of tabs
-        tabs = new HashMap<Tab, FileMeta>();
-        
         // The sketch is not saved TODO what's going on here, really?
         setSaved(false);
 
@@ -237,40 +277,16 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		
         // Initialize the global APDE application object
         getGlobalState().setEditor(this);
-        getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
         
         // Initialize the action bar title
         getSupportActionBar().setTitle(getGlobalState().getSketchName());
         
         // Try to load the auto-save sketch, otherwise set the editor up as a new sketch
-        if(!loadSketchStart()) {
-			addDefaultTab(getGlobalState().getSketchName());
+        if (!loadSketchStart()) {
+			getGlobalState().selectNewTempSketch();
+			addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
+			autoSave();
 		}
-        
-        // Make the code area able to detect its own text changing
-        ((CodeEditText) findViewById(R.id.code)).setupTextListener();
-        
-        //Detect text changes for determining whether or not the sketch has been saved
-        ((EditText) findViewById(R.id.code)).addTextChangedListener(new TextWatcher(){
-            public void afterTextChanged(Editable s) {
-                if(isSaved()) setSaved(false);
-            }
-            public void beforeTextChanged(CharSequence s, int start, int count, int after){}
-            public void onTextChanged(CharSequence s, int start, int before, int count){}
-        });
-        
-        // Detect touch events
-        ((EditText) findViewById(R.id.code)).setOnTouchListener(new EditText.OnTouchListener() {
-        	@Override
-        	public boolean onTouch(View v, MotionEvent event) {
-        		//Disable the soft keyboard if the user is using a hardware keyboard
-        		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
-        			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-        		}
-        		
-        		return false;
-        	}
-        });
         
         // Check for an app update
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -300,10 +316,12 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         forceDrawerReload();
         
         // Initialize the drawer drawer toggler
-        drawerToggle = new ActionBarDrawerToggle(this, drawer, R.drawable.ic_navigation_drawer, R.string.nav_drawer_open, R.string.nav_drawer_close) {
+        drawerToggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.nav_drawer_open, R.string.nav_drawer_close) {
             @Override
         	public void onDrawerClosed(View view) {
-            	((EditText) findViewById(R.id.code)).setEnabled(true);
+				if (isSelectedCodeAreaInitialized()) {
+					getSelectedCodeArea().setEnabled(true);
+				}
                 supportInvalidateOptionsMenu();
             }
             
@@ -312,7 +330,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	super.onDrawerSlide(drawer, slide);
             	
             	if(slide > 0) { // Detect an open event
-            		((EditText) findViewById(R.id.code)).setEnabled(false);
+					if (isSelectedCodeAreaInitialized()) {
+						getSelectedCodeArea().setEnabled(false);
+					}
                     supportInvalidateOptionsMenu();
                     drawerOpen = true;
                     
@@ -324,7 +344,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     				}
             	} else { // Detect a close event
             		// Re-enable the code area
-            		((EditText) findViewById(R.id.code)).setEnabled(true);
+					if (isSelectedCodeAreaInitialized()) {
+						getSelectedCodeArea().setEnabled(true);
+					}
                     supportInvalidateOptionsMenu();
                     drawerOpen = false;
                     
@@ -335,7 +357,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             
             @Override
             public void onDrawerOpened(View drawerView) {
-            	((EditText) findViewById(R.id.code)).setEnabled(false);
+				if (isSelectedCodeAreaInitialized()) {
+					getSelectedCodeArea().setEnabled(false);
+				}
                 supportInvalidateOptionsMenu();
         }};
         drawer.setDrawerListener(drawerToggle);
@@ -346,8 +370,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 				FileNavigatorAdapter.FileItem item = ((FileNavigatorAdapter) drawerList.getAdapter()).getItem(position);
 				
-				if(drawerSketchLocationType == null && !drawerRecentSketch) {
-					switch(position) {
+				if (drawerSketchLocationType == null && !drawerRecentSketch) {
+					switch (position) {
 					case 0:
 						drawerSketchLocationType = APDE.SketchLocation.SKETCHBOOK;
 						break;
@@ -358,14 +382,17 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 						drawerSketchLocationType = APDE.SketchLocation.LIBRARY_EXAMPLE;
 						break;
 					case 3:
+						drawerSketchLocationType = APDE.SketchLocation.TEMPORARY;
+						break;
+					case 4:
 						drawerRecentSketch = true;
 						break;
 					}
 				} else {
-					switch(item.getType()) {
+					switch (item.getType()) {
 					case NAVIGATE_UP:
 						int lastSlash = drawerSketchPath.lastIndexOf('/');
-						if(lastSlash > 0) {
+						if (lastSlash > 0) {
 							drawerSketchPath = drawerSketchPath.substring(0, lastSlash);
 						} else if(drawerSketchPath.length() > 0) {
 							drawerSketchPath = "";
@@ -373,7 +400,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 							drawerSketchLocationType = null;
 						}
 						
-						if(drawerRecentSketch) {
+						if (drawerRecentSketch) {
 							drawerRecentSketch = false;
 						}
 						
@@ -388,7 +415,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 						// Save the current sketch...
 						autoSave();
 						
-						if(drawerRecentSketch) {
+						if (drawerRecentSketch) {
 							APDE.SketchMeta sketch = getGlobalState().getRecentSketches().get(position - 1); // "position - 1" because the first item is the UP button
 							
 							loadSketch(sketch.getPath(), sketch.getLocation());
@@ -402,9 +429,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 					}
 				}
 				
-				if(drawerSketchLocationType != null) {
+				if (drawerSketchLocationType != null) {
 					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
-				} else if(drawerRecentSketch) {
+				} else if (drawerRecentSketch) {
 					getSupportActionBar().setSubtitle(getResources().getString(R.string.recent) + "/");
 				} else {
 					getSupportActionBar().setSubtitle(null);
@@ -451,276 +478,140 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         
-        final ScrollView codeScroller = (ScrollView) findViewById(R.id.code_scroller);
-        final HorizontalScrollView codeScrollerX = (HorizontalScrollView) findViewById(R.id.code_scroller_x);
-        final EditText code = (EditText) findViewById(R.id.code);
-        
         // Obtain the root view
         final View activityRootView = findViewById(R.id.content);
-        
-        final GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.OnGestureListener() {
-        	final static int FLING_THRESHOLD = 2;
-        	final static double ANGLE_THRESHOLD = Math.PI / 2; //45 degrees +/- the horizontal
-        	
-			@Override
-			public boolean onSingleTapUp(MotionEvent e) {
-				return false;
-			}
-			@Override
-			public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-				return false;
-			}
-			@Override
-			public boolean onDown(MotionEvent e) {
-				return false;
-			}
-			@Override
-			public void onShowPress(MotionEvent e) {}
-			@Override
-			public void onLongPress(MotionEvent e) {}
-			
-			@Override
-			public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-        		if (twoFingerSwipe) {
-        			int selectedTab = tabBar.getSelectedTabIndex();
-        			
-        			//Let's steer clear of undefined
-        			if (velocityX == 0) {
-        				return false;
-        			}
-        			
-        			//Obtain the angle, make sure that 0 < theta < 2 * PI
-        			double theta = (Math.atan2(velocityY, velocityX) + Math.PI * 2) % Math.PI * 2;
-        			
-        			//Make sure that the angle is within the allowed region
-        			if ((theta > ANGLE_THRESHOLD && theta < Math.PI * 2 - ANGLE_THRESHOLD)) {
-        				return false;
-        			}
-        			
-        			if (velocityX >= FLING_THRESHOLD) {
-        				if (selectedTab > 0) {
-        					tabBar.selectTab(selectedTab - 1);
-        				}
-        				return true;
-        			} else if (velocityX <= -FLING_THRESHOLD) {
-        				if (selectedTab < tabBar.getTabCount() - 1) {
-        					tabBar.selectTab(selectedTab + 1);
-        				}
-        				return true;
-        			}
-        		}
-        		
-				return false;
-			}
-		});
-        
-        // Forward touch events to the code area so that the user can select anywhere
-        codeScroller.setOnTouchListener(new View.OnTouchListener() {
-        	// Meta data from the current touch event
-        	private boolean dragged = false;
-        	private float startX, startY;
-        	private MotionEvent startEvent;
-        	
-			@Override
-			public boolean onTouch(View v, MotionEvent event) {
-				if(getGlobalState().isExample()) {
-					return false;
-				}
-				
-				twoFingerSwipe = twoFingerSwipe || event.getPointerCount() == 2;
-				
-				boolean swipeSuccess = gestureDetector.onTouchEvent(event);
-				
-				if (event.getAction() == MotionEvent.ACTION_UP) {
-					twoFingerSwipe = false;
-				}
-				
-				if (swipeSuccess || twoFingerSwipe) {
-					return true;
-				}
-				
-				final LinearLayout padding = (LinearLayout) findViewById(R.id.code_padding);
-				
-				// Assign the starting pointer location
-				if(event.getAction() == MotionEvent.ACTION_DOWN) {
-					startX = event.getX();
-					startY = event.getY();
-					
-					startEvent = event;
-				}
-				
-				// Some problems... some random crashes... just keep this fail-safe even though we shouldn't need it
-				if(startEvent == null) {
-					return false;
-				}
-				
-				// Calculate change in the current motion event
-				float changeX = event.getX() - startX;
-				float changeY = event.getY() - startY;
-				
-				// The maximum change before the motion becomes a drag (20 DP)
-				float maxChange = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 20, getResources().getDisplayMetrics());
-				
-				// Calculate distance to see if we've moved too far
-				if(event.getAction() == MotionEvent.ACTION_MOVE && (changeX * changeX) + (changeY * changeY) > maxChange * maxChange)
-					dragged = true;
-				
-				// Only dispatch the touch event if this isn't a drag and there are tabs
-				if(code.getHeight() < codeScroller.getHeight() - padding.getPaddingBottom() + padding.getPaddingTop() && event.getAction() == MotionEvent.ACTION_UP
-						&& !dragged && tabBar.getTabCount() > 0) {
-					// Hacky - dispatches a touch event to the code area
-					
-					code.requestFocus();
-					
-					code.post(new Runnable() {
-						public void run() {
-							MotionEvent me = MotionEvent.obtain(startEvent);
-							// Accommodate for scrolling
-							me.setLocation(me.getX() + codeScrollerX.getScrollX(), me.getY());
-							me.setAction(MotionEvent.ACTION_UP);
-							code.dispatchTouchEvent(me);
-							me.recycle();
-						}
-					});
-					
-					// Make the keyboard visible (if the user doesn't have a hardware keyboard)
-					if(!keyboardVisible && !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
-						InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-						imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
-					}
-				}
-				
-				if(event.getAction() == MotionEvent.ACTION_UP)
-					dragged = false;
-				
-				// Make sure that the scroll area can still scroll
-				return false;
-		}});
-        
-        codeScrollerX.setOnTouchListener(new View.OnTouchListener() {
-			@Override
-			public boolean onTouch(View v, MotionEvent event) {
-				twoFingerSwipe = twoFingerSwipe || event.getPointerCount() == 2;
-				
-				boolean swipeSuccess = gestureDetector.onTouchEvent(event);
-				
-				if (event.getAction() == MotionEvent.ACTION_UP) {
-					twoFingerSwipe = false;
-				}
-				
-				return swipeSuccess || twoFingerSwipe;
-			}
-		});
-        
-        // Make the code area fill the width of the screen
-        code.setMinimumWidth(activityRootView.getWidth());
-        code.setMinWidth(activityRootView.getWidth());
         
         // Detect software keyboard open / close events
         // StackOverflow: http://stackoverflow.com/questions/2150078/how-to-check-visibility-of-software-keyboard-in-android
         activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
-        	@SuppressWarnings("deprecation")
+			@SuppressWarnings("deprecation")
 			@Override
-        	public void onGlobalLayout() {
-        		//Calculate the difference in height
-        		Rect r = new Rect();
-        		activityRootView.getWindowVisibleDisplayFrame(r);
-        		int heightDiff = activityRootView.getRootView().getHeight() - (r.bottom - r.top);
-        		
-        		// Hide the soft keyboard if it's trying to show its dirty face...
-        		// ...and the user doesn't want it
-        		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
-        			InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        			imm.hideSoftInputFromWindow(activityRootView.getWindowToken(), 0);
-        			return;
-        		}
-        		
-        		if(oldCodeHeight == -1)
-        			oldCodeHeight = findViewById(R.id.code_scroller).getHeight();
-        		
-        		if(heightDiff > 100) { // If the difference is bigger than 100, it's probably the keyboard
-        			if(!keyboardVisible) {
-	        			keyboardVisible = true;
-	        			
-	        			if(message == -1)
-	        				message = findViewById(R.id.message).getHeight();
-	        			
-	        			// Configure the layout for the keyboard
-	        			
-	        			LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
-	        			TextView messageArea = (TextView) findViewById(R.id.message);
-        				View console = findViewById(R.id.console_scroller);
-        				View code = findViewById(R.id.code_scroller);
-	        			View content = findViewById(R.id.content);
-	        			
-	        			if(firstResize)
-	        				firstResize = false;
-	        			else
-	        				oldCodeHeight = code.getHeight();
-	        			
-	        			// Start the custom animation TODO make the keyboard appearance prettier
-	        			messageArea.startAnimation(new MessageAreaAnimation(code, console, messageArea,
-								oldCodeHeight, content.getHeight() - message  - tabBar.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0), content.getHeight()));
-	        			
-	        			// Remove the focus from the Message slider if it has it and maintain styling
-	        			if(errorMessage) {
-	        				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
-	        				buffer.setBackgroundColor(getResources().getColor(R.color.error_back));
-	        				messageArea.setTextColor(getResources().getColor(R.color.error_text));
-	        			} else {
-	        				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
-	        				buffer.setBackgroundColor(getResources().getColor(R.color.message_back));
-	        				messageArea.setTextColor(getResources().getColor(R.color.message_text));
-	        			}
-	        			
-	        			((CodeEditText) findViewById(R.id.code)).updateBracketMatch();
-	        			
-	        			// Don't do anything if the user has disabled the character insert tray
-	        			if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true)) {
-	        				// Update the character insert tray
-	        				toggleCharInserts.setVisibility(View.VISIBLE);
-	        				findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.VISIBLE);
-	        				
-	        				if(charInserts) {
-	        					findViewById(R.id.message).setVisibility(View.GONE);
-	        					findViewById(R.id.char_insert_tray).setVisibility(View.VISIBLE);
-	        				}
-	        			}
-        			}
-        		} else {
-        			if(keyboardVisible) {
-        				// Configure the layout for the absence of the keyboard
-        				
-        				View messageArea = findViewById(R.id.message);
-        				View codeArea = findViewById(R.id.code_scroller);
-        				View consoleArea = findViewById(R.id.console_scroller);
-        				
-        				// Start the custom animation TODO make the keyboard appearance prettier
-        				messageArea.startAnimation(new MessageAreaAnimation(codeArea, consoleArea, messageArea, codeArea.getLayoutParams().height, oldCodeHeight,
-								findViewById(R.id.content).getHeight()  - tabBar.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
-        				
-	        			keyboardVisible = false;
+			public void onGlobalLayout() {
+				// Calculate the difference in height
+				Rect r = new Rect();
+				activityRootView.getWindowVisibleDisplayFrame(r);
+				int heightDiff = activityRootView.getRootView().getHeight() - (r.bottom - r.top);
+				
+				// Hide the soft keyboard if it's trying to show its dirty face...
+				// ...and the user doesn't want it
+				if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+					imm.hideSoftInputFromWindow(activityRootView.getWindowToken(), 0);
+					return;
+				}
+				
+				if (oldCodeHeight == -1) {
+					oldCodeHeight = codePager.getHeight();
+				}
+				
+				if (heightDiff > 100) { //If the difference is bigger than 100, it's probably the keyboard
+					
+					// An important note for understanding the following code:
+					// The tab bar is actually inside the code area pager, so the height of "code"
+					// includes the height of the tab bar
+					
+					if (!keyboardVisible) {
+						keyboardVisible = true;
+						
+						if (message == -1) {
+							message = findViewById(R.id.buffer).getHeight();
+						}
+						
+						// Configure the layout for the keyboard
+
+						LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
+						TextView messageArea = (TextView) findViewById(R.id.message);
+						View console = findViewById(R.id.console_scroller);
+						View content = findViewById(R.id.content);
+						
+						if (firstResize) {
+							firstResize = false;
+						} else {
+							oldCodeHeight = codePager.getHeight();
+						}
+						
+						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+						
+						if (totalHeight > oldCodeHeight) {
+							codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, totalHeight));
+							console.startAnimation(new ResizeAnimation<LinearLayout>(console, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0));
+						} else {
+							codePager.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, totalHeight));
+							console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
+						}
+						
+						//Remove the focus from the Message slider if it has it and maintain styling
+						if (errorMessage) {
+							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
+							buffer.setBackgroundColor(getResources().getColor(R.color.error_back));
+							messageArea.setTextColor(getResources().getColor(R.color.error_text));
+						} else {
+							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
+							buffer.setBackgroundColor(getResources().getColor(R.color.message_back));
+							messageArea.setTextColor(getResources().getColor(R.color.message_text));
+						}
+						
+						CodeEditText codeArea = getSelectedCodeArea();
+						
+						if (codeArea != null) {
+							codeArea.updateBracketMatch();
+						}
+						
+						// Don't do anything if the user has disabled the character insert tray
+						if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true)) {
+							//Update the character insert tray
+							toggleCharInserts.setVisibility(View.VISIBLE);
+							findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.VISIBLE);
+							
+							if (charInserts) {
+								findViewById(R.id.message).setVisibility(View.GONE);
+								findViewById(R.id.char_insert_tray).setVisibility(View.VISIBLE);
+							}
+						}
+					}
+				} else {
+					if (keyboardVisible) {
+						//Configure the layout for the absence of the keyboard
+						
+						View codeArea = getSelectedCodeAreaScroller();
+						View consoleArea = findViewById(R.id.console_scroller);
+						
+						ViewGroup content = (ViewGroup) findViewById(R.id.content);
+						
+						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+						
+						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight, false));
+						consoleArea.startAnimation(new ResizeAnimation<LinearLayout>(consoleArea, ResizeAnimation.DEFAULT, codeArea.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight, false));
+						
+						keyboardVisible = false;
 						
 						if (oldCodeHeight > 0) {
 							consoleWasHidden = false;
 						}
-	        			
-	        			// Remove any unnecessary focus from the code area
-	        			((CodeEditText) findViewById(R.id.code)).clearFocus();
-	        			((CodeEditText) findViewById(R.id.code)).matchingBracket = -1;
-	        			
-	        			// Update the character insert tray
-	        			toggleCharInserts.setVisibility(View.GONE);
-	        			findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.GONE);
-	        			
-	        			findViewById(R.id.message).setVisibility(View.VISIBLE);
-	        			findViewById(R.id.char_insert_tray).setVisibility(View.GONE);
-        			}
-        		}
-        	}
-        });
-        
-        ((CodeEditText) findViewById(R.id.code)).setupCustomActionMode();
+						
+						// Remove any unnecessary focus from the code area
+						getSelectedCodeArea().clearFocus();
+						getSelectedCodeArea().matchingBracket = -1;
+						
+						// Update the character insert tray
+						toggleCharInserts.setVisibility(View.GONE);
+						findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.GONE);
+						
+						findViewById(R.id.message).setVisibility(View.VISIBLE);
+						findViewById(R.id.char_insert_tray).setVisibility(View.GONE);
+					}
+				}
+			}
+		});
+		
+		// Set up character insert tray toggle
+		toggleCharInserts = (ImageButton) findViewById(R.id.toggle_char_inserts);
+		toggleCharInserts.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				toggleCharInserts();
+			}
+		});
         
         // Load default key bindings TODO load user's custom key bindings
         // Also, do this after we initialize the console so that we can get error reports
@@ -831,7 +722,67 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			// Update examples repository
 			getGlobalState().initExamplesRepo();
 		}
+		
+		codePagerAdapter.notifyDataSetChanged();
+		codeTabStrip.setupWithViewPager(codePager);
     }
+	
+	@Override
+	public void onStart() {
+		super.onStart();
+		
+		APDE.StorageDrive.StorageDriveType storageDriveType = getGlobalState().getSketchbookStorageDrive().type;
+		
+		if (storageDriveType.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL) || storageDriveType.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)) {
+			// Make sure we have WRITE_EXTERNAL_STORAGE
+			if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+				// We have to request it...
+				// TODO Explain why to the user?
+				ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
+			}
+		}
+	}
+	
+	protected final int PERMISSIONS_REQUEST_CODE = 42;
+	
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+		switch (requestCode) {
+		case PERMISSIONS_REQUEST_CODE:
+			if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+				// TODO Explain that we NEED this permission!
+			}
+			break;
+		}
+	}
+	
+	public int getSelectedCodeIndex() {
+		return codePager.getCurrentItem();
+	}
+	
+	public void selectCode(int index) {
+		codePager.setCurrentItem(index);
+	}
+	
+	public int getCodeCount() {
+		return tabs.size();
+	}
+	
+	public boolean isSelectedCodeAreaInitialized() {
+		return getSelectedSketchFile() != null && getSelectedSketchFile().getFragment().getCodeEditText() != null;
+	}
+	
+	public CodeEditText getSelectedCodeArea() {
+		return getSelectedSketchFile() != null ? getSelectedSketchFile().getFragment().getCodeEditText() : null;
+	}
+	
+	public ScrollView getSelectedCodeAreaScroller() {
+		return getSelectedSketchFile() != null ? getSelectedSketchFile().getFragment().getCodeScroller() : null;
+	}
+	
+	public SketchFile getSelectedSketchFile() {
+		return tabs.size() > 0 ? tabs.get(getSelectedCodeIndex()) : null;
+	}
 	
 	/**
 	 * Used internally to manage the "What's New" screen
@@ -870,8 +821,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		String fullText = APDE.readAssetFile(context, "whatsnew.txt");
 		// File is seperated human-readably...
 		List<String> releaseNotes = Arrays.asList(
-				fullText.split("------------------------------------------------------------------------"));
-		
+		fullText.split("(\\r\\n|\\n|\\r)------------------------------------------------------------------------(\\r\\n|\\n|\\r)"));
 		// Remove newlines at beginning and end
 		for (int i = 0; i < releaseNotes.size(); i ++) {
 			releaseNotes.set(i, releaseNotes.get(i).trim());
@@ -886,27 +836,49 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		return releaseNotesStack;
 	}
 	
+	public TabLayout getCodeTabStrip() {
+		return codeTabStrip;
+	}
+	
+	public ViewPager getCodePager() {
+		return codePager;
+	}
+	
+	public ScrollView getConsoleScroller() {
+		return (ScrollView) findViewById(R.id.console_scroller);
+	}
+	
 	public void setExtraHeaderView(View headerView) {
 		extraHeaderView = headerView;
+	}
+	
+	public View getExtraHeaderView() {
+		return extraHeaderView;
 	}
     
     @Override
     protected void onSaveInstanceState(Bundle icicle) {
     	//Save the selected tab
-    	icicle.putInt("selected_tab", tabBar.getSelectedTabIndex());
+    	icicle.putInt("selected_tab", getSelectedCodeIndex());
     	
-    	FileMeta[] tabMetas = new FileMeta[tabs.size()];
-    	int count = 0;
+    	SketchFile[] tabMetas = new SketchFile[tabs.size()];
+//    	int count = 0;
     	
-    	for (Map.Entry<ActionBar.Tab, FileMeta> entry : tabs.entrySet()) {
-    		int num = tabBar.indexOfTab(entry.getKey());
-    		FileMeta meta = entry.getValue();
-    		
-    		meta.tabNum = num;
-    		
-    		tabMetas[count] = meta;
-    		count ++;
-    	}
+//    	for (Map.Entry<ActionBar.Tab, SketchFile> entry : tabs.entrySet()) {
+//    		int num = tabBar.indexOfTab(entry.getKey());
+//    		SketchFile meta = entry.getValue();
+//    		
+//    		meta.tabNum = num;
+//    		
+//    		tabMetas[count] = meta;
+//    		count ++;
+//    	}
+		
+		for (int i = 0; i < tabs.size(); i ++) {
+			SketchFile sketchFile = tabs.get(i);
+			sketchFile.tabNum = i;
+			tabMetas[i] = sketchFile;
+		}
     	
     	//We have to right a map... this seems to be unnecessarily difficult
     	icicle.putParcelableArray("tabs", getTabMetas());
@@ -914,22 +886,28 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     
     @Override
     protected void onRestoreInstanceState(Bundle icicle) {
-    	if(icicle != null) {
+    	if (icicle != null) {
     		//Restore the selected tab (this should only happen when the screen rotates)
-    		tabBar.selectTab(icicle.getInt("selected_tab"));
+    		selectCode(icicle.getInt("selected_tab"));
     		
     		//Refresh the syntax highlighter AGAIN so that it can take into account the restored selected tab
     		//The tokens end up getting refreshed 3+ times on a rotation... but it doesn't seem to have much of an impact on performance, so it's fine for now
-    		((CodeEditText) findViewById(R.id.code)).flagRefreshTokens();
-
+//			getSelectedCodeArea().flagRefreshTokens();
+			
 			Parcelable[] tabMetaParcels = icicle.getParcelableArray("tabs");
 			
 			//Fix an all-too-common crash report that hides the stack trace that we really want
-			if (tabMetaParcels instanceof FileMeta[]) {
-				FileMeta[] tabMetas = (FileMeta[]) tabMetaParcels;
-
-				for (FileMeta tabMeta : tabMetas) {
-					tabs.put(tabBar.getTab(tabMeta.tabNum), tabMeta);
+			loadTabs:
+			if (tabMetaParcels instanceof SketchFile[]) {
+				SketchFile[] tabMetas = (SketchFile[]) tabMetaParcels;
+				
+				if (tabs.size() > 0 && tabMetas[0].equals(tabs.get(0))) {
+					break loadTabs;
+				}
+				
+				for (SketchFile tabMeta : tabMetas) {
+//					tabs.put(tabBar.getTab(tabMeta.tabNum), tabMeta);
+					addTab(tabMeta);
 				}
 			} else {
 				System.err.println("Error occurred restoring state, likely caused by\na crash in an activity further down the hierarchy");
@@ -976,7 +954,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	super.onResume();
 		
     	//Reference the SharedPreferences text size value
-    	((CodeEditText) findViewById(R.id.code)).refreshTextSize();
+//    	((CodeEditText) findViewById(R.id.code)).refreshTextSize();
 		((TextView) findViewById(R.id.console)).setTextSize(Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(this).getString("textsize_console", "14")));
     	
     	//Disable / enable the soft keyboard
@@ -986,7 +964,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
         
         //Update the syntax highlighter
-        ((CodeEditText) findViewById(R.id.code)).updateTokens();
+//		getSelectedCodeArea().updateTokens();
         
 		//Make the character insert toggle button square
         final View charInsertToggle = findViewById(R.id.toggle_char_inserts);
@@ -1019,11 +997,11 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		minWidth = maxWidth - (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
 		
 		//Make sure that the EditText is wide enough
-		findViewById(R.id.code).setMinimumWidth(minWidth);
+//		findViewById(R.id.code).setMinimumWidth(minWidth);
 		findViewById(R.id.console).setMinimumWidth(minWidth);
 		
-		findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
-		findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
+//		findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
+//		findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
 		
 		//Let's see if the user is trying to open a .PDE file...
 		
@@ -1065,7 +1043,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         //In case the user has enabled / disabled undo / redo in settings
         supportInvalidateOptionsMenu();
-    }
+	}
     
     public HashMap<String, KeyBinding> getKeyBindings() {
     	return keyBindings;
@@ -1200,14 +1178,14 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     	
     	if(keyBindings.get("undo").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		if (!getGlobalState().isExample() && tabBar.getTabCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
-    			tabs.get(tabBar.getSelectedTab()).undo(this);
+    		if (!getGlobalState().isExample() && getCodeCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
+    			tabs.get(getSelectedCodeIndex()).undo(this);
     		}
     		return true;
     	}
     	if(keyBindings.get("redo").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		if (!getGlobalState().isExample() && tabBar.getTabCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
-    			tabs.get(tabBar.getSelectedTab()).redo(this);
+    		if (!getGlobalState().isExample() && getCodeCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
+    			tabs.get(getSelectedCodeIndex()).redo(this);
     		}
     		
     		return true;
@@ -1239,62 +1217,66 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      * Saves the current sketch and sets up the editor with a blank sketch, from the context of the editor.
      */
     public void createNewSketch() {
-    	//Make sure that the sketch isn't called "sketch"
-    	if(getGlobalState().getSketchName().equals(APDE.DEFAULT_SKETCH_NAME)) {
-    		//If it is, we have to let the user know
-    		
-			AlertDialog.Builder alert = new AlertDialog.Builder(this);
-	    	
-	    	alert.setTitle(R.string.save_sketch_dialog_title);
-	    	alert.setMessage(R.string.save_sketch_dialog_message);
-	    	
-	    	alert.setPositiveButton(R.string.save_sketch, new DialogInterface.OnClickListener() {
-	    		public void onClick(DialogInterface dialog, int whichButton) {
-	    			//Save the sketch
-	    			autoSave();
-	    			
-	    			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
-	    			newSketch();
-	    			forceDrawerReload();
-	    			
-	    			getSupportActionBar().setTitle(getGlobalState().getSketchName());
-	    	}});
-	    	
-	    	//TODO neutral and negative seem mixed up, uncertain of correct implementation - current set up is for looks
-	    	alert.setNeutralButton(R.string.dont_save_sketch, new DialogInterface.OnClickListener() {
-	    		public void onClick(DialogInterface dialog, int whichButton) {
-	    			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
-	    			newSketch();
-	    			forceDrawerReload();
-	    			
-	    			getSupportActionBar().setTitle(getGlobalState().getSketchName());
-	    	}});
-	    	
-	    	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-	    		public void onClick(DialogInterface dialog, int whichButton) {
-	    	}});
-	    	
-	    	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
-	    	AlertDialog dialog = alert.create();
-	    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-	    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-	    	dialog.show();
-		} else {
-			//Save the sketch
-			autoSave();
-			
-			//Update the global state
-			getGlobalState().selectSketch(APDE.DEFAULT_SKETCH_NAME, APDE.SketchLocation.TEMPORARY);
-			
-			//Set up for a new sketch
-			newSketch();
-			//Reload the navigation drawer
-			forceDrawerReload();
-			
-			//Update the action bar title
-			getSupportActionBar().setTitle(getGlobalState().getSketchName());
-		}
+		//Save the sketch
+		autoSave();
+		
+		//Update the global state
+		getGlobalState().selectNewTempSketch();
+		
+		//Set up for a new sketch
+		newSketch();
+		//Reload the navigation drawer
+		forceDrawerReload();
+		
+		//Update the action bar title
+		getSupportActionBar().setTitle(getGlobalState().getSketchName());
     }
+	
+	/**
+	 * Open the rename sketch AlertDialog
+	 */
+	public void launchRenameSketch() {
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		
+		alert.setTitle(String.format(Locale.US, getResources().getString(R.string.rename_sketch_title), getGlobalState().getSketchName()));
+		alert.setMessage(R.string.rename_sketch_message);
+		
+		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
+		
+		alert.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {
+				String sketchName = input.getText().toString();
+				
+				if (validateSketchName(sketchName) && !sketchName.equals(getGlobalState().getSketchName())) {
+					getGlobalState().setSketchName(sketchName);
+					
+					APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
+					APDE.SketchMeta dest = new APDE.SketchMeta(source.getLocation(), source.getParent() + "/" + sketchName);
+					
+					getGlobalState().moveFolder(source, dest, EditorActivity.this);
+				}
+				
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+				}
+			}
+		});
+		
+		alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+				}
+			}
+		});
+		
+		// Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
+		AlertDialog dialog = alert.create();
+		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+			dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+		}
+		dialog.show();
+	}
     
     /**
      * Called when the user selects "Load Sketch" - this will open the navigation drawer
@@ -1403,12 +1385,23 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	}
 	
 	@Override
-    public void onStop() {
-		//Make sure to save the sketch
+	public void onPause() {
+		// Make sure to save the sketch
 		saveSketchForStop();
 		
-    	super.onStop();
-    }
+		// We do this to avoid messing up the *very* delicate console/code area resizing stuff
+		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
+		
+		super.onPause();
+	}
+	
+	@Override
+	public void onStop() {
+		// Make sure to save the sketch
+		saveSketchForStop();
+		
+		super.onStop();
+	}
 	
 	@Override
 	public void onDestroy() {
@@ -1472,10 +1465,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			break;
 		case SKETCHBOOK:
 		case EXTERNAL:
-			saveSketch();
-			break;
 		case TEMPORARY:
-			saveSketchTemp();
+			saveSketch();
 			break;
 		}
 	}
@@ -1488,32 +1479,39 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		getSupportActionBar().setTitle(getGlobalState().getSketchName());
 		//Reload the action bar actions and overflow
 		supportInvalidateOptionsMenu();
-		//Reload the navigation drawer
-		forceDrawerReload();
 		
 		//Get rid of any existing tabs
-		tabBar.removeAllTabs();
+//		tabBar.removeAllTabs();
 		tabs.clear();
+		codePagerAdapter.notifyDataSetChanged();
 		
 		//Add the default "sketch" tab
-		addDefaultTab(APDE.DEFAULT_SKETCH_NAME);
+		addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
 		
 		//Select the new tab
-		tabBar.selectTab(0);
+		selectCode(0);
 		
 		//Clear the code area
-		CodeEditText code = ((CodeEditText) findViewById(R.id.code));
-		code.setText(""); //We don't use setNoUndoText() because it screws up the undo history...
+//		CodeEditText code = ((CodeEditText) findViewById(R.id.code));
+//		code.setText(""); //We don't use setNoUndoText() because it screws up the undo history...
 		
 		//Fix a strange bug...
-		getCurrentFileMeta().clearUndoRedo();
+		getSelectedSketchFile().clearUndoRedo();
 		
 		//Get rid of previous syntax highlighter data
-		code.clearTokens();
+//		code.clearTokens();
+//		
+//		//Make sure the code area is editable
+//		code.setFocusable(true);
+//		code.setFocusableInTouchMode(true);
 		
-		//Make sure the code area is editable
-		code.setFocusable(true);
-		code.setFocusableInTouchMode(true);
+		// Save the new sketch
+		autoSave();
+		// Add to recents
+		getGlobalState().putRecentSketch(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
+		
+		// Reload the navigation drawer
+		forceDrawerReload();
 	}
     
 	/**
@@ -1525,105 +1523,111 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	 */
 	public boolean loadSketch(String sketchPath, APDE.SketchLocation sketchLocation) {
 		if (sketchLocation == null) {
-			//Something bad happened
+			// Something bad happened
 			return false;
 		}
 		
-		if(sketchLocation.equals(APDE.SketchLocation.TEMPORARY)) {
-			return loadSketchTemp();
-		}
-		
-		//Get the sketch location
+		// Get the sketch location
     	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, sketchLocation);
     	boolean success;
     	
-    	//Ensure that the sketch folder exists and is a directory
-    	if(sketchLoc.exists() && sketchLoc.isDirectory()) {
+    	// Ensure that the sketch folder exists and is a directory
+    	if (sketchLoc.exists() && sketchLoc.isDirectory()) {
     		getGlobalState().selectSketch(sketchPath, sketchLocation);
     		
-    		//Get all the files in the directory
+    		// Get all the files in the directory
     		File[] files = sketchLoc.listFiles();
     		
-    		//Why do we need this...?
-    		for(FileMeta meta : tabs.values())
-    			meta.disable();
+    		// Why do we need this...?
+    		for (SketchFile meta : tabs) {
+				meta.disable();
+			}
     		
-    		//Get rid of any tabs
+    		// Get rid of any tabs
     		tabs.clear();
-    		tabBar.removeAllTabs();
-    		//This method is necessary, too
-    		removeAllTabs();
-    		
-    		//Cycle through the files
-    		for(File file : files) {
-    			//Split the filename into prefix and suffix
+//    		tabBar.removeAllTabs();
+    		// This method is necessary, too
+			
+    		// Cycle through the files
+    		for (File file : files) {
+    			// Split the filename into prefix and suffix
     			String[] folders = file.getPath().split("/");
     			String[] parts = folders[folders.length - 1].split("\\.");
-    			//If the filename isn't formatted properly, skip this file
+    			// If the filename isn't formatted properly, skip this file
     			if(parts.length != 2)
     				continue;
     			
-    			//Retrieve the prefix and suffix
+    			// Retrieve the prefix and suffix
     			String prefix = parts[parts.length - 2];
     			String suffix = parts[parts.length - 1];
     			
-    			//Check to see if it's a .PDE file
+    			// Check to see if it's a .PDE file
     			if (suffix.equals("pde")) {
-    				//Build a Tab Meta object
-    				FileMeta meta = new FileMeta("");
-    				meta.readData(this, file.getAbsolutePath());
+    				// Build a Tab Meta object
+    				SketchFile meta = new SketchFile("");
+    				meta.readData(file.getAbsolutePath());
     				meta.setTitle(prefix);
-    				
-    				//Add the tab
-    				addTab(prefix, meta);
+					meta.setExample(getGlobalState().isExample());
+					
+					// Add the tab
+					addTabWithoutPagerUpdate(meta);
+					
+					meta.getFragment().setSketchFile(meta);
     			} else if (suffix.equals("java")) {
-    				//Build a Tab Meta object
-    				FileMeta meta = new FileMeta("");
-    				meta.readData(this, file.getAbsolutePath());
+    				// Build a Tab Meta object
+    				SketchFile meta = new SketchFile("");
+    				meta.readData(file.getAbsolutePath());
     				meta.setTitle(prefix);
     				meta.setSuffix(".java");
-    				
-    				//Add the tab
-    				addTab(meta.getTitle(), meta);
+					meta.setExample(getGlobalState().isExample());
+				
+					// Add the tab
+					addTabWithoutPagerUpdate(meta);
+				
+					meta.getFragment().setSketchFile(meta);
     			}
     		}
+		
+			codePagerAdapter.notifyDataSetChanged();
     		
-    		//Update the code area
-    		if(tabBar.getTabCount() > 0)
-    			((CodeEditText) findViewById(R.id.code)).setNoUndoText(tabs.get(tabBar.getSelectedTab()).getText());
-    		else
-    			((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
+//    		// Update the code area
+//    		if(getCodeCount() > 0)
+//    			((CodeEditText) findViewById(R.id.code)).setNoUndoText(tabs.get(getSelectedCodeIndex()).getText());
+//    		else
+//    			((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
     		
-    		//Get rid of previous syntax highlighter data
-    		((CodeEditText) findViewById(R.id.code)).clearTokens();
+			
+    		// Get rid of previous syntax highlighter data
+//    		((CodeEditText) findViewById(R.id.code)).clearTokens();
     		
     		success = true;
     		
-    		//Automatically selects and loads the new tab
-    		tabBar.selectLoadDefaultTab();
+    		// Automatically selects and loads the new tab
+//    		tabBar.selectLoadDefaultTab();
+			selectCode(0);
     	} else {
     		success = false;
     	}
     	
     	if(success) {
-			//Close Find/Replace (if it's open)
+			// Close Find/Replace (if it's open)
 			((FindReplace) getGlobalState().getPackageToToolTable().get(FindReplace.PACKAGE_NAME)).close();
 			
-    		if(getGlobalState().isExample()) {
-    			//Make sure the code area isn't editable
-        		((CodeEditText) findViewById(R.id.code)).setFocusable(false);
-        		((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
-    		} else {
-    			if(tabBar.getTabCount() > 0) {
-    				//Make sure the code area is editable
-    				((CodeEditText) findViewById(R.id.code)).setFocusable(true);
-    				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
-    			} else {
-    				//Make sure that the code area isn't editable
-    				((CodeEditText) findViewById(R.id.code)).setFocusable(false);
-    				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
-    			}
-    		}
+//    		if(getGlobalState().isExample()) {
+//    			//Make sure the code area isn't editable
+//        		((CodeEditText) findViewById(R.id.code)).setFocusable(false);
+//        		((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
+//    		} else {
+//    			if(getCodeCount() > 0) {
+//    				//Make sure the code area is editable
+//    				((CodeEditText) findViewById(R.id.code)).setFocusable(true);
+//    				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
+//    			} else {
+//    				//Make sure that the code area isn't editable
+//    				((CodeEditText) findViewById(R.id.code)).setFocusable(false);
+//    				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(false);
+//    			}
+//    		}
     		
     		//Add this to the recent sketches
     		getGlobalState().putRecentSketch(sketchLocation, sketchPath);
@@ -1650,72 +1654,62 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		return;
     	}
     	
-    	//Make sure that the sketch's name isn't "sketch"... and if it is, let the user change it
-    	if(getGlobalState().getSketchName().equals(APDE.DEFAULT_SKETCH_NAME)) {
-    		changeSketchNameForSave();
-    		return;
-    	}
-    	
     	boolean success = true;
     	
     	String sketchPath = getGlobalState().getSketchPath();
     	
-    	//A temporary sketch doesn't have a path defined yet, so we have to use the name
-    	if(getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.TEMPORARY)) {
-    		sketchPath = "/" + getGlobalState().getSketchName();
-    	}
-    	
     	//Obtain the location of the sketch
-    	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.EXTERNAL) ?
-				APDE.SketchLocation.EXTERNAL : APDE.SketchLocation.SKETCHBOOK);
+    	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, getGlobalState().getSketchLocationType());
     	
     	//Ensure that the sketch folder exists
     	sketchLoc.mkdirs();
     	
-    	if(tabBar.getTabCount() > 0) {
-	    	//Update the current tab
-//	    	tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), this));
-	    	tabs.get(tabBar.getSelectedTab()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
+    	if (getCodeCount() > 0) {
+//	    	//Update the current tab
+//	    	tabs.put(tabBar.getSelectedTab(), new SketchFile(tabBar.getSelectedTab().getText().toString(), this));
+//	    	tabs.get(getSelectedCodeIndex()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
 	    	
-	    	//Iterate through the FileMetas...
-	    	for(FileMeta meta : tabs.values()) {
-	    		if(meta.enabled()) {
-	    			//...and write them to the sketch folder
-	    			if(!meta.writeData(getApplicationContext(), sketchLoc.getPath() + "/")) {
+			// Update all tabs
+			for (int i = 0; i < tabs.size(); i ++) {
+				// Not all of the tabs are loaded at once
+				if (tabs.get(i).getFragment().getCodeEditText() != null) {
+					tabs.get(i).update(this, getGlobalState().getPref("pref_key_undo_redo", true));
+				}
+			}
+			
+	    	// Iterate through the SketchFiles...
+	    	for(SketchFile meta : tabs) {
+	    		if (meta.enabled()) {
+	    			// ...and write them to the sketch folder
+	    			if (!meta.writeData(sketchLoc.getPath() + "/")) {
 	    				success = false;
 	    			}
 	    		}
 	    	}
 	    	
-	    	if(success) {
-	    		if(getGlobalState().isTemp()) {
-	    			//If it's a temporary sketch, we need to add it to the recent list
-	    			getGlobalState().putRecentSketch(APDE.SketchLocation.SKETCHBOOK, sketchPath);
-	    		}
+	    	if (success) {
+	    		getGlobalState().selectSketch(sketchPath, getGlobalState().getSketchLocationType());
 	    		
-	    		getGlobalState().selectSketch(sketchPath, getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.EXTERNAL) ?
-	        			APDE.SketchLocation.EXTERNAL : APDE.SketchLocation.SKETCHBOOK);
-	    		
-	    		//Force the drawer to reload
+	    		// Force the drawer to reload
 	    		forceDrawerReload();
 	    		
 	    		supportInvalidateOptionsMenu();
 	            
-	            //Inform the user of success
+	            // Inform the user of success
 	    		message(getResources().getText(R.string.sketch_saved));
 	    		setSaved(true);
 	    	} else {
-	    		//Inform the user of failure
+	    		// Inform the user of failure
 	    		error(getResources().getText(R.string.sketch_save_failure));
 	    	}
     	} else {
-    		//If there are no tabs
-    		//TODO is this right?
+    		// If there are no tabs
+    		// TODO is this right?
     		
-    		//Force the drawer to reload
+    		// Force the drawer to reload
     		forceDrawerReload();
     		
-            //Inform the user
+            // Inform the user
     		message(getResources().getText(R.string.sketch_saved));
     		setSaved(true);
     	}
@@ -1758,8 +1752,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
     		
     		//Make sure the code area is editable
-			((CodeEditText) findViewById(R.id.code)).setFocusable(true);
-			((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
+//			((CodeEditText) findViewById(R.id.code)).setFocusable(true);
+//			((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
     		
     		//Force the drawer to reload
     		forceDrawerReload();
@@ -1774,44 +1768,49 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		error(getResources().getText(R.string.sketch_save_failure));
     	}
     }
-    
-    private void changeSketchNameForSave() {
-		AlertDialog.Builder alert = new AlertDialog.Builder(this);
-    	
-    	alert.setTitle(R.string.sketch_name_dialog_title);
-    	alert.setMessage(R.string.sketch_name_dialog_message);
-    	
-    	final EditText input = new EditText(this);
-    	input.setSingleLine();
-    	input.setText(getGlobalState().getSketchName());
-    	input.selectAll();
-    	alert.setView(input);
-    	
-    	alert.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-    		public void onClick(DialogInterface dialog, int whichButton) {
-    			String after = input.getText().toString();
-    			
-    			if(validateSketchName(after)) {
-    				getGlobalState().setSketchName(after);
-    				
-    				//We have to save before we do this... because it reads from the file system
-    				saveSketch();
-    				forceDrawerReload();
-    			}
-    		}
-    	});
-    	
-    	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-    		public void onClick(DialogInterface dialog, int whichButton) {
-    		}
-    	});
-    	
-    	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
-    	AlertDialog dialog = alert.create();
-    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-    	dialog.show();
-    }
+	
+	public void moveToSketchbook() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		
+		builder.setTitle(R.string.move_temp_to_sketchbook_title);
+		builder.setMessage(String.format(Locale.US, getResources().getString(R.string.move_temp_to_sketchbook_message), getGlobalState().getSketchName()));
+		
+		builder.setPositiveButton(R.string.move, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
+				APDE.SketchMeta dest = new APDE.SketchMeta(APDE.SketchLocation.SKETCHBOOK, "/" + source.getName());
+				
+				// Let's not overwrite anything...
+				// TODO Maybe give the user options to replace / keep both in the new location?
+				// We don't need that much right now, they can deal with things manually...
+				if (getGlobalState().getSketchLocation(dest.getPath(), dest.getLocation()).exists()) {
+					AlertDialog.Builder builder = new AlertDialog.Builder(EditorActivity.this);
+					
+					builder.setTitle(R.string.cannot_move_sketch_title);
+					builder.setMessage(R.string.cannot_move_folder_message);
+					
+					builder.setPositiveButton(getResources().getString(R.string.ok), new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {}
+					});
+					
+					builder.create().show();
+					
+					return;
+				}
+				
+				getGlobalState().moveFolder(source, dest, EditorActivity.this);
+				supportInvalidateOptionsMenu();
+			}
+		});
+		
+		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {}
+		});
+		
+		builder.create().show();
+	}
     
     //Copy all of the old preferences over to the new SharedPreferences and delete the old ones
   	public void copyPrefs(String before, String after) {
@@ -1865,24 +1864,38 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			return false;
 		}
 		
-		//We can't have the name "sketch"
-		if(name.equals(APDE.DEFAULT_SKETCH_NAME)) {
-			error(getResources().getText(R.string.sketch_name_invalid_sketch));
-			return false;
-		}
-		
 		return true;
+	}
+	
+	public void launchDeleteSketchConfirmationDialog() {
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		
+		alert.setTitle(String.format(Locale.US, getResources().getString(R.string.delete_sketch_dialog_title), getGlobalState().getSketchName()));
+		alert.setMessage(String.format(Locale.US, getResources().getString(R.string.delete_sketch_dialog_message), getGlobalState().getSketchName()));
+		
+		alert.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+			@SuppressLint("NewApi")
+			public void onClick(DialogInterface dialog, int whichButton) {
+				deleteSketch();
+				
+				getGlobalState().selectNewTempSketch();
+				newSketch();
+				
+				toolbar.setTitle(getGlobalState().getSketchName());
+			}
+		});
+		
+		alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {}
+		});
+		
+		alert.create().show();
 	}
     
     /**
      * Deletes the current sketch
      */
     public void deleteSketch() {
-    	//You can't delete a temporary sketch...
-    	if(getGlobalState().getSketchLocationType().equals(APDE.SketchLocation.TEMPORARY)) {
-    		return;
-    	}
-    	
     	//Obtain the location of the sketch folder
     	File sketchFolder = getGlobalState().getSketchLocation();
     	if(sketchFolder.isDirectory()) {
@@ -1894,121 +1907,6 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				e.printStackTrace();
 			}
     	}
-    }
-    
-    //Save the sketch into temp storage
-    public void saveSketchTemp() {
-    	//Erase previously stored files
-    	File[] files = getFilesDir().listFiles();
-    	for(File file : files)
-    		file.delete();
-    	
-    	String sketchPath = getGlobalState().getSketchName();
-    	writeTempFile("sketchPath.txt", sketchPath);
-    	
-    	String sketchLocation = getGlobalState().getSketchLocationType().toString();
-    	writeTempFile("sketchLocation.txt", sketchLocation);
-    	
-    	//Preserve tab order upon re-launch
-    	String tabList = "";
-    	for(int i = 0; i < tabBar.getTabCount(); i ++) {
-    		String tabName = ((TextView) tabBar.getTabView(i).getChildAt(0)).getText().toString();
-    		
-    		//If it's a .PDE file, make sure to add the suffix
-    		if(tabName.split(".").length <= 1)
-    			tabName += ".pde";
-    		
-    		//Add the tab to the list
-    		tabList += tabName + "\n";
-    	}
-    	
-    	//Save the names of the tabs
-    	writeTempFile("sketchFileNames.txt", tabList);
-    	
-    	if(tabBar.getTabCount() > 0) {
-    		//Update the current tab
-//    		tabs.put(tabBar.getSelectedTab(), new FileMeta(tabBar.getSelectedTab().getText().toString(), this));
-    		tabs.get(tabBar.getSelectedTab()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
-    	}
-    	
-    	//Iterate through the FileMetas...
-    	for(FileMeta meta : tabs.values())
-    		//...and write them to the sketch folder
-    		meta.writeDataTemp(getApplicationContext());
-    	
-    	setSaved(true);
-    }
-    
-    /**
-     * Loads a sketch from the temp folder
-     * 
-     * @return success
-     */
-    public boolean loadSketchTemp() {
-    	boolean success;
-    	
-    	try {
-    		//Read the sketch path
-    		String sketchPath = readTempFile("sketchPath.txt");
-    		APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(readTempFile("sketchLocation.txt"));
-    		
-    		getGlobalState().selectSketch(sketchPath, sketchLocation);
-    		
-    		//Read the list of tabs
-    		String[] files = readTempFile("sketchFileNames.txt").split("\n");
-    		
-    		//Iterate through the files
-    		for(String filename : files) {
-    			File file = new File(filename);
-    			
-    			//Split the filename into prefix and suffix
-    			String[] folders = file.getPath().split("/");
-    			String[] parts = folders[folders.length - 1].split("\\.");
-    			//If the filename isn't formatted properly, skip this file
-    			if(parts.length != 2)
-    				continue;
-    			
-    			//Retrieve the prefix and suffix
-    			String prefix = parts[parts.length - 2];
-    			String suffix = parts[parts.length - 1];
-    			
-    			//Check to see if it's a .PDE file
-    			if (suffix.equals("pde")) {
-    				//Build a Tab Meta object
-    				FileMeta meta = new FileMeta("");
-    				meta.readTempData(this, file.getName());
-    				meta.setTitle(prefix);
-    				
-    				//Add the tab
-    				addTab(prefix, meta);
-    			} else if (suffix.equals("java")) {
-    				//Build a Tab Meta object
-    				FileMeta meta = new FileMeta("");
-    				meta.readTempData(this, file.getName());
-    				meta.setTitle(prefix);
-    				meta.setSuffix(".java");
-    				
-    				//Add the tab
-    				addTab(meta.getTitle(), meta);
-    			}
-    		}
-    		
-    		//Automatically select and load the first tab
-    		tabBar.selectLoadDefaultTab();
-    		
-    		success = true;
-    	} catch(Exception e) { //Errors...
-    		e.printStackTrace();
-    		
-    		success = false;
-    	}
-		
-		if (success) {
-			//Close Find/Replace (if it's open)
-			((FindReplace) getGlobalState().getPackageToToolTable().get(FindReplace.PACKAGE_NAME)).close();
-		}
-    	
-    	return success;
     }
     
     /**
@@ -2093,7 +1991,8 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         
         if(drawerSketchLocationType != null) {
         	items = getGlobalState().listSketchContainingFolders(getGlobalState().getSketchLocation(drawerSketchPath, drawerSketchLocationType), new String[] {APDE.LIBRARIES_FOLDER},
-        			drawerSketchPath.length() > 0, drawerSketchLocationType.equals(APDE.SketchLocation.SKETCHBOOK), new APDE.SketchMeta(drawerSketchLocationType, drawerSketchPath));
+        			drawerSketchPath.length() > 0, drawerSketchLocationType.equals(APDE.SketchLocation.SKETCHBOOK) || drawerSketchLocationType.equals(APDE.SketchLocation.TEMPORARY),
+					new APDE.SketchMeta(drawerSketchLocationType, drawerSketchPath));
         } else {
         	if(drawerRecentSketch) {
         		items = getGlobalState().listRecentSketches();
@@ -2102,30 +2001,31 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.sketches), FileNavigatorAdapter.FileItemType.FOLDER));
         		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.examples), FileNavigatorAdapter.FileItemType.FOLDER));
         		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.library_examples), FileNavigatorAdapter.FileItemType.FOLDER));
+				items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.temporary), FileNavigatorAdapter.FileItemType.FOLDER));
         		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.recent), FileNavigatorAdapter.FileItemType.FOLDER));
         	}
         }
         
         int selected = -1;
-        
+		
         if(drawerSketchLocationType != null && drawerSketchLocationType.equals(getGlobalState().getSketchLocationType())
         		&& getGlobalState().getSketchPath().equals(drawerSketchPath + "/" + getGlobalState().getSketchName())) {
         	
         	selected = FileNavigatorAdapter.indexOfSketch(items, getGlobalState().getSketchName());
-        } else if(drawerRecentSketch && !getGlobalState().isTemp() && !(getGlobalState().getRecentSketches().size() == 0)) {
-        	//In the recent screen, the top-most sketch is always currently selected (if a temporary sketch isn't currently open and there are recent sketches)...
-        	//It's not "0" because that's the UP button
+        } else if(drawerRecentSketch && !(getGlobalState().getRecentSketches().size() == 0)) {
+        	// In the recent screen, the top-most sketch is always currently selected...
+        	// It's not "0" because that's the UP button
         	selected = 1;
         }
         
         final FileNavigatorAdapter fileAdapter = new FileNavigatorAdapter(this, items, selected);
         
-        //Load the list of sketches into the drawer
+        // Load the list of sketches into the drawer
         drawerList.setAdapter(fileAdapter);
         drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         
-        //Let the adapter handle long click events
-        //Used for drag and drop to move files...
+        // Let the adapter handle long click events
+        // Used for drag and drop to move files...
         drawerList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
 			@Override
 			public boolean onItemLongClick(AdapterView<?> adapterView, View view, int position, long id) {
@@ -2153,9 +2053,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         getMenuInflater().inflate(R.menu.activity_editor, menu);
         
         if(drawerOpen) {
-        	//If the drawer is visible
+        	// If the drawer is visible
         	
-        	//Make sure to hide all of the sketch-specific action items
+        	// Make sure to hide all of the sketch-specific action items
         	menu.findItem(R.id.menu_run).setVisible(false);
         	menu.findItem(R.id.menu_stop).setVisible(false);
         	menu.findItem(R.id.menu_undo).setVisible(false);
@@ -2163,20 +2063,23 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	menu.findItem(R.id.menu_tab_delete).setVisible(false);
         	menu.findItem(R.id.menu_tab_rename).setVisible(false);
         	menu.findItem(R.id.menu_save).setVisible(false);
+			menu.findItem(R.id.menu_delete).setVisible(false);
+			menu.findItem(R.id.menu_rename).setVisible(false);
         	menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
+			menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
         	menu.findItem(R.id.menu_new).setVisible(false);
         	menu.findItem(R.id.menu_load).setVisible(false);
         	menu.findItem(R.id.menu_tab_new).setVisible(false);
         	menu.findItem(R.id.menu_tools).setVisible(false);
         	menu.findItem(R.id.menu_sketch_properties).setVisible(false);
         	
-        	//Make sure to hide the sketch name
+        	// Make sure to hide the sketch name
         	getSupportActionBar().setTitle(R.string.app_name);
         } else {
-        	if(tabBar.getTabCount() > 0) {
-        		//If the drawer is closed and there are tabs
+        	if (getCodeCount() > 0) {
+        		// If the drawer is closed and there are tabs
         		
-        		//Make sure to make the tab actions visible
+        		// Make sure to make the tab actions visible
             	menu.findItem(R.id.menu_run).setVisible(true);
             	menu.findItem(R.id.menu_stop).setVisible(true);
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
@@ -2184,7 +2087,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	
             	menu.findItem(R.id.menu_tools).setVisible(true);
             	
-            	if(getGlobalState().isExample()) {
+            	if (getGlobalState().isExample()) {
             		menu.findItem(R.id.menu_undo).setVisible(false);
                 	menu.findItem(R.id.menu_redo).setVisible(false);
             	} else {
@@ -2197,9 +2100,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             		}
             	}
             } else {
-            	//If the drawer is closed and there are no tabs
+            	// If the drawer is closed and there are no tabs
             	
-            	//Make sure to make the tab actions invisible
+            	// Make sure to make the tab actions invisible
             	menu.findItem(R.id.menu_run).setVisible(false);
     	    	menu.findItem(R.id.menu_stop).setVisible(false);
     	    	menu.findItem(R.id.menu_undo).setVisible(false);
@@ -2209,27 +2112,42 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	menu.findItem(R.id.menu_tools).setVisible(false);
             }
         	
-        	//Enable / disable undo / redo buttons
-        	FileMeta meta = getCurrentFileMeta();
+        	// Enable/disable undo/redo buttons
+        	SketchFile meta = getSelectedSketchFile();
         	menu.findItem(R.id.menu_undo).setEnabled(meta != null ? meta.canUndo() : false);
         	menu.findItem(R.id.menu_redo).setEnabled(meta != null ? meta.canRedo() : false);
         	
-        	//Make sure to make all of the sketch-specific actions visible
+        	// Make sure to make all of the sketch-specific actions visible
         	
-        	switch(getGlobalState().getSketchLocationType()) {
+        	switch (getGlobalState().getSketchLocationType()) {
         	case SKETCHBOOK:
+				menu.findItem(R.id.menu_save).setVisible(true);
+				menu.findItem(R.id.menu_delete).setVisible(true);
+				menu.findItem(R.id.menu_rename).setVisible(true);
+				menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
+				menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
+				break;
         	case TEMPORARY:
         		menu.findItem(R.id.menu_save).setVisible(true);
+				menu.findItem(R.id.menu_delete).setVisible(true);
+				menu.findItem(R.id.menu_rename).setVisible(false);
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
+				menu.findItem(R.id.menu_move_to_sketchbook).setVisible(true);
         		break;
         	case EXTERNAL:
         		menu.findItem(R.id.menu_save).setVisible(true);
+				menu.findItem(R.id.menu_delete).setVisible(true);
+				menu.findItem(R.id.menu_rename).setVisible(true);
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+				menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
         		break;
         	case EXAMPLE:
         	case LIBRARY_EXAMPLE:
         		menu.findItem(R.id.menu_save).setVisible(false);
+				menu.findItem(R.id.menu_delete).setVisible(false);
+				menu.findItem(R.id.menu_rename).setVisible(false);
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
+				menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
         		break;
         	}
         	
@@ -2242,15 +2160,20 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
         	getSupportActionBar().setTitle(getGlobalState().getSketchName());
         }
         
-        //Disable these buttons because they appear when the tab is pressed
-        //Not getting rid of them completely in case we want to change things in the future
+        // Disable these buttons because they appear when the tab is pressed
+        // Not getting rid of them completely in case we want to change things in the future
         menu.findItem(R.id.menu_tab_new).setVisible(false);
         menu.findItem(R.id.menu_tab_delete).setVisible(false);
     	menu.findItem(R.id.menu_tab_rename).setVisible(false);
+		
+		// With auto-saving, we don't actually need to let the user save the sketch manually
+		// However, the keyboard shortcut will still be available
+		menu.findItem(R.id.menu_save).setVisible(false);
     	
-    	//So that the user can add a tab if there are none
-    	if(tabBar.getTabCount() <= 0 && !getGlobalState().isExample())
-    		menu.findItem(R.id.menu_tab_new).setVisible(true);
+    	// So that the user can add a tab if there are none
+    	if (getCodeCount() <= 0 && !getGlobalState().isExample()) {
+			menu.findItem(R.id.menu_tab_new).setVisible(true);
+		}
     	
         return true;
     }
@@ -2287,7 +2210,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
                     drawer.openDrawer(drawerLayout);
                     
                     //Turn of the code area so that it cannot be focused (and so that the soft keyboard is hidden)
-                    ((EditText) findViewById(R.id.code)).setEnabled(false);
+					if (isSelectedCodeAreaInitialized()) {
+						getSelectedCodeArea().setEnabled(false);
+					}
                     supportInvalidateOptionsMenu();
                 }
         		return true;
@@ -2298,23 +2223,32 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
             	stopApplication();
             	return true;
             case R.id.menu_undo:
-        		tabs.get(tabBar.getSelectedTab()).undo(this);
+        		tabs.get(getSelectedCodeIndex()).undo(this);
             	return true;
             case R.id.menu_redo:
-            	tabs.get(tabBar.getSelectedTab()).redo(this);
+            	tabs.get(getSelectedCodeIndex()).redo(this);
             	return true;
             case R.id.menu_save:
             	saveSketch();
             	return true;
+			case R.id.menu_rename:
+				launchRenameSketch();
+				return true;
             case R.id.menu_copy_to_sketchbook:
             	copyToSketchbook();
             	return true;
+			case R.id.menu_move_to_sketchbook:
+				moveToSketchbook();
+				return true;
             case R.id.menu_new:
             	createNewSketch();
             	return true;
             case R.id.menu_load:
             	loadSketch();
             	return true;
+			case R.id.menu_delete:
+				launchDeleteSketchConfirmationDialog();
+				return true;
             case R.id.menu_settings:
             	launchSettings();
             	return true;
@@ -2337,68 +2271,108 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
                 return super.onOptionsItemSelected(item);
         }
     }
-    
-    /**
-     * This function is called by the XML-defined special character insertion tray toggler.
-     * 
-     * @param view the button that was clicked
-     */
-    public void toggleCharInserts(View view) {
-    	//Don't do anything if the user has disabled the character insert tray
-		if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true))
+	
+    public void toggleCharInserts() {
+    	// Don't do anything if the user has disabled the character insert tray
+		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true)) {
 			return;
+		}
     	
-    	if(!keyboardVisible)
+    	if (!keyboardVisible) {
 			return;
+		}
     	
-    	charInserts = !charInserts;
-    	
-    	//Update the global reference
-    	toggleCharInserts = (ImageButton) view;
-    	
-    	if(charInserts) {
-    		//Build the character inserts tray
-            reloadCharInserts();
-    		
-            showCharInserts();
+    	if (charInserts) {
+			hideCharInserts();
     	} else {
-            hideCharInserts();
+			//Build the character inserts tray
+			reloadCharInserts();
+		
+			showCharInserts();
     	}
     }
     
     protected void showCharInserts() {
-    	((ImageButton) toggleCharInserts).setImageResource(errorMessage ? R.drawable.ic_caret_right_light : R.drawable.ic_caret_right);
-		((TextView) findViewById(R.id.message)).setVisibility(View.GONE);
-		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.VISIBLE);
+		TextView messageView = (TextView) findViewById(R.id.message);
+		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
+		
+		View buffer = findViewById(R.id.buffer);
+		
+		View sep = findViewById(R.id.toggle_char_inserts_separator);
+		
+		toggleCharInserts.setImageResource(errorMessage ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_right_black);
+//		((TextView) findViewById(R.id.message)).setVisibility(View.GONE);
+//		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.VISIBLE);
+		
+		int total = buffer.getWidth() - sep.getWidth() - toggleCharInserts.getWidth();
+		
+		RotateAnimation rotate = new RotateAnimation(180f, 360f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+		rotate.setInterpolator(new AccelerateDecelerateInterpolator());
+		rotate.setRepeatCount(0);
+		rotate.setDuration(200);
+		
+		messageView.startAnimation(new ResizeAnimation<LinearLayout>(messageView, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0, ResizeAnimation.DEFAULT));
+		charInsertTray.startAnimation(new ResizeAnimation<LinearLayout>(charInsertTray, 0, buffer.getHeight(), total, buffer.getHeight()));
+		toggleCharInserts.startAnimation(rotate);
 		
 		charInserts = true;
     }
-    
+	
     protected void hideCharInserts() {
-    	((ImageButton) toggleCharInserts).setImageResource(errorMessage ? R.drawable.ic_caret_left_light : R.drawable.ic_caret_left);
-		((TextView) findViewById(R.id.message)).setVisibility(View.VISIBLE);
-		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.GONE);
+		if (!(keyboardVisible && charInserts)) {
+			// No need to hide them if they're already hidden
+			return;
+		}
+		
+		TextView messageView = (TextView) findViewById(R.id.message);
+		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
+		
+		View buffer = findViewById(R.id.buffer);
+		
+		View sep = findViewById(R.id.toggle_char_inserts_separator);
+	
+		toggleCharInserts.setImageResource(errorMessage ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
+		
+		int total = buffer.getWidth() - sep.getWidth() - toggleCharInserts.getWidth();
+		
+		RotateAnimation rotate = new RotateAnimation(180f, 360f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+		rotate.setInterpolator(new AccelerateDecelerateInterpolator());
+		rotate.setRepeatCount(0);
+		rotate.setDuration(200);
+		
+		messageView.startAnimation(new ResizeAnimation<LinearLayout>(messageView, 0, buffer.getHeight(), total, buffer.getHeight()));
+		charInsertTray.startAnimation(new ResizeAnimation<LinearLayout>(charInsertTray, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0, ResizeAnimation.DEFAULT));
+		toggleCharInserts.startAnimation(rotate);
 		
 		charInserts = false;
     }
+	
+	public void hideCharInsertsNoAnimation() {
+		TextView messageView = (TextView) findViewById(R.id.message);
+		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
+		
+		toggleCharInserts.setImageResource(errorMessage ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
+		messageView.setVisibility(View.VISIBLE);
+		charInsertTray.setVisibility(View.GONE);
+		
+		charInserts = false;
+	}
     
     /**
      * Set up the character inserts tray.
      */
 	public void reloadCharInserts() {
-		if(!keyboardVisible)
+		if (!keyboardVisible)
 			return;
 		
-    	if(message == -1)
-    		message = findViewById(R.id.message).getHeight();
+    	if (message == -1) {
+			message = findViewById(R.id.buffer).getHeight();
+		}
     	
     	//Get a reference to the button container
     	LinearLayout container = ((LinearLayout) findViewById(R.id.char_insert_tray_list));
     	//Clear any buttons from before
     	container.removeAllViews();
-    	
-    	//Get a reference to the code area
-    	final CodeEditText code = (CodeEditText) findViewById(R.id.code);
     	
     	//The (temporary) list of character inserts TODO make this list configurable
     	//"\u2192" is Unicode for the right arrow (like "->") - this is a graphical representation of the TAB key
@@ -2463,7 +2437,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 					}
 					
 					if (!dispatched) {
-						code.dispatchKeyEvent(event);
+						getSelectedCodeArea().dispatchKeyEvent(event);
 					}
 					
 					// Provide haptic feedback (if the user has vibrations enabled)
@@ -2485,19 +2459,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		break;
     	case SKETCHBOOK:
     	case EXTERNAL:
+		case TEMPORARY:
     		saveSketch();
     		break;
-    	case TEMPORARY:
-    		//If the sketch has yet to be saved, inform the user
-    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-    		builder.setTitle(getResources().getText(R.string.save_sketch_before_run_dialog_title))
-    		.setMessage(getResources().getText(R.string.save_sketch_before_run_dialog_message)).setCancelable(false)
-    		.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-    			@Override
-    			public void onClick(DialogInterface dialog, int which) {}
-    		}).show();
-    		
-    		return;
     	}
     	
     	//In case the user presses the button twice, we don't want any errors
@@ -2550,7 +2514,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Update message area height
     	correctMessageAreaHeight();
     	
-    	hideCharInserts();
+    	hideCharInsertsNoAnimation();
     }
     
     /**
@@ -2561,20 +2525,20 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      */
     public void messageExt(final String msg) {
     	runOnUiThread(new Runnable() {
-    		public void run() {
-    			//Write the message
-    			((TextView) findViewById(R.id.message)).setText(msg);
-    			
-    			colorMessageAreaMessage();
-    			
-    			errorMessage = false;
-    			
-    			//Update message area height
-    			correctMessageAreaHeight();
-    			
-    			hideCharInserts();
-    		}
-    	});
+			public void run() {
+				//Write the message
+				((TextView) findViewById(R.id.message)).setText(msg);
+
+				colorMessageAreaMessage();
+
+				errorMessage = false;
+
+				//Update message area height
+				correctMessageAreaHeight();
+
+				hideCharInsertsNoAnimation();
+			}
+		});
     }
     
     /**
@@ -2603,7 +2567,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Update message area height
     	correctMessageAreaHeight();
     	
-    	hideCharInserts();
+    	hideCharInsertsNoAnimation();
     }
     
     /**
@@ -2614,20 +2578,20 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      */
     public void errorExt(final String msg) {
     	runOnUiThread(new Runnable() {
-    		public void run() {
-    			//Write the error message
-    			((TextView) findViewById(R.id.message)).setText(msg);
-    			
-    			colorMessageAreaError();
-    	    	
-    	    	errorMessage = true;
-    	    	
-    	    	//Update message area height
-    	    	correctMessageAreaHeight();
-    	    	
-    	    	hideCharInserts();
-    		}
-    	});
+			public void run() {
+				//Write the error message
+				((TextView) findViewById(R.id.message)).setText(msg);
+
+				colorMessageAreaError();
+
+				errorMessage = true;
+
+				//Update message area height
+				correctMessageAreaHeight();
+
+				hideCharInsertsNoAnimation();
+			}
+		});
     }
     
     /**
@@ -2647,7 +2611,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
     	
     	//Update the toggle button
-    	toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right : R.drawable.ic_caret_left);
+    	toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_black : R.drawable.ic_caret_left_black);
     	
     	//Update the separator line
     	findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator));
@@ -2666,7 +2630,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
     	
     	//Update the toggle button
-    	toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_light : R.drawable.ic_caret_left_light);
+    	toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_left_white);
     	
     	//Update the separator line
     	findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator_light));
@@ -2678,39 +2642,48 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     }
     
-    //Called internally to correct issues with 2-line messages vs 1-line messages (and maybe some other issues)
+    // Called internally to correct issues with 2-line messages vs 1-line messages (and maybe some other issues)
     protected void correctMessageAreaHeight() {
     	final TextView messageArea = (TextView) findViewById(R.id.message);
     	
-    	//Update the message area's height
+    	// Update the message area's height
     	messageArea.requestLayout();
     	
-    	//Check back in later when the height has updated...
+    	// Check back in later when the height has updated...
     	messageArea.post(new Runnable() {
     		public void run() {
-    			//...and update the console's height...
+    			// ...and update the console's height...
     			
-    			//We need to use this in case the message area is partially off the screen
-    			//This is the DESIRED height, not the ACTUAL height
+    			// We need to use this in case the message area is partially off the screen
+    			// This is the DESIRED height, not the ACTUAL height
     			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
     			
-    			//Obtain some references
+    			// Obtain some references
     			View console = findViewById(R.id.console_scroller);
-    			View code = findViewById(R.id.code_scroller);
     			View content = findViewById(R.id.content);
-    			
-    			//We can't shrink the console if it's hidden (like when the keyboard is visible)...
-    			//...so shrink the code area instead
-    			if (console.getHeight() <= 0) {
-					code.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-							content.getHeight() - tabBar.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
-				} else {
-					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-							content.getHeight() - code.getHeight() - tabBar.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+				
+				if (isSelectedCodeAreaInitialized()) {
+					// We can't shrink the console if it's hidden (like when the keyboard is visible)...
+					// ...so shrink the code area instead
+					if (console.getHeight() <= 0) {
+						codePager.setLayoutParams(new LinearLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+								content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+					} else {
+						console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+								content.getHeight() - codePager.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+					}
 				}
     		}
     	});
     }
+	
+	public void initCodeAreaAndConsoleDimensions() {
+		ScrollView console = getConsoleScroller();
+		
+		// Initialize in case we have the layout weights instead of actual values
+		codePager.getLayoutParams().height = codePager.getHeight();
+		console.getLayoutParams().height = console.getHeight();
+	}
 	
 	/**
 	 * Fix inconsistencies in the vertical distribution of the content area views
@@ -2719,13 +2692,13 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		//Obtain some references
 		final View content = findViewById(R.id.content);
 		final View console = findViewById(R.id.console_scroller);
-		final View code = findViewById(R.id.code_scroller);
+		final View code = getSelectedCodeAreaScroller();
 		final TextView messageArea = (TextView) findViewById(R.id.message);
 		
 		if (firstResize) {
 			//Use some better layout parameters - this switches from fractions/layout weights to absolute values
-			code.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, code.getHeight()));
-			console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight()));
+			code.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, code.getHeight()));
+			console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight()));
 
 			firstResize = false;
 		}
@@ -2737,20 +2710,20 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				//We need to use this in case the message area is partially off the screen
 				//This is the DESIRED height, not the ACTUAL height
 				message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
-				
-				int consoleSize = content.getHeight() - code.getHeight() - tabBar.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
-				
+
+				int consoleSize = content.getHeight() - code.getHeight() - codeTabStrip.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+
 				//We can't shrink the console if it's hidden (like when the keyboard is visible)...
 				//...so shrink the code area instead
 				if (consoleSize < 0 || consoleWasHidden || keyboardVisible) {
 					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
-					code.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-							content.getHeight() - tabBar.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
-					
+					code.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+							content.getHeight() - codeTabStrip.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+
 					consoleWasHidden = true;
 				} else {
 					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, consoleSize));
-					
+
 					consoleWasHidden = false;
 				}
 			}
@@ -2781,32 +2754,74 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      */
     public void highlightLineExt(final int tab, final int line) {
     	runOnUiThread(new Runnable() {
-    		public void run() {
-    			//Switch to the tab with the error if we have one to switch to
-    			if(tab != -1 && tab < tabs.size())
-    				tabBar.selectTab(tab);
-    			
-    			//Get a reference to the code area
-    			CodeEditText code = (CodeEditText) findViewById(R.id.code);
-    			
-    			//Calculate the beginning and ending of the line
-    			int start = code.offsetForLine(line);
-    			int stop = code.offsetForLineEnd(line);
-    			
-    			if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
-    				//Check to see if the user wants to use the hardware keyboard
-    				
-    				//Hacky way of focusing the code area - dispatches a touch event
-    				MotionEvent me = MotionEvent.obtain(100, 0, 0, 0, 0, 0);
-    				code.dispatchTouchEvent(me);
-    				me.recycle();
-    			}
-    			
-    			//Select the text in the code area
-    			code.setSelection(start, stop);
-    		}
-    	});
+			public void run() {
+				//Switch to the tab with the error if we have one to switch to
+				if (tab != -1 && tab < tabs.size()) {
+//					tabBar.selectTab(tab);
+					selectCode(tab);
+				}
+
+				//Get a reference to the code area
+				CodeEditText code = getSelectedCodeArea();
+
+				//Calculate the beginning and ending of the line
+				int start = code.offsetForLine(line);
+				int stop = code.offsetForLineEnd(line);
+
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					//Check to see if the user wants to use the hardware keyboard
+
+					//Hacky way of focusing the code area - dispatches a touch event
+					MotionEvent me = MotionEvent.obtain(100, 0, 0, 0, 0, 0);
+					code.dispatchTouchEvent(me);
+					me.recycle();
+				}
+
+				//Select the text in the code area
+				code.setSelection(start, stop);
+			}
+		});
     }
+	
+	protected void addTabWithoutPagerUpdate(SketchFile sketchFile) {
+		tabs.add(sketchFile);
+	}
+	
+	public void addTab(SketchFile sketchFile) {
+		tabs.add(sketchFile);
+		codePagerAdapter.notifyDataSetChanged();
+	}
+	
+	public void onTabReselected(View view) {
+		if(!drawerOpen && !getGlobalState().isExample()) {
+			PopupMenu popup = new PopupMenu(getGlobalState().getEditor(), view);
+			
+			//Populate the actions
+			MenuInflater inflater = getMenuInflater();
+			inflater.inflate(R.menu.tab_actions, popup.getMenu());
+			
+			//Detect presses
+			popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+				@Override
+				public boolean onMenuItemClick(MenuItem item) {
+					switch(item.getItemId()) {
+					case R.id.menu_tab_new:
+						addTabWithDialog();
+						return true;
+					case R.id.menu_tab_rename:
+						renameTab();
+						return true;
+					case R.id.menu_tab_delete:
+						deleteTab();
+						return true;
+					}
+
+					return false;
+				}
+			});
+			popup.show();
+		}
+	}
     
     /**
      * Creates a user input dialog for adding a new tab
@@ -2822,16 +2837,17 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      */
     private void addDefaultTab(String title) {
     	//Obtain a tab
-    	ActionBar.Tab tab = getSupportActionBar().newTab();
+//    	ActionBar.Tab tab = getSupportActionBar().newTab();
     	//Set the tab text
-    	tab.setText(title);
+//    	tab.setText(title);
     	
     	//Add the tab
-    	tabBar.addTab(tab);
-    	tabs.put(tab, new FileMeta(title));
-    	
+//    	tabBar.addTab(tab);
+//    	tabs.put(tab, new SketchFile(title));
+    	addTab(new SketchFile(title));
+		
     	//Make the tab non-all-caps
-    	customizeTab(tab, title);
+//    	customizeTab(tab, title);
     }
     
     /**
@@ -2841,83 +2857,66 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
      */
 	private void addTab(String title) {
 		//Obtain a tab
-    	ActionBar.Tab tab = getSupportActionBar().newTab();
+//    	ActionBar.Tab tab = getSupportActionBar().newTab();
     	//Set the tab text
-    	tab.setText(title);
+//    	tab.setText(title);
     	
     	//Add the tab
-    	tabBar.addSelectTab(tab);
-    	tabs.put(tab, new FileMeta(title));
-    	
+//    	tabBar.addSelectTab(tab);
+//    	tabs.put(tab, new SketchFile(title));
+    	addTab(new SketchFile(title));
+		
+		selectCode(getCodeCount() - 1);
+		
     	//Clear the code area
-    	((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
-    	((CodeEditText) findViewById(R.id.code)).clearTokens();
+//    	((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
+//    	((CodeEditText) findViewById(R.id.code)).clearTokens();
     	
     	//Make the tab non-all-caps
-    	customizeTab(tab, title);
+//    	customizeTab(tab, title);
 	}
 	
-	/**
-	 * Makes the tab non-all-caps (very hacky)
-	 * 
-	 * @param tab
-	 * @param title
-	 */
-	@SuppressWarnings("deprecation")
-	private void customizeTab(Tab tab, String title) {
-		//Hacky way of making the tabs non-all-caps
-		//Theoretically, we could do some other stuff here, too...
-		
-		//Get the tab view
-    	ScrollingTabContainerView.TabView view = tabBar.getNewTabView();
-    	
-    	//Initialize some basic properties
-    	view.setGravity(Gravity.CENTER);
-    	view.setBackgroundColor(getResources().getColor(R.color.activity_background));
-    	view.setBackgroundDrawable(getResources().getDrawable(R.drawable.tab_indicator_ab_holo));
-    	
-    	//Get the text view
-    	TextView textView = (TextView) view.getChildAt(0);
-    	
-    	//Set up the text view
-    	textView.setText(title);
-    	textView.setTextColor(getResources().getColor(R.color.tab_text_color));
-    	textView.setTypeface(Typeface.DEFAULT_BOLD);
-    	textView.setTextSize(12);
-    	
-    	//Ensure that the tabs automatically scroll at some point
-    	view.setMinimumWidth((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80, getResources().getDisplayMetrics()));
-    	
-    	//Make sure that we can detect tab selection events
-    	view.setOnClickListener(tabBar.getTabClickListener());
-    }
-	
-	/**
-	 * Adds a tab to the tab bar
-	 * 
-	 * @param title
-	 * @param meta
-	 */
-	private void addTab(String title, FileMeta meta) {
-		//Obtain a tab
-    	ActionBar.Tab tab = getSupportActionBar().newTab();
-    	//Set the tab text
-    	tab.setText(title);
-    	
-    	//Add the tab
-    	tabBar.addTab(tab);
-    	tabs.put(tab, meta);
-    	
-    	//Make the tab non-all-caps
-    	customizeTab(tab, title);
-    }
+//	/**
+//	 * Makes the tab non-all-caps (very hacky)
+//	 * 
+//	 * @param tab
+//	 * @param title
+//	 */
+//	@SuppressWarnings("deprecation")
+//	private void customizeTab(Tab tab, String title) {
+//		//Hacky way of making the tabs non-all-caps
+//		//Theoretically, we could do some other stuff here, too...
+//		
+//		//Get the tab view
+//		LinearLayoutCompat view = (LinearLayoutCompat) tabBar.getNewTabView();
+//    	
+//    	//Initialize some basic properties
+//    	view.setGravity(Gravity.CENTER);
+//    	view.setBackgroundColor(getResources().getColor(R.color.activity_background));
+//    	view.setBackgroundDrawable(getResources().getDrawable(R.drawable.abc_tab_indicator_mtrl_alpha));
+//    	
+//    	//Get the text view
+//    	TextView textView = (TextView) view.getChildAt(0);
+//    	
+//    	//Set up the text view
+//    	textView.setText(title);
+//    	textView.setTextColor(getResources().getColor(R.color.tab_text_color));
+//    	textView.setTypeface(Typeface.DEFAULT_BOLD);
+//    	textView.setTextSize(12);
+//    	
+//    	//Ensure that the tabs automatically scroll at some point
+//    	view.setMinimumWidth((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80, getResources().getDisplayMetrics()));
+//    	
+//    	//Make sure that we can detect tab selection events
+//    	view.setOnClickListener(tabBar.getTabClickListener());
+//    }
     
 	/**
 	 * Creates a user input dialog for renaming the current tab
 	 */
     private void renameTab() {
     	if(tabs.size() > 0 && !getGlobalState().isExample())
-    		createInputDialog(getResources().getString(R.string.tab_rename_dialog_title), getResources().getString(R.string.tab_rename_dialog_message), tabBar.getSelectedTab().getText().toString(), RENAME_TAB);
+    		createInputDialog(getResources().getString(R.string.tab_rename_dialog_title), getResources().getString(R.string.tab_rename_dialog_message), getSelectedSketchFile().getTitle(), RENAME_TAB);
     }
     
     /**
@@ -2955,8 +2954,9 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	File file = new File(sketchLoc + "/", filename);
     	
     	//Delete the file
-    	if(file.exists()) {
+    	if (file.exists()) {
     		file.delete();
+			
     		return true;
     	}
     	
@@ -2967,52 +2967,46 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     private void deleteTabContinue() {
     	if(tabs.size() > 0) {
     		//Get the tab
-    		Tab cur = tabBar.getSelectedTab(); //TODO there'll be problems here for sure
+//    		Tab cur = tabBar.getSelectedTab(); //TODO there'll be problems here for sure
     		//Delete the tab from the sketch folder
-    		deleteLocalFile(tabs.get(cur).getFilename());
-    		//Disable the tab
-    		tabs.get(cur).disable();
+    		deleteLocalFile(getSelectedSketchFile().getFilename());
+			//Disable the tab
+//    		tabs.get(cur).disable();
+			getSelectedSketchFile().disable();
     		//Remove the tab
-    		tabBar.removeSelectedTab();
-	    	tabs.remove(cur);
+//    		tabBar.removeSelectedTab();
+			
+			// We have to do this whole hop-skip thing because of peculiarities in the PagerSlidingTabStrip library...
+			selectCode(getSelectedCodeIndex() - 1);
+			tabs.remove(getSelectedCodeIndex() + 1);
+//	    	tabs.remove(cur);
 	    	
 	    	//If there are no more tabs
-	    	if(tabBar.getTabCount() <= 0) {
-	    		//Clear the code text area
-		    	CodeEditText code = ((CodeEditText) findViewById(R.id.code));
-		    	code.setNoUndoText("");
-		    	code.setSelection(0);
-		    	
-		    	//Get rid of previous syntax highlighter data
-	    		code.clearTokens();
-	    		
-	    		//Disable the code text area if there is no selected tab
-		    	code.setFocusable(false);
-	    		code.setFocusableInTouchMode(false);
+	    	if(getCodeCount() <= 0) {
+//	    		//Clear the code text area
+//		    	CodeEditText code = ((CodeEditText) findViewById(R.id.code));
+//		    	code.setNoUndoText("");
+//		    	code.setSelection(0);
+//		    	
+//		    	//Get rid of previous syntax highlighter data
+//	    		code.clearTokens();
+//	    		
+//	    		//Disable the code text area if there is no selected tab
+//		    	code.setFocusable(false);
+//	    		code.setFocusableInTouchMode(false);
 	    		
 	    		//Force remove all tabs
-	    		tabBar.removeAllTabs();
+//	    		tabBar.removeAllTabs();
 	    		tabs.clear();
 	    		
 	    		//Force action menu refresh
 	    		supportInvalidateOptionsMenu();
 	    	}
-	    	
+		
+			codePagerAdapter.notifyDataSetChanged();
+			
 	    	//Inform the user in the message area
 	    	message(getResources().getText(R.string.tab_deleted));
-    	}
-    }
-    
-    /**
-     * Force remove all tabs
-     */
-    public void removeAllTabs() {
-    	//Note: This method is used because it seems that nothing else works.
-    	
-    	Iterator<Tab> it = tabs.keySet().iterator();
-    	while(it.hasNext()) {
-			it.next();
-    		it.remove();
     	}
     }
     
@@ -3024,21 +3018,18 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	//Set the title and message
     	alert.setTitle(title);
     	alert.setMessage(message);
-    	
-    	//Create an input field
-    	final EditText input = new EditText(this);
-    	input.setSingleLine();
-    	input.setText(currentName);
-    	input.selectAll();
-    	
-    	//Add the input field
-    	alert.setView(input);
+		
+		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, currentName, true);
     	
     	//Add the "OK" button
     	alert.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {
     			String value = input.getText().toString();
     			checkInputDialog(key, true, value);
+				
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+				}
     		}
     	});
     	
@@ -3046,13 +3037,18 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {
     			checkInputDialog(key, false, "");
+				
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+				}
     		}
     	});
     	
     	//Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
     	AlertDialog dialog = alert.create();
-    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-    		dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+    	if(!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+			dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+		}
     	dialog.show();
     }
     
@@ -3067,15 +3063,17 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		switch(key) {
     		case RENAME_TAB:
     			//Get the tab
-    			Tab cur = tabBar.getSelectedTab();
+//    			Tab cur = tabBar.getSelectedTab();
     			//Delete the tab from the sketch folder
-    			deleteLocalFile(tabs.get(cur).getFilename());
+    			deleteLocalFile(getSelectedSketchFile().getFilename());
     			
     			//Change the tab as it is displayed
-    			((TextView) tabBar.getTabView(tabBar.getSelectedTab()).getChildAt(0)).setText(value); //This seems more complicated than it needs to be... but it's necessary to change the appearance of the tab name
-    			tabBar.getSelectedTab().setText(value);
-    			tabs.get(tabBar.getSelectedTab()).setTitle(value);
-    	    	
+//    			((TextView) ((LinearLayoutCompat) tabBar.getTabView(tabBar.getSelectedTab())).getChildAt(0)).setText(value); //This seems more complicated than it needs to be... but it's necessary to change the appearance of the tab name
+//    			tabBar.getSelectedTab().setText(value);
+//    			tabs.get(tabBar.getSelectedTab()).setTitle(value);
+    	    	getSelectedSketchFile().setTitle(value);
+				codePagerAdapter.notifyDataSetChanged();
+				
     	    	//Notify the user of success
     			message(getResources().getText(R.string.tab_renamed));
     			
@@ -3083,47 +3081,51 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     		case NEW_TAB:
     			if (value.endsWith(".java")) {
     				//Obtain a tab
-    		    	ActionBar.Tab tab = getSupportActionBar().newTab();
+//    		    	ActionBar.Tab tab = getSupportActionBar().newTab();
     		    	//Set the tab text
-    		    	tab.setText(value);
+//    		    	tab.setText(value);
     		    	
     		    	//Add the tab
-    		    	tabBar.addSelectTab(tab);
+//    		    	tabBar.addSelectTab(tab);
     		    	
     		    	//Correctly instantiate with a .JAVA suffix
-    		    	FileMeta meta = new FileMeta(value.substring(0, value.length() - 5));
+    		    	SketchFile meta = new SketchFile(value.substring(0, value.length() - 5));
     		    	meta.setSuffix(".java");
     		    	
-    		    	tabs.put(tab, meta);
+//    		    	tabs.put(tab, meta);
+					addTab(meta);
+					selectCode(getCodeCount() - 1);
     		    	
     		    	//Clear the code area
-    		    	((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
-    		    	((CodeEditText) findViewById(R.id.code)).clearTokens();
+//    		    	((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
+//    		    	((CodeEditText) findViewById(R.id.code)).clearTokens();
     		    	
     		    	//Make the tab non-all-caps
-    		    	customizeTab(tab, value);
+//    		    	customizeTab(tab, value);
     				
     				//Select the new tab
-    				tabBar.selectLastTab();
+//    				tabBar.selectLastTab();
+//					selectCode(getCodeCount() - 1);
     				//Perform a selection action
-    				onTabSelected(tabBar.getSelectedTab());
-    				
+//    				onTabSelected(tabBar.getSelectedTab());
     			} else {
     				//Add the tab
     				addTab(value);
     				//Select the new tab
-    				tabBar.selectLastTab();
+//    				tabBar.selectLastTab();
+					selectCode(getCodeCount() - 1);
     				//Perform a selection action
-    				onTabSelected(tabBar.getSelectedTab());
+//    				onTabSelected(tabBar.getSelectedTab());
     			}
     			
     			//Refresh options menu to remove "New Tab" button
-				if(tabBar.getTabCount() == 1)
+				if (getCodeCount() == 1) {
 					supportInvalidateOptionsMenu();
+				}
 				
 				//Make sure that the code area is editable
-				((CodeEditText) findViewById(R.id.code)).setFocusable(true);
-				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
+//				((CodeEditText) findViewById(R.id.code)).setFocusable(true);
+//				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
 				
 				//Notify the user of success
 				message(getResources().getText(R.string.tab_created));
@@ -3133,103 +3135,103 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
     	}
     }
     
-    public FileMeta getCurrentFileMeta() {
-    	return tabs.get(tabBar.getSelectedTab());
-    }
+//    public SketchFile getCurrentFileMeta() {
+//    	return tabs.get(tabBar.getSelectedTab());
+//    }
     
     public void clearUndoRedoHistory() {
-    	for (FileMeta meta : tabs.values()) {
+    	for (SketchFile meta : tabs) {
     		meta.clearUndoRedo();
     	}
     }
     
-	@Override
-	public void onTabSelected(Tab tab) {
-		//Get a reference to the code area
-		final CodeEditText code = ((CodeEditText) findViewById(R.id.code));
-		final HorizontalScrollView scrollerX = ((HorizontalScrollView) findViewById(R.id.code_scroller_x));
-		final ScrollView scrollerY = ((ScrollView) findViewById(R.id.code_scroller));
-		//Get a reference to the current tab's meta
-		final FileMeta meta = tabs.get(tab);
-		
-		if(tabBar.getTabCount() > 0 && meta != null) {
-			//If there are already tabs
-			
-			//Update the code area text
-			code.setNoUndoText(meta.getText());
-			//Update the code area selection
-			code.setSelection(meta.getSelectionStart(), meta.getSelectionEnd());
-			code.updateBracketMatch();
-			
-			scrollerX.post(new Runnable() {
-				public void run() {
-					scrollerX.scrollTo(meta.getScrollX(), 0);
-				}
-			});
-			
-			scrollerY.post(new Runnable() {
-				public void run() {
-					scrollerY.scrollTo(0, meta.getScrollY());
-				}
-			});
-			
-//			System.out.println("scrolling tab " + meta.getTitle() + ", scrollX: " + meta.getScrollX() + ", scrollY: " + meta.getScrollY());
-			
-			//Get rid of previous syntax highlighter data
-    		code.clearTokens();
-		} else {
-			//If this is selecting the first added tab
-			
-			//Re-enable the code text area
-	    	code.setEnabled(true);
-		}
-		
-		//Force action menu refresh
-		supportInvalidateOptionsMenu();
-	}
-	
-	@Override
-	public void onTabUnselected(Tab tab) {
-//		tabs.put(tab, new FileMeta(tab.getText().toString(), this));
-		getCurrentFileMeta().update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
-	}
-	
-	@Override
-	public void onTabReselected(Tab tab) {
-		if(!drawerOpen && !getGlobalState().isExample()) {
-			//Get a reference to the anchor view for the popup window
-			View anchorView = tabBar.getTabView(tabBar.getSelectedTab());
-			
-			//Create a PopupMenu anchored to a 0dp height "fake" view at the top if the display
-			//This is a custom implementation, designed to support API level 10+ (Android's PopupMenu is 11+)
-			PopupMenu popup = new PopupMenu(getGlobalState().getEditor(), anchorView);
-			
-			//Populate the actions
-			MenuInflater inflater = getMenuInflater();
-			inflater.inflate(R.menu.tab_actions, popup.getMenu());
-			
-			//Detect presses
-			popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-				@Override
-				public boolean onMenuItemClick(MenuItem item) {
-					switch(item.getItemId()) {
-					case R.id.menu_tab_new:
-						addTabWithDialog();
-						return true;
-					case R.id.menu_tab_rename:
-						renameTab();
-						return true;
-					case R.id.menu_tab_delete:
-						deleteTab();
-						return true;
-					}
-
-					return false;
-				}
-			});
-			popup.show();
-		}
-	}
+//	@Override
+//	public void onTabSelected(Tab tab) {
+//		//Get a reference to the code area
+//		final CodeEditText code = ((CodeEditText) findViewById(R.id.code));
+//		final HorizontalScrollView scrollerX = ((HorizontalScrollView) findViewById(R.id.code_scroller_x));
+//		final ScrollView scrollerY = ((ScrollView) findViewById(R.id.code_scroller));
+//		//Get a reference to the current tab's meta
+//		final SketchFile meta = tabs.get(tab);
+//		
+//		if(getCodeCount() > 0 && meta != null) {
+//			//If there are already tabs
+//			
+//			//Update the code area text
+//			code.setNoUndoText(meta.getText());
+//			//Update the code area selection
+//			code.setSelection(meta.getSelectionStart(), meta.getSelectionEnd());
+//			code.updateBracketMatch();
+//			
+//			scrollerX.post(new Runnable() {
+//				public void run() {
+//					scrollerX.scrollTo(meta.getScrollX(), 0);
+//				}
+//			});
+//			
+//			scrollerY.post(new Runnable() {
+//				public void run() {
+//					scrollerY.scrollTo(0, meta.getScrollY());
+//				}
+//			});
+//			
+////			System.out.println("scrolling tab " + meta.getTitle() + ", scrollX: " + meta.getScrollX() + ", scrollY: " + meta.getScrollY());
+//			
+//			//Get rid of previous syntax highlighter data
+//    		code.clearTokens();
+//		} else {
+//			//If this is selecting the first added tab
+//			
+//			//Re-enable the code text area
+//	    	code.setEnabled(true);
+//		}
+//		
+//		//Force action menu refresh
+//		supportInvalidateOptionsMenu();
+//	}
+//	
+//	@Override
+//	public void onTabUnselected(Tab tab) {
+////		tabs.put(tab, new SketchFile(tab.getText().toString(), this));
+//		getCurrentFileMeta().update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
+//	}
+//	
+//	@Override
+//	public void onTabReselected(Tab tab) {
+//		if(!drawerOpen && !getGlobalState().isExample()) {
+//			//Get a reference to the anchor view for the popup window
+//			View anchorView = (View) tabBar.getTabView(tabBar.getSelectedTab());
+//			
+//			//Create a PopupMenu anchored to a 0dp height "fake" view at the top if the display
+//			//This is a custom implementation, designed to support API level 10+ (Android's PopupMenu is 11+)
+//			PopupMenu popup = new PopupMenu(getGlobalState().getEditor(), anchorView);
+//			
+//			//Populate the actions
+//			MenuInflater inflater = getMenuInflater();
+//			inflater.inflate(R.menu.tab_actions, popup.getMenu());
+//			
+//			//Detect presses
+//			popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+//				@Override
+//				public boolean onMenuItemClick(MenuItem item) {
+//					switch(item.getItemId()) {
+//					case R.id.menu_tab_new:
+//						addTabWithDialog();
+//						return true;
+//					case R.id.menu_tab_rename:
+//						renameTab();
+//						return true;
+//					case R.id.menu_tab_delete:
+//						deleteTab();
+//						return true;
+//					}
+//
+//					return false;
+//				}
+//			});
+//			popup.show();
+//		}
+//	}
 	
 	/**
 	 * @return whether or not we can write to the external storage
@@ -3243,33 +3245,33 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	//Called internally to determine if a file / tab name is valid
 	protected boolean validateFileName(String title) {
 		//Make sure that the tab name's length > 0
-		if(title.length() <= 0) {
+		if (title.length() <= 0) {
 			error(getResources().getText(R.string.name_invalid_no_char));
 			return false;
 		}
 		
 		//Check to make sure that the first character isn't a number and isn't an underscore
 		char first = title.charAt(0);
-		if((first >= '0' && first <= '9') || first == '_') {
+		if ((first >= '0' && first <= '9') || first == '_') {
 			error(getResources().getText(R.string.name_invalid_first_char));
 			return false;
 		}
 		
 		//Check all of the characters
-		for(int i = 0; i < title.length(); i ++) {
+		for (int i = 0; i < title.length(); i ++) {
 			char c = title.charAt(i);
-			if(c >= '0' && c <= '9') continue;
-			if(c >= 'a' && c <= 'z') continue;
-			if(c >= 'A' && c <= 'Z') continue;
-			if(c == '_') continue;
+			if (c >= '0' && c <= '9') continue;
+			if (c >= 'a' && c <= 'z') continue;
+			if (c >= 'A' && c <= 'Z') continue;
+			if (c == '_') continue;
 			
 			error(getResources().getText(R.string.name_invalid_char));
 			return false;
 		}
 		
 		//Make sure that this file / tab doesn't already exist
-		for(FileMeta meta : tabs.values()) {
-			if(meta.getTitle().equals(title)) {
+		for (SketchFile meta : tabs) {
+			if (meta.getTitle().equals(title)) {
 				error(getResources().getText(R.string.name_invalid_same_title));
 				return false;
 			}
@@ -3374,10 +3376,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	
 	//Called internally to open the Settings activity
 	private void launchSettings() {
-		if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB)
-			startActivity(new Intent(this, SettingsActivity.class));
-		else
-			startActivity(new Intent(this, SettingsActivityHC.class));
+		startActivity(new Intent(this, SettingsActivityHC.class));
 	}
 	
 	/**
@@ -3405,13 +3404,15 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		importList += "\n";
 		
 		//Sanity check
-		if(tabBar.getTabCount() <= 0)
+		if(getCodeCount() <= 0)
 			return;
 		
 		//Select the first tab
-		tabBar.selectTab(0);
+//		tabBar.selectTab(0);
+		selectCode(0);
 		
-		CodeEditText code = (CodeEditText) findViewById(R.id.code);
+//		CodeEditText code = (CodeEditText) findViewById(R.id.code);
+		CodeEditText code = getSelectedCodeArea();
 		
 		//Select the top
 		code.setSelection(0);
@@ -3445,20 +3446,21 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 	}
 	
 	/**
-	 * @return a map of tabs to their metas
+	 * @return an ArrayList of SketchFile tabs
 	 */
-	public HashMap<Tab, FileMeta> getTabs() {
+	public ArrayList<SketchFile> getSketchFiles() {
 		return tabs;
 	}
 	
 	/**
-	 * @return an array containing all of the tabs' FileMeta objects
+	 * @return an array containing all of the tabs' SketchFile objects
 	 */
-	public FileMeta[] getTabMetas() {
-		FileMeta[] metas = new FileMeta[tabBar.getTabCount()];
+	public SketchFile[] getTabMetas() {
+		SketchFile[] metas = new SketchFile[getCodeCount()];
 		
-		for(int i = 0; i < tabBar.getTabCount(); i ++)
-			metas[i] = tabs.get(tabBar.getTab(i));
+		for (int i = 0; i < getCodeCount(); i ++) {
+			metas[i] = tabs.get(i);
+		}
 		
 		return metas;
 	}
@@ -3476,36 +3478,35 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		
 		final TextView tv = (TextView) findViewById(R.id.console);
 		
-		//	Add the text
+		// Add the text
 		tv.append(msg);
 		
 		final ScrollView scroll = ((ScrollView) findViewById(R.id.console_scroller));
 		final HorizontalScrollView scrollX = ((HorizontalScrollView) findViewById(R.id.console_scroller_x));
 		
-		//	Scroll to the bottom (if the user has this feature enabled)
+		// Scroll to the bottom (if the user has this feature enabled)
 		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_scroll_lock", true))
 			scroll.post(new Runnable() {
 				@Override
 				public void run() {
-					//	Scroll to the bottom
+					// Scroll to the bottom
 					scroll.fullScroll(ScrollView.FOCUS_DOWN);
 					
 					scrollX.post(new Runnable() {
 						public void run() {
-							//	Don't scroll horizontally at all...
-							//	TODO This doesn't really work
+							// Don't scroll horizontally at all...
+							// TODO This doesn't really work
 							scrollX.scrollTo(0, 0);
 						}
 					});
 			}});
 	}
 	
-	//	Listener class for managing message area drag events
+	// Listener class for managing message area drag events
 	public class MessageTouchListener implements android.view.View.OnLongClickListener, android.view.View.OnTouchListener {
 		private boolean pressed;
 		private int touchOff;
 		
-		private View code;
 		private View console;
 		private View content;
 		
@@ -3514,8 +3515,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			
 			pressed = false;
 			
-			//	Store necessary views globally
-			code = findViewById(R.id.code_scroller);
+			// Store necessary views globally
 			console = findViewById(R.id.console_scroller);
 			content = findViewById(R.id.content);
 		}
@@ -3523,38 +3523,45 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		@SuppressWarnings("deprecation")
 		@Override
 		public boolean onTouch(View view, MotionEvent event) {
-			//	Don't resize the console if there is no console to speak of
+			// Don't resize the console if there is no console to speak of
 			if(keyboardVisible)
 				return false;
 			
-			//	Get the offset relative to the touch
+			// Get the offset relative to the touch
 			if(event.getAction() == MotionEvent.ACTION_DOWN)
 				touchOff = (int) event.getY();
 			
 			if(pressed) {
 				switch(event.getAction()) {
 				case MotionEvent.ACTION_MOVE:
-					if(message == -1)
-						message = findViewById(R.id.message).getHeight();
+					if(message == -1) {
+						message = findViewById(R.id.buffer).getHeight();
+					}
 					
-					//	Calculate maximum possible code view height
-					int maxCode = content.getHeight() - message - tabBar.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+					// An important note for understanding the following code:
+					// The tab bar is actually inside the code area pager, so the height of "code"
+					// includes the height of the tab bar
 					
-					//	Find relative movement for this event
+					// Calculate maximum possible code view height
+					int maxCode = content.getHeight() - message - codeTabStrip.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+					
+					// Find relative movement for this event
 					int y = (int) event.getY() - touchOff;
 					
 					//Calculate the new dimensions of the console
 					int consoleDim = console.getHeight() - y;
-					if(consoleDim < 0)
+					if (consoleDim < 0) {
 						consoleDim = 0;
-					if(consoleDim > maxCode)
+					}
+					if (consoleDim > maxCode) {
 						consoleDim = maxCode;
+					}
 					
-					//	Calculate the new dimensions of the code view
+					// Calculate the new dimensions of the code view
 					int codeDim = maxCode - consoleDim;
 					
-					//	Set the new dimensions
-					code.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim));
+					// Set the new dimensions
+					codePager.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim + codeTabStrip.getHeight()));
 					console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
 					
 					firstResize = false;
@@ -3570,7 +3577,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 					LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
 					TextView messageArea = (TextView) findViewById(R.id.message);
 					
-					//	Change the message area drawable and maintain styling
+					// Change the message area drawable and maintain styling
 					if(errorMessage) {
 						buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
 						messageArea.setTextColor(getResources().getColor(R.color.error_text));
@@ -3589,7 +3596,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		@SuppressWarnings("deprecation")
 		@Override
 		public boolean onLongClick(View view) {
-			//	Don't resize the console if there is no console to speak of
+			// Don't resize the console if there is no console to speak of
 			if(keyboardVisible)
 				return false;
 			
@@ -3598,7 +3605,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 			LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
 			TextView messageArea = (TextView) findViewById(R.id.message);
 			
-			//	Change the message area drawable and maintain styling
+			// Change the message area drawable and maintain styling
 			if(errorMessage) {
 				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error_selected));
 				messageArea.setTextColor(getResources().getColor(R.color.error_text));
@@ -3607,7 +3614,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 				messageArea.setTextColor(getResources().getColor(R.color.message_text));
 			}
 			
-			//	Provide haptic feedback (if the user has vibrations enabled)
+			// Provide haptic feedback (if the user has vibrations enabled)
 			if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_vibrate", true))
 				((android.os.Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(200); //200 millis
 			
@@ -3615,7 +3622,7 @@ public class EditorActivity extends ActionBarActivity implements ScrollingTabCon
 		}
 	}
 	
-	//	Custom console output stream, used for System.out and System.err
+	// Custom console output stream, used for System.out and System.err
 	private class ConsoleStream extends OutputStream {
 		final byte single[] = new byte[1];
 		

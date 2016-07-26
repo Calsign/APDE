@@ -1,14 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheckedTextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/permissions_list_item"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="5dp"
-    android:textIsSelectable="false"
-    android:textSize="14sp"
-    android:button="@null"
-    android:drawableRight="@drawable/btn_check_holo_dark"
-    android:clickable="false"
-    android:gravity="center_vertical"
-    android:checked="false"
-    android:singleLine="true" />
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:id="@+id/permissions_list_item"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:background="?attr/selectableItemBackground" >
+     
+    <CheckBox android:id="@+id/permissions_list_item_checkbox"
+              android:layout_width="wrap_content"
+              android:layout_height="match_parent"
+              android:layout_gravity="center_vertical"
+              android:layout_alignParentRight="true"
+              android:text=""
+              android:padding="5dp" />
+     
+    <TextView android:id="@+id/permissions_list_item_label"
+              android:layout_width="wrap_content"
+              android:layout_height="match_parent"
+              android:layout_gravity="center_vertical"
+              android:layout_alignParentLeft="true"
+              android:layout_toLeftOf="@id/permissions_list_item_checkbox"
+              android:layout_centerVertical="true"
+              android:textIsSelectable="false"
+              android:textSize="14sp"
+              android:singleLine="true"
+              android:background="?attr/selectableItemBackground"
+              android:padding="8dp" />
+</RelativeLayout>

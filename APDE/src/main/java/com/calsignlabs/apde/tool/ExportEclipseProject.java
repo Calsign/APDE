@@ -1,9 +1,5 @@
 package com.calsignlabs.apde.tool;
 
-import java.io.File;
-
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.view.MenuItem;
 import android.widget.TextView;
 
@@ -11,6 +7,8 @@ import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.build.Build;
+
+import java.io.File;
 
 /**
  * Exports the current sketch as an Eclipse-compatible Android project
@@ -42,19 +40,9 @@ public class ExportEclipseProject implements Tool {
     		break;
     	case SKETCHBOOK:
     	case EXTERNAL:
+		case TEMPORARY:
     		context.getEditor().saveSketch();
     		break;
-    	case TEMPORARY:
-    		//If the sketch has yet to be saved, inform the user
-    		AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
-    		builder.setTitle(context.getResources().getText(R.string.save_sketch_before_run_dialog_title))
-    		.setMessage(context.getResources().getText(R.string.save_sketch_before_run_dialog_message)).setCancelable(false)
-    		.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-    			@Override
-    			public void onClick(DialogInterface dialog, int which) {}
-    		}).show();
-    		
-    		return;
     	}
 		
 		//Don't try to export if we're already exporting...
