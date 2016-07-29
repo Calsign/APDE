@@ -186,27 +186,24 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			((RelativeLayout) convertView).setGravity(Gravity.CENTER_VERTICAL);
 		}
 		
-		//TODO Find out how to support 2.3.3...
-		if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.HONEYCOMB) {
-			convertView.setTag(item);
-			//We need the listener for all of the views because they get mixed up when they get recycled
-			//Unfortunately, this means that everything becomes a lot slower...
-			convertView.setOnDragListener(folderDragListener);
-			
-			//Store last touch coordinates
-			if(item.isDraggable()) {
-				convertView.setOnTouchListener(new View.OnTouchListener() {
-					@Override
-					public boolean onTouch(View view, MotionEvent event) {
-						if(event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-							dragPressX = event.getX();
-							dragPressY = event.getY();
-						}
-						
-						return false;
+		convertView.setTag(item);
+		//We need the listener for all of the views because they get mixed up when they get recycled
+		//Unfortunately, this means that everything becomes a lot slower...
+		convertView.setOnDragListener(folderDragListener);
+		
+		//Store last touch coordinates
+		if(item.isDraggable()) {
+			convertView.setOnTouchListener(new View.OnTouchListener() {
+				@Override
+				public boolean onTouch(View view, MotionEvent event) {
+					if(event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+						dragPressX = event.getX();
+						dragPressY = event.getY();
 					}
-				});
-			}
+					
+					return false;
+				}
+			});
 		}
 		
 		return convertView;
@@ -606,12 +603,6 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			return false;
 		}
 		
-//		//We can't have the name "sketch"
-//		if (name.equals(APDE.DEFAULT_SKETCH_NAME)) {
-//			showDialog(R.string.invalid_name, R.string.invalid_name_sketch_sketch, activityContext);
-//			return false;
-//		}
-		
 		return true;
 	}
 	
@@ -636,16 +627,13 @@ public class FileNavigatorAdapter extends BaseAdapter {
 	
 	@SuppressLint("NewApi")
 	public boolean onLongClickItem(final View view, int position) {
-		//TODO Find out how to support 2.3.3...
-		if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.HONEYCOMB) {
-			FileItem item = getItem(position);
+		FileItem item = getItem(position);
+		
+		if(item.isDraggable()) {
+			startDrag(item, view);
+			draggingIsSelected = position == selected;
 			
-			if(item.isDraggable()) {
-				startDrag(item, view);
-				draggingIsSelected = position == selected;
-				
-				return true;
-			}
+			return true;
 		}
 		
 		return false;
@@ -654,17 +642,16 @@ public class FileNavigatorAdapter extends BaseAdapter {
 	private static View.OnDragListener folderDragListener;
 	
 	static {
-		if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.HONEYCOMB) {
-			folderDragListener = new View.OnDragListener() {
-				private Handler delayHandler = new Handler();
+		folderDragListener = new View.OnDragListener() {
+			private Handler delayHandler = new Handler();
+			
+			@SuppressLint("NewApi")
+			@SuppressWarnings("deprecation")
+			@Override
+			public boolean onDrag(View view, DragEvent event) {
+				final FileItem item = (FileItem) view.getTag();
 				
-				@SuppressLint("NewApi")
-				@SuppressWarnings("deprecation")
-				@Override
-				public boolean onDrag(View view, DragEvent event) {
-					final FileItem item = (FileItem) view.getTag();
-					
-					switch(event.getAction()) {
+				switch(event.getAction()) {
 					case DragEvent.ACTION_DRAG_STARTED:
 						if(event.getClipDescription().hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
 							//When scrolling, views are recycled and it makes a mess...
@@ -683,7 +670,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 						}
 						
 						return false;
-						
+					
 					case DragEvent.ACTION_DRAG_ENTERED:
 						//When scrolling, views are recycled and it makes a mess...
 						if(item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
@@ -724,10 +711,10 @@ public class FileNavigatorAdapter extends BaseAdapter {
 						//				}, 1000);
 						
 						return true;
-						
+					
 					case DragEvent.ACTION_DRAG_LOCATION:
 						return true;
-						
+					
 					case DragEvent.ACTION_DRAG_EXITED:
 						//Don't flip out if we've navigated out of this folder...
 						//When scrolling, views are recycled and it makes a mess...
@@ -742,7 +729,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 						delayHandler.removeCallbacksAndMessages(null);
 						
 						return true;
-						
+					
 					case DragEvent.ACTION_DROP:
 						//Don't flip out if we've navigated out of this folder...
 						//When scrolling, views are recycled and it makes a mess...
@@ -758,7 +745,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 						}
 						
 						return true;
-						
+					
 					case DragEvent.ACTION_DRAG_ENDED:
 						//Don't flip out if we've navigated out of this folder...
 						//When scrolling, views are recycled and it makes a mess...
@@ -781,12 +768,11 @@ public class FileNavigatorAdapter extends BaseAdapter {
 						delayHandler.removeCallbacksAndMessages(null);
 						
 						return true;
-					}
-					
-					return false;
 				}
-			};
-		}
+				
+				return false;
+			}
+		};
 	}
 	
 	@Override

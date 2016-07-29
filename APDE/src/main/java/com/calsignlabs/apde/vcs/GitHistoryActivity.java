@@ -25,7 +25,7 @@ import android.widget.Toast;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.R;
-import com.calsignlabs.apde.SettingsActivityHC;
+import com.calsignlabs.apde.SettingsActivity;
 
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
@@ -378,7 +378,7 @@ public class GitHistoryActivity extends AppCompatActivity {
 	}
 	
 	private void launchSettings() {
-		startActivity(new Intent(this, SettingsActivityHC.class));
+		startActivity(new Intent(this, SettingsActivity.class));
 	}
 	
 	public static class CommitListFragment extends Fragment {

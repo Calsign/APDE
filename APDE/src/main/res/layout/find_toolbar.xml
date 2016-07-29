@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/find_replace_toolbar"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical" >
+              android:id="@+id/find_replace_toolbar"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical" >
     
     <RelativeLayout
         android:id="@+id/find_replace_find_bar"
@@ -81,7 +81,7 @@
             android:layout_toLeftOf="@+id/find_replace_expand_collapse_wrapper"
             android:contentDescription="@string/replace_all"
             style="@style/Widget.AppCompat.Light.ActionButton" />
-
+        
         <!-- Wrapper layout so that we can change the background
              without getting rid of the fancy button press drawables -->
         <FrameLayout
@@ -92,7 +92,7 @@
             android:layout_alignTop="@id/find_replace_replace_text"
             android:layout_alignBottom="@id/find_replace_replace_text"
             android:layout_alignParentRight="true" >
-
+            
             <ImageButton
                 android:id="@+id/find_replace_expand_collapse"
                 android:layout_width="wrap_content"

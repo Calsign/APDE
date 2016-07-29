@@ -303,49 +303,45 @@ public class CodeEditText extends EditText {
 		final ArrayList<Tool> tools = ((APDE) context.getApplicationContext()).getTools();
 		final HashMap<MenuItem, Tool> callbacks = new HashMap<MenuItem, Tool>();
 		
-		if(android.os.Build.VERSION.SDK_INT >= 11) {
-			setCustomSelectionActionModeCallback(new ActionMode.Callback() {
-				@Override
-				public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-					for(Tool tool : tools) {
-						MenuItem item = menu.add(tool.getMenuTitle());
-						
-						if(tool.createSelectionActionModeMenuItem(item)) {
-							callbacks.put(item, tool);
-						} else {
-							//Get rid of it
-							//It would be better if it was gone all together instead of just hidden...
-							item.setVisible(false);
-						}
+		setCustomSelectionActionModeCallback(new ActionMode.Callback() {
+			@Override
+			public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+				for(Tool tool : tools) {
+					MenuItem item = menu.add(tool.getMenuTitle());
+					
+					if(tool.createSelectionActionModeMenuItem(item)) {
+						callbacks.put(item, tool);
+					} else {
+						//Get rid of it
+						//It would be better if it was gone all together instead of just hidden...
+						item.setVisible(false);
 					}
+				}
+				
+				return true;
+			}
+			
+			@Override
+			public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+				return false;
+			}
+			
+			@Override
+			public void onDestroyActionMode(ActionMode mode) {}
+			
+			@Override
+			public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+				Tool callback = callbacks.get(item);
+				
+				if(callback != null) {
+					callback.run();
 					
 					return true;
 				}
 				
-				@Override
-				public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-					return false;
-				}
-				
-				@Override
-				public void onDestroyActionMode(ActionMode mode) {}
-				
-				@Override
-				public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-					Tool callback = callbacks.get(item);
-					
-					if(callback != null) {
-						callback.run();
-						
-						return true;
-					}
-					
-					return false;
-				}
-			});
-		} else {
-			//They're just going to have to deal with it
-		}
+				return false;
+			}
+		});
 	}
 	
 	public void startSelectionActionMode() {

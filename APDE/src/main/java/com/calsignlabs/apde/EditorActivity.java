@@ -442,37 +442,35 @@ public class EditorActivity extends AppCompatActivity {
 		});
         
         // TODO This scrolling is currently somewhat choppy because we have a drag listener for every item to deal with ListView item recycling
-        if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.HONEYCOMB) {
-        	drawerList.setOnDragListener(new View.OnDragListener() {
-        		final float THRESHOLD = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 100, getResources().getDisplayMetrics());
-        		
-        		@Override
-        		public boolean onDrag(View view, DragEvent event) {
-        			// If the dragged item is nearing the edges, scroll to see more content
-        			// Dragged items will be sketches / folders
-        			
-        			switch(event.getAction()) {
-        			case DragEvent.ACTION_DRAG_LOCATION:
-        				float y = event.getY();
-        				float h = drawerList.getHeight();
-        				
-        				float upDif = y - THRESHOLD;
-        				float downDif = y - (h - THRESHOLD);
-        				
-        				if(upDif < 0) {
-        					drawerList.smoothScrollBy((int) upDif, 300);
-        				}
-        				if(downDif > 0) {
-        					drawerList.smoothScrollBy((int) upDif, 300);
-        				}
-        				
-        				break;
-        			}
-        			
-        			return true;
-        		}
-        	});
-        }
+		drawerList.setOnDragListener(new View.OnDragListener() {
+			final float THRESHOLD = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 100, getResources().getDisplayMetrics());
+			
+			@Override
+			public boolean onDrag(View view, DragEvent event) {
+				// If the dragged item is nearing the edges, scroll to see more content
+				// Dragged items will be sketches / folders
+				
+				switch(event.getAction()) {
+					case DragEvent.ACTION_DRAG_LOCATION:
+						float y = event.getY();
+						float h = drawerList.getHeight();
+						
+						float upDif = y - THRESHOLD;
+						float downDif = y - (h - THRESHOLD);
+						
+						if(upDif < 0) {
+							drawerList.smoothScrollBy((int) upDif, 300);
+						}
+						if(downDif > 0) {
+							drawerList.smoothScrollBy((int) upDif, 300);
+						}
+						
+						break;
+				}
+				
+				return true;
+			}
+		});
         
         // Enable the home button, the "home as up" will actually get replaced by the drawer toggle button
         getSupportActionBar().setHomeButtonEnabled(true);
@@ -642,11 +640,7 @@ public class EditorActivity extends AppCompatActivity {
 			
 			final RelativeLayout layout;
 			
-			if (android.os.Build.VERSION.SDK_INT >= 11) {
-				layout = (RelativeLayout) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Holo_Dialog), R.layout.whats_new, null);
-			} else {
-				layout = (RelativeLayout) View.inflate(new ContextThemeWrapper(this, android.R.style.Theme_Dialog), R.layout.whats_new, null);
-			}
+			layout = (RelativeLayout) View.inflate(new ContextThemeWrapper(this, R.style.Theme_AppCompat_Dialog), R.layout.whats_new, null);
 			
 			final ListView list = (ListView) layout.findViewById(R.id.whats_new_list);
 			final Button loadMore = (Button) layout.findViewById(R.id.whats_new_more);
@@ -984,14 +978,9 @@ public class EditorActivity extends AppCompatActivity {
         int minWidth;
 		int maxWidth;
 		
-		//Let's try and do things correctly for once
-		if(android.os.Build.VERSION.SDK_INT >= 13) {
-			Point point = new Point();
-			getWindowManager().getDefaultDisplay().getSize(point);
-			maxWidth = point.x;
-		} else {
-			maxWidth = getWindowManager().getDefaultDisplay().getWidth();
-		}
+		Point point = new Point();
+		getWindowManager().getDefaultDisplay().getSize(point);
+		maxWidth = point.x;
 		
 		//Remove padding
 		minWidth = maxWidth - (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
@@ -1114,27 +1103,13 @@ public class EditorActivity extends AppCompatActivity {
     	// ...and yes, I know that META and FUNCTION map to the same value...
     	// ...but we can't exactly map CTRL+S to SHIFT+S, now can we?
     	
-    	boolean ctrl;
-		boolean meta;
-		boolean func;
+    	boolean ctrl = event.isCtrlPressed();
+		boolean meta = event.isMetaPressed();
+		boolean func = event.isFunctionPressed();
 		
 		boolean alt = event.isAltPressed();
     	boolean sym = event.isSymPressed();
     	boolean shift = event.isShiftPressed();
-		
-    	if(android.os.Build.VERSION.SDK_INT >= 11) {
-    		//Read these values on API 11+
-    		
-    		ctrl = event.isCtrlPressed();
-    		meta = event.isMetaPressed();
-    		func = event.isFunctionPressed();
-    	} else {
-    		//Map these values to other ones on API 10 (app minimum)
-    		
-    		ctrl = alt;
-    		meta = sym;
-    		func = sym;
-    	}
     	
     	//Check for the key bindings
     	//...this is where functional programming would come in handy
@@ -2385,14 +2360,7 @@ public class EditorActivity extends AppCompatActivity {
     	
     	//This works for now... as far as I can tell
     	final int keyboardID = 0;
-    	
-//    	if(android.os.Build.VERSION.SDK_INT >= 11)
-//    		//Hopefully this is the right keyboard...
-//    		keyboardID = KeyCharacterMap.VIRTUAL_KEYBOARD;
-//    	else
-//    		//...and hopefully this will be sufficient for pre-Honeycomb devices
-//    		keyboardID = KeyCharacterMap.BUILT_IN_KEYBOARD;
-    	
+		
     	//Add each button to the container
     	for(final String c : chars) {
     		Button button = (Button) LayoutInflater.from(this).inflate(R.layout.char_insert_button, null);
@@ -3376,7 +3344,7 @@ public class EditorActivity extends AppCompatActivity {
 	
 	//Called internally to open the Settings activity
 	private void launchSettings() {
-		startActivity(new Intent(this, SettingsActivityHC.class));
+		startActivity(new Intent(this, SettingsActivity.class));
 	}
 	
 	/**

@@ -422,7 +422,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 	}
 	
 	private void launchSettings() {
-		startActivity(new Intent(this, SettingsActivityHC.class));
+		startActivity(new Intent(this, SettingsActivity.class));
 	}
 	
 	private void launchPermissions() {
@@ -476,11 +476,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		//Alt text for the big icon
 		final TextView bigIconAltText = (TextView) changeIconLayout.findViewById(R.id.big_icon_alt_text);
 		
-		if (android.os.Build.VERSION.SDK_INT >= 14) {
-			bigIconAltText.setAllCaps(true);
-		} else {
-			bigIconAltText.setText(getResources().getString(R.string.icon_file_not_selected).toUpperCase(Locale.US));
-		}
+		bigIconAltText.setAllCaps(true);
 		
 		builder.setView(changeIconLayout);
 		

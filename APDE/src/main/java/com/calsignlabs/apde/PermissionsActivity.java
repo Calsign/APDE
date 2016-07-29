@@ -248,11 +248,7 @@ public class PermissionsActivity extends AppCompatActivity {
     }
 	
 	private void launchSettings() {
-//		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.HONEYCOMB) {
-//			startActivity(new Intent(this, SettingsActivity.class));
-//		} else {
-			startActivity(new Intent(this, SettingsActivityHC.class));
-//		}
+		startActivity(new Intent(this, SettingsActivity.class));
 	}
 	
 	public void newPermission() {

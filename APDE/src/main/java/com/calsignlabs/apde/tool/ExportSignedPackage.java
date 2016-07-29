@@ -214,10 +214,7 @@ public class ExportSignedPackage implements Tool {
 						TextView messageTextView = (TextView) infoDialog.findViewById(android.R.id.message);
 						messageTextView.setTextSize(12);
 						
-						//Stupid 2.3.3...
-						if (android.os.Build.VERSION.SDK_INT >= 11) {
-							messageTextView.setTextIsSelectable(true);
-						}
+						messageTextView.setTextIsSelectable(true);
 						
 						//Don't dismiss the dialog!!
 					}
@@ -886,14 +883,7 @@ public class ExportSignedPackage implements Tool {
 		ArrayList<String> keystores = getRecentKeystores();
 		
 		if(keystores.size() > 0) {
-			//API level 10 is yucky...
-			if (android.os.Build.VERSION.SDK_INT >= 11) {
-				keystoreAdapter.addAll(keystores);
-			} else {
-				for (String recentKeystore : keystores) {
-					keystoreAdapter.add(recentKeystore);
-				}
-			}
+			keystoreAdapter.addAll(keystores);
 		}
 	}
 	
@@ -902,15 +892,8 @@ public class ExportSignedPackage implements Tool {
 		aliasAdapter.clear();
 		
 		if (aliases.size() > 0) {
-			//API level 10 is yucky...
-			if (android.os.Build.VERSION.SDK_INT >= 11) {
-				//I think this is better performance than doing them individually
-				aliasAdapter.addAll(aliases);
-			} else {
-				for (String al : aliases) {
-					aliasAdapter.add(al);
-				}
-			}
+			// I think this is better performance than doing them individually
+			aliasAdapter.addAll(aliases);
 			
 			alias.setEnabled(true);
 		} else {

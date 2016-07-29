@@ -19,7 +19,7 @@ import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.preference.Preference;
 
-import com.calsignlabs.apde.SettingsActivityHC;
+import com.calsignlabs.apde.SettingsActivity;
 import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompat;
 
 @SuppressLint("NewApi")
@@ -36,8 +36,8 @@ public class StockPreferenceFragment extends PreferenceFragmentCompat {
 		addPreferencesFromResource(res);
 		
 		//Hacky way of letting the host activity do what it wants with the preferences
-		if(getActivity() instanceof SettingsActivityHC) {
-			((SettingsActivityHC) getActivity()).checkPreferences(this);
+		if(getActivity() instanceof SettingsActivity) {
+			((SettingsActivity) getActivity()).checkPreferences(this);
 		}
 	}
 	

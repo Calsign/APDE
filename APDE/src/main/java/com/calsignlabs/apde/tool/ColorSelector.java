@@ -178,12 +178,8 @@ public class ColorSelector implements Tool {
 				@SuppressLint("NewApi")
 				@Override
 				public void onClick(View view) {
-					if(android.os.Build.VERSION.SDK_INT >= 11) {
-						((android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE))
-								.setPrimaryClip(android.content.ClipData.newPlainText(context.getResources().getString(R.string.hex_color), hex.getText()));
-					} else {
-						((android.text.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE)).setText(hex.getText());
-					}
+					((android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE))
+							.setPrimaryClip(android.content.ClipData.newPlainText(context.getResources().getString(R.string.hex_color), hex.getText()));
 					
 					Toast.makeText(context.getEditor(), R.string.hex_color_copied_to_clipboard, Toast.LENGTH_SHORT).show();
 				}
@@ -352,12 +348,10 @@ public class ColorSelector implements Tool {
 		
 		@SuppressLint("NewApi")
 		private void init() {
-			if(android.os.Build.VERSION.SDK_INT >= 11) {
-				//Fixes problems on Android 4.0+ that come about with hardware acceleration
-				//More information:
-				//StackOverflow: http://stackoverflow.com/questions/17228717/compose-two-shaders-color-picker
-				setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-			}
+			// Fixes problems on Android 4.0+ that come about with hardware acceleration
+			// More information:
+			// StackOverflow: http://stackoverflow.com/questions/17228717/compose-two-shaders-color-picker
+			setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 			
 			color = new float[] {0.0f, 1.0f, 1.0f};
 			FLAG_REFRESH_HUE = false;

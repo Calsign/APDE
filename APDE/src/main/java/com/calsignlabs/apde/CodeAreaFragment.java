@@ -50,21 +50,14 @@ public class CodeAreaFragment extends Fragment {
 		//Correctly size the code area
 		
 		int fullWidth;
-		int fullHeight = getGlobalState().getEditor().getCodePager().getHeight() - getGlobalState().getEditor().getCodeTabStrip().getHeight();
 		
-		//Let's try and do things correctly for once
-		if (android.os.Build.VERSION.SDK_INT >= 13) {
-			Point point = new Point();
-			getActivity().getWindowManager().getDefaultDisplay().getSize(point);
-			fullWidth = point.x;
-		} else {
-			fullWidth = getActivity().getWindowManager().getDefaultDisplay().getWidth();
-		}
+		Point point = new Point();
+		getActivity().getWindowManager().getDefaultDisplay().getSize(point);
+		fullWidth = point.x;
 		
 		int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
 		
 		int minWidth = fullWidth - padding;
-		int minHeight = fullWidth - padding;
 		
 		getCodeEditText().setMinWidth(minWidth);
 		

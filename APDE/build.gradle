@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.calsignlabs.apde"
-        minSdkVersion 10
+        minSdkVersion 15
         targetSdkVersion 24
     }
 
