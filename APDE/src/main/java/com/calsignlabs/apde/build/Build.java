@@ -737,29 +737,41 @@ public class Build {
 				System.out.println("Changing execution permissions for AAPT...");
 			}
 			
-			//Run "chmod" on aapt so that we can execute it
-			String[] chmod = {"chmod", "744", aaptLoc.getAbsolutePath()};
-			Process chmodProcess = Runtime.getRuntime().exec(chmod);
+//			File chmodFile = new File("/system/bin/chmod");
+//			System.out.println("chmod file " + (chmodFile.exists() ? "exists" : "doesn't exist"));
 			
-			int code = chmodProcess.waitFor();
+//			//Run "chmod" on aapt so that we can execute it
+//			String[] chmod = {"chmod", "744", aaptLoc.getAbsolutePath()};
+//			Process chmodProcess = Runtime.getRuntime().exec(chmod);
+//			
+//			int code = chmodProcess.waitFor();
+//			
+//			if (code != 0) {
+//				System.err.println("Unable to make AAPT executable, error code: " + code);
+//				
+//				cleanUpError();
+//				return;
+//			}
 			
-			if (code != 0) {
-				System.err.println("Unable to make AAPT executable, error code: " + code);
+			// We don't need to use chmod!!!!!!!
+			if (!aaptLoc.setExecutable(true, true)){
+				System.err.println("Unable to make AAPT executable");
 				
 				cleanUpError();
 				return;
 			}
 			
-			if (verbose) {
-				copyStream(chmodProcess.getErrorStream(), System.out);
-			}
+//			if (verbose) {
+//				copyStream(chmodProcess.getErrorStream(), System.out);
+//			}
 		} catch (IOException e) {
 			System.out.println("Unable to make AAPT executable");
 			e.printStackTrace();
-		} catch (InterruptedException e) {
-			System.out.println("Unable to make AAPT executable");
-			e.printStackTrace();
 		}
+//		catch (InterruptedException e) {
+//			System.out.println("Unable to make AAPT executable");
+//			e.printStackTrace();
+//		}
 		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();

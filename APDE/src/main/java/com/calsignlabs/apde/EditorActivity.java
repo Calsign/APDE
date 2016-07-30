@@ -281,13 +281,6 @@ public class EditorActivity extends AppCompatActivity {
         // Initialize the action bar title
         getSupportActionBar().setTitle(getGlobalState().getSketchName());
         
-        // Try to load the auto-save sketch, otherwise set the editor up as a new sketch
-        if (!loadSketchStart()) {
-			getGlobalState().selectNewTempSketch();
-			addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
-			autoSave();
-		}
-        
         // Check for an app update
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         int oldVersionNum = prefs.getInt("version_num", -1);
@@ -719,6 +712,13 @@ public class EditorActivity extends AppCompatActivity {
 		
 		codePagerAdapter.notifyDataSetChanged();
 		codeTabStrip.setupWithViewPager(codePager);
+	
+		// Try to load the auto-save sketch, otherwise set the editor up as a new sketch
+		if (!loadSketchStart()) {
+			getGlobalState().selectNewTempSketch();
+			addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
+			autoSave();
+		}
     }
 	
 	@Override
