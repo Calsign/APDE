@@ -1253,7 +1253,7 @@ public class ExportSignedPackage implements Tool {
 	
 	protected void releaseBuild() {
 		//If this is an example, then put the sketch in the "bin" directory within the sketchbook
-		final File binFolder = new File(context.isExample() ? context.getSketchbookFolder() : context.getSketchLocation(), "bin");
+		final File binFolder = new File((context.isExample() || context.isTemp()) ? context.getSketchbookFolder() : context.getSketchLocation(), "bin");
 		
 		binFolder.mkdir();
 		
@@ -1279,7 +1279,7 @@ public class ExportSignedPackage implements Tool {
 	
 	@Override
 	public boolean showInToolsMenu(APDE.SketchLocation sketchLocation) {
-		return !sketchLocation.isTemp();
+		return true;
 	}
 	
 	@Override

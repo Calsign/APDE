@@ -51,7 +51,7 @@ public class ExportEclipseProject implements Tool {
 		}
 		
 		//If this is an example, then put the sketch in the "bin" directory within the sketchbook
-		final File binFolder = new File(context.isExample() ? context.getSketchbookFolder() : context.getSketchLocation(), "bin");
+		final File binFolder = new File((context.isExample() || context.isTemp()) ? context.getSketchbookFolder() : context.getSketchLocation(), "bin");
 		final File exportFolder = new File(binFolder, "export");
 		
 		binFolder.mkdir();
@@ -78,7 +78,7 @@ public class ExportEclipseProject implements Tool {
 	
 	@Override
 	public boolean showInToolsMenu(APDE.SketchLocation sketchLocation) {
-		return !sketchLocation.isTemp();
+		return true;
 	}
 	
 	@Override

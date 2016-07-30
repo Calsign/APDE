@@ -2019,7 +2019,7 @@ public class EditorActivity extends AppCompatActivity {
     /**
      * @return the APDE application global state
      */
-    private APDE getGlobalState() {
+    public APDE getGlobalState() {
     	return (APDE) getApplication();
     }
     

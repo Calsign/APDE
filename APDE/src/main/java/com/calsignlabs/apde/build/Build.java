@@ -1074,10 +1074,13 @@ public class Build {
 		} else {
 			System.out.println("Signing with private key...");
 			
-			//We want to sign for release!!!
-			signApkRelease();
+			File outputBinFolder = new File((editor.getGlobalState().isExample() || editor.getGlobalState().isTemp()) ? editor.getGlobalState().getSketchbookFolder() : editor.getGlobalState().getSketchLocation(), "bin");
+			String outFilename = outputBinFolder.getAbsolutePath() + "/" + sketchName + ".apk";
 			
-			System.out.println("Exported to: " + getSketchBinFolder().getAbsolutePath() + "/" + sketchName + ".apk");
+			//We want to sign for release!!!
+			signApkRelease(outFilename);
+			
+			System.out.println("Exported to: " + outFilename);
 			editor.messageExt(editor.getResources().getString(R.string.export_signed_package_complete));
 			
 			cleanUp();
@@ -1165,11 +1168,10 @@ public class Build {
 		}
 	}
 	
-	private void signApkRelease() {
+	private void signApkRelease(String outputFilename) {
 		Security.addProvider(new BouncyCastleProvider());
 		
 		String inFilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned";
-		String outFilename = getSketchBinFolder().getAbsolutePath() + "/" + sketchName + ".apk";
 		
 		ZipSigner signer;
 		
@@ -1178,7 +1180,7 @@ public class Build {
 			
 //			signer.signZip(new URL("file://" + keystore), "bks", keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outFilename);
 			//Let's take advantage of ZipSigner's ability to load JKS keystores as well
-			CustomKeySigner.signZip(signer, keystore, keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outFilename);
+			CustomKeySigner.signZip(signer, keystore, keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outputFilename);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
