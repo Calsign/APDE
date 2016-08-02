@@ -4,9 +4,9 @@
     <string name="prop_permissions">Sketch Permissions</string>
     <string name="prop_permissions_desc">Required for specific functionality</string>
     <string name="prop_min_sdk">Minimum SDK</string>
-    <string name="prop_min_sdk_default">10</string>
+    <string name="prop_min_sdk_default">15</string>
     <string name="prop_target_sdk">Target SDK</string>
-    <string name="prop_target_sdk_default">10</string>
+    <string name="prop_target_sdk_default">15</string>
     <string-array name="orientations">
         <item>None</item>
         <item>Portrait</item>

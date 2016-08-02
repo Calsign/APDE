@@ -8,7 +8,7 @@
         <style color="#FFE8B665">keyword_type</style>
         <style color="#FF89DBC7">keyword_structure</style>
         <style color="#FFD693B2">keyword_processing_variable</style>
-        <style color="#FF8CB476">keyword_processing_renderer</style>
+        <style color="#FF8CB476">keyword_processing_constant</style>
         
         <!-- required styles -->
         <style color="#FF000000">base</style>
@@ -24,6 +24,7 @@
         <!-- bold Processing functions -->
         <keyword style="keyword_processing_function_bold" function="true">setup</keyword>
         <keyword style="keyword_processing_function_bold" function="true">draw</keyword>
+        <keyword style="keyword_processing_function_bold" function="true">settings</keyword>
         <keyword style="keyword_processing_function_bold" function="true">mousePressed</keyword>
         <keyword style="keyword_processing_function_bold" function="true">mouseReleased</keyword>
         <keyword style="keyword_processing_function_bold" function="true">mouseDragged</keyword>
@@ -33,9 +34,15 @@
         <keyword style="keyword_processing_function_bold" function="true">keyReleased</keyword>
         <keyword style="keyword_processing_function_bold" function="true">keyTyped</keyword>
         
+		<!-- Android Mode functions -->
+		<keyword style="keyword_processing_function" function="true">orientation</keyword>
+		<keyword style="keyword_processing_function" function="true">checkPermission</keyword>
+		<keyword style="keyword_processing_function" function="true">onPermissionGranted</keyword>
+		
         <!-- Processing functions -->
         <keyword style="keyword_processing_function" function="true">size</keyword>
         <keyword style="keyword_processing_function" function="true">resize</keyword>
+		<keyword style="keyword_processing_function" function="true">fullScreen</keyword>
         <keyword style="keyword_processing_function" function="true">println</keyword>
         <keyword style="keyword_processing_function" function="true">print</keyword>
         <keyword style="keyword_processing_function" function="true">printArray</keyword>
@@ -93,6 +100,8 @@
         <keyword style="keyword_processing_function" function="true">loadJSONObject</keyword>
         <keyword style="keyword_processing_function" function="true">loadStrings</keyword>
         <keyword style="keyword_processing_function" function="true">loadTable</keyword>
+		<keyword style="keyword_processing_function" function="true">parseJSONArray</keyword>
+		<keyword style="keyword_processing_function" function="true">parseJSONObject</keyword>
         <keyword style="keyword_processing_function" function="true">loadXML</keyword>
         <keyword style="keyword_processing_function" function="true">parseXML</keyword>
         <keyword style="keyword_processing_function" function="true">selectFolder</keyword>
@@ -105,19 +114,18 @@
         <keyword style="keyword_processing_function" function="true">month</keyword>
         <keyword style="keyword_processing_function" function="true">second</keyword>
         <keyword style="keyword_processing_function" function="true">year</keyword>
-        
-        <keyword style="keyword_processing_function" function="true">beginRaw</keyword>
+		
         <keyword style="keyword_processing_function" function="true">beginRecord</keyword>
         <keyword style="keyword_processing_function" function="true">createOutput</keyword>
         <keyword style="keyword_processing_function" function="true">createWriter</keyword>
         <keyword style="keyword_processing_function" function="true">selectInput</keyword>
-        <keyword style="keyword_processing_function" function="true">endRaw</keyword>
         <keyword style="keyword_processing_function" function="true">endRecord</keyword>
         <keyword style="keyword_processing_function" function="true">saveBytes</keyword>
         <keyword style="keyword_processing_function" function="true">saveJSONArray</keyword>
         <keyword style="keyword_processing_function" function="true">saveJSONObject</keyword>
         <keyword style="keyword_processing_function" function="true">saveStream</keyword>
         <keyword style="keyword_processing_function" function="true">saveStrings</keyword>
+		<keyword style="keyword_processing_function" function="true">saveTable</keyword>
         <keyword style="keyword_processing_function" function="true">saveXML</keyword>
         <keyword style="keyword_processing_function" function="true">selectOutput</keyword>
         
@@ -199,7 +207,6 @@
         <keyword style="keyword_processing_function" function="true">blend</keyword>
         <keyword style="keyword_processing_function" function="true">copy</keyword>
         <keyword style="keyword_processing_function" function="true">filter</keyword>
-        <keyword style="keyword_processing_function" function="true">createImage</keyword>
         <keyword style="keyword_processing_function" function="true">get</keyword>
         <keyword style="keyword_processing_function" function="true">loadPixels</keyword>
         <keyword style="keyword_processing_function" function="true">set</keyword>
@@ -207,6 +214,8 @@
         
         <keyword style="keyword_processing_function" function="true">blendMode</keyword>
         <keyword style="keyword_processing_function" function="true">createGraphics</keyword>
+		<keyword style="keyword_processing_function" function="true">clip</keyword>
+		<keyword style="keyword_processing_function" function="true">noClip</keyword>
         
         <keyword style="keyword_processing_function" function="true">loadShader</keyword>
         <keyword style="keyword_processing_function" function="true">resetShader</keyword>
@@ -260,13 +269,43 @@
         <keyword style="keyword_processing_function" function="true">random</keyword>
         <keyword style="keyword_processing_function" function="true">randomGaussian</keyword>
         <keyword style="keyword_processing_function" function="true">randomSeed</keyword>
+		
+		<!-- Processing String functions -->
+		<keyword style="keyword_processing_function" function="true">join</keyword>
+		<keyword style="keyword_processing_function" function="true">match</keyword>
+		<keyword style="keyword_processing_function" function="true">matchAll</keyword>
+		<keyword style="keyword_processing_function" function="true">nf</keyword>
+		<keyword style="keyword_processing_function" function="true">nfc</keyword>
+		<keyword style="keyword_processing_function" function="true">nfp</keyword>
+		<keyword style="keyword_processing_function" function="true">nfs</keyword>
+		<keyword style="keyword_processing_function" function="true">split</keyword>
+		<keyword style="keyword_processing_function" function="true">splitTokens</keyword>
+		<keyword style="keyword_processing_function" function="true">trim</keyword>
+		
+		<!-- Processing array functions -->
+		<keyword style="keyword_processing_function" function="true">append</keyword>
+		<keyword style="keyword_processing_function" function="true">arrayCopy</keyword>
+		<keyword style="keyword_processing_function" function="true">concat</keyword>
+		<keyword style="keyword_processing_function" function="true">expand</keyword>
+		<keyword style="keyword_processing_function" function="true">reverse</keyword>
+		<keyword style="keyword_processing_function" function="true">shorten</keyword>
+		<keyword style="keyword_processing_function" function="true">sort</keyword>
+		<keyword style="keyword_processing_function" function="true">splice</keyword>
+		<keyword style="keyword_processing_function" function="true">subset</keyword>
         
+		<!-- Type conversions -->
         <keyword style="keyword_processing_function" function="true">int</keyword>
         <keyword style="keyword_processing_function" function="true">float</keyword>
         <keyword style="keyword_processing_function" function="true">boolean</keyword>
         <keyword style="keyword_processing_function" function="true">char</keyword>
         <keyword style="keyword_processing_function" function="true">byte</keyword>
         <keyword style="keyword_processing_function" function="true">color</keyword>
+		
+		<keyword style="keyword_processing_function" function="true">str</keyword>
+		<keyword style="keyword_processing_function" function="true">binary</keyword>
+		<keyword style="keyword_processing_function" function="true">unbinary</keyword>
+		<keyword style="keyword_processing_function" function="true">hex</keyword>
+		<keyword style="keyword_processing_function" function="true">unhex</keyword>
         
         <!-- Constructors -->
         <keyword style="keyword_processing_function" function="true">String</keyword>
@@ -464,17 +503,173 @@
         <keyword style="keyword_processing_variable">keyPressed</keyword>
         <keyword style="keyword_processing_variable">key</keyword>
         <keyword style="keyword_processing_variable">keyCode</keyword>
+		
+		<keyword style="keyword_processing_constant">EPSILON</keyword>
+		<keyword style="keyword_processing_constant">MAX_FLOAT</keyword>
+		<keyword style="keyword_processing_constant">MIN_FLOAT</keyword>
+		<keyword style="keyword_processing_constant">MAX_INT</keyword>
+		<keyword style="keyword_processing_constant">MIN_INT</keyword>
+		
+		<keyword style="keyword_processing_constant">VERTEX</keyword>
+		<keyword style="keyword_processing_constant">BEZIER_VERTEX</keyword>
+		<keyword style="keyword_processing_constant">QUADRATIC_VERTEX</keyword>
+		<keyword style="keyword_processing_constant">CURVE_VERTEX</keyword>
+		<keyword style="keyword_processing_constant">BREAK</keyword>
         
-        <keyword style="keyword_processing_variable">HALF_PI</keyword>
-        <keyword style="keyword_processing_variable">PI</keyword>
-        <keyword style="keyword_processing_variable">QUARTER_PI</keyword>
-        <keyword style="keyword_processing_variable">TAU</keyword>
-        <keyword style="keyword_processing_variable">TWO_PI</keyword>
+        <keyword style="keyword_processing_constant">HALF_PI</keyword>
+        <keyword style="keyword_processing_constant">PI</keyword>
+        <keyword style="keyword_processing_constant">QUARTER_PI</keyword>
+        <keyword style="keyword_processing_constant">TAU</keyword>
+        <keyword style="keyword_processing_constant">TWO_PI</keyword>
+	
+		<keyword style="keyword_processing_constant">RGB</keyword>
+		<keyword style="keyword_processing_constant">ARGB</keyword>
+		<keyword style="keyword_processing_constant">HSB</keyword>
+		<keyword style="keyword_processing_constant">ALPHA</keyword>
+		<keyword style="keyword_processing_constant">CMYK</keyword>
+	
+		<keyword style="keyword_processing_constant">TIFF</keyword>
+		<keyword style="keyword_processing_constant">TARGA</keyword>
+		<keyword style="keyword_processing_constant">JPEG</keyword>
+		<keyword style="keyword_processing_constant">GIF</keyword>
+	
+		<keyword style="keyword_processing_constant">BLUR</keyword>
+		<keyword style="keyword_processing_constant">GRAY</keyword>
+		<keyword style="keyword_processing_constant">INVERT</keyword>
+		<keyword style="keyword_processing_constant">OPAQUE</keyword>
+		<keyword style="keyword_processing_constant">POSTERIZE</keyword>
+		<keyword style="keyword_processing_constant">THRESHOLD</keyword>
+		<keyword style="keyword_processing_constant">ERODE</keyword>
+		<keyword style="keyword_processing_constant">DILATE</keyword>
+	
+		<keyword style="keyword_processing_constant">REPLACE</keyword>
+		<keyword style="keyword_processing_constant">BLEND</keyword>
+		<keyword style="keyword_processing_constant">ADD</keyword>
+		<keyword style="keyword_processing_constant">SUBTRACT</keyword>
+		<keyword style="keyword_processing_constant">LIGHTEST</keyword>
+		<keyword style="keyword_processing_constant">DARKEST</keyword>
+		<keyword style="keyword_processing_constant">DIFFERENCE</keyword>
+		<keyword style="keyword_processing_constant">EXCLUSION</keyword>
+		<keyword style="keyword_processing_constant">MULTIPLY</keyword>
+		<keyword style="keyword_processing_constant">SCREEN</keyword>
+		<keyword style="keyword_processing_constant">OVERLAY</keyword>
+		<keyword style="keyword_processing_constant">HARD_LIGHT</keyword>
+		<keyword style="keyword_processing_constant">SOFT_LIGHT</keyword>
+		<keyword style="keyword_processing_constant">DODGE</keyword>
+		<keyword style="keyword_processing_constant">BURN</keyword>
+	
+		<keyword style="keyword_processing_constant">CHATTER</keyword>
+		<keyword style="keyword_processing_constant">COMPLAINT</keyword>
+		<keyword style="keyword_processing_constant">PROBLEM</keyword>
+	
+		<keyword style="keyword_processing_constant">CUSTOM</keyword>
+		<keyword style="keyword_processing_constant">ORTHOGRAPHIC</keyword>
+		<keyword style="keyword_processing_constant">PERSPECTIVE</keyword>
+	
+		<keyword style="keyword_processing_constant">GROUP</keyword>
+		<keyword style="keyword_processing_constant">POINT</keyword>
+		<keyword style="keyword_processing_constant">POINTS</keyword>
+		<keyword style="keyword_processing_constant">LINE</keyword>
+		<keyword style="keyword_processing_constant">LINES</keyword>
+		<keyword style="keyword_processing_constant">LINE_STRIP</keyword>
+		<keyword style="keyword_processing_constant">LINE_LOOP</keyword>
+		<keyword style="keyword_processing_constant">TRIANGLE</keyword>
+		<keyword style="keyword_processing_constant">TRIANGLES</keyword>
+		<keyword style="keyword_processing_constant">TRIANGLE_STRIP</keyword>
+		<keyword style="keyword_processing_constant">TRIANGLE_FAN</keyword>
+		<keyword style="keyword_processing_constant">QUAD</keyword>
+		<keyword style="keyword_processing_constant">QUADS</keyword>
+		<keyword style="keyword_processing_constant">QUAD_STRIP</keyword>
+		<keyword style="keyword_processing_constant">RECT</keyword>
+		<keyword style="keyword_processing_constant">ELLIPSE</keyword>
+		<keyword style="keyword_processing_constant">ARC</keyword>
+		<keyword style="keyword_processing_constant">SPHERE</keyword>
+		<keyword style="keyword_processing_constant">BOX</keyword>
+	
+		<keyword style="keyword_processing_constant">OPEN</keyword>
+		<keyword style="keyword_processing_constant">CLOSE</keyword>
+	
+		<keyword style="keyword_processing_constant">CORNER</keyword>
+		<keyword style="keyword_processing_constant">CORNERS</keyword>
+		<keyword style="keyword_processing_constant">RADIUS</keyword>
+		<keyword style="keyword_processing_constant">CENTER</keyword>
+		<keyword style="keyword_processing_constant">DIAMETER</keyword>
+	
+		<keyword style="keyword_processing_constant">CHORD</keyword>
+		<keyword style="keyword_processing_constant">PIE</keyword>
+	
+		<keyword style="keyword_processing_constant">BASELINE</keyword>
+		<keyword style="keyword_processing_constant">TOP</keyword>
+		<keyword style="keyword_processing_constant">BOTTOM</keyword>
+	
+		<keyword style="keyword_processing_constant">NORMAL</keyword>
+		<keyword style="keyword_processing_constant">IMAGE</keyword>
+	
+		<keyword style="keyword_processing_constant">CLAMP</keyword>
+		<keyword style="keyword_processing_constant">REPEAT</keyword>
+	
+		<keyword style="keyword_processing_constant">MODEL</keyword>
+		<keyword style="keyword_processing_constant">SHAPE</keyword>
+	
+		<keyword style="keyword_processing_constant">SQUARE</keyword>
+		<keyword style="keyword_processing_constant">ROUND</keyword>
+		<keyword style="keyword_processing_constant">PROJECT</keyword>
+		<keyword style="keyword_processing_constant">MITER</keyword>
+		<keyword style="keyword_processing_constant">BEVEL</keyword>
+	
+		<keyword style="keyword_processing_constant">AMBIENT</keyword>
+		<keyword style="keyword_processing_constant">DIRECTIONAL</keyword>
+		<keyword style="keyword_processing_constant">SPOT</keyword>
+	
+		<keyword style="keyword_processing_constant">BACKSPACE</keyword>
+		<keyword style="keyword_processing_constant">TAB</keyword>
+		<keyword style="keyword_processing_constant">ENTER</keyword>
+		<keyword style="keyword_processing_constant">RETURN</keyword>
+		<keyword style="keyword_processing_constant">ESC</keyword>
+		<keyword style="keyword_processing_constant">DELETE</keyword>
+	
+		<keyword style="keyword_processing_constant">CODED</keyword>\
+	
+		<keyword style="keyword_processing_constant">UP</keyword>
+		<keyword style="keyword_processing_constant">DOWN</keyword>
+		<keyword style="keyword_processing_constant">LEFT</keyword>
+		<keyword style="keyword_processing_constant">RIGHT</keyword>
+	
+		<keyword style="keyword_processing_constant">BACK</keyword>
+		<keyword style="keyword_processing_constant">MENU</keyword>
+		<keyword style="keyword_processing_constant">DPAD</keyword>
+	
+		<keyword style="keyword_processing_constant">PORTRAIT</keyword>
+		<keyword style="keyword_processing_constant">LANDSCAPE</keyword>
+	
+		<keyword style="keyword_processing_constant">ENABLE_NATIVE_FONTS</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_NATIVE_FONTS</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_DEPTH_TEST</keyword>
+		<keyword style="keyword_processing_constant">ENABLE_DEPTH_TEST</keyword>
+		<keyword style="keyword_processing_constant">ENABLE_DEPTH_SORT</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_DEPTH_SORT</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_OPENGL_ERRORS</keyword>
+		<keyword style="keyword_processing_constant">ENABLE_OPENGL_ERRORS</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_DEPTH_MASK</keyword>
+		<keyword style="keyword_processing_constant">ENABLE_DEPTH_MASK</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_OPTIMIZED_STROKE</keyword>
+		<keyword style="keyword_processing_constant">ENABLE_OPTIMIZED_STROKE</keyword>
+		<keyword style="keyword_processing_constant">ENABLE_STROKE_PERSPECTIVE</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_STROKE_PERSPECTIVE</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_TEXTURE_MIPMAPS</keyword>
+		<keyword style="keyword_processing_constant">ENABLE_TEXTURE_MIPMAPS</keyword>
+		<keyword style="keyword_processing_constant">ENABLE_STROKE_PURE</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_STROKE_PURE</keyword>
+		<keyword style="keyword_processing_constant">ENABLE_BUFFER_READING</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_BUFFER_READING</keyword>
+		<keyword style="keyword_processing_constant">DISABLE_ASYNC_SAVEFRAME</keyword>
+		<keyword style="keyword_processing_constant">ENABLE_ASYNC_SAVEFRAME</keyword>
+		<keyword style="keyword_processing_constant">HINT_COUNT</keyword>
         
         <!-- Processing renderers -->
-        <keyword style="keyword_processing_renderer">JAVA2D</keyword>
-        <keyword style="keyword_processing_renderer">OPENGL</keyword>
-        <keyword style="keyword_processing_renderer">P2D</keyword>
-        <keyword style="keyword_processing_renderer">P3D</keyword>
+        <keyword style="keyword_processing_constant">JAVA2D</keyword>
+        <keyword style="keyword_processing_constant">OPENGL</keyword>
+        <keyword style="keyword_processing_constant">P2D</keyword>
+        <keyword style="keyword_processing_constant">P3D</keyword>
     </keywords>
 </syntax>

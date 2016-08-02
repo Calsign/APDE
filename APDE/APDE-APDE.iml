@@ -118,6 +118,7 @@
     <orderEntry type="library" exported="" name="pde" level="project" />
     <orderEntry type="library" exported="" name="zipsigner-lib-optional-1.17" level="project" />
     <orderEntry type="library" exported="" name="android-core" level="project" />
+    <orderEntry type="library" exported="" name="JavaMode" level="project" />
     <orderEntry type="library" exported="" name="sdklib" level="project" />
     <orderEntry type="library" exported="" name="pkix-1.51.0.0" level="project" />
     <orderEntry type="library" exported="" name="support-v4-24.0.0" level="project" />
@@ -134,8 +135,8 @@
     <orderEntry type="library" exported="" name="jsch-0.1.51" level="project" />
     <orderEntry type="library" exported="" name="preference-v7-24.0.0" level="project" />
     <orderEntry type="library" exported="" name="zipio-lib-1.8" level="project" />
-    <orderEntry type="library" exported="" name="appcompat-v7-24.0.0" level="project" />
     <orderEntry type="library" exported="" name="preference-v7-24.0.0.1" level="project" />
+    <orderEntry type="library" exported="" name="appcompat-v7-24.0.0" level="project" />
     <orderEntry type="library" exported="" name="design-24.0.0" level="project" />
     <orderEntry type="module" module-name="aFileChooser" exported="" />
   </component>

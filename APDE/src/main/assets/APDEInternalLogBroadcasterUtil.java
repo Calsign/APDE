@@ -2,17 +2,17 @@ public class APDEInternalLogBroadcasterUtil {
 	public static class APDEInternalExceptionHandler implements Thread.UncaughtExceptionHandler {
 		private Thread.UncaughtExceptionHandler defaultHandler;
 		
-		private android.app.Activity context;
+		private android.app.Fragment fragment;
 		
-		public APDEInternalExceptionHandler(android.app.Activity context) {
+		public APDEInternalExceptionHandler(android.app.Fragment fragment) {
 			defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
 			
-			this.context = context;
+			this.fragment = fragment;
 		}
 		
 		public void uncaughtException(Thread t, Throwable e) {
 			e.printStackTrace();
-			APDEInternalBroadcastMessage(e.getMessage(), 'x', e.getClass().getName(), context);
+			APDEInternalBroadcastMessage(e.getMessage(), 'x', e.getClass().getName(), fragment.getActivity());
 			defaultHandler.uncaughtException(t, e);
 		}
 	}
@@ -21,12 +21,12 @@ public class APDEInternalLogBroadcasterUtil {
 		private final byte single[] = new byte[1];
 		private final char severity;
 		
-		private android.app.Activity context;
+		private android.app.Fragment fragment;
 		
-		public APDEInternalConsoleStream(char severity, android.app.Activity context) {
+		public APDEInternalConsoleStream(char severity, android.app.Fragment fragment) {
 			this.severity = severity;
 			
-			this.context = context;
+			this.fragment = fragment;
 		}
 		
 		@Override
@@ -41,7 +41,7 @@ public class APDEInternalLogBroadcasterUtil {
 		
 		@Override
 		public void write(byte b[], int offset, int length) {
-			APDEInternalBroadcastMessage(new String(b, offset, length), severity, "", context);
+			APDEInternalBroadcastMessage(new String(b, offset, length), severity, "", fragment.getActivity());
 		}
 		
 		@Override

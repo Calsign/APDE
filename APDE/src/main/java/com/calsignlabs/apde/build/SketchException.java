@@ -129,25 +129,6 @@ public class SketchException extends Throwable /*RuntimeException*/ {
 	}
 
 
-	/**
-	 * Nix the java.lang crap out of an exception message
-	 * because it scares the children.
-	 * <P>
-	 * This function must be static to be used with super()
-	 * in each of the constructors above.
-	 */
-	/*
-  static public final String massage(String msg) {
-    if (msg.indexOf("java.lang.") == 0) {
-      //int dot = msg.lastIndexOf('.');
-      msg = msg.substring("java.lang.".length());
-    }
-    return msg;
-    //return (dot == -1) ? msg : msg.substring(dot+1);
-  }
-	 */
-
-
 	public void printStackTrace() {
 		if (showStackTrace) {
 			super.printStackTrace();

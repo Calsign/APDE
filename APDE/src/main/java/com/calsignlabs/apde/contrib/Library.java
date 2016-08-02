@@ -1,5 +1,8 @@
 package com.calsignlabs.apde.contrib;
 
+import com.calsignlabs.apde.APDE;
+import com.calsignlabs.apde.build.Build;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -9,9 +12,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Properties;
-
-import com.calsignlabs.apde.APDE;
-import com.calsignlabs.apde.build.Build;
 
 public class Library {
 	public static final String propertiesFilename = "library.properties";
@@ -50,7 +50,11 @@ public class Library {
 	
 	public String getAuthorList(APDE context) {
 		try {
-			return getProperty("authorList", context);
+			// Not all library.properties file are consistent
+			if (hasProperty("authorList", context)) return getProperty("authorList", context);
+			else if (hasProperty("authors", context)) return getProperty("authors", context);
+			else if (hasProperty("author", context)) return getProperty("author", context);
+			else return "";
 		} catch(Exception e) {
 			return "";
 		}
@@ -85,6 +89,10 @@ public class Library {
 	
 	public String getProperty(String key, APDE context) throws FileNotFoundException, IOException {
 		return getProperties(context).getProperty(key);
+	}
+	
+	public boolean hasProperty(String key, APDE context) throws FileNotFoundException, IOException {
+		return getProperties(context).containsKey(key);
 	}
 	
 	public File getLibraryJarFolder(APDE context) {

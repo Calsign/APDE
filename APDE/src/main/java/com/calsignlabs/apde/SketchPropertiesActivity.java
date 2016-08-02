@@ -491,7 +491,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 				Bitmap bitmap = BitmapFactory.decodeFile(iconFile.getText().toString());
 				int minDim = Math.min(bitmap.getWidth(), bitmap.getHeight());
 				
-				int[] dims = {36, 48, 72, 96};
+				int[] dims = {36, 48, 72, 96, 144, 192};
 				
 				for (int dim : dims) {
 					File out = new File(getGlobalState().getSketchLocation(), "icon-" + dim + ".png");
@@ -620,7 +620,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		//Load the old icon for the current sketch
 		
 		File sketchFolder = getGlobalState().getSketchLocation();
-		String[] iconTitles = {"icon-96.png", "icon-72.png", "icon-48.png", "icon-36.png"}; //Prefer the higher-resolution icons
+		String[] iconTitles = com.calsignlabs.apde.build.Build.ICON_LIST;
 		
 		String iconPath = "";
 		

@@ -38,6 +38,7 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.support.CustomListPreference;
 import com.calsignlabs.apde.support.StockPreferenceFragment;
 import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompat;
@@ -183,6 +184,19 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 			if (!(usePie && isArm)) {
 				((PreferenceCategory) frag.findPreference("pref_build_debug")).removePreference(useOldAaptBinary);
 			}
+		}
+		
+		Preference recopyAndroidJar = frag.findPreference("pref_build_recopy_android_jar");
+		
+		if (recopyAndroidJar != null) {
+			recopyAndroidJar.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					((APDE) getApplication()).getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new CopyAndroidJarTask());
+					
+					return true;
+				}
+			});
 		}
 		
 		Preference version = frag.findPreference("pref_about_version");

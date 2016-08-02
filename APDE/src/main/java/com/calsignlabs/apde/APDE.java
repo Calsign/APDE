@@ -54,6 +54,7 @@ import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.math.RoundingMode;
 import java.nio.channels.FileChannel;
 import java.text.DecimalFormat;
@@ -65,7 +66,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 
-import processing.app.Base;
+import processing.app.Platform;
 
 /**
  * This is the Application global state for APDE. It manages things like the
@@ -1355,7 +1356,7 @@ public class APDE extends Application {
 	public Manifest getManifest() {
 		Manifest mf = new Manifest(new com.calsignlabs.apde.build.Build(this));
 		mf.load();
-
+		
 		return mf;
 	}
 	
@@ -1505,7 +1506,14 @@ public class APDE extends Application {
 		return packageToToolTable.get(packageName);
 	}
 	
+	private boolean processingPrefsInitialized = false;
+	
 	public void initProcessingPrefs() {
+		if (processingPrefsInitialized) {
+			// Don't do this again
+			return;
+		}
+		
 		//Make pde.jar behave properly
 		
 		//Set up the Processing-specific folder
@@ -1517,10 +1525,19 @@ public class APDE extends Application {
 			//Put the default preferences file where Processing will look for it
 			EditorActivity.copyAssetFolder(getAssets(), "processing_default", dir.getAbsolutePath());
 		}
-			
+		
 		//Some magic to put our own platform in place
-		Base.initPlatform();
 		AndroidPlatform.setDir(dir);
+		
+		try {
+			Field inst = Platform.class.getDeclaredField("inst");
+			inst.setAccessible(true);
+			inst.set(null, new AndroidPlatform());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		processingPrefsInitialized = true;
 	}
 	
 	public boolean getPref(String pref, boolean def) {

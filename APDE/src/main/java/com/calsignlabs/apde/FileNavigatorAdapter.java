@@ -28,6 +28,8 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.calsignlabs.apde.build.Build;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -139,7 +141,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			//Try to load the sketch's icon
 			
 			File sketchFolder = ((APDE) context.getApplicationContext()).getSketchLocation(item.getSketch().getPath(), item.getSketch().getLocation());
-			String[] iconTitles = {"icon-96.png", "icon-72.png", "icon-48.png", "icon-36.png"}; //Prefer the higher-resolution icons
+			String[] iconTitles = Build.ICON_LIST;
 			String iconPath = "";
 			
 			for (String iconTitle : iconTitles) {

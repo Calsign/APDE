@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <item name="prop_min_sdk_default" format="integer" type="integer">10</item>
-    <item name="prop_target_sdk_default" format="integer" type="integer">10</item>
+    <item name="prop_min_sdk_default" format="integer" type="integer">15</item>
+    <item name="prop_target_sdk_default" format="integer" type="integer">15</item>
     <item name="prop_version_code_default" format="integer" type="integer">1</item>
 </resources>

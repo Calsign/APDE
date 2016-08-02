@@ -64,6 +64,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.calsignlabs.apde.build.Build;
+import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
@@ -2354,9 +2355,9 @@ public class EditorActivity extends AppCompatActivity {
     	String[] chars;
     	//This branch isn't very elegant... but it will work for now...
     	if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts_include_numbers", true))
-    		chars = new String[] {"\u2192", ";", ".", ",", "{", "}", "(", ")", "=", "*", "/", "+", "-", "&", "|", "!", "[", "]", "<", ">", "\"", "'", "\\", "_", "?", ":", "@", "#", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
+    		chars = new String[] {"\u2192", ";", ".", ",", "{", "}", "(", ")", "=", "*", "/", "+", "-", "&", "|", "!", "[", "]", "<", ">", "\"", "'", "\\", "_", "?", ":", "%", "@", "#", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
     	else
-    		chars = new String[] {"\u2192", ";", ".", ",", "{", "}", "(", ")", "=", "*", "/", "+", "-", "&", "|", "!", "[", "]", "<", ">", "\"", "'", "\\", "_", "?", ":", "@", "#"};
+    		chars = new String[] {"\u2192", ";", ".", ",", "{", "}", "(", ")", "=", "*", "/", "+", "-", "&", "|", "!", "[", "]", "<", ">", "\"", "'", "\\", "_", "?", ":", "%", "@", "#"};
     	
     	//This works for now... as far as I can tell
     	final int keyboardID = 0;
@@ -2626,6 +2627,8 @@ public class EditorActivity extends AppCompatActivity {
     			// This is the DESIRED height, not the ACTUAL height
     			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
     			
+				findViewById(R.id.buffer).getLayoutParams().height = message;
+				
     			// Obtain some references
     			View console = findViewById(R.id.console_scroller);
     			View content = findViewById(R.id.content);
@@ -3672,6 +3675,16 @@ public class EditorActivity extends AppCompatActivity {
 					edit.putBoolean("pref_build_folder_keep", !prefs.getBoolean("pref_build_discard", true));
 					edit.apply();
 				}
+			}
+		});
+		
+		// v0.4.0 Alpha pre-1
+		
+		// Upgrade to Android Mode 3.0, changes minSdk from API 10 to 15; update android.jar file
+		upgradeChanges.add(new UpgradeChange(16) {
+			@Override
+			public void run() {
+				getGlobalState().getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new CopyAndroidJarTask());
 			}
 		});
 		
