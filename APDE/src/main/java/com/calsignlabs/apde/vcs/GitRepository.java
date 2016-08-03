@@ -182,14 +182,27 @@ public class GitRepository {
 		}
 	}
 	
-	public boolean canPull() {
+	/**
+	 * Note: This is only used by the examples repo
+	 * 
+	 * @return
+	 */
+	public boolean canPull(String remoteURI, String remoteBranch) {
 		//Determine whether or not the remote repository has new commits that need to be pulled
 		//This just compares the local and remote HEADs - if they're different, then we can pull
 		
 		try {
-			Collection<Ref> refs = Git.lsRemoteRepository().setHeads(true).setTags(true).setRemote(APDE.EXAMPLES_REPO).call();
+			Collection<Ref> refs = Git.lsRemoteRepository().setHeads(true).setTags(true).setRemote(remoteURI).call();
 			
-			ObjectId remoteHead = refs.iterator().next().getObjectId();
+			ObjectId remoteHead = null;
+			
+			for (Ref ref : refs) {
+				if (ref.getName().equals("refs/heads/" + remoteBranch)) {
+					remoteHead = ref.getObjectId();
+					break;
+				}
+			}
+			
 			ObjectId localHead = git.getRepository().resolve("HEAD");
 			
 			if (remoteHead == null) {
@@ -229,7 +242,7 @@ public class GitRepository {
 			e.printStackTrace();
 		}
 	}
-
+	
 	public void pullRepo(String uri, String branch) {
 		try {
 			setRemote(uri);
@@ -242,7 +255,7 @@ public class GitRepository {
 			e.printStackTrace();
 		}
 	}
-
+	
 	public void pullRepo(String uri, String branch, GitUser user) {
 		try {
 			setRemote(uri);

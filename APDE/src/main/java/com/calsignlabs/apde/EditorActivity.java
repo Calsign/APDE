@@ -3711,7 +3711,7 @@ public class EditorActivity extends AppCompatActivity {
 		
 		// Hard-coded list of changes that have occurred
 		
-		// v0.3.3 Alpha pre-1
+		// v0.3.3 Alpha-pre1
 
 		// Update some of the default examples
 		upgradeChanges.add(new UpgradeChange(13) {
@@ -3726,7 +3726,7 @@ public class EditorActivity extends AppCompatActivity {
 			}
 		});
 		
-		// v0.3.3 Alpha pre-2
+		// v0.3.3 Alpha-pre2
 		
 		// Change preference "Delete old build folder" to "Keep build folder" (invert)
 		upgradeChanges.add(new UpgradeChange(14) {
@@ -3742,13 +3742,32 @@ public class EditorActivity extends AppCompatActivity {
 			}
 		});
 		
-		// v0.4.0 Alpha pre-1
+		// v0.4.0 Alpha-pre1
 		
 		// Upgrade to Android Mode 3.0, changes minSdk from API 10 to 15; update android.jar file
 		upgradeChanges.add(new UpgradeChange(16) {
 			@Override
 			public void run() {
 				getGlobalState().getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new CopyAndroidJarTask());
+			}
+		});
+		
+		// Switch to the new examples repo
+		upgradeChanges.add(new UpgradeChange(16) {
+			@Override
+			public void run() {
+				try {
+					// Just delete the old repository, the new one will be downloaded automatically
+					
+					// But make sure that we don't delete the starter examples (if the user hasn't
+					// downloaded the full repo)
+					File examplesRepo = getGlobalState().getExamplesRepoFolder();
+					if (examplesRepo.exists()) {
+						APDE.deleteFile(examplesRepo);
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		});
 		

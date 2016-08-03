@@ -80,7 +80,9 @@ public class APDE extends Application {
 	
 	public static final String LAST_TEMPORARY_SKETCH_NAME_PREF = "last_temporary_sketch_name";
 	
-	public static final String EXAMPLES_REPO = "https://github.com/Calsign/APDE-examples.git";
+	public static final String EXAMPLES_REPO = "https://github.com/Calsign/APDE-Examples-Repo.git";
+	// We use a new branch every time we break backwards-compatibility by updating the examples
+	public static final String EXAMPLES_REPO_BRANCH = "v0.4.0";
 	
 	private TaskManager taskManager;
 	
@@ -873,7 +875,7 @@ public class APDE extends Application {
 						GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
 						
 						// Check to see if an update is available
-						if (!examplesRepo.exists() || (examplesRepo.exists() && examplesRepo.canPull())) {
+						if (!examplesRepo.exists() || (examplesRepo.exists() && examplesRepo.canPull(EXAMPLES_REPO, EXAMPLES_REPO_BRANCH))) {
 							examplesRepo.close();
 							
 							// Yucky multi-threading
@@ -957,8 +959,8 @@ public class APDE extends Application {
 				boolean update = false;
 				
 				if (examplesRepo.exists()) {
-					if (examplesRepo.canPull()) {
-						examplesRepo.pullRepo();
+					if (examplesRepo.canPull(EXAMPLES_REPO, EXAMPLES_REPO_BRANCH)) {
+						examplesRepo.pullRepo(EXAMPLES_REPO, EXAMPLES_REPO_BRANCH);
 						update = true;
 					}
 					
@@ -968,7 +970,7 @@ public class APDE extends Application {
 					//We need to close before so that we can write to the directory
 					examplesRepo.close();
 					
-					GitRepository.cloneRepo(EXAMPLES_REPO, examplesRepo.getRootDir());
+					GitRepository.cloneRepo(EXAMPLES_REPO, examplesRepo.getRootDir(), EXAMPLES_REPO_BRANCH);
 					update = true;
 				}
 				
