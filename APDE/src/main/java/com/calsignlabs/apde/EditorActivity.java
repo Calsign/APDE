@@ -1736,6 +1736,8 @@ public class EditorActivity extends AppCompatActivity {
     		forceDrawerReload();
     		
     		supportInvalidateOptionsMenu();
+			
+			updateCodeAreaFocusable();
             
             //Inform the user of success
     		message(getResources().getText(R.string.sketch_saved));
@@ -1745,6 +1747,13 @@ public class EditorActivity extends AppCompatActivity {
     		error(getResources().getText(R.string.sketch_save_failure));
     	}
     }
+	
+	public void updateCodeAreaFocusable() {
+		for (SketchFile sketchFile : tabs) {
+			sketchFile.setExample(false);
+			sketchFile.forceReloadTextIfInitialized();
+		}
+	}
 	
 	public void moveToSketchbook() {
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
