@@ -497,7 +497,7 @@ public class EditorActivity extends AppCompatActivity {
 					oldCodeHeight = codePager.getHeight();
 				}
 				
-				if (heightDiff > 100) { //If the difference is bigger than 100, it's probably the keyboard
+				if (heightDiff > getResources().getDimension(R.dimen.keyboard_visibility_change_threshold)) { //If the difference is bigger than 200dp, it's probably the keyboard
 					
 					// An important note for understanding the following code:
 					// The tab bar is actually inside the code area pager, so the height of "code"
