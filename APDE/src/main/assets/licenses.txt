@@ -21,6 +21,13 @@ APDE makes use of code and libraries from the following open source projects:
    - Eclipse JGit  . . . . . . . . . . . Eclipse Distribution License v1.0
 
  - ANTLR . . . . . . . . . . . . . . . . (Public Domain)
+ 
+ - Android Support Library . . . . . . . Apache License v2.0
+   - v4
+   - v7 AppCompat
+   - v7 Design
+   - v7 Preference
+   - v14 Preference
 
  - Google Material Design Icons  . . . . CC Attribution 4.0 International
 
@@ -32,6 +39,9 @@ APDE makes use of code and libraries from the following open source projects:
 
  - zip-signer (https://code.google.com/p/zip-signer/)
      . . . . . . . . . . . . . . . . . . Apache License v2.0
+
+ - Android Support Preference V7 Fix (https://github.com/Gericop/Android-Support-Preference-V7-Fix)
+     . . . . . . . . . . . . . . . . . . (Public Domain), Apache License v2.0
 
 
 The open source licenses for each of these projects are attached below:
