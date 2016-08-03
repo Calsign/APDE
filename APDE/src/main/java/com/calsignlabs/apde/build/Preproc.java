@@ -267,6 +267,31 @@ public class Preproc extends PdePreprocessor {
 			return info;
 		}
 		
+		// Lint is telling me that this statement is never true... but I beg to differ
+		if (sizeContents == null && fullContents == null) {
+			/*
+			 * Default to fullscreen
+			 * 
+			 * This isn't in Processing's implementation, but for some reason the prior version
+			 * of APDE also defaulted to fullscreen, so include this to keep it the same
+			 * 
+			 * Plus, it makes more sense to default to fullscreen - who wants a 100 x 100 sketch
+			 * display area on a mobile device?
+			 */
+			
+			SurfaceInfo info = new SurfaceInfo();
+			
+			info.addStatement("fullScreen();");
+			
+			setPrivateSurfaceInfoField(info, "width", "displayWidth");
+			setPrivateSurfaceInfoField(info, "height", "displayHeight");
+			
+			info.addStatements(extraStatements);
+			invokePrivateSurfaceInfoMethod(info, "checkEmpty", null);
+			
+			return info;
+		}
+		
 		// Made it this far, but no size() or fullScreen(), and still
 		// need to pull out the noSmooth() and smooth(N) methods.
 		if (extraStatements.size() != 0) {
