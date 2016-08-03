@@ -12,6 +12,7 @@ import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
@@ -2434,9 +2435,13 @@ public class EditorActivity extends AppCompatActivity {
     	}
     	
     	//In case the user presses the button twice, we don't want any errors
-    	if(building) {
+    	if (building) {
     		return;
     	}
+		
+		if (!checkScreenOverlay()) {
+			return;
+		}
     	
     	//Clear the console
     	((TextView) findViewById(R.id.console)).setText("");
@@ -2466,6 +2471,65 @@ public class EditorActivity extends AppCompatActivity {
     	if(building)
     		Build.halt();
     }
+	
+	/**
+	 * Set to the most recent value of MotionEvent.FLAG_WINDOW_IS_OBSCURED
+	 * 
+	 * This will be true if a screen overlay (e.g. Twilight, Lux, or similar app) is currently
+	 * being drawn over the screen. Android security measures prevent app installation if a screen
+	 * overlay is being drawn, so we need to let the user know and stop the build so that we don't
+	 * get "I can't press the install button!" emails.
+	 * 
+	 * This is the exact same detection method used by the Android system, so there are no corner
+	 * cases. See the link below for the source code of Android's implementation:
+	 * 
+	 * http://androidxref.com/6.0.1_r10/xref/packages/apps/PackageInstaller/src/com/android/packageinstaller/permission/ui/OverlayTouchActivity.java
+	 */
+	private boolean isTouchObscured = false;
+	
+	@Override
+	public boolean dispatchTouchEvent(MotionEvent event) {
+		/*
+		 * See comments for isTouchObscured above.
+		 */
+		
+		isTouchObscured = (event.getFlags() & MotionEvent.FLAG_WINDOW_IS_OBSCURED) != 0;
+		return super.dispatchTouchEvent(event);
+	}
+	
+	/**
+	 * Check to see if we can proceed with the build. If a screen overlay is in place, then the
+	 * Android system will prevent the package manager from installing the sketch, so show a
+	 * warning message to the user.
+	 * 
+	 * @return whether or not to proceed with the build
+	 */
+	public boolean checkScreenOverlay() {
+		if (isTouchObscured) {
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			
+			builder.setTitle(R.string.screen_overlay_dialog_title);
+			builder.setMessage(R.string.screen_overlay_dialog_message);
+			
+			builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialogInterface, int i) {}
+			});
+			
+			builder.setNeutralButton(R.string.info, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialogInterface, int i) {
+					startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.screen_overlay_info_wiki_url))));
+				}
+			});
+			
+			builder.show();
+			
+			return false;
+		} else {
+			return true;
+		}
+	}
     
     /**
      * Writes a message to the message area
