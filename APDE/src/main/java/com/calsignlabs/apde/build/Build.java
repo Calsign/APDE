@@ -51,7 +51,6 @@ import java.util.zip.ZipFile;
 
 import kellinwood.security.zipsigner.ZipSigner;
 import kellinwood.security.zipsigner.optional.CustomKeySigner;
-import processing.app.Base;
 import processing.app.Preferences;
 import processing.core.PApplet;
 import processing.data.StringList;
@@ -1736,8 +1735,8 @@ public class Build {
 		writer.println("       <isset property=\"env.ANDROID_HOME\" />");
 		writer.println("  </condition>");
 		
-		writer.println("  <property name=\"jdt.core\" value=\"" + Base.getToolsFolder() + "/../modes/java/mode/org.eclipse.jdt.core.jar\" />");
-		writer.println("  <property name=\"jdtCompilerAdapter\" value=\"" + Base.getToolsFolder() + "/../modes/java/mode/jdtCompilerAdapter.jar\" />");
+//		writer.println("  <property name=\"jdt.core\" value=\"" + Base.getToolsFolder() + "/../modes/java/mode/org.eclipse.jdt.core.jar\" />");
+//		writer.println("  <property name=\"jdtCompilerAdapter\" value=\"" + Base.getToolsFolder() + "/../modes/java/mode/jdtCompilerAdapter.jar\" />");
 		writer.println("  <property name=\"build.compiler\" value=\"org.eclipse.jdt.core.JDTCompilerAdapter\" />");
 		
 		writer.println("  <mkdir dir=\"bin\" />");
