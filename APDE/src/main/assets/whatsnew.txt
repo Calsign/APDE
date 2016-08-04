@@ -1,3 +1,23 @@
+v0.4.0 Alpha-pre1
+
+ - Material design
+ - New temporary sketch model
+ - Processing core sync with Android Mode 3.0.1 (0252)
+ - Processing internals sync with Processing 3.0.1 (0247)
+ - Updated default sketch icons
+ - Lots of bug fixes and smaller improvements
+
+Notes:
+
+This release drops support for Android 2.3.3 Gingerbread (API level 10),
+which the desktop version has also done. The new minimum Android version
+is Android 4.0.3 Ice Cream Sandwich (API level 15).
+
+If v0.3.3 broke the AAPT part of the build process, then please go to
+Settings > Build > Debug and enable "Use pre-v0.3.3 AAPT Binary".
+
+------------------------------------------------------------------------
+
 v0.3.3 Alpha
 
  - Large set of examples (must be downloaded)
