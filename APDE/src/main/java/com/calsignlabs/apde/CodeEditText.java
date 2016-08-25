@@ -126,6 +126,15 @@ public class CodeEditText extends EditText {
 		//Get rid of extra spacing at the top and bottom
 		setIncludeFontPadding(false);
 		
+		matchingBracket = -1;
+		
+		highlights = new ArrayList<Highlight>();
+		
+		// Don't load the syntax again for each tab
+		if (syntaxLoaded.get()) {
+			return;
+		}
+		
 		//Create the line highlight Paint
 		lineHighlight = new Paint();
 		lineHighlight.setStyle(Paint.Style.FILL);
@@ -160,10 +169,6 @@ public class CodeEditText extends EditText {
 		} catch (SAXException e) {
 			e.printStackTrace();
 		}
-		
-		matchingBracket = -1;
-		
-		highlights = new ArrayList<Highlight>();
 	}
 	
 	private TextWatcher textListener = null;
@@ -381,6 +386,8 @@ public class CodeEditText extends EditText {
 		
 		//Get the list of defined keywords
 		XML[] keywords = xml.getChild("keywords").getChildren();
+		ArrayList<Keyword> tempSyntax = new ArrayList<>();
+		
 		syntax = new Keyword[keywords.length];
 		for (int i = 0; i < keywords.length; i ++) {
 			XML keyword = keywords[i];
@@ -394,15 +401,36 @@ public class CodeEditText extends EditText {
 			String name = keyword.getContent();
 			boolean function = keyword.getString("function", "false").equals("true");
 			
+			String reference = keyword.getString("reference", "processing");
+			boolean noUnderscore = keyword.getString("reference_hint", "").equals("no_underscore");
+			
+			String parentClass = keyword.getString("class", "");
+			boolean staticInParentClass = Boolean.valueOf(keyword.getString("static", "false"));
+			
+			// If there is a parent class, then open that class... we don't know how to be fancier yet
+			// Automatically add an underscore if the keyword is a function and doesn't have the "no_underscore" hint
+			String referenceTarget = keyword.getString("reference_target", parentClass.length() > 0 ? parentClass : (name + (function && !noUnderscore ? "_" : "")));
+			
 			//If this isn't a valid style, bail out
 			if(!styles.containsKey(style))
 				continue;
 			
 			//Add the keyword
-			syntax[i] = new Keyword(name, styles.get(style), function);
+			tempSyntax.add(new Keyword(name, styles.get(style), function, reference, referenceTarget, parentClass, staticInParentClass));
+		}
+		
+		syntax = new Keyword[tempSyntax.size()];
+		
+		// We need to do this because more than the half of the reported XML elements are null
+		for (int i = 0; i < tempSyntax.size(); i ++) {
+			syntax[i] = tempSyntax.get(i);
 		}
 		
 		syntaxLoaded.set(true);
+	}
+	
+	public static Keyword[] getKeywords() {
+		return syntax;
 	}
 	
 	@Override

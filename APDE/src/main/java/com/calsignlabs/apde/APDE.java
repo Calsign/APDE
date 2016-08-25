@@ -36,11 +36,13 @@ import com.calsignlabs.apde.tool.CommentUncomment;
 import com.calsignlabs.apde.tool.DecreaseIndent;
 import com.calsignlabs.apde.tool.ExportEclipseProject;
 import com.calsignlabs.apde.tool.ExportSignedPackage;
+import com.calsignlabs.apde.tool.FindInReference;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.GitManager;
 import com.calsignlabs.apde.tool.ImportLibrary;
 import com.calsignlabs.apde.tool.IncreaseIndent;
 import com.calsignlabs.apde.tool.ManageLibraries;
+import com.calsignlabs.apde.tool.OpenReference;
 import com.calsignlabs.apde.tool.Tool;
 import com.calsignlabs.apde.tool.UninstallSketch;
 import com.calsignlabs.apde.vcs.GitRepository;
@@ -1431,6 +1433,7 @@ public class APDE extends Application {
 		String[] coreTools = new String[] { AutoFormat.PACKAGE_NAME, ImportLibrary.PACKAGE_NAME, ManageLibraries.PACKAGE_NAME, ColorSelector.PACKAGE_NAME,
 				CommentUncomment.PACKAGE_NAME, IncreaseIndent.PACKAGE_NAME, DecreaseIndent.PACKAGE_NAME,
 				ExportEclipseProject.PACKAGE_NAME, ExportSignedPackage.PACKAGE_NAME,
+				FindInReference.PACKAGE_NAME, OpenReference.PACKAGE_NAME,
 				GitManager.PACKAGE_NAME, FindReplace.PACKAGE_NAME, UninstallSketch.PACKAGE_NAME};
 		
 		for (String coreTool : coreTools) {

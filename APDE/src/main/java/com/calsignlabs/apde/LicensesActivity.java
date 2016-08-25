@@ -1,7 +1,6 @@
 package com.calsignlabs.apde;
 
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
@@ -15,7 +14,7 @@ public class LicensesActivity extends AppCompatActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_licenses);
-
+		
 		Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
 		toolbar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
 		setSupportActionBar(toolbar);
