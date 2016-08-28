@@ -101,6 +101,9 @@
 			android:name=".ReferenceActivity"
 			android:label="@string/title_activity_reference"
 			android:theme="@style/FullscreenTheme" />
+		<activity
+			android:name=".sandbox.SandboxActivity"
+			android:theme="@style/FullscreenTheme" />
 	</application>
 
 </manifest>

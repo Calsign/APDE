@@ -2235,7 +2235,7 @@ public class Build {
 	}
 	
 	//http://stackoverflow.com/questions/11820142/how-to-pass-a-file-path-which-is-in-assets-folder-to-filestring-path
-	private static File createFileFromInputStream(InputStream inputStream, File destFile) {
+	public static File createFileFromInputStream(InputStream inputStream, File destFile) {
 		try {
 			// Make sure that the parent folder exists
 			destFile.getParentFile().mkdirs();

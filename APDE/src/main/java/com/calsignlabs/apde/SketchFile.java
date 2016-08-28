@@ -707,6 +707,10 @@ public class SketchFile implements Parcelable {
 		}
 	}
 	
+	public boolean isFragmentInitialized() {
+		return fragment != null;
+	}
+	
 	public void forceFragmentUpdate() {
 		fragment.setSketchFile(this);
 		fragment.updateWithSketchFile();

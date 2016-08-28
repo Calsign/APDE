@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<!-- Any device running APDE loaded through ARC Welder - so large-screened Chromebooks and computers -->
+	
+	<dimen name="sandbox_pane_width">800dp</dimen>
+</resources>

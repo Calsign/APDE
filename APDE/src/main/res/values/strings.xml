@@ -283,5 +283,10 @@
 	<string name="reference_source_processing">Processing</string>
 	<string name="reference_source_android_processing">Android Processing</string>
 	<string name="open_reference">Open Reference</string>
+	<string name="sandbox">Sandbox</string>
+	<string name="menu_sandbox">Open Sandbox</string>
+	<string name="menu_sandbox_close">Close</string>
+	<string name="menu_sandbox_fullscreen">Fullscreen</string>
+	<string name="menu_sandbox_reload">Reload</string>
 
 </resources>

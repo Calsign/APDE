@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+	  xmlns:app="http://schemas.android.com/apk/res-auto">
+	
+	<item
+		android:id="@+id/menu_sandbox_reload"
+		android:icon="@drawable/ic_refresh_white"
+		app:showAsAction="ifRoom"
+		android:title="@string/menu_sandbox_reload" />
+	<item
+		android:id="@+id/menu_sandbox_fullscreen"
+		android:icon="@drawable/ic_fullscreen_white"
+		app:showAsAction="ifRoom"
+		android:title="@string/menu_sandbox_fullscreen" />
+	<item
+		android:id="@+id/menu_sandbox_close"
+		android:icon="@drawable/ic_close_white"
+		app:showAsAction="ifRoom"
+		android:title="@string/menu_sandbox_close" />
+</menu>

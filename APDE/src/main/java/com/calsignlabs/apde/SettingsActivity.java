@@ -561,6 +561,10 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		Bundle args = new Bundle(1);
 		args.putString("resource", preferencesXml);
 		
+		if (isMultiPane()) {
+			clearFragmentBackstack();
+		}
+		
 		StockPreferenceFragment newFragment = new StockPreferenceFragment();
 		newFragment.setArguments(args);
 		

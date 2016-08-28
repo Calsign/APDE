@@ -803,8 +803,10 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 			getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
 			
 			//Make sure the code area is editable
-			((CodeEditText) getGlobalState().getEditor().findViewById(R.id.code)).setFocusable(true);
-			((CodeEditText) getGlobalState().getEditor().findViewById(R.id.code)).setFocusableInTouchMode(true);
+//			((CodeEditText) getGlobalState().getEditor().findViewById(R.id.code)).setFocusable(true);
+//			((CodeEditText) getGlobalState().getEditor().findViewById(R.id.code)).setFocusableInTouchMode(true);
+			
+			getGlobalState().getEditor().updateCodeAreaFocusable();
 			
 			//Force the drawer to reload
 			getGlobalState().getEditor().forceDrawerReload();

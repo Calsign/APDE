@@ -388,7 +388,6 @@ public class CodeEditText extends EditText {
 		XML[] keywords = xml.getChild("keywords").getChildren();
 		ArrayList<Keyword> tempSyntax = new ArrayList<>();
 		
-		syntax = new Keyword[keywords.length];
 		for (int i = 0; i < keywords.length; i ++) {
 			XML keyword = keywords[i];
 			

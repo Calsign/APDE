@@ -4,14 +4,19 @@
     
     <item
         android:id="@+id/menu_run"
-        android:icon="@drawable/ic_run_white"
         app:showAsAction="ifRoom"
+		app:actionLayout="@layout/action_run_stop"
         android:title="@string/menu_run" />
     <item
         android:id="@+id/menu_stop"
         android:icon="@drawable/ic_stop_white"
         app:showAsAction="ifRoom"
         android:title="@string/menu_stop" />
+	<item
+		android:id="@+id/menu_sandbox"
+		android:icon="@drawable/ic_pail_white"
+		app:showAsAction="ifRoom"
+		android:title="@string/menu_sandbox" />
     <item
         android:id="@+id/menu_undo"
         android:icon="@drawable/ic_undo_white"

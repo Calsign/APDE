@@ -25,7 +25,7 @@ android {
     dexOptions {
         javaMaxHeapSize "4g"
     }
-    
+
     sourceSets { main { res.srcDirs = ['src/main/res'] } }
 }
 
@@ -48,8 +48,8 @@ dependencies {
     compile files('libs/zipio-lib-1.8.jar')
     compile files('libs/zipsigner-lib-1.17.jar')
     compile files('libs/zipsigner-lib-optional-1.17.jar')
-    compile 'com.android.support:support-v4:24.0.0'
-    compile 'com.android.support:appcompat-v7:24.0.0'
-    compile 'com.android.support:design:24.0.0'
+    compile 'com.android.support:support-v4:24.1.1'
+    compile 'com.android.support:appcompat-v7:24.1.1'
+    compile 'com.android.support:design:24.1.1'
     compile 'com.takisoft.fix:preference-v7:24.0.0.1'
 }

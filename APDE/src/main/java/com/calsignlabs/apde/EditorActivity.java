@@ -12,6 +12,7 @@ import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.drawable.AnimatedVectorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -19,8 +20,10 @@ import android.os.Parcelable;
 import android.preference.PreferenceManager;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
@@ -63,10 +66,13 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.sandbox.SandboxActivity;
+import com.calsignlabs.apde.sandbox.SandboxFragment;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
@@ -132,6 +138,8 @@ public class EditorActivity extends AppCompatActivity {
 	
 	private View extraHeaderView;
 	
+	protected SandboxFragment sandboxFragment;
+	
 	//Possible dialog results
 	private final static int RENAME_TAB = 0;
 	private final static int NEW_TAB = 1;
@@ -160,8 +168,6 @@ public class EditorActivity extends AppCompatActivity {
 	//A reference to the toggle char inserts button... and why do we need this?
 	//It's because adding views to the char insert tray is somehow breaking the retrieval of this view by ID...
 	private ImageButton toggleCharInserts;
-	
-	private boolean twoFingerSwipe = false;
 	
 	//Intent flag to delete the old just-installed APK file
 	public static final int FLAG_DELETE_APK = 5;
@@ -736,6 +742,11 @@ public class EditorActivity extends AppCompatActivity {
 				// TODO Explain why to the user?
 				ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
 			}
+		}
+		
+		if (isSandboxOpen()) {
+			sandboxFragment.updateCode(getTabMetas());
+			clearConsole();
 		}
 	}
 	
@@ -1377,6 +1388,10 @@ public class EditorActivity extends AppCompatActivity {
 		// Make sure to save the sketch
 		saveSketchForStop();
 		
+		if (isSandboxOpen()) {
+			sandboxFragment.killSketch();
+		}
+		
 		super.onStop();
 	}
 	
@@ -1384,6 +1399,8 @@ public class EditorActivity extends AppCompatActivity {
 	public void onDestroy() {
 		//Unregister the log / console receiver
     	unregisterReceiver(consoleBroadcastReceiver);
+		
+		sandboxFragment = null;
     	
     	super.onDestroy();
 	}
@@ -1486,6 +1503,10 @@ public class EditorActivity extends AppCompatActivity {
 		autoSave();
 		// Add to recents
 		getGlobalState().putRecentSketch(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
+		
+		if (isSandboxOpen()) {
+			closeSandbox();
+		}
 		
 		// Reload the navigation drawer
 		forceDrawerReload();
@@ -1608,15 +1629,23 @@ public class EditorActivity extends AppCompatActivity {
     		
     		//Add this to the recent sketches
     		getGlobalState().putRecentSketch(sketchLocation, sketchPath);
+			
+			if (isSandboxOpen()) {
+				closeSandbox();
+			}
     	}
     	
     	return success;
 	}
     
+	public void saveSketch() {
+		saveSketch(true);
+	}
+	
     /**
      * Saves the sketch to the sketchbook folder, creating a new subdirectory if necessary
      */
-    public void saveSketch() {
+    public void saveSketch(boolean invalidateOptionsMenu) {
     	//If we cannot write to the external storage (and the user wants to), make sure to inform the user
     	if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
 				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
@@ -1670,7 +1699,9 @@ public class EditorActivity extends AppCompatActivity {
 	    		// Force the drawer to reload
 	    		forceDrawerReload();
 	    		
-	    		supportInvalidateOptionsMenu();
+				if (invalidateOptionsMenu) {
+					supportInvalidateOptionsMenu();
+				}
 	            
 	            // Inform the user of success
 	    		message(getResources().getText(R.string.sketch_saved));
@@ -2034,15 +2065,65 @@ public class EditorActivity extends AppCompatActivity {
     	return (APDE) getApplication();
     }
     
+	protected ImageButton runStopMenuButton = null;
+	protected boolean runStopMenuButtonAnimating = false;
+	
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.activity_editor, menu);
-        
+		getMenuInflater().inflate(R.menu.activity_editor, menu);
+		prepareOptionsMenu(menu);
+		return true;
+	}
+	
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+		prepareOptionsMenu(menu);
+		return true;
+	}
+	
+	private void prepareOptionsMenu(Menu menu) {
+		// We're using an action view because apparently this is the only way to animate the icon
+		runStopMenuButton = (ImageButton) menu.findItem(R.id.menu_run).getActionView();
+		
+		runStopMenuButton.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				if (runStopMenuButtonAnimating) {
+					return;
+				}
+				
+				// Run turns into stop when building
+				if (!building) {
+					runApplication();
+				} else {
+					stopApplication();
+				}
+			}
+		});
+		
+		runStopMenuButton.setOnLongClickListener(new ImageButton.OnLongClickListener() {
+			@Override
+			public boolean onLongClick(View v) {
+				Toast toast = Toast.makeText(EditorActivity.this, building ? R.string.menu_stop : R.string.menu_run, Toast.LENGTH_SHORT);
+				FindReplace.positionToast(toast, runStopMenuButton, getWindow(), 0, 0);
+				toast.show();
+				
+				return true;
+			}
+		});
+		
+		if (android.os.Build.VERSION.SDK_INT >= 21) {
+			runStopMenuButton.setImageDrawable(getResources().getDrawable(building ? R.drawable.ic_stop_vector : R.drawable.ic_run_vector));
+		} else {
+			runStopMenuButton.setImageDrawable(getResources().getDrawable(building ? R.drawable.ic_stop_white : R.drawable.ic_run_white));
+		}
+		
         if(drawerOpen) {
         	// If the drawer is visible
         	
         	// Make sure to hide all of the sketch-specific action items
         	menu.findItem(R.id.menu_run).setVisible(false);
+			menu.findItem(R.id.menu_sandbox).setVisible(false);
         	menu.findItem(R.id.menu_stop).setVisible(false);
         	menu.findItem(R.id.menu_undo).setVisible(false);
         	menu.findItem(R.id.menu_redo).setVisible(false);
@@ -2064,10 +2145,11 @@ public class EditorActivity extends AppCompatActivity {
         } else {
         	if (getCodeCount() > 0) {
         		// If the drawer is closed and there are tabs
-        		
-        		// Make sure to make the tab actions visible
+				
+				// Show the run button when not building and the stop button when building
             	menu.findItem(R.id.menu_run).setVisible(true);
-            	menu.findItem(R.id.menu_stop).setVisible(true);
+            	menu.findItem(R.id.menu_stop).setVisible(false);
+				menu.findItem(R.id.menu_sandbox).setVisible(!isSandboxOpen());
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
             	menu.findItem(R.id.menu_tab_rename).setVisible(true);
             	
@@ -2160,8 +2242,6 @@ public class EditorActivity extends AppCompatActivity {
     	if (getCodeCount() <= 0 && !getGlobalState().isExample()) {
 			menu.findItem(R.id.menu_tab_new).setVisible(true);
 		}
-    	
-        return true;
     }
     
     @Override
@@ -2202,12 +2282,20 @@ public class EditorActivity extends AppCompatActivity {
                     supportInvalidateOptionsMenu();
                 }
         		return true;
-            case R.id.menu_run:
-            	runApplication();
-            	return true;
-            case R.id.menu_stop:
-            	stopApplication();
-            	return true;
+//            case R.id.menu_run:
+//				// Run turns into stop when building
+//				if (!building) {
+//					runApplication();
+//				} else {
+//					stopApplication();
+//				}
+//            	return true;
+//            case R.id.menu_stop:
+//            	stopApplication();
+//            	return true;
+			case R.id.menu_sandbox:
+				openSandbox();
+				return true;
             case R.id.menu_undo:
         		tabs.get(getSelectedCodeIndex()).undo(this);
             	return true;
@@ -2439,7 +2527,7 @@ public class EditorActivity extends AppCompatActivity {
     	case SKETCHBOOK:
     	case EXTERNAL:
 		case TEMPORARY:
-    		saveSketch();
+    		saveSketch(false);
     		break;
     	}
     	
@@ -2451,9 +2539,9 @@ public class EditorActivity extends AppCompatActivity {
 		if (!checkScreenOverlay()) {
 			return;
 		}
-    	
+		
     	//Clear the console
-    	((TextView) findViewById(R.id.console)).setText("");
+    	clearConsole();
     	
     	final Build builder = new Build(getGlobalState());
     	
@@ -2462,8 +2550,10 @@ public class EditorActivity extends AppCompatActivity {
     		@Override
     		public void run() {
     			building = true;
+				changeRunStopIcon(true);
     			builder.build("debug");
     			building = false;
+				changeRunStopIcon(false);
     	}});
     	buildThread.start();
     }
@@ -2477,9 +2567,170 @@ public class EditorActivity extends AppCompatActivity {
     	//I don't think we can stop a running app...
     	//...that's what the BACK button is for
     	
-    	if(building)
-    		Build.halt();
+    	if(building) {
+			Build.halt();
+		}
+		
     }
+	
+	public void changeRunStopIcon(final boolean run) {
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				if (android.os.Build.VERSION.SDK_INT >= 21) {
+					AnimatedVectorDrawable anim = (AnimatedVectorDrawable) getResources().getDrawable(run ? R.drawable.run_to_stop : R.drawable.stop_to_run);
+					runStopMenuButton.setImageDrawable(anim);
+					anim.start();
+					runStopMenuButtonAnimating = true;
+					
+					runStopMenuButton.postDelayed(new Runnable() {
+						@Override
+						public void run() {
+							supportInvalidateOptionsMenu();
+							runStopMenuButtonAnimating = false;
+						}
+					}, getResources().getInteger(R.integer.run_stop_animation_duration));
+				} else {
+					supportInvalidateOptionsMenu();
+				}
+			}
+		});
+	}
+	
+	/**
+	 * Open Sandbox mode
+	 */
+	protected void openSandbox() {
+		if (isMultiPane()) {
+			LinearLayout sandboxPane = (LinearLayout) findViewById(R.id.sandbox_pane);
+			Toolbar sandboxToolbar = (Toolbar) findViewById(R.id.sandbox_toolbar);
+			final LinearLayout supercontainer = (LinearLayout) findViewById(R.id.multipane_supercontainer); 
+			final LinearLayout content = (LinearLayout) findViewById(R.id.content);
+			
+			if (!isSandboxOpen()) {
+				float sandboxPaneWidth = getResources().getDimension(R.dimen.sandbox_pane_width);
+				
+				sandboxPane.startAnimation(new ResizeAnimation<LinearLayout>(sandboxPane, 0, supercontainer.getHeight(), sandboxPaneWidth, supercontainer.getHeight()));
+				content.startAnimation(new ResizeAnimation<LinearLayout>(content, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, supercontainer.getWidth() - sandboxPaneWidth, ResizeAnimation.DEFAULT));
+				
+				if (sandboxToolbar.getMenu().size() == 0) {
+					// We haven't built the menu yet
+//					sandboxToolbar.setLogo(R.drawable.ic_pail_white);
+					sandboxToolbar.setTitle(R.string.sandbox);
+					sandboxToolbar.inflateMenu(R.menu.pane_sandbox);
+					sandboxToolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+						@Override
+						public boolean onMenuItemClick(MenuItem item) {
+							switch (item.getItemId()) {
+								case R.id.menu_sandbox_close:
+									closeSandbox();
+									return true;
+								case R.id.menu_sandbox_fullscreen:
+									fullscreenSandbox();
+									return true;
+								case R.id.menu_sandbox_reload:
+									sandboxFragment.updateCode(getTabMetas());
+									clearConsole();
+									return true;
+								default:
+									return false;
+							}
+						}
+					});
+				}
+				
+				sandboxPane.postDelayed(new Runnable() {
+					@Override
+					public void run() {
+						sandboxFragment = SandboxFragment.newInstance();
+						
+						FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+						transaction.add(R.id.sandbox_container, sandboxFragment);
+						transaction.commit();
+						
+						getSupportFragmentManager().executePendingTransactions();
+						
+						sandboxFragment.updateCode(getTabMetas());
+						clearConsole();
+						
+						supportInvalidateOptionsMenu();
+						
+						updateConsoleAndCodeAreasMinWidth();
+					}
+				}, 200);
+			} else {
+				sandboxFragment.updateCode(getTabMetas());
+				clearConsole();
+			}
+		} else {
+			startActivity(new Intent(this, SandboxActivity.class));
+		}
+	}
+	
+	protected boolean isSandboxOpen() {
+		return sandboxFragment != null;
+	}
+	
+	protected void fullscreenSandbox() {
+		if (android.os.Build.VERSION.SDK_INT >= 21) {
+			FrameLayout sandboxContainer = (FrameLayout) findViewById(R.id.sandbox_container);
+			
+			Intent intent = new Intent(this, SandboxActivity.class);
+			// Shared element transition
+			ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(this, sandboxContainer, "sandbox_container");
+			startActivity(intent, options.toBundle());
+		} else {
+			startActivity(new Intent(this, SandboxActivity.class));
+		}
+	}
+	
+	/**
+	 * Close Sandbox mode
+	 */
+	protected void closeSandbox() {
+		if (isMultiPane()) {
+			LinearLayout sandboxPane = (LinearLayout) findViewById(R.id.sandbox_pane);
+			final LinearLayout supercontainer = (LinearLayout) findViewById(R.id.multipane_supercontainer);
+			final LinearLayout content = (LinearLayout) findViewById(R.id.content);
+			
+			sandboxPane.startAnimation(new ResizeAnimation<LinearLayout>(sandboxPane, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0, ResizeAnimation.DEFAULT));
+			content.startAnimation(new ResizeAnimation<LinearLayout>(content, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, supercontainer.getWidth(), ResizeAnimation.DEFAULT));
+			
+			sandboxPane.postDelayed(new Runnable() {
+				@Override
+				public void run() {
+					FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+					transaction.remove(sandboxFragment);
+					transaction.commit();
+					
+					sandboxFragment = null;
+					
+					supportInvalidateOptionsMenu();
+					
+					updateConsoleAndCodeAreasMinWidth();
+				}
+			}, 200);
+		}
+	}
+	
+	protected void updateConsoleAndCodeAreasMinWidth() {
+		LinearLayout content = (LinearLayout) findViewById(R.id.content);
+		
+		int maxWidth = content.getWidth();
+		int minWidth = maxWidth - (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()) * 2;
+		
+		((TextView) findViewById(R.id.console)).setMinimumWidth(minWidth);
+		
+		for (SketchFile sketchFile : getTabMetas()) {
+			if (sketchFile.isFragmentInitialized() && sketchFile.getFragment().isInitialized()) {
+				sketchFile.getFragment().getCodeEditText().setMinWidth(minWidth);
+			}
+		}
+	}
+	
+	protected boolean isMultiPane() {
+		return getResources().getBoolean(R.bool.tablet_multi_pane);
+	}
 	
 	/**
 	 * Set to the most recent value of MotionEvent.FLAG_WINDOW_IS_OBSCURED
@@ -3544,6 +3795,10 @@ public class EditorActivity extends AppCompatActivity {
 						}
 					});
 			}});
+	}
+	
+	public void clearConsole() {
+		((TextView) findViewById(R.id.console)).setText("");
 	}
 	
 	// Listener class for managing message area drag events
