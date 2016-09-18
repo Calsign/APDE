@@ -80,4 +80,8 @@
         android:id="@+id/menu_tools"
         app:showAsAction="never"
         android:title="@string/tools" />
+	<item
+		android:id="@+id/menu_learning"
+		app:showAsAction="never"
+		android:title="@string/title_activity_learning" />
 </menu>

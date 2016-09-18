@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="title_activity_learning">Learning</string>
+	<string-array name="skill_tutorial_states">
+		<item>Not available</item>
+		<item>Locked</item>
+		<item>Unlocked</item>
+		<item>Completed</item>
+	</string-array>
+	<string name="skill_tutorial_begin">Begin</string>
+	<string name="skill_tutorial_back">Back</string>
+	<string name="skill_tutorial_next">Next</string>
+	<string name="skill_tutorial_finish">Finish</string>
+	<string name="skill_tutorial_recommended_examples">Recommended Examples:</string>
+	<string name="learning_repo_not_downloaded_dialog_title">Curriculum Not Downloaded</string>
+	<string name="learning_repo_not_downloaded_dialog_message">You must download the examples repository in order to access the learning curriculum.\n\nGo to Settings > General > Examples Updates to change settings.</string>
+</resources>

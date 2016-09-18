@@ -71,11 +71,13 @@ import android.widget.Toast;
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.learning.LearningActivity;
 import com.calsignlabs.apde.sandbox.SandboxActivity;
 import com.calsignlabs.apde.sandbox.SandboxFragment;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
+import com.calsignlabs.apde.vcs.GitRepository;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import org.xml.sax.SAXException;
@@ -2338,6 +2340,9 @@ public class EditorActivity extends AppCompatActivity {
             case R.id.menu_tools:
             	launchTools();
         		return true;
+			case R.id.menu_learning:
+				launchLearning();
+				return true;
             case R.id.menu_sketch_properties:
             	launchSketchProperties();
             	return true;
@@ -3598,6 +3603,25 @@ public class EditorActivity extends AppCompatActivity {
 		
 		dialog.setCanceledOnTouchOutside(true);
 		dialog.show();
+	}
+	
+	public void launchLearning() {
+		GitRepository learningRepo = new GitRepository(getGlobalState().getLearningFolder());
+		
+		if (learningRepo.exists()) {
+			startActivity(new Intent(this, LearningActivity.class));
+		} else {
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setTitle(R.string.learning_repo_not_downloaded_dialog_title);
+			builder.setMessage(R.string.learning_repo_not_downloaded_dialog_message);
+			builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialogInterface, int i) {}
+			});
+			builder.show();
+		}
+		
+		learningRepo.close();
 	}
 	
 	public void launchImportLibrary() {

@@ -1,7 +1,9 @@
 package com.calsignlabs.apde.tool;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -38,6 +40,7 @@ public class ColorSelector implements Tool {
 	public static final String PACKAGE_NAME = "com.calsignlabs.apde.tool.ColorSelector";
 	
 	private APDE context;
+	private Activity activity;
 	
 	private AlertDialog dialog;
 	
@@ -53,12 +56,24 @@ public class ColorSelector implements Tool {
 	
 	private static float DIP;
 	
+	private DialogInterface.OnShowListener onShowListener = null;
+	private DialogInterface.OnDismissListener onDismissListener = null;
+	
 	@Override
 	public void init(APDE context) {
 		this.context = context;
 		
 		// "0.5f" scaling factor is neccessary because the graphics were originally created for a higher-resolution screen...
 		DIP = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, context.getResources().getDisplayMetrics());
+	}
+	
+	public void setActivity(Activity activity) {
+		this.activity = activity;
+		
+		// We need to reset
+		if (dialog != null) {
+			dialog = null;
+		}
 	}
 	
 	@Override
@@ -70,7 +85,7 @@ public class ColorSelector implements Tool {
 	@Override
 	public void run() {
 		if(dialog == null) {
-			AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
+			AlertDialog.Builder builder = new AlertDialog.Builder(activity != null ? activity : context.getEditor());
 			builder.setTitle(R.string.color_selector);
 			
 			layout = (LinearLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.color_selector, null);
@@ -189,6 +204,13 @@ public class ColorSelector implements Tool {
 			dialog = builder.create();
 		}
 		
+		if (onShowListener != null) {
+			dialog.setOnShowListener(onShowListener);
+		}
+		if (onDismissListener != null) {
+			dialog.setOnDismissListener(onDismissListener);
+		}
+		
 		dialog.show();
 	}
 	
@@ -205,6 +227,23 @@ public class ColorSelector implements Tool {
 	@Override
 	public boolean createSelectionActionModeMenuItem(MenuItem convert) {
 		return false;
+	}
+	
+	public void setOnShowListener(DialogInterface.OnShowListener onShowListener) {
+		this.onShowListener = onShowListener;
+	}
+	
+	public void setOnDissmissListener(DialogInterface.OnDismissListener onDissmissListener) {
+		this.onDismissListener = onDissmissListener;
+	}
+	
+	public void setHex(String colorString) {
+		int color = Color.parseColor(colorString);
+		setRGB(Color.red(color), Color.green(color), Color.blue(color));
+	}
+	
+	public String getHex() {
+		return hex.getText().toString();
 	}
 	
 	@SuppressLint("NewApi")

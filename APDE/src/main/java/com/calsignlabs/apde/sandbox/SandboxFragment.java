@@ -173,6 +173,27 @@ public class SandboxFragment extends Fragment {
 		}
 	}
 	
+	public void updateCode(String code) {
+		String escapedPdeCode = code.replace("\"", "\\\"").replace("\n", "\\n");
+		
+		final String jsFunction = "updateCode(\"" + escapedPdeCode + "\")";
+		
+		if (pageLoaded) {
+			webView.loadUrl("javascript:" + jsFunction);
+		} else {
+			pageLoadListener = new OnPageLoadListener() {
+				@TargetApi(android.os.Build.VERSION_CODES.KITKAT)
+				@Override
+				public void onPageLoad() {
+					if (webView != null) {
+						// Hmm... got this crash once, so just to be sure
+						webView.loadUrl("javascript:" + jsFunction);
+					}
+				}
+			};
+		}
+	}
+	
 	private String compileSketchFiles(SketchFile[] sketchFiles) {
 		StringBuilder code = new StringBuilder();
 		

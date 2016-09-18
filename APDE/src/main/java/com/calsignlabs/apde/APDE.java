@@ -84,7 +84,11 @@ public class APDE extends Application {
 	
 	public static final String EXAMPLES_REPO = "https://github.com/Calsign/APDE-Examples-Repo.git";
 	// We use a new branch every time we break backwards-compatibility by updating the examples
-	public static final String EXAMPLES_REPO_BRANCH = "v0.4.0";
+	public static final String EXAMPLES_REPO_BRANCH = "learning";
+	
+	public static final String LEARNING_REPO = "https://github.com/Calsign/APDE-Learning-Repo.git";
+	// We use a new branch every time we break backwards-compatibility
+	public static final String LEARNING_REPO_BRANCH = "learning";
 	
 	private TaskManager taskManager;
 	
@@ -845,6 +849,10 @@ public class APDE extends Application {
 		return examplesRepo.list().length > 0 ? examplesRepo : getStarterExamplesFolder();
 	}
 	
+	public File getLearningFolder() {
+		return getDir("learning", 0);
+	}
+	
 	public void initExamplesRepo() {
 		// Don't bother checking if the user doesn't want to
 		if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("update_examples", true)) {
@@ -874,11 +882,16 @@ public class APDE extends Application {
 					getEditor().FLAG_SUSPEND_OUT_STREAM.set(true);
 					
 					try {
+						// Do both examples and learning all at once
 						GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
+						GitRepository learningRepo = new GitRepository(getLearningFolder());
 						
 						// Check to see if an update is available
-						if (!examplesRepo.exists() || (examplesRepo.exists() && examplesRepo.canPull(EXAMPLES_REPO, EXAMPLES_REPO_BRANCH))) {
+						if (!examplesRepo.exists() || (examplesRepo.exists() && examplesRepo.canPull(EXAMPLES_REPO, EXAMPLES_REPO_BRANCH))
+								|| !learningRepo.exists() || (learningRepo.exists() && learningRepo.canPull(LEARNING_REPO, LEARNING_REPO_BRANCH))) {
+							
 							examplesRepo.close();
+							learningRepo.close();
 							
 							// Yucky multi-threading
 							editor.runOnUiThread(new Runnable() {
@@ -956,6 +969,8 @@ public class APDE extends Application {
 			public void run() {
 				getEditor().FLAG_SUSPEND_OUT_STREAM.set(true);
 				
+				// Check for examples
+				
 				GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
 				
 				boolean update = false;
@@ -966,13 +981,33 @@ public class APDE extends Application {
 						update = true;
 					}
 					
-					//Make sure to close
+					// Make sure to close
 					examplesRepo.close();
 				} else {
-					//We need to close before so that we can write to the directory
+					// We need to close before so that we can write to the directory
 					examplesRepo.close();
 					
 					GitRepository.cloneRepo(EXAMPLES_REPO, examplesRepo.getRootDir(), EXAMPLES_REPO_BRANCH);
+					update = true;
+				}
+				
+				// Check for learning curriculum
+				
+				GitRepository learningRepo = new GitRepository(getLearningFolder());
+				
+				if (learningRepo.exists()) {
+					if (learningRepo.canPull(LEARNING_REPO, LEARNING_REPO_BRANCH)) {
+						learningRepo.pullRepo(LEARNING_REPO, LEARNING_REPO_BRANCH);
+						update = true;
+					}
+					
+					// Make sure to close
+					learningRepo.close();
+				} else {
+					// We need to close before so that we can write to the directory
+					learningRepo.close();
+					
+					GitRepository.cloneRepo(LEARNING_REPO, learningRepo.getRootDir(), LEARNING_REPO_BRANCH);
 					update = true;
 				}
 				
@@ -1011,10 +1046,12 @@ public class APDE extends Application {
 			new Thread(new Runnable() {
 				public void run() {
 					GitRepository examplesRepo = new GitRepository(getExamplesRepoFolder());
+					GitRepository learningRepo = new GitRepository(getLearningFolder());
 					
 					//Delete the repository
 					try {
 						deleteFile(examplesRepo.getRootDir());
+						deleteFile(learningRepo.getRootDir());
 					} catch (IOException e) {
 						e.printStackTrace();
 						return;
