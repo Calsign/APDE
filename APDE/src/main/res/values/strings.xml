@@ -288,5 +288,9 @@
 	<string name="menu_sandbox_close">Close</string>
 	<string name="menu_sandbox_fullscreen">Fullscreen</string>
 	<string name="menu_sandbox_reload">Reload</string>
-
+	<string name="enable_firebase_analytics_dialog_title">Enable Analytics</string>
+	<string name="enable_firebase_analytics_dialog_message">You have installed a testing version of APDE that includes Firebase Analytics. It is recommended that you enable analytics to improve APDE, but you may disable analytics should you so desire.\n\nNormal builds of APDE do not contain any analytics at all. In this version, no personal information will be collected should you choose to enable analytics. An example of data that would be collected is an event triggered by opening a skill tutorial in the learning environment. All data that is collected is designed to measure feature use and therefore determine how to best improve APDE.\n\nIf you would like to enable analytics, please select "Enable". If you would like not to enable analytics, please select "Disable". If you make no selection, analytics will be disabled and you will be prompted again the next time that you start APDE.\n\nYou can change your selection at any time from Settings > General > Debug > Enable Analytics.</string>
+	<string name="enable">Enable</string>
+	<string name="disable">Disable</string>
+	
 </resources>

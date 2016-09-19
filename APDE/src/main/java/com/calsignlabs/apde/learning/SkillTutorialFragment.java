@@ -11,6 +11,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 
 import com.calsignlabs.apde.R;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 public class SkillTutorialFragment extends Fragment {
 	private View rootView;
@@ -20,18 +21,37 @@ public class SkillTutorialFragment extends Fragment {
 	private Button backButton, nextButton, finishButton;
 	
 	private SkillTutorial skillTutorial;
+	private String skillTutorialStateString;
 	private int currentPage = -1;
 	
-	public static SkillTutorialFragment newInstance(String skillTutorialName) {
+	private FirebaseAnalytics firebaseAnalytics;
+	
+	public static SkillTutorialFragment newInstance(String skillTutorialName, String skillTutorialStateString) {
 		SkillTutorialFragment skillTutorialFragment = new SkillTutorialFragment();
 		Bundle args = new Bundle();
 		args.putString("skillTutorialName", skillTutorialName);
+		args.putString("skillTutorialStateString", skillTutorialStateString);
 		skillTutorialFragment.setArguments(args);
 		return skillTutorialFragment;
 	}
 	
 	public SkillTutorialFragment() {}
 	
+	protected FirebaseAnalytics getAnalytics() {
+		return firebaseAnalytics;
+	}
+	
+	protected SkillTutorial getSkillTutorial() {
+		return skillTutorial;
+	}
+	
+	protected String getSkillTutorialStateString() {
+		return skillTutorialStateString;
+	}
+	
+	protected int getCurrentPage() {
+		return currentPage;
+	}
 	
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -49,10 +69,13 @@ public class SkillTutorialFragment extends Fragment {
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
 		
+		firebaseAnalytics = FirebaseAnalytics.getInstance(getContext());
+		
 		container = (LinearLayout) rootView.findViewById(R.id.skill_tutorial_container);
 		scroller = (ScrollView) rootView.findViewById(R.id.skill_tutorial_container_scroller); 
 		
 		skillTutorial = new SkillTutorial(getActivity(), this, getArguments().getString("skillTutorialName"));
+		skillTutorialStateString = getArguments().getString("skillTutorialStateString");
 		
 		backButton = (Button) rootView.findViewById(R.id.skill_tutorial_back);
 		nextButton = (Button) rootView.findViewById(R.id.skill_tutorial_next);
@@ -100,6 +123,11 @@ public class SkillTutorialFragment extends Fragment {
 					return;
 				}
 				
+				Bundle bundle = new Bundle();
+				bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, skillTutorial.getName());
+				bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, skillTutorialStateString);
+				firebaseAnalytics.logEvent("learning_finish_tutorial", bundle);
+				
 				((LearningActivity) getActivity()).finishSkillTutorial(skillTutorial.getName());
 			}
 		});
@@ -124,6 +152,12 @@ public class SkillTutorialFragment extends Fragment {
 		
 		nextButton.setVisibility(canNext ? View.VISIBLE : View.GONE);
 		finishButton.setVisibility(canNext ? View.GONE : View.VISIBLE);
+		
+		Bundle bundle = new Bundle();
+		bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, skillTutorial.getName());
+		bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, skillTutorialStateString);
+		bundle.putLong(FirebaseAnalytics.Param.LEVEL, page);
+		firebaseAnalytics.logEvent("learning_tutorial_navigate_page", bundle);
 	}
 	
 	@Override

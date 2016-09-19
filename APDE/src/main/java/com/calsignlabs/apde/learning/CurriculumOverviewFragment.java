@@ -30,6 +30,7 @@ import android.view.ViewGroup;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.R;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.io.File;
 import java.util.Arrays;
@@ -50,10 +51,10 @@ public class CurriculumOverviewFragment extends Fragment {
 	private TextPaint[] labelPaints = new TextPaint[4];
 	private int[] stateMessageColors = new int[4];
 	
-	public static int NOT_AVAILABLE = 0;
-	public static int LOCKED = 1;
-	public static int UNLOCKED = 2;
-	public static int COMPLETED = 3;
+	public static final int NOT_AVAILABLE = 0;
+	public static final int LOCKED = 1;
+	public static final int UNLOCKED = 2;
+	public static final int COMPLETED = 3;
 	
 	private XML learningCurriculumOverviewData;
 	private HashMap<String, NodeLabel> nodeLabels;
@@ -67,6 +68,8 @@ public class CurriculumOverviewFragment extends Fragment {
 	private float offsetX, offsetY;
 	
 	private float minOffsetX, maxOffsetX, minOffsetY, maxOffsetY;
+	
+	private FirebaseAnalytics firebaseAnalytics;
 	
 	protected class NodeLabel {
 		protected String name;
@@ -94,6 +97,16 @@ public class CurriculumOverviewFragment extends Fragment {
 			this.prerequisites = prerequisites;
 			this.exactCenterY = exactCenterY;
 			this.state = state;
+		}
+		
+		public String getStateString() {
+			switch (state) {
+				case NOT_AVAILABLE: return "not_available";
+				case LOCKED: return "locked";
+				case UNLOCKED: return "unlocked";
+				case COMPLETED: return "completed";
+				default: return "unknown_skill_tutorial_state";
+			}
 		}
 	}
 	
@@ -174,6 +187,8 @@ public class CurriculumOverviewFragment extends Fragment {
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
+		
+		firebaseAnalytics = FirebaseAnalytics.getInstance(getContext());
 		
 		backgroundPaint.setColor(getActivity().getResources().getColor(R.color.activity_background));
 		
@@ -423,7 +438,7 @@ public class CurriculumOverviewFragment extends Fragment {
 	protected boolean detectPress(float x, float y) {
 		for (final NodeLabel nodeLabel : nodeLabels.values()) {
 			if (nodeLabel.rect.contains(x - offsetX, y - offsetY)) {
-				AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+				final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 				
 				String readableState = getActivity().getResources().getStringArray(R.array.skill_tutorial_states)[nodeLabel.state];
 				
@@ -436,7 +451,12 @@ public class CurriculumOverviewFragment extends Fragment {
 				builder.setPositiveButton(R.string.skill_tutorial_begin, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialogInterface, int i) {
-						((LearningActivity) getActivity()).loadSkillTutorial(nodeLabel.name, nodeLabel.title);
+						Bundle bundle = new Bundle();
+						bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, nodeLabel.name);
+						bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, nodeLabel.getStateString());
+						firebaseAnalytics.logEvent("learning_begin_tutorial", bundle);
+						
+						((LearningActivity) getActivity()).loadSkillTutorial(nodeLabel.name, nodeLabel.title, nodeLabel.getStateString());
 					}
 				});
 				
@@ -444,6 +464,11 @@ public class CurriculumOverviewFragment extends Fragment {
 				dialog.show();
 				
 				dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(nodeLabel.state == UNLOCKED || nodeLabel.state == COMPLETED); // TODO
+				
+				Bundle bundle = new Bundle();
+				bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, nodeLabel.name);
+				bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, nodeLabel.getStateString());
+				firebaseAnalytics.logEvent("learning_view_tutorial", bundle);
 				
 				return true;
 			}

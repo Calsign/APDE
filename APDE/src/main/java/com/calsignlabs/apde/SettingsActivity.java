@@ -40,6 +40,7 @@ import android.widget.TextView;
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.support.CustomListPreference;
 import com.calsignlabs.apde.support.StockPreferenceFragment;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompat;
 import com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat;
 
@@ -51,11 +52,15 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 	
 	private static boolean wasMultiPaneAtStart;
 	
+	// Firebase Analytics
+	private FirebaseAnalytics firebaseAnalytics;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
 		setContentView(R.layout.activity_settings);
+		
+		firebaseAnalytics = FirebaseAnalytics.getInstance(this);
 		
 		if (savedInstanceState == null) {
 			addHeadersFragment();
@@ -92,6 +97,10 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		}
 		
 		wasMultiPaneAtStart = isMultiPane();
+		
+		Bundle bundle = new Bundle();
+		bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "settings");
+		firebaseAnalytics.logEvent("open_screen", bundle);
 	}
 	
 	@Override

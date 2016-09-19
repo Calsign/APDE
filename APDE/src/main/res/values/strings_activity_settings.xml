@@ -93,5 +93,7 @@
     <string name="pref_build_aapt_binary">Use pre-v0.3.3 AAPT Binary</string>
     <string name="pref_build_aapt_binary_desc">Potential fix for devices where v0.3.3 broke the build process</string>
     <string name="pref_build_recopy_android_jar">Re-copy android.jar file</string>
+    <string name="pref_debug_firebase_analytics">Enable Analytics</string>
+    <string name="pref_debug_firebase_analytics_desc">All data is anonymous and no personal data will be collected. Used for improving APDE. You must restart APDE for a change in this setting to take effect.</string>
 
 </resources>

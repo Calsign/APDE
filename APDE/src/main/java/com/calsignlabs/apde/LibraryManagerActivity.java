@@ -37,6 +37,7 @@ import android.widget.TextView;
 import com.calsignlabs.apde.contrib.ContributionManager;
 import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.support.CustomProgressDialog;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import java.io.File;
@@ -63,10 +64,14 @@ public class LibraryManagerActivity extends AppCompatActivity {
 	//Whether or not we are currently doing something
 	private boolean working = false;
 	
+	private FirebaseAnalytics firebaseAnalytics;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_library_manager);
+		
+		firebaseAnalytics = FirebaseAnalytics.getInstance(this);
 		
 		Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
 		toolbar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
@@ -76,6 +81,10 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 		
 		getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
+		
+		Bundle bundle = new Bundle();
+		bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "library_manager");
+		firebaseAnalytics.logEvent("open_screen", bundle);
 	}
 	
 	@Override

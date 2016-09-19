@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
@@ -34,6 +35,7 @@ import com.calsignlabs.apde.CodeEditText;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.sandbox.SandboxFragment;
 import com.calsignlabs.apde.tool.ColorSelector;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -477,7 +479,7 @@ public class SkillTutorial {
 		private TextView textView;
 		
 		@Override
-		public View getView(ViewGroup root, Segment segment) {
+		public View getView(ViewGroup root, final Segment segment) {
 			FrameLayout layout = (FrameLayout) ((LayoutInflater) segment.getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.learning_skill_tutorial_component_code, root, false);
 			
 			final CodeEditText codeArea = (CodeEditText) layout.findViewById(R.id.learning_skill_container_component_code_area);
@@ -504,6 +506,14 @@ public class SkillTutorial {
 				runButton.setOnClickListener(new View.OnClickListener() {
 					@Override
 					public void onClick(View view) {
+						SkillTutorialFragment skillTutorialFragment = (SkillTutorialFragment) segment.getFragment();
+						
+						Bundle bundle = new Bundle();
+						bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, skillTutorialFragment.getSkillTutorial().getName());
+						bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, skillTutorialFragment.getSkillTutorialStateString());
+						bundle.putLong(FirebaseAnalytics.Param.LEVEL, skillTutorialFragment.getCurrentPage());
+						skillTutorialFragment.getAnalytics().logEvent("learning_tutorial_run_code", bundle);
+						
 						((LearningActivity) activity).loadExampleCode(code.toString());
 					}
 				});
@@ -727,6 +737,15 @@ public class SkillTutorial {
 						return false;
 					}
 				});
+				
+				SkillTutorialFragment skillTutorialFragment = (SkillTutorialFragment) segment.getFragment();
+				
+				Bundle bundle = new Bundle();
+				bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, skillTutorialFragment.getSkillTutorial().getName());
+				bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, skillTutorialFragment.getSkillTutorialStateString());
+				bundle.putLong(FirebaseAnalytics.Param.LEVEL, skillTutorialFragment.getCurrentPage());
+				bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "number");
+				skillTutorialFragment.getAnalytics().logEvent("learning_tutorial_pick_code", bundle);
 			}
 		}
 		
@@ -777,6 +796,15 @@ public class SkillTutorial {
 				});
 				
 				colorSelector.run();
+				
+				SkillTutorialFragment skillTutorialFragment = (SkillTutorialFragment) segment.getFragment();
+				
+				Bundle bundle = new Bundle();
+				bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, skillTutorialFragment.getSkillTutorial().getName());
+				bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, skillTutorialFragment.getSkillTutorialStateString());
+				bundle.putLong(FirebaseAnalytics.Param.LEVEL, skillTutorialFragment.getCurrentPage());
+				bundle.putString(FirebaseAnalytics.Param.ITEM_ID, "color");
+				skillTutorialFragment.getAnalytics().logEvent("learning_tutorial_pick_code", bundle);
 			}
 		}
 	}
@@ -869,6 +897,14 @@ public class SkillTutorial {
 					text.setSpan(new ClickableSpan() {
 						@Override
 						public void onClick(View view) {
+							SkillTutorialFragment skillTutorialFragment = (SkillTutorialFragment) segment.getFragment();
+							
+							Bundle bundle = new Bundle();
+							bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, skillTutorialFragment.getSkillTutorial().getName());
+							bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, skillTutorialFragment.getSkillTutorialStateString());
+							bundle.putString(FirebaseAnalytics.Param.ITEM_ID, line);
+							skillTutorialFragment.getAnalytics().logEvent("learning_tutorial_open_example", bundle);
+							
 							((APDE) segment.getContext().getApplication()).getEditor().loadSketch(line, APDE.SketchLocation.EXAMPLE);
 							segment.getContext().finish();
 						}

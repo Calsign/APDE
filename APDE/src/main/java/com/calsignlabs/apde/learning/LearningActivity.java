@@ -12,16 +12,21 @@ import android.widget.FrameLayout;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SettingsActivity;
 import com.calsignlabs.apde.sandbox.SandboxFragment;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 public class LearningActivity extends AppCompatActivity {
 	private CurriculumOverviewFragment curriculumOverviewFragment;
 	private SkillTutorialFragment skillTutorialFragment;
 	private SandboxFragment sandboxFragment;
 	
+	private FirebaseAnalytics firebaseAnalytics;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_learning);
+		
+		firebaseAnalytics = FirebaseAnalytics.getInstance(this);
 		
 		Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
 		toolbar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
@@ -59,6 +64,10 @@ public class LearningActivity extends AppCompatActivity {
 				});
 			}
 		}
+		
+		Bundle bundle = new Bundle();
+		bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "learning");
+		firebaseAnalytics.logEvent("open_screen", bundle);
 	}
 	
 	@Override
@@ -70,8 +79,8 @@ public class LearningActivity extends AppCompatActivity {
 		if (sandboxFragment != null) getSupportFragmentManager().putFragment(icicle, "sandbox", sandboxFragment);
 	}
 	
-	public void loadSkillTutorial(String name, String title) {
-		skillTutorialFragment = SkillTutorialFragment.newInstance(name);
+	public void loadSkillTutorial(String name, String title, String stateString) {
+		skillTutorialFragment = SkillTutorialFragment.newInstance(name, stateString);
 		
 		FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
 		transaction.remove(curriculumOverviewFragment);

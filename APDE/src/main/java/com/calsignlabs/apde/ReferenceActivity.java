@@ -15,6 +15,8 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 
+import com.google.firebase.analytics.FirebaseAnalytics;
+
 import java.util.Arrays;
 
 public class ReferenceActivity extends AppCompatActivity {
@@ -29,10 +31,14 @@ public class ReferenceActivity extends AppCompatActivity {
 	private boolean FLAG_UPDATE_REFERENCE = false;
 	private boolean FLAG_FIRST_LOAD = true;
 	
+	private FirebaseAnalytics firebaseAnalytics;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_reference);
+		
+		firebaseAnalytics = FirebaseAnalytics.getInstance(this);
 		
 		Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
 		toolbar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
@@ -93,6 +99,10 @@ public class ReferenceActivity extends AppCompatActivity {
 			@Override
 			public void onNothingSelected(AdapterView<?> adapterView) {}
 		});
+		
+		Bundle bundle = new Bundle();
+		bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "reference");
+		firebaseAnalytics.logEvent("open_screen", bundle);
 	}
 	
 	public void updateReferenceSourceSpinnerSelection() {

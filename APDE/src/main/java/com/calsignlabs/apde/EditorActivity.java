@@ -78,6 +78,7 @@ import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
 import com.calsignlabs.apde.vcs.GitRepository;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import org.xml.sax.SAXException;
@@ -174,11 +175,16 @@ public class EditorActivity extends AppCompatActivity {
 	//Intent flag to delete the old just-installed APK file
 	public static final int FLAG_DELETE_APK = 5;
 	
+	// Firebase Analytics
+	private FirebaseAnalytics firebaseAnalytics;
+	
     @SuppressLint("NewApi")
 	@Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
+		
+		firebaseAnalytics = FirebaseAnalytics.getInstance(this);
 		
 		toolbar = (Toolbar) findViewById(R.id.toolbar);
 		toolbar.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
@@ -693,8 +699,14 @@ public class EditorActivity extends AppCompatActivity {
 					
 					// If the "What's New" screen is visible, wait to show the examples updates screen
 					
-					// Update examples repository
-					getGlobalState().initExamplesRepo();
+					if (!PreferenceManager.getDefaultSharedPreferences(EditorActivity.this).contains("pref_debug_firebase_analytics")) {
+						showAnalyticsDialog();
+					} else {
+						// Update examples repository
+						getGlobalState().initExamplesRepo();
+						
+						firebaseAnalytics.setAnalyticsCollectionEnabled(PreferenceManager.getDefaultSharedPreferences(EditorActivity.this).getBoolean("pref_debug_firebase_analytics", false));
+					}
 				}
 			});
 			
@@ -716,8 +728,14 @@ public class EditorActivity extends AppCompatActivity {
 		} else {
 			// If the "What's New" screen is visible, wait to show the examples updates screen
 			
-			// Update examples repository
-			getGlobalState().initExamplesRepo();
+			if (!PreferenceManager.getDefaultSharedPreferences(EditorActivity.this).contains("pref_debug_firebase_analytics")) {
+				showAnalyticsDialog();
+			} else {
+				// Update examples repository
+				getGlobalState().initExamplesRepo();
+				
+				firebaseAnalytics.setAnalyticsCollectionEnabled(PreferenceManager.getDefaultSharedPreferences(EditorActivity.this).getBoolean("pref_debug_firebase_analytics", false));
+			}
 		}
 		
 		codePagerAdapter.notifyDataSetChanged();
@@ -730,6 +748,51 @@ public class EditorActivity extends AppCompatActivity {
 			autoSave();
 		}
     }
+	
+	private void showAnalyticsDialog() {
+		// Ask the user whether or not to enable Firebase Analytics
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.enable_firebase_analytics_dialog_title);
+		builder.setMessage(R.string.enable_firebase_analytics_dialog_message);
+		builder.setPositiveButton(R.string.enable, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialogInterface, int i) {
+				SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(EditorActivity.this).edit();
+				edit.putBoolean("pref_debug_firebase_analytics", true);
+				edit.apply();
+				
+				firebaseAnalytics.setAnalyticsCollectionEnabled(true);
+			}
+		});
+		builder.setNegativeButton(R.string.disable, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialogInterface, int i) {
+				SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(EditorActivity.this).edit();
+				edit.putBoolean("pref_debug_firebase_analytics", false);
+				edit.apply();
+				
+				firebaseAnalytics.setAnalyticsCollectionEnabled(false);
+			}
+		});
+		AlertDialog dialog = builder.create();
+		dialog.show();
+		
+		dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+			@Override
+			public void onDismiss(DialogInterface dialogInterface) {
+				// Default to disabled if the user closes out somehow
+				firebaseAnalytics.setAnalyticsCollectionEnabled(false);
+				
+				// Update examples repository
+				getGlobalState().initExamplesRepo();
+			}
+		});
+	}
+	
+	public FirebaseAnalytics getAnalytics() {
+		return firebaseAnalytics;
+	}
 	
 	@Override
 	public void onStart() {
@@ -1635,6 +1698,13 @@ public class EditorActivity extends AppCompatActivity {
 			if (isSandboxOpen()) {
 				closeSandbox();
 			}
+			
+			Bundle bundle = new Bundle();
+			bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, sketchLocation.toString());
+			if (sketchLocation.isExample()) {
+				bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, sketchPath);
+			}
+			firebaseAnalytics.logEvent("load_sketch", bundle);
     	}
     	
     	return success;
@@ -1739,6 +1809,8 @@ public class EditorActivity extends AppCompatActivity {
             
     		return;
     	}
+		
+		String oldPath = getGlobalState().getSketchPath();
     	
     	//The old example location
     	File oldLoc = getGlobalState().getSketchLocation();
@@ -1771,6 +1843,11 @@ public class EditorActivity extends AppCompatActivity {
     		supportInvalidateOptionsMenu();
 			
 			updateCodeAreaFocusable();
+			
+			Bundle bundle = new Bundle();
+			bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, oldLoc.toString());
+			bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, oldPath);
+			firebaseAnalytics.logEvent("copy_to_sketchbook", bundle);
             
             //Inform the user of success
     		message(getResources().getText(R.string.sketch_saved));
@@ -1821,6 +1898,11 @@ public class EditorActivity extends AppCompatActivity {
 				
 				getGlobalState().moveFolder(source, dest, EditorActivity.this);
 				supportInvalidateOptionsMenu();
+				
+				Bundle bundle = new Bundle();
+				bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, source.getLocation().toString());
+				bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, source.getPath());
+				firebaseAnalytics.logEvent("move_to_sketchbook", bundle);
 			}
 		});
 		
@@ -2561,6 +2643,13 @@ public class EditorActivity extends AppCompatActivity {
 				changeRunStopIcon(false);
     	}});
     	buildThread.start();
+		
+		Bundle bundle = new Bundle();
+		bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, getGlobalState().getSketchLocationType().toString());
+		if (getGlobalState().getSketchLocationType().isExample()) {
+			bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, getGlobalState().getSketchPath());
+		}
+		firebaseAnalytics.logEvent("run_application", bundle);
     }
     
     /**
@@ -2670,6 +2759,14 @@ public class EditorActivity extends AppCompatActivity {
 		} else {
 			startActivity(new Intent(this, SandboxActivity.class));
 		}
+		
+		Bundle bundle = new Bundle();
+		bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, getGlobalState().getSketchLocationType().toString());
+		if (getGlobalState().getSketchLocationType().isExample()) {
+			bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, getGlobalState().getSketchPath());
+		}
+		bundle.putBoolean("multi_pane", isMultiPane());
+		firebaseAnalytics.logEvent("launch_sandbox", bundle);
 	}
 	
 	protected boolean isSandboxOpen() {
@@ -3591,6 +3688,10 @@ public class EditorActivity extends AppCompatActivity {
 			//Populate the list
 			builder.setItems(getGlobalState().listToolsInList(), new DialogInterface.OnClickListener() {
 				public void onClick(DialogInterface dialog, int which) {
+					Bundle bundle = new Bundle();
+					bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, toolList.get(which).getMenuTitle());
+					firebaseAnalytics.logEvent("launch_tool", bundle);
+					
 					runOnUiThread(toolList.get(which));
 				}
 			});

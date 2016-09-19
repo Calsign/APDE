@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.os.Bundle;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.text.Editable;
@@ -23,6 +24,7 @@ import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 
 import com.calsignlabs.apde.tool.Tool;
+import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.xml.sax.SAXException;
 
@@ -339,6 +341,10 @@ public class CodeEditText extends EditText {
 				Tool callback = callbacks.get(item);
 				
 				if(callback != null) {
+					Bundle bundle = new Bundle();
+					bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, callback.getMenuTitle());
+					((APDE) context.getApplicationContext()).getEditor().getAnalytics().logEvent("launch_tool", bundle);
+					
 					callback.run();
 					
 					return true;

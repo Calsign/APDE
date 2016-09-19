@@ -53,5 +53,11 @@
             android:defaultValue="false"
             android:key="pref_debug_global_verbose_output"
             android:title="@string/pref_debug_global_verbose_output" />
+    
+        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="pref_debug_firebase_analytics"
+            android:title="@string/pref_debug_firebase_analytics"
+            android:summary="@string/pref_debug_firebase_analytics_desc" />
     </android.support.v7.preference.PreferenceCategory>
 </android.support.v7.preference.PreferenceScreen>

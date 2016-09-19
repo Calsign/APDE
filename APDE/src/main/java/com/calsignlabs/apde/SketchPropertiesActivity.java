@@ -41,6 +41,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.calsignlabs.apde.build.Manifest;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import java.io.File;
@@ -69,12 +70,16 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 	
 	private Toolbar toolbar;
 	
+	// Firebase Analytics
+	private FirebaseAnalytics firebaseAnalytics;
+	
 	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
 		setContentView(R.layout.activity_sketch_properties);
+		
+		firebaseAnalytics = FirebaseAnalytics.getInstance(this);
 		
 		// StackOverflow: http://stackoverflow.com/a/27455330/1628609
 		LinearLayout root = (LinearLayout) findViewById(android.R.id.list).getParent().getParent().getParent();
@@ -96,6 +101,10 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		getGlobalState().setProperties(this);
         
         getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
+		
+		Bundle bundle = new Bundle();
+		bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "sketch_properties");
+		firebaseAnalytics.logEvent("open_screen", bundle);
 	}
 	
 	@Override
@@ -854,6 +863,11 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 				getGlobalState().moveFolder(source, dest, SketchPropertiesActivity.this);
 				
 				restartActivity();
+				
+				Bundle bundle = new Bundle();
+				bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, source.getLocation().toString());
+				bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, source.getPath());
+				firebaseAnalytics.logEvent("move_to_sketchbook", bundle);
 			}
 		});
 		

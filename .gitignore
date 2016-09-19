@@ -10,3 +10,4 @@ build/**
 gradle/
 *.log
 local.properties
+google-services.json
