@@ -21,7 +21,7 @@ The editor requires the following permissions:
  - *Control vibration* - vibration is used for haptic feedback in rare instances within the app. If you wish to disable it, you can do so from the Settings menu (devices without a vibrator do not have to worry about this).
  - *Test access to protected storage* - this also has to do with writing to the external storage. This permission isn't actually necessary yet, but it will be needed in future versions of Android.
 
-The editor is not necessarily designed to be used on a phone, although it is possible. If you plan to do so, do *not* plan on using landscape orientation (the editing area will become almost completely covered by the software keyboard). I recommend either getting a hardware / bluetooth keyboard or a more advanced software keyboard (like [Hacker's Keyboard](https://play.google.com/store/apps/details?id=org.pocketworkstation.pckeyboard&hl=en), which is free). Some keyboard shortcuts are enabled. APDE includes a small special character tray above the software keyboard to make it easier to type coding symbols (like `{`, `;`, etc) if you really insist on using a phone. Tablets are obviously the device of choice.
+The editor is not necessarily designed to be used on a phone, although it is possible. If you plan to do so, do *not* plan on using landscape orientation (the editing area will become almost completely covered by the software keyboard). I recommend either getting a hardware/bluetooth keyboard or a more advanced software keyboard (like [Hacker's Keyboard](https://play.google.com/store/apps/details?id=org.pocketworkstation.pckeyboard&hl=en), which is free). Some keyboard shortcuts are enabled. APDE includes a small special character tray above the software keyboard to make it easier to type coding symbols (like `{`, `;`, etc) if you really insist on using a phone. Tablets are obviously the device of choice.
 
 I am aware of two existing Java IDEs capable of building Android applications on a device; they are [AIDE](http://www.android-ide.com/) and [Java-IDE-Droid](http://code.google.com/p/java-ide-droid/). Java-IDE-Droid is open source and relatively unmaintained... while AIDE can be seen as the present industry leader of mobile development platforms, comparable to Eclipse for the desktop. AIDE offers a free version (restricted) and a 10 US dollar premium key.
 
@@ -37,12 +37,12 @@ APDE strives to be a fully-featured Processing editor, using the PDE as a model.
  - Export sketch as a signed APK file or as an Eclipse-compatible Android project
  - Internal Android Manifest file configuration (sketch permissions, orientation lock, etc.)
  - Sketch output and exceptions in console by injecting a log broadcaster (may be disabled)
- - Undo / Redo
+ - Undo/Redo
  - Add files to sketch's "data" folder
  - A set of examples (more to come soon)
  - Color selector
  - Change sketch icon wizard
- - Auto format, comment / uncomment, increase / decrease indent
+ - Auto format, comment/uncomment, increase/decrease indent
  - Syntax highlighting
  - Automatic saving
 
@@ -58,9 +58,9 @@ Key Changes from the PDE
 
 Before you begin to use APDE, it is important to understand some differences between the desktop PDE and APDE.
 
-Firstly, the sketch's name is determined by the name of the sketch folder, but the main sketch file / tab does not need to have this name. Presently, there is no concept of a "main" tab; I think that this is a beneficial re-thinking of the sketch's structure. It makes more sense because all of the tabs are combined anyway, without regard for any "main" tab, except that the "main" tab is added first. Consequently, the default name of the initial tab is just "sketch", and it will likely stay that way the majority of simple applications. I may end up changing this functionality to mimic the PDE, though, if it is necessary purely for compatibility if I implement Git integration, for example.
+Firstly, the sketch's name is determined by the name of the sketch folder, but the main sketch file/tab does not need to have this name. Presently, there is no concept of a "main" tab; I think that this is a beneficial re-thinking of the sketch's structure. It makes more sense because all of the tabs are combined anyway, without regard for any "main" tab, except that the "main" tab is added first. Consequently, the default name of the initial tab is just "sketch", and it will likely stay that way the majority of simple applications. I may end up changing this functionality to mimic the PDE, though, if it is necessary purely for compatibility if I implement Git integration, for example.
 
-The default sketch name is "sketch", unlike the PDE, which creates a new sketch name based on the date / time for every new sketch. As such, the name "sketch" is also invalid, and this sketch cannot be saved. It must be renamed first. I may change this, as well, to make it easier to use...
+The default sketch name is "sketch", unlike the PDE, which creates a new sketch name based on the date/time for every new sketch. As such, the name "sketch" is also invalid, and this sketch cannot be saved. It must be renamed first. I may change this, as well, to make it easier to use...
 
 APDE doesn't use ANT to build sketches - instead, it uses a custom build chain. The main difference between ANT and APDE's build sequence is that APDE uses the Eclipse Java Compiler (ECJ) instead of the JDK Java compiler (JAVAC). The build process is described in more detail below.
 
@@ -77,7 +77,7 @@ When you first open APDE, it is possible to start coding right away. However, be
 
 To access a list of all of sketches, either press the APDE icon in the top left corner, swipe in from the left side of the screen, or select "Load Sketch" from the menu. You will be presented with the folders "Sketches", "Examples", "Library Examples", and "Recent". These categories should be self-explanatory. After navigating into one of the folders, you can navigate back out by pressing the ".." button at the top of the list. You can select a sketch (or example) to open it. The previously open sketch will be automatically saved (unless it has not been saved yet, in which case you will be prompted with a dialog).
 
-In the sketch list, you can long press on a sketch (or a folder) to move it around (unless you have 2.3.3, in which case... sorry. The drag and drop APIs weren't added until 3.0... I'll have to make a custom implementation eventually). Drop the sketch into a folder or the parent folder ("..") to move it there. You can also drop it onto one of the three buttons at the bottom. The plus button will move the sketch to a new folder. The pencil button will rename the sketch. The trash can button will delete the sketch. You can also manage sketches / folders from a file manager (even on 2.3.3), but these features are present to make things easier.
+In the sketch list, you can long press on a sketch (or a folder) to move it around (unless you have 2.3.3, in which case... sorry. The drag and drop APIs weren't added until 3.0... I'll have to make a custom implementation eventually). Drop the sketch into a folder or the parent folder ("..") to move it there. You can also drop it onto one of the three buttons at the bottom. The plus button will move the sketch to a new folder. The pencil button will rename the sketch. The trash can button will delete the sketch. You can also manage sketches/folders from a file manager (even on 2.3.3), but these features are present to make things easier.
 
 Many of the menu items are duplicated in the Sketch Properties view, although there are some differences ("Delete Sketch" is only accessible from Sketch Properties, for example).
 
@@ -87,7 +87,7 @@ To increase the size of the console, you can long-press the message area. After 
 
 To install a library from the editor menu, navigate to Tools > Import Library > Manage Libraries > Install Compressed Library (in the overflow menu). Select the downloaded library's ZIP file (if you don't have a file manager, the aFileChooser library should provide one). A dialog will appear displaying the progress of the installation. Dexing the library will take a while, so be patient. Every second that you spend waiting for the library to dex is one less second that you have to wait every time that you build a sketch. When the dialog closes, the library should appear in the list; it has been installed.
 
-The Color Selector and Auto Format tools are available from the Tools menu (as well as Import Library). The text selection tools (Comment / Uncomment, Inrease Indent, and Decrease Indent) are available from the overflow menu after selecting text (but not in 2.3.3). However, it appears that an Android bug causes the menu to disappear immediately on some (most?) devices - of the devices tested, only the Samsung ones displayed the menu properly. So this might not be useful for all that many people.
+The Color Selector and Auto Format tools are available from the Tools menu (as well as Import Library). The text selection tools (Comment/Uncomment, Inrease Indent, and Decrease Indent) are available from the overflow menu after selecting text (but not in 2.3.3). However, it appears that an Android bug causes the menu to disappear immediately on some (most?) devices - of the devices tested, only the Samsung ones displayed the menu properly. So this might not be useful for all that many people.
 
 Running the Sketch
 ------------------
