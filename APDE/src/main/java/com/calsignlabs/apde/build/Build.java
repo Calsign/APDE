@@ -15,6 +15,7 @@ import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.support.v4.content.FileProvider;
 
 import com.android.sdklib.build.ApkBuilder;
 import com.calsignlabs.apde.APDE;
@@ -699,9 +700,6 @@ public class Build {
 		
 		// Get the correct AAPT binary for this processor architecture
 		switch (arch) {
-		case "mip":
-			aaptName = "aapt-binaries/aapt-mips";
-			break;
 		case "x86":
 			if (usePie) {
 				aaptName = "aapt-binaries/aapt-x86-pie";
@@ -718,19 +716,22 @@ public class Build {
 			// Default to ARM, just in case
 			
 			if (usePie) {
-				// Check to see if the user wants to use the old, pre-0.3.3 AAPT PIE binary.
-				// This is for debugging... because for some reason, the new one that was
-				// supposed to fix incompatibilities with some devices is - wait for it -
-				// incompatible with some devices. This seems to be a pattern.
-				if (PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_aapt_binary", false)) {
-					aaptName = "aapt-binaries/aapt-arm-pie-old";
-					
-					if (verbose) {
-						System.out.println("Using pre-0.3.3 AAPT binary");
-					}
-				} else {
-					aaptName = "aapt-binaries/aapt-arm-pie";
-				}
+//				// Check to see if the user wants to use the old, pre-0.3.3 AAPT PIE binary.
+//				// This is for debugging... because for some reason, the new one that was
+//				// supposed to fix incompatibilities with some devices is - wait for it -
+//				// incompatible with some devices. This seems to be a pattern.
+//				if (PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_aapt_binary", false)) {
+//					aaptName = "aapt-binaries/aapt-arm-pie-old";
+//					
+//					if (verbose) {
+//						System.out.println("Using pre-0.3.3 AAPT binary");
+//					}
+//				} else {
+//					aaptName = "aapt-binaries/aapt-arm-pie";
+//				}
+				
+				// Disabled above pref because old aapt contains vulnerable version of libpng
+				aaptName = "aapt-binaries/aapt-arm-pie";
 				
 				if (verbose) {
 					System.out.println("Using position independent executable (PIE) AAPT binary");
@@ -963,10 +964,10 @@ public class Build {
 			
 			//This is some side-stepping to avoid System.exit() calls
 			
-			com.android.dx.command.dexer.Main.Arguments dexArgs = new com.android.dx.command.dexer.Main.Arguments();
+			com.androidjarjar.dx.command.dexer.Main.Arguments dexArgs = new com.androidjarjar.dx.command.dexer.Main.Arguments();
 			dexArgs.parse(args);
 			
-			int resultCode = com.android.dx.command.dexer.Main.run(dexArgs);
+			int resultCode = com.androidjarjar.dx.command.dexer.Main.run(dexArgs);
 			
 			if (resultCode != 0) {
 				System.err.println("DX Dexer result code: " + resultCode);
@@ -1004,7 +1005,7 @@ public class Build {
 				args[i + 2] = dexedLibs[i].getAbsolutePath();
 			}
 			
-			com.android.dx.merge.DexMerger.main(args);
+			com.androidjarjar.dx.merge.DexMerger.main(args);
 		} catch (Exception e) {
 			System.out.println("DX Merger failed");
 			e.printStackTrace();
@@ -1129,38 +1130,43 @@ public class Build {
 		//Copy the APK file to a new (and hopefully readable) location
 		
 		String apkName = sketchName + ".apk";
-		String apkLoc = binFolder.getAbsolutePath() + "/" + apkName;
-		File apkFile = new File(apkLoc);
-		File destApkFile = new File(editor.getFilesDir(), apkName);
+		File apkFile = new File(binFolder.getAbsolutePath() + "/" + apkName);
 		
-		Intent promptInstall;
-		
-		//We only need to do our copying-voodoo if the user is crazy enough to want to build on the internal storage (or if they don't have an external storage...)
-		if(PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_internal_storage", true)) {
+		// We only need to copy the APK file if we are building on the internal storage
+		if (PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_internal_storage", true)) {
 			try {
-				//Yes, I know that MODE_WORLD_READABLE is risky...
-				//...this is the only way to get the package installer to be able to read the APK file from the internal storage
-				//It's not like there's any personal data in the sketch...
-				copyFileToOutputStream(apkFile, editor.openFileOutput(apkName, Context.MODE_WORLD_READABLE));
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
+				File destApkFile;
+				
+				if (android.os.Build.VERSION.SDK_INT >= 24) {
+					File apksDir = new File(editor.getFilesDir(), "apks");
+					apksDir.mkdir();
+					destApkFile = new File(apksDir, apkName);
+					
+					copyFile(apkFile, destApkFile);
+				} else {
+					destApkFile = new File(editor.getFilesDir(), apkName);
+					
+					// Still have to use MODE_WORLD_READABLE...
+					copyFileToOutputStream(apkFile, editor.openFileOutput(apkName, Context.MODE_WORLD_READABLE));
+				}
+				
+				apkFile = destApkFile;
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-
-			//Prompt the user to install the APK file
-			promptInstall = new Intent(Intent.ACTION_VIEW)
-			.setDataAndType(Uri.fromFile(
-					destApkFile), //The location of the APK
-					"application/vnd.android.package-archive"
-					);
+		}
+		
+		// Prompt the user to install the APK file
+		
+		Intent promptInstall;
+		
+		if (android.os.Build.VERSION.SDK_INT >= 24) {
+			// Need to use FileProvider
+			Uri apkUri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", apkFile);
+			promptInstall = new Intent(Intent.ACTION_INSTALL_PACKAGE).setData(apkUri).setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 		} else {
-			//Prompt the user to install the APK file
-			promptInstall = new Intent(Intent.ACTION_VIEW)
-			.setDataAndType(Uri.parse("file:///" +
-					apkLoc), //The location of the APK
-					"application/vnd.android.package-archive"
-					);
+			// The package manager doesn't seem to like FileProvider...
+			promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
 		}
 		
 		if (injectLogBroadcaster) {

@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 24
-    buildToolsVersion "24.0.0"
+    compileSdkVersion 25
+    buildToolsVersion "25.0.1"
 
     defaultConfig {
         applicationId "com.calsignlabs.apde"
         minSdkVersion 15
-        targetSdkVersion 24
+        targetSdkVersion 25
     }
 
     buildTypes {
@@ -48,8 +48,8 @@ dependencies {
     compile files('libs/zipio-lib-1.8.jar')
     compile files('libs/zipsigner-lib-1.17.jar')
     compile files('libs/zipsigner-lib-optional-1.17.jar')
-    compile 'com.android.support:support-v4:24.0.0'
-    compile 'com.android.support:appcompat-v7:24.0.0'
-    compile 'com.android.support:design:24.0.0'
-    compile 'com.takisoft.fix:preference-v7:24.0.0.1'
+    compile 'com.android.support:support-v4:25.0.1'
+    compile 'com.android.support:appcompat-v7:25.0.1'
+    compile 'com.android.support:design:25.0.1'
+    compile 'com.takisoft.fix:preference-v7:25.0.1.0'
 }
