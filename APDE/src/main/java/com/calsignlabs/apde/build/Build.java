@@ -300,7 +300,6 @@ public class Build {
 				String prefix = "libs/";
 				String suffix = ".jar";
 				
-				
 				//Copy for the compiler
 				for(String lib : libsToCopy) {
 					InputStream inputStream = am.open(prefix + lib + suffix);
@@ -578,7 +577,7 @@ public class Build {
 					System.out.println("Copying dexed Processing libraries...");
 				}
 				
-				String[] dexLibsToCopy = {"processing-core-dex", "android-support-v4-dex", "annotations-dex"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
+				String[] dexLibsToCopy = {"all-lib-dex"}; // {"processing-core-dex", "android-support-v4-dex", "annotations-dex"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
 				String dexPrefix = "libs-dex/";
 				String dexSuffix = ".jar";
 				
