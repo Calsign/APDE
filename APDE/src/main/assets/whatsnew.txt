@@ -1,4 +1,4 @@
-v0.4.0 Alpha-pre2
+v0.4.0 Alpha
 
  - Material design
  - Android 7.0 (Nougat) build crash fixed
