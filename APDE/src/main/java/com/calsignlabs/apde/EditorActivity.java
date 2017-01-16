@@ -705,7 +705,7 @@ public class EditorActivity extends AppCompatActivity {
 					layout.setLayoutParams(new FrameLayout.LayoutParams(w, h));
 				}
 			});
-		} else {
+		} else if (savedInstanceState == null) {
 			// If the "What's New" screen is visible, wait to show the examples updates screen
 			
 			// Update examples repository
@@ -878,10 +878,14 @@ public class EditorActivity extends AppCompatActivity {
     	
     	//We have to right a map... this seems to be unnecessarily difficult
     	icicle.putParcelableArray("tabs", getTabMetas());
+		
+		super.onSaveInstanceState(icicle);
     }
     
     @Override
     protected void onRestoreInstanceState(Bundle icicle) {
+		super.onRestoreInstanceState(icicle);
+		
     	if (icicle != null) {
     		//Restore the selected tab (this should only happen when the screen rotates)
     		selectCode(icicle.getInt("selected_tab"));
