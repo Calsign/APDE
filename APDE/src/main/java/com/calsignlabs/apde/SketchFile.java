@@ -514,7 +514,7 @@ public class SketchFile implements Parcelable {
 		}
 	}
 	
-	private void updateEditor(EditorActivity context) {
+	protected void updateEditor(EditorActivity context) {
 		final CodeEditText code = fragment.getCodeEditText();
 		final HorizontalScrollView scrollerX = fragment.getCodeScrollerX();
 		final ScrollView scrollerY = fragment.getCodeScroller();
@@ -777,8 +777,8 @@ public class SketchFile implements Parcelable {
 		undo = new LinkedList<FileChange>();
 		redo = new LinkedList<FileChange>();
 		
-		source.readList(undo, null);
-		source.readList(redo, null);
+		source.readList(undo, getClass().getClassLoader());
+		source.readList(redo, getClass().getClassLoader());
 		
 		enabled = source.readByte() != 0;
 		

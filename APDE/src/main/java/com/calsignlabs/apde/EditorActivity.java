@@ -15,7 +15,6 @@ import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Parcelable;
 import android.preference.PreferenceManager;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
@@ -851,69 +850,19 @@ public class EditorActivity extends AppCompatActivity {
 	public View getExtraHeaderView() {
 		return extraHeaderView;
 	}
-    
-    @Override
-    protected void onSaveInstanceState(Bundle icicle) {
-    	//Save the selected tab
-    	icicle.putInt("selected_tab", getSelectedCodeIndex());
-    	
-    	SketchFile[] tabMetas = new SketchFile[tabs.size()];
-//    	int count = 0;
-    	
-//    	for (Map.Entry<ActionBar.Tab, SketchFile> entry : tabs.entrySet()) {
-//    		int num = tabBar.indexOfTab(entry.getKey());
-//    		SketchFile meta = entry.getValue();
-//    		
-//    		meta.tabNum = num;
-//    		
-//    		tabMetas[count] = meta;
-//    		count ++;
-//    	}
-		
-		for (int i = 0; i < tabs.size(); i ++) {
-			SketchFile sketchFile = tabs.get(i);
-			sketchFile.tabNum = i;
-			tabMetas[i] = sketchFile;
-		}
-    	
-    	//We have to right a map... this seems to be unnecessarily difficult
-    	icicle.putParcelableArray("tabs", getTabMetas());
-		
-		super.onSaveInstanceState(icicle);
-    }
-    
-    @Override
-    protected void onRestoreInstanceState(Bundle icicle) {
-		super.onRestoreInstanceState(icicle);
-		
-    	if (icicle != null) {
-    		//Restore the selected tab (this should only happen when the screen rotates)
-    		selectCode(icicle.getInt("selected_tab"));
-    		
-    		//Refresh the syntax highlighter AGAIN so that it can take into account the restored selected tab
-    		//The tokens end up getting refreshed 3+ times on a rotation... but it doesn't seem to have much of an impact on performance, so it's fine for now
-//			getSelectedCodeArea().flagRefreshTokens();
-			
-			Parcelable[] tabMetaParcels = icicle.getParcelableArray("tabs");
-			
-			//Fix an all-too-common crash report that hides the stack trace that we really want
-			loadTabs:
-			if (tabMetaParcels instanceof SketchFile[]) {
-				SketchFile[] tabMetas = (SketchFile[]) tabMetaParcels;
-				
-				if (tabs.size() > 0 && tabMetas[0].equals(tabs.get(0))) {
-					break loadTabs;
+	
+	@Override
+	public void onRestoreInstanceState(Bundle savedInstanceState) {
+		if (savedInstanceState != null) {
+			// We're going to re-add all of the fragments, so get rid of the old ones
+			List<Fragment> fragments = getSupportFragmentManager().getFragments();
+			for (Fragment fragment : fragments) {
+				if (fragment != null) {
+					getSupportFragmentManager().beginTransaction().remove(fragment).commit();
 				}
-				
-				for (SketchFile tabMeta : tabMetas) {
-//					tabs.put(tabBar.getTab(tabMeta.tabNum), tabMeta);
-					addTab(tabMeta);
-				}
-			} else {
-				System.err.println("Error occurred restoring state, likely caused by\na crash in an activity further down the hierarchy");
 			}
-    	}
-    }
+		}
+	}
     
     private static SparseArray<ActivityResultCallback> activityResultCodes = new SparseArray<ActivityResultCallback>();
     
@@ -1403,11 +1352,46 @@ public class EditorActivity extends AppCompatActivity {
 		
 		//Save the relative path to the current sketch
 		String sketchPath = getGlobalState().getSketchPath();
-		writeTempFile("sketchPath.txt", sketchPath);
     	
     	//Save the location of the current sketch
 		String sketchLocation = getGlobalState().getSketchLocationType().toString();
-		writeTempFile("sketchLocation.txt", sketchLocation);
+		
+		StringBuilder sketchData = new StringBuilder();
+		sketchData.append(sketchPath);
+		sketchData.append(';');
+		sketchData.append(sketchLocation);
+		sketchData.append(';');
+		sketchData.append(getSelectedCodeIndex());
+		sketchData.append(';');
+		
+		for (int i = 0; i < tabs.size(); i ++) {
+			SketchFile sketchFile = tabs.get(i);
+			
+			if (sketchFile.getFragment() != null && sketchFile.getFragment().isInitialized()) {
+				sketchData.append(sketchFile.getFragment().getCodeEditText().getSelectionStart());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getFragment().getCodeEditText().getSelectionEnd());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getFragment().getCodeScroller().getScrollX());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getFragment().getCodeScroller().getScrollY());
+				sketchData.append(';');
+			} else {
+				// The fragment is unloaded if it isn't visible or adjacent to the visible tab, but
+				// the data is stored on the SketchFile
+				
+				sketchData.append(sketchFile.getSelectionStart());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getSelectionEnd());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getScrollX());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getScrollY());
+				sketchData.append(';');
+			}
+		}
+		
+		writeTempFile("sketchData.txt", sketchData.toString());
 	}
 	
 	/**
@@ -1417,12 +1401,32 @@ public class EditorActivity extends AppCompatActivity {
 	 */
 	public boolean loadSketchStart() {
 		try {
-			//Load the temp files
-			String sketchPath = readTempFile("sketchPath.txt");
-			APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(readTempFile("sketchLocation.txt"));
+			String sketchData = readTempFile("sketchData.txt");
+			String[] data = sketchData.split(";");
 			
-			return loadSketch(sketchPath, sketchLocation);
+			String sketchPath = data[0];
+			APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(data[1]);
+			
+			boolean success = loadSketch(sketchPath, sketchLocation);
+			
+			selectCode(Integer.parseInt(data[2]));
+			
+			if (success && tabs.size() == data.length - 3) {
+				for (int i = 3; i < data.length; i ++) {
+					String[] sketchFileData = data[i].split(",");
+					
+					if (sketchFileData.length > 0) {
+						tabs.get(i - 3).selectionStart = Integer.parseInt(sketchFileData[0]);
+						tabs.get(i - 3).selectionEnd = Integer.parseInt(sketchFileData[1]);
+						tabs.get(i - 3).scrollX = Integer.parseInt(sketchFileData[2]);
+						tabs.get(i - 3).scrollY = Integer.parseInt(sketchFileData[3]);
+					}
+				}
+			}
+			
+			return success;
 		} catch(Exception e) { //Meh...
+			e.printStackTrace();
 			return false;
 		}
 	}

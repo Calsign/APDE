@@ -116,6 +116,7 @@ public class CodeAreaFragment extends Fragment {
 		});
 		
 		updateWithSketchFile();
+		sketchFile.updateEditor(getGlobalState().getEditor());
 		
 		getCodeEditText().setupCustomActionMode();
 		getCodeEditText().setupTextListener();
