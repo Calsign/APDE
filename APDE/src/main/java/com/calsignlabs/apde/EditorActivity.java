@@ -89,6 +89,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Stack;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -160,10 +163,24 @@ public class EditorActivity extends AppCompatActivity {
 	//It's because adding views to the char insert tray is somehow breaking the retrieval of this view by ID...
 	private ImageButton toggleCharInserts;
 	
-	private boolean twoFingerSwipe = false;
-	
 	//Intent flag to delete the old just-installed APK file
 	public static final int FLAG_DELETE_APK = 5;
+	
+	public ScheduledThreadPoolExecutor autoSaveTimer;
+	public ScheduledFuture<?> autoSaveTimerTask;
+	public Runnable autoSaveTimerAction = new Runnable() {
+		@Override
+		public void run() {
+			// This looks really messy, but we need to run on the UI thread in order to display
+			// the "sketch has been saved" message in the message area
+			runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					autoSave();
+				}
+			});
+		}
+	};
 	
     @SuppressLint("NewApi")
 	@Override
@@ -720,6 +737,8 @@ public class EditorActivity extends AppCompatActivity {
 			addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
 			autoSave();
 		}
+		
+		autoSaveTimer = new ScheduledThreadPoolExecutor(1);
     }
 	
 	@Override
@@ -1453,6 +1472,28 @@ public class EditorActivity extends AppCompatActivity {
 		case TEMPORARY:
 			saveSketch();
 			break;
+		}
+		
+		// In case there is still an autosave task in the queue
+		cancelAutoSave();
+	}
+	
+	public void cancelAutoSave() {
+		if (autoSaveTimerTask != null && !autoSaveTimerTask.isDone() && !autoSaveTimerTask.isCancelled()) {
+			autoSaveTimerTask.cancel(false);
+		}
+	}
+	
+	public void scheduleAutoSave() {
+		// By default autosave after 30 seconds of inactivity
+		// But the user can change the timeout in settings
+		
+		cancelAutoSave();
+		
+		long timeout = Long.parseLong(getGlobalState().getPref("pref_key_autosave_timeout", getGlobalState().getString(R.string.pref_autosave_timeout_default_value)));
+		
+		if (timeout != -1L) {
+			autoSaveTimerTask = autoSaveTimer.schedule(autoSaveTimerAction, timeout, TimeUnit.SECONDS);
 		}
 	}
 	

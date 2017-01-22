@@ -239,6 +239,8 @@ public class CodeEditText extends EditText {
 							meta.update(editor, false);
 						}
 					}
+					
+					editor.scheduleAutoSave();
 				}
 				
 				@Override

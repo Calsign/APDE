@@ -349,6 +349,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		bindPreferenceSummaryToValue(frag.findPreference("textsize"));
 		bindPreferenceSummaryToValue(frag.findPreference("textsize_console"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_sketchbook_location"));
+		bindPreferenceSummaryToValue(frag.findPreference("pref_key_autosave_timeout"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_key_undo_redo_keep"));
 	}
 	

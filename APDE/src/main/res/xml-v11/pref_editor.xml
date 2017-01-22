@@ -13,7 +13,7 @@
             android:selectAllOnFocus="true"
             android:singleLine="true"
             android:title="@string/pref_textsize_title" />
-
+		
         <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="syntax_highlight"
@@ -24,6 +24,13 @@
             android:key="override_tab"
             android:title="@string/override_tab"
             android:summary="@string/override_tab_desc" />
+    	
+        <android.support.v7.preference.ListPreference
+            android:key="pref_key_autosave_timeout"
+            android:title="@string/pref_autosave_timeout"
+            android:entries="@array/pref_autosave_timeout_entries"
+            android:entryValues="@array/pref_autosave_timeout_values"
+            android:defaultValue="@string/pref_autosave_timeout_default_value" />
         
         <!-- We haven't figured this out yet... -->
         <!-- <Preference

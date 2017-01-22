@@ -93,5 +93,27 @@
     <string name="pref_build_aapt_binary">Use pre-v0.3.3 AAPT Binary</string>
     <string name="pref_build_aapt_binary_desc">Potential fix for devices where v0.3.3 broke the build process</string>
     <string name="pref_build_recopy_android_jar">Re-copy android.jar file</string>
+	<string name="pref_autosave_timeout">Autosave Timeout</string>
+    <string-array name="pref_autosave_timeout_entries">
+        <item >5 seconds</item>
+        <item >10 seconds</item>
+        <item >15 seconds</item>
+        <item >20 seconds</item>
+        <item >30 seconds</item>
+        <item >1 minute</item>
+        <item >2 minutes</item>
+        <item>Never</item>
+    </string-array>
+    <string-array name="pref_autosave_timeout_values">
+        <item >5</item>
+        <item >10</item>
+        <item >15</item>
+        <item >20</item>
+        <item >30</item>
+        <item >60</item>
+        <item >120</item>
+        <item >-1</item>
+    </string-array>
+    <string name="pref_autosave_timeout_default_value">30</string>
 
 </resources>
