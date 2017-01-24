@@ -730,12 +730,17 @@ public class EditorActivity extends AppCompatActivity {
 		
 		codePagerAdapter.notifyDataSetChanged();
 		codeTabStrip.setupWithViewPager(codePager);
-	
-		// Try to load the auto-save sketch, otherwise set the editor up as a new sketch
-		if (!loadSketchStart()) {
-			getGlobalState().selectNewTempSketch();
-			addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
-			autoSave();
+		
+		try {
+			// Try to load the auto-save sketch, otherwise set the editor up as a new sketch
+			if (!loadSketchStart()) {
+				getGlobalState().selectNewTempSketch();
+				addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
+				autoSave();
+			}
+		} catch (Exception e) {
+			// Who knows really...
+			e.printStackTrace();
 		}
 		
 		autoSaveTimer = new ScheduledThreadPoolExecutor(1);
@@ -872,14 +877,21 @@ public class EditorActivity extends AppCompatActivity {
 	
 	@Override
 	public void onRestoreInstanceState(Bundle savedInstanceState) {
-		if (savedInstanceState != null) {
-			// We're going to re-add all of the fragments, so get rid of the old ones
-			List<Fragment> fragments = getSupportFragmentManager().getFragments();
-			for (Fragment fragment : fragments) {
-				if (fragment != null) {
-					getSupportFragmentManager().beginTransaction().remove(fragment).commit();
+		try {
+			if (savedInstanceState != null) {
+				// We're going to re-add all of the fragments, so get rid of the old ones
+				List<Fragment> fragments = getSupportFragmentManager().getFragments();
+				if (fragments != null) {
+					for (Fragment fragment : fragments) {
+						if (fragment != null) {
+							getSupportFragmentManager().beginTransaction().remove(fragment).commit();
+						}
+					}
 				}
 			}
+		} catch (Exception e) {
+			// Who knows really...
+			e.printStackTrace();
 		}
 	}
     
@@ -1422,6 +1434,11 @@ public class EditorActivity extends AppCompatActivity {
 		try {
 			String sketchData = readTempFile("sketchData.txt");
 			String[] data = sketchData.split(";");
+			
+			if (data.length < 3) {
+				// On clean installs and after updating
+				return false;
+			}
 			
 			String sketchPath = data[0];
 			APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(data[1]);
@@ -2500,6 +2517,10 @@ public class EditorActivity extends AppCompatActivity {
 		if (!checkScreenOverlay()) {
 			return;
 		}
+		
+		// Hide the soft keyboard
+		InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+		imm.hideSoftInputFromWindow(findViewById(R.id.content).getWindowToken(), 0);
     	
     	//Clear the console
     	((TextView) findViewById(R.id.console)).setText("");
