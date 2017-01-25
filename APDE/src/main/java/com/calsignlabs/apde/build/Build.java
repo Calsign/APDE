@@ -16,6 +16,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.content.FileProvider;
+import android.view.inputmethod.InputMethodManager;
 
 import com.android.sdklib.build.ApkBuilder;
 import com.calsignlabs.apde.APDE;
@@ -1174,6 +1175,11 @@ public class Build {
 				System.out.println("");
 			}
 		}
+		
+		// Hide the keyboard just before opening the installer dialog so that it doesn't
+		// obscure the "Install" button
+		InputMethodManager imm = (InputMethodManager) editor.getSystemService(Context.INPUT_METHOD_SERVICE);
+		imm.hideSoftInputFromWindow(editor.findViewById(R.id.content).getWindowToken(), 0);
 		
 		//Get a result so that we can delete the APK file
 		editor.startActivityForResult(promptInstall, EditorActivity.FLAG_DELETE_APK);

@@ -876,6 +876,27 @@ public class EditorActivity extends AppCompatActivity {
 	}
 	
 	@Override
+	public void onSaveInstanceState(Bundle outState) {
+		try {
+			TextView messageArea = (TextView) findViewById(R.id.message);
+			TextView console = (TextView) findViewById(R.id.console);
+			ScrollView consoleScroller = (ScrollView) findViewById(R.id.console_scroller);
+			HorizontalScrollView consoleScrollerX = (HorizontalScrollView) findViewById(R.id.console_scroller_x); 
+			
+			outState.putString("consoleText", console.getText().toString());
+			outState.putInt("consoleScrollPos", consoleScroller.getScrollY());
+			outState.putInt("consoleScrollPosX", consoleScrollerX.getScrollX());
+			outState.putString("messageText", messageArea.getText().toString());
+			outState.putBoolean("messageIsError", errorMessage); 
+		} catch (Exception e) {
+			// Just to be safe
+			e.printStackTrace();
+		}
+		
+		super.onSaveInstanceState(outState);
+	}
+	
+	@Override
 	public void onRestoreInstanceState(Bundle savedInstanceState) {
 		try {
 			if (savedInstanceState != null) {
@@ -887,6 +908,38 @@ public class EditorActivity extends AppCompatActivity {
 							getSupportFragmentManager().beginTransaction().remove(fragment).commit();
 						}
 					}
+				}
+				
+				String consoleText = savedInstanceState.getString("consoleText");
+				final int consoleScrollPos = savedInstanceState.getInt("consoleScrollPos");
+				final int consoleScrollPosX = savedInstanceState.getInt("consoleScrollPosX");
+				String messageText = savedInstanceState.getString("messageText");
+				boolean messageIsError = savedInstanceState.getBoolean("messageIsError");
+				
+				TextView console = (TextView) findViewById(R.id.console);
+				final ScrollView consoleScroller = (ScrollView) findViewById(R.id.console_scroller);
+				final HorizontalScrollView consoleScrollerX = (HorizontalScrollView) findViewById(R.id.console_scroller_x);
+				
+				if (consoleText != null) {
+					// Assume that they're all there...
+					
+					console.setText(consoleText);
+					
+					// This doesn't actually work in practice because the text is always
+					// replaced with "The sketch has been saved"...
+					if (messageIsError) {
+						error(messageText);
+					} else {
+						message(messageText);
+					}
+					
+					console.post(new Runnable() {
+						@Override
+						public void run() {
+							consoleScroller.scrollTo(0, consoleScrollPos);
+							consoleScrollerX.scrollTo(consoleScrollPosX, 0);
+						}
+					});
 				}
 			}
 		} catch (Exception e) {
