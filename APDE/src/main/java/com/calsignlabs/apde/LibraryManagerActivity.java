@@ -377,7 +377,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		final Thread dexThread = new Thread(new Runnable() {
 			public void run() {
 				working = true;
-				ContributionManager.dexJar(inputFile, outputFile);
+				ContributionManager.dexJar(inputFile, outputFile, LibraryManagerActivity.this);
 				working = false;
 				
 				dialog.dismiss();

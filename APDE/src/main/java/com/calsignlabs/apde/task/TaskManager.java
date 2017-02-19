@@ -10,6 +10,7 @@ import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.support.CustomProgressDialog;
 
 import java.util.HashMap;
+import java.util.Locale;
 
 public class TaskManager {
 	private APDE context;
@@ -61,7 +62,7 @@ public class TaskManager {
 	public void registerTask(String tag, Task task) {
 		if (tasks.containsKey(tag)) {
 			//That's a no-no
-			System.err.println("can't register task  \"" + tag + "\", tag already exists");
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.task_register_fail_duplicate_tag), tag));
 			return;
 		}
 		
@@ -73,7 +74,7 @@ public class TaskManager {
 	public void unregisterTask(String tag) {
 		if (tasks.get(tag).isRunning()) {
 			//That's a no-no
-			System.err.println("can't unregister running task \"" + tag + "\", must be killed first");
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.task_unregister_fail_not_killed_tag), tag));
 			return;
 		}
 		
@@ -82,7 +83,7 @@ public class TaskManager {
 	
 	public Task getTask(String tag) {
 		if (!tasks.containsKey(tag)) {
-			System.err.println("can't get task  \"" + tag + "\", tag doesn't exist");
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.task_get_fail_nonexistent_tag), tag));
 			return null;
 		}
 
@@ -94,7 +95,7 @@ public class TaskManager {
 
 		if (task.isRunning()) {
 			//That's a no-no
-			System.err.println("can't start task  \"" + tag + "\", already running");
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.task_start_fail_already_running_tag), tag));
 			return;
 		}
 
@@ -107,7 +108,7 @@ public class TaskManager {
 		
 		if (task.isRunning()) {
 			//That's a no-no
-			System.err.println("can't start task  \"" + tag + "\", already running");
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.task_start_fail_already_running_tag), tag));
 			return;
 		}
 
@@ -118,7 +119,7 @@ public class TaskManager {
 	private void startTask(final Task task) {
 		if (task.isRunning()) {
 			//That's a no-no
-			System.err.println("can't start task, already running");
+			System.err.println(context.getResources().getString(R.string.task_start_fail_already_running));
 			return;
 		}
 		
@@ -202,7 +203,7 @@ public class TaskManager {
 	public void killTask(Task task) {
 		if (!task.isRunning()) {
 			//That's a no-no
-			System.err.println("can't kill task, not running");
+			System.err.println(context.getResources().getString(R.string.task_kill_fail_not_running));
 			return;
 		}
 		
@@ -214,7 +215,7 @@ public class TaskManager {
 	public void cancelTask(Task task) {
 		if (!task.isRunning()) {
 			//That's a no-no
-			System.err.println("can't kill task, not running");
+			System.err.println(context.getResources().getString(R.string.task_kill_fail_not_running));
 			return;
 		}
 		

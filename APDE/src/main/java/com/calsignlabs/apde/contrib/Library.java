@@ -1,6 +1,9 @@
 package com.calsignlabs.apde.contrib;
 
+import android.content.Context;
+
 import com.calsignlabs.apde.APDE;
+import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.build.Build;
 
 import java.io.File;
@@ -11,6 +14,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Properties;
 
 public class Library {
@@ -205,15 +209,15 @@ public class Library {
 		}
 	};
 	
-	static public ArrayList<Library> list(File folder) {
+	static public ArrayList<Library> list(File folder, Context context) {
 		ArrayList<Library> libraries = new ArrayList<Library>();
-		list(folder, libraries);
+		list(folder, libraries, context);
 		return libraries;
 	}
 	
-	static public void list(File folder, ArrayList<Library> libraries) {
+	static public void list(File folder, ArrayList<Library> libraries, Context context) {
 		ArrayList<File> librariesFolders = new ArrayList<File>();
-		discover(folder, librariesFolders);
+		discover(folder, librariesFolders, context);
 		
 		for (File baseFolder : librariesFolders) {
 			libraries.add(new Library(baseFolder));
@@ -237,7 +241,7 @@ public class Library {
 //		}
 	}
 	
-	static public void discover(File folder, ArrayList<File> libraries) {
+	static public void discover(File folder, ArrayList<File> libraries, Context context) {
 		String[] list = folder.list(junkFolderFilter);
 		
 		//If a bad folder or something like that, this might come back null
@@ -257,12 +261,8 @@ public class Library {
 					if (sanityCheck.equals(potentialName)) {
 						libraries.add(baseFolder);
 					} else {
-						String mess = "The library \""
-								+ potentialName
-								+ "\" cannot be used.\n"
-								+ "Library names must contain only basic letters and numbers.\n"
-								+ "(ASCII only and no spaces, and it cannot start with a number)";
-						System.err.println("Ignoring bad library name\n\n" + mess);
+						System.err.println(String.format(Locale.US, context.getResources().getString(R.string.library_add_sanity_check_mess_message), potentialName));
+						
 						continue;
 					}
 				}
@@ -271,7 +271,7 @@ public class Library {
 	}
 	
 	public String[] getPackageList(APDE context) {
-		return Build.packageListFromClassPath(getClassPath(context));
+		return Build.packageListFromClassPath(getClassPath(context), context);
 	}
 	
 	//Add this library's packages to the master list
@@ -284,17 +284,12 @@ public class Library {
 				libraries = new ArrayList<Library>();
 				importToLibraryTable.put(pkg, libraries);
 			} else {
-				System.err.println("The library found in");
-				System.err.println(getLibraryFolder(context).getAbsolutePath());
-				System.err.println("conflicts with");
+				StringBuilder libraryConflicts = new StringBuilder();
 				for (Library library : libraries) {
-					System.err.println(library.getLibraryFolder(context).getAbsolutePath());
+					libraryConflicts.append(library.getLibraryFolder(context).getAbsolutePath());
 				}
-				System.err.println("which already define(s) the package " + pkg);
-				System.err.println("If you have a line in your sketch that reads");
-				System.err.println("import " + pkg + ".*;");
-				System.err.println("Then you'll need to first remove one of those libraries.");
-				System.err.println();
+				
+				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.library_package_name_conflict), getLibraryFolder(context).getAbsolutePath(), libraryConflicts.toString(), pkg));
 			}
 			libraries.add(this);
 		}

@@ -906,7 +906,7 @@ public class EditorActivity extends AppCompatActivity {
 					addTab(tabMeta);
 				}
 			} else {
-				System.err.println("Error occurred restoring state, likely caused by\na crash in an activity further down the hierarchy");
+				System.err.println(getResources().getString(R.string.error_restoring_state));
 			}
     	}
     }
@@ -3340,7 +3340,7 @@ public class EditorActivity extends AppCompatActivity {
 			});
 		} else {
 			//Eh... there should ALWAYS be tools, unless something funky is going on
-			System.err.println("Couldn't find any tools... uh-oh...");
+			System.err.println(getResources().getString(R.string.no_tools_found));
 		}
 		
 		final AlertDialog dialog = builder.create();

@@ -440,7 +440,7 @@ public class ExportSignedPackage implements Tool {
 						e.printStackTrace();
 					} catch (Exception e) {
 						//...
-						System.err.println("Failed to read certificate information");
+						System.err.println(context.getResources().getString(R.string.export_signed_package_certificate_read_failed));
 						e.printStackTrace();
 					}
 				}

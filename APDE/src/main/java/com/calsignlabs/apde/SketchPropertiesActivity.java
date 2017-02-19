@@ -154,7 +154,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 			APDE.copyFile(source, dest);
 		} catch (IOException e) {
 			//Something bad happened
-			System.err.println("Failed to add file to sketch, error output:");
+			System.err.println(getResources().getString(R.string.sketch_properties_add_file_failed));
 			e.printStackTrace();
 		}
 	}

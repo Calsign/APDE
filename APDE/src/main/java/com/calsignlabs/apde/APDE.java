@@ -415,7 +415,7 @@ public class APDE extends Application {
 		if (contents == null) {
 			//Let the user know that the folder is empty...
 			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
-			System.out.println("failed - contents null");
+			System.out.println(getResources().getString(R.string.list_sketch_containing_folders_failed_contents_null));
 			
 			return output;
 		}
@@ -679,8 +679,7 @@ public class APDE extends Application {
 		if (savedDrive == null) {
 			// The drive has probably been removed
 			
-			System.err.println("Sketchbook drive could not be found, it may\n" +
-					"have been removed. Reverting to default drive.");
+			System.err.println(getResources().getString(R.string.sketchbook_drive_not_found));
 			
 			SharedPreferences.Editor edit = prefs.edit();
 			edit.putString(storageDrivePref, getDefaultSketchbookStorageDrive(storageDrives).root.toString());
@@ -1085,7 +1084,7 @@ public class APDE extends Application {
 		try {
 			copyFile(sourceFile, destFile);
 		} catch (IOException e) {
-			System.err.println("Error moving sketch...");
+			System.err.println(getResources().getString(R.string.move_folder_error_moving_sketch));
 			e.printStackTrace();
 			
 			return false;
@@ -1094,7 +1093,7 @@ public class APDE extends Application {
 		try {
 			deleteFile(sourceFile);
 		} catch (IOException e) {
-			System.err.println("Error deleting old sketch after moving...");
+			System.err.println(getResources().getString(R.string.move_folder_error_deleting_old_sketch));
 			e.printStackTrace();
 			
 			return false;
@@ -1377,7 +1376,7 @@ public class APDE extends Application {
 		
 		File contribLibrariesFolder = getLibrariesFolder();
 		if (contribLibrariesFolder != null) {
-			contributedLibraries = Library.list(contribLibrariesFolder);
+			contributedLibraries = Library.list(contribLibrariesFolder, this);
 			for (Library lib : contributedLibraries) {
 				lib.addPackageList(importToLibraryTable,
 						(APDE) editor.getApplicationContext());
@@ -1459,19 +1458,19 @@ public class APDE extends Application {
 			list.add(tool);
 			table.put(toolName, tool);
 		} catch (ClassNotFoundException e) {
-			System.err.println("Failed to load tool " + toolName);
+			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		} catch (InstantiationException e) {
-			System.err.println("Failed to load tool " + toolName);
+			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
-			System.err.println("Failed to load tool " + toolName);
+			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		} catch (Error e) {
-			System.err.println("Failed to load tool " + toolName);
+			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		} catch (Exception e) {
-			System.err.println("Failed to load tool " + toolName);
+			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		}
 	}
