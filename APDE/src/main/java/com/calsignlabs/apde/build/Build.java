@@ -43,6 +43,7 @@ import java.io.PrintWriter;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,10 +54,13 @@ import java.util.zip.ZipFile;
 import kellinwood.security.zipsigner.ZipSigner;
 import kellinwood.security.zipsigner.optional.CustomKeySigner;
 import processing.app.Preferences;
+import processing.app.Util;
 import processing.core.PApplet;
 import processing.data.StringList;
 import processing.mode.java.preproc.PdePreprocessor;
 import processing.mode.java.preproc.PreprocessorResult;
+
+import static android.R.attr.mode;
 
 public class Build {
 	public static final String PACKAGE_REGEX ="(?:^|\\s|;)package\\s+(\\S+)\\;";
@@ -103,6 +107,13 @@ public class Build {
 	
 	private static boolean verbose;
 	
+	private int appComponent;
+	
+	static final int FRAGMENT = 0;
+	static final int WALLPAPER = 1;
+	static final int WATCHFACE = 2;
+	static final int CARDBOARD = 3;
+	
 	public Build(APDE global) {
 		this.editor = global.getEditor();
 		
@@ -113,6 +124,10 @@ public class Build {
 		
 		injectLogBroadcaster = PreferenceManager.getDefaultSharedPreferences(global).getBoolean("inject_log_broadcaster", true);
 		verbose = PreferenceManager.getDefaultSharedPreferences(global).getBoolean("build_output_verbose", false);
+	}
+	
+	public int getAppComponent() {
+		return appComponent;
 	}
 	
 	public void setKey(String keystore, char[] keystorePassword, String keyAlias, char[] keyAliasPassword) {
@@ -188,179 +203,179 @@ public class Build {
     	return true;
     }
 	
-    public void exportAndroidEclipseProject(File dest, String target) {
-    	editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
-		System.out.println("Initializing build sequence...");
-		
-		if (verbose) {
-			System.out.println("Target: export");
-		}
-    	
-    	buildFolder = dest;
-		srcFolder = new File(buildFolder, "src");
-		genFolder = new File(buildFolder, "gen");
-		libsFolder = new File(buildFolder, "libs");
-		assetsFolder = new File(buildFolder, "assets");
-		binFolder = new File(buildFolder, "bin");
-		
-		File buildFile = new File(buildFolder, "build.xml");
-		
-		//Wipe the old export folder
-		if(buildFolder.exists()) {
-			if (deleteFile(buildFolder)) {
-				System.out.println("Deleted old export folder");
-			} else if (verbose) {
-				System.out.println("Failed to delete old export folder");
-			}
-		}
-		
-		buildFolder.mkdir();
-		srcFolder.mkdir();
-		libsFolder.mkdir();
-		assetsFolder.mkdir();
-		binFolder.mkdir();
-		
-		//Make sure we have the latest version of the libraries folder
-		((APDE) editor.getApplicationContext()).rebuildLibraryList();
-		
-		Manifest manifest = null;
-		String sketchClassName = null;
-		
-		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
-		
-		try {
-			manifest = new Manifest(this);
-			
-			if (manifest.needsProcessing3Update()) {
-				System.out.println("Upgrading Manifest.xml to Android Mode 3.0...");
-				manifest.updateProcessing3();
-			}
-			
-			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
-			
-			//Enable all of the fancy preprocessor stuff
-			Preferences.setBoolean("preproc.enhanced_casting", true);
-			Preferences.setBoolean("preproc.web_colors", true);
-			Preferences.setBoolean("preproc.color_datatype", true);
-			Preferences.setBoolean("preproc.substitute_floats", true);
-			Preferences.setBoolean("preproc.substitute_unicode", true);
-			
-			if (verbose) {
-				System.out.println("Pre-processing...");
-			}
-			
-			Preproc preproc = new Preproc(sketchName, manifest.getPackageName());
-			
-			//Combine all of the tabs to check for size
-			String combinedText = "";
-			for(SketchFile tab : tabs)
-				combinedText += tab.getText();
-			preproc.initSketchSize(combinedText);
-			preproc.initSketchSmooth(combinedText);
-			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false, false);
-			
-			if(sketchClassName != null) {
-				if (verbose) {
-					System.out.println("Writing AndroidManifest.xml...");
-				}
-				
-				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
-				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
-				
-				if (verbose) {
-					System.out.println("Writing ANT build files...");
-				}
-				
-				writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
-				writeBuildXML(buildFile, sketchName);
-				writeProjectProps(new File(buildFolder, "project.properties"), manifest.getTargetSdk(editor));
-//				writeLocalProps(new File(buildFolder, "local.properties"));
-				
-				if (verbose) {
-					System.out.println("Writing resources...");
-				}
-				
-				final File resFolder = new File(buildFolder, "res");
-				writeRes(resFolder, sketchClassName);
-				
-				writeMainActivity(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName);
-				
-//				final File libsFolder = mkdirs(buildFolder, "libs");
-//				final File assetsFolder = mkdirs(buildFolder, "assets");
-				
-				AssetManager am = editor.getAssets();
-				
-				//Copy native libraries
-				
-				if (verbose) {
-					System.out.println("Copying Processing libraries...");
-				}
-				
-				String[] libsToCopy = {"processing-core", "android-support-v4"};
-				String prefix = "libs/";
-				String suffix = ".jar";
-				
-				//Copy for the compiler
-				for(String lib : libsToCopy) {
-					InputStream inputStream = am.open(prefix + lib + suffix);
-					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
-					inputStream.close();
-				}
-				
-				if (verbose) {
-					System.out.println("Copying contributed libaries...");
-				}
-				
-				// Copy any imported libraries (their libs and assets),
-				// and anything in the code folder contents to the project.
-				copyLibraries(libsFolder, assetsFolder);
-				copyCodeFolder(libsFolder);
-				
-				// Copy the data folder (if one exists) to the project's 'assets' folder
-				final File sketchDataFolder = getSketchDataFolder();
-				if(sketchDataFolder.exists()) {
-					if (verbose) {
-						System.out.println("Copying data folder...");
-					}
-					
-					copyDir(sketchDataFolder, assetsFolder);
-				}
-				
-				// Do the same for the 'res' folder.
-				// http://code.google.com/p/processing/issues/detail?id=767
-				final File sketchResFolder = new File(getSketchFolder(), "res");
-				if(sketchResFolder.exists()) {
-					if (verbose) {
-						System.out.println("Copying res folder...");
-					}
-					
-					copyDir(sketchResFolder, resFolder);
-				}
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (SketchException e) {
-			e.printStackTrace();
-			
-			editor.errorExt(e.getMessage());
-			editor.highlightLineExt(e.getCodeIndex(), e.getCodeLine());
-			
-			//Bail out
-			cleanUp();
-			return;
-		} catch (RuntimeException e) {
-			e.printStackTrace();
-			
-			editor.errorExt(e.getMessage());
-			
-			//Bail out
-			cleanUp();
-			return;
-		}
-		
-		System.out.println("Exported to " + dest.getAbsolutePath());
-		editor.messageExt(editor.getResources().getString(R.string.export_eclipse_project_complete));
-    }
+//    public void exportAndroidEclipseProject(File dest, String target) {
+//    	editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
+//		System.out.println("Initializing build sequence...");
+//		
+//		if (verbose) {
+//			System.out.println("Target: export");
+//		}
+//    	
+//    	buildFolder = dest;
+//		srcFolder = new File(buildFolder, "src");
+//		genFolder = new File(buildFolder, "gen");
+//		libsFolder = new File(buildFolder, "libs");
+//		assetsFolder = new File(buildFolder, "assets");
+//		binFolder = new File(buildFolder, "bin");
+//		
+//		File buildFile = new File(buildFolder, "build.xml");
+//		
+//		//Wipe the old export folder
+//		if(buildFolder.exists()) {
+//			if (deleteFile(buildFolder)) {
+//				System.out.println("Deleted old export folder");
+//			} else if (verbose) {
+//				System.out.println("Failed to delete old export folder");
+//			}
+//		}
+//		
+//		buildFolder.mkdir();
+//		srcFolder.mkdir();
+//		libsFolder.mkdir();
+//		assetsFolder.mkdir();
+//		binFolder.mkdir();
+//		
+//		//Make sure we have the latest version of the libraries folder
+//		((APDE) editor.getApplicationContext()).rebuildLibraryList();
+//		
+//		Manifest manifest = null;
+//		String sketchClassName = null;
+//		
+//		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
+//		
+//		try {
+//			manifest = new Manifest(this);
+//			
+//			if (manifest.needsProcessing3Update()) {
+//				System.out.println("Upgrading Manifest.xml to Android Mode 3.0...");
+//				manifest.updateProcessing3();
+//			}
+//			
+//			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
+//			
+//			//Enable all of the fancy preprocessor stuff
+//			Preferences.setBoolean("preproc.enhanced_casting", true);
+//			Preferences.setBoolean("preproc.web_colors", true);
+//			Preferences.setBoolean("preproc.color_datatype", true);
+//			Preferences.setBoolean("preproc.substitute_floats", true);
+//			Preferences.setBoolean("preproc.substitute_unicode", true);
+//			
+//			if (verbose) {
+//				System.out.println("Pre-processing...");
+//			}
+//			
+//			Preproc preproc = new Preproc(sketchName, manifest.getPackageName());
+//			
+//			//Combine all of the tabs to check for size
+//			String combinedText = "";
+//			for(SketchFile tab : tabs)
+//				combinedText += tab.getText();
+//			preproc.initSketchSize(combinedText);
+//			preproc.initSketchSmooth(combinedText);
+//			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false, false);
+//			
+//			if(sketchClassName != null) {
+//				if (verbose) {
+//					System.out.println("Writing AndroidManifest.xml...");
+//				}
+//				
+//				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
+//				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
+//				
+//				if (verbose) {
+//					System.out.println("Writing ANT build files...");
+//				}
+//				
+//				writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
+//				writeBuildXML(buildFile, sketchName);
+//				writeProjectProps(new File(buildFolder, "project.properties"), manifest.getTargetSdk(editor));
+////				writeLocalProps(new File(buildFolder, "local.properties"));
+//				
+//				if (verbose) {
+//					System.out.println("Writing resources...");
+//				}
+//				
+//				final File resFolder = new File(buildFolder, "res");
+//				writeRes(resFolder, sketchClassName);
+//				
+//				writeMainActivity(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName);
+//				
+////				final File libsFolder = mkdirs(buildFolder, "libs");
+////				final File assetsFolder = mkdirs(buildFolder, "assets");
+//				
+//				AssetManager am = editor.getAssets();
+//				
+//				//Copy native libraries
+//				
+//				if (verbose) {
+//					System.out.println("Copying Processing libraries...");
+//				}
+//				
+//				String[] libsToCopy = {"processing-core", "android-support-v4"};
+//				String prefix = "libs/";
+//				String suffix = ".jar";
+//				
+//				//Copy for the compiler
+//				for(String lib : libsToCopy) {
+//					InputStream inputStream = am.open(prefix + lib + suffix);
+//					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
+//					inputStream.close();
+//				}
+//				
+//				if (verbose) {
+//					System.out.println("Copying contributed libaries...");
+//				}
+//				
+//				// Copy any imported libraries (their libs and assets),
+//				// and anything in the code folder contents to the project.
+//				copyLibraries(libsFolder, assetsFolder);
+//				copyCodeFolder(libsFolder);
+//				
+//				// Copy the data folder (if one exists) to the project's 'assets' folder
+//				final File sketchDataFolder = getSketchDataFolder();
+//				if(sketchDataFolder.exists()) {
+//					if (verbose) {
+//						System.out.println("Copying data folder...");
+//					}
+//					
+//					copyDir(sketchDataFolder, assetsFolder);
+//				}
+//				
+//				// Do the same for the 'res' folder.
+//				// http://code.google.com/p/processing/issues/detail?id=767
+//				final File sketchResFolder = new File(getSketchFolder(), "res");
+//				if(sketchResFolder.exists()) {
+//					if (verbose) {
+//						System.out.println("Copying res folder...");
+//					}
+//					
+//					copyDir(sketchResFolder, resFolder);
+//				}
+//			}
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		} catch (SketchException e) {
+//			e.printStackTrace();
+//			
+//			editor.errorExt(e.getMessage());
+//			editor.highlightLineExt(e.getCodeIndex(), e.getCodeLine());
+//			
+//			//Bail out
+//			cleanUp();
+//			return;
+//		} catch (RuntimeException e) {
+//			e.printStackTrace();
+//			
+//			editor.errorExt(e.getMessage());
+//			
+//			//Bail out
+//			cleanUp();
+//			return;
+//		}
+//		
+//		System.out.println("Exported to " + dest.getAbsolutePath());
+//		editor.messageExt(editor.getResources().getString(R.string.export_eclipse_project_complete));
+//    }
 	
 	public static File getAndroidJarLoc(Context context) {
 		return new File(getTempFolder(context), "android.jar");
@@ -548,7 +563,7 @@ public class Build {
 					System.out.println("Copying Processing libraries...");
 				}
 				
-				String[] libsToCopy = {"processing-core", "android-support-v4"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
+				String[] libsToCopy = {"processing-core"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
 				String prefix = "libs/";
 				String suffix = ".jar";
 				
@@ -1718,148 +1733,215 @@ public class Build {
 		return 0; // i give up
 	}
 	
-	private void writeAntProps(final File file, String packageName) {
-		final PrintWriter writer = PApplet.createWriter(file);
-		writer.println("application-package=" + packageName);
-		writer.flush();
-		writer.close();
-	}
-	
-	
-	private void writeBuildXML(final File file, final String projectName) {
-		final PrintWriter writer = PApplet.createWriter(file);
-		writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-		
-		writer.println("<project name=\"" + projectName + "\" default=\"help\">");
-		
-		writer.println("  <property file=\"local.properties\" />");
-		writer.println("  <property file=\"ant.properties\" />");
-		
-		writer.println("  <property environment=\"env\" />");
-		writer.println("  <condition property=\"sdk.dir\" value=\"${env.ANDROID_HOME}\">");
-		writer.println("       <isset property=\"env.ANDROID_HOME\" />");
-		writer.println("  </condition>");
-		
-//		writer.println("  <property name=\"jdt.core\" value=\"" + Base.getToolsFolder() + "/../modes/java/mode/org.eclipse.jdt.core.jar\" />");
-//		writer.println("  <property name=\"jdtCompilerAdapter\" value=\"" + Base.getToolsFolder() + "/../modes/java/mode/jdtCompilerAdapter.jar\" />");
-		writer.println("  <property name=\"build.compiler\" value=\"org.eclipse.jdt.core.JDTCompilerAdapter\" />");
-		
-		writer.println("  <mkdir dir=\"bin\" />");
-		
-		writer.println("  <echo message=\"${build.compiler}\" />");
-
-// Override target from maint android build file
-		writer.println("    <target name=\"-compile\" depends=\"-pre-build, -build-setup, -code-gen, -pre-compile\">");
-		writer.println("        <do-only-if-manifest-hasCode elseText=\"hasCode = false. Skipping...\">");
-		writer.println("            <path id=\"project.javac.classpath\">");
-		writer.println("                <path refid=\"project.all.jars.path\" />");
-		writer.println("                <path refid=\"tested.project.classpath\" />");
-		writer.println("                <path path=\"${java.compiler.classpath}\" />");
-		writer.println("            </path>");
-		writer.println("            <javac encoding=\"${java.encoding}\"");
-		writer.println("                    source=\"${java.source}\" target=\"${java.target}\"");
-		writer.println("                    debug=\"true\" extdirs=\"\" includeantruntime=\"false\"");
-		writer.println("                    destdir=\"${out.classes.absolute.dir}\"");
-		writer.println("                    bootclasspathref=\"project.target.class.path\"");
-		writer.println("                    verbose=\"${verbose}\"");
-		writer.println("                    classpathref=\"project.javac.classpath\"");
-		writer.println("                    fork=\"${need.javac.fork}\">");
-		writer.println("                <src path=\"${source.absolute.dir}\" />");
-		writer.println("                <src path=\"${gen.absolute.dir}\" />");
-		writer.println("                <compilerarg line=\"${java.compilerargs}\" />");
-		writer.println("                <compilerclasspath path=\"${jdtCompilerAdapter};${jdt.core}\" />");
-		writer.println("            </javac>");
-		
-		writer.println("            <if condition=\"${build.is.instrumented}\">");
-		writer.println("                <then>");
-		writer.println("                    <echo level=\"info\">Instrumenting classes from ${out.absolute.dir}/classes...</echo>");
-		
-		
-		writer.println("                    <getemmafilter");
-		writer.println("                            appPackage=\"${project.app.package}\"");
-		writer.println("                            libraryPackagesRefId=\"project.library.packages\"");
-		writer.println("                            filterOut=\"emma.default.filter\"/>");
-		
-		
-		writer.println("                    <property name=\"emma.coverage.absolute.file\" location=\"${out.absolute.dir}/coverage.em\" />");
-		
-		
-		writer.println("                    <emma enabled=\"true\">");
-		writer.println("                        <instr verbosity=\"${verbosity}\"");
-		writer.println("                               mode=\"overwrite\"");
-		writer.println("                               instrpath=\"${out.absolute.dir}/classes\"");
-		writer.println("                               outdir=\"${out.absolute.dir}/classes\"");
-		writer.println("                               metadatafile=\"${emma.coverage.absolute.file}\">");
-		writer.println("                            <filter excludes=\"${emma.default.filter}\" />");
-		writer.println("                            <filter value=\"${emma.filter}\" />");
-		writer.println("                        </instr>");
-		writer.println("                    </emma>");
-		writer.println("                </then>");
-		writer.println("            </if>");
-		
-		writer.println("            <if condition=\"${project.is.library}\">");
-		writer.println("                <then>");
-		writer.println("                    <echo level=\"info\">Creating library output jar file...</echo>");
-		writer.println("                    <property name=\"out.library.jar.file\" location=\"${out.absolute.dir}/classes.jar\" />");
-		writer.println("                    <if>");
-		writer.println("                        <condition>");
-		writer.println("                            <length string=\"${android.package.excludes}\" trim=\"true\" when=\"greater\" length=\"0\" />");
-		writer.println("                        </condition>");
-		writer.println("                        <then>");
-		writer.println("                            <echo level=\"info\">Custom jar packaging exclusion: ${android.package.excludes}</echo>");
-		writer.println("                        </then>");
-		writer.println("                    </if>");
-		
-		writer.println("                    <propertybyreplace name=\"project.app.package.path\" input=\"${project.app.package}\" replace=\".\" with=\"/\" />");
-		
-		writer.println("                    <jar destfile=\"${out.library.jar.file}\">");
-		writer.println("                        <fileset dir=\"${out.classes.absolute.dir}\"");
-		writer.println("                                includes=\"**/*.class\"");
-		writer.println("                                excludes=\"${project.app.package.path}/R.class ${project.app.package.path}/R$*.class ${project.app.package.path}/BuildConfig.class\"/>");
-		writer.println("                        <fileset dir=\"${source.absolute.dir}\" excludes=\"**/*.java ${android.package.excludes}\" />");
-		writer.println("                    </jar>");
-		writer.println("                </then>");
-		writer.println("            </if>");
-		
-		writer.println("        </do-only-if-manifest-hasCode>");
-		writer.println("    </target>");
-		
-		
-		
-		
-		
-		writer.println("  <loadproperties srcFile=\"project.properties\" />");
-		
-		writer.println("  <fail message=\"sdk.dir is missing. Make sure to generate local.properties using 'android update project'\" unless=\"sdk.dir\" />");
-		
-		writer.println("  <import file=\"custom_rules.xml\" optional=\"true\" />");
-		
-		writer.println("  <!-- version-tag: 1 -->");  // should this be 'custom' instead of 1?
-		writer.println("  <import file=\"${sdk.dir}/tools/ant/build.xml\" />");
-		
-		writer.println("</project>");
-		writer.flush();
-		writer.close();
-	}
-	
-	private void writeProjectProps(final File file, int sdkTarget) {
-		final PrintWriter writer = PApplet.createWriter(file);
-		writer.println("target=" + sdkTarget);
-		writer.println();
-		// http://stackoverflow.com/questions/4821043/includeantruntime-was-not-set-for-android-ant-script
-		writer.println("# Suppress the javac task warnings about \"includeAntRuntime\"");
-		writer.println("build.sysclasspath=last");
-		writer.flush();
-		writer.close();
-	}
+//	private void writeAntProps(final File file, String packageName) {
+//		final PrintWriter writer = PApplet.createWriter(file);
+//		writer.println("application-package=" + packageName);
+//		writer.flush();
+//		writer.close();
+//	}
+//	
+//	
+//	private void writeBuildXML(final File file, final String projectName) {
+//		final PrintWriter writer = PApplet.createWriter(file);
+//		writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+//		
+//		writer.println("<project name=\"" + projectName + "\" default=\"help\">");
+//		
+//		writer.println("  <property file=\"local.properties\" />");
+//		writer.println("  <property file=\"ant.properties\" />");
+//		
+//		writer.println("  <property environment=\"env\" />");
+//		writer.println("  <condition property=\"sdk.dir\" value=\"${env.ANDROID_HOME}\">");
+//		writer.println("       <isset property=\"env.ANDROID_HOME\" />");
+//		writer.println("  </condition>");
+//		
+////		writer.println("  <property name=\"jdt.core\" value=\"" + Base.getToolsFolder() + "/../modes/java/mode/org.eclipse.jdt.core.jar\" />");
+////		writer.println("  <property name=\"jdtCompilerAdapter\" value=\"" + Base.getToolsFolder() + "/../modes/java/mode/jdtCompilerAdapter.jar\" />");
+//		writer.println("  <property name=\"build.compiler\" value=\"org.eclipse.jdt.core.JDTCompilerAdapter\" />");
+//		
+//		writer.println("  <mkdir dir=\"bin\" />");
+//		
+//		writer.println("  <echo message=\"${build.compiler}\" />");
+//
+//// Override target from maint android build file
+//		writer.println("    <target name=\"-compile\" depends=\"-pre-build, -build-setup, -code-gen, -pre-compile\">");
+//		writer.println("        <do-only-if-manifest-hasCode elseText=\"hasCode = false. Skipping...\">");
+//		writer.println("            <path id=\"project.javac.classpath\">");
+//		writer.println("                <path refid=\"project.all.jars.path\" />");
+//		writer.println("                <path refid=\"tested.project.classpath\" />");
+//		writer.println("                <path path=\"${java.compiler.classpath}\" />");
+//		writer.println("            </path>");
+//		writer.println("            <javac encoding=\"${java.encoding}\"");
+//		writer.println("                    source=\"${java.source}\" target=\"${java.target}\"");
+//		writer.println("                    debug=\"true\" extdirs=\"\" includeantruntime=\"false\"");
+//		writer.println("                    destdir=\"${out.classes.absolute.dir}\"");
+//		writer.println("                    bootclasspathref=\"project.target.class.path\"");
+//		writer.println("                    verbose=\"${verbose}\"");
+//		writer.println("                    classpathref=\"project.javac.classpath\"");
+//		writer.println("                    fork=\"${need.javac.fork}\">");
+//		writer.println("                <src path=\"${source.absolute.dir}\" />");
+//		writer.println("                <src path=\"${gen.absolute.dir}\" />");
+//		writer.println("                <compilerarg line=\"${java.compilerargs}\" />");
+//		writer.println("                <compilerclasspath path=\"${jdtCompilerAdapter};${jdt.core}\" />");
+//		writer.println("            </javac>");
+//		
+//		writer.println("            <if condition=\"${build.is.instrumented}\">");
+//		writer.println("                <then>");
+//		writer.println("                    <echo level=\"info\">Instrumenting classes from ${out.absolute.dir}/classes...</echo>");
+//		
+//		
+//		writer.println("                    <getemmafilter");
+//		writer.println("                            appPackage=\"${project.app.package}\"");
+//		writer.println("                            libraryPackagesRefId=\"project.library.packages\"");
+//		writer.println("                            filterOut=\"emma.default.filter\"/>");
+//		
+//		
+//		writer.println("                    <property name=\"emma.coverage.absolute.file\" location=\"${out.absolute.dir}/coverage.em\" />");
+//		
+//		
+//		writer.println("                    <emma enabled=\"true\">");
+//		writer.println("                        <instr verbosity=\"${verbosity}\"");
+//		writer.println("                               mode=\"overwrite\"");
+//		writer.println("                               instrpath=\"${out.absolute.dir}/classes\"");
+//		writer.println("                               outdir=\"${out.absolute.dir}/classes\"");
+//		writer.println("                               metadatafile=\"${emma.coverage.absolute.file}\">");
+//		writer.println("                            <filter excludes=\"${emma.default.filter}\" />");
+//		writer.println("                            <filter value=\"${emma.filter}\" />");
+//		writer.println("                        </instr>");
+//		writer.println("                    </emma>");
+//		writer.println("                </then>");
+//		writer.println("            </if>");
+//		
+//		writer.println("            <if condition=\"${project.is.library}\">");
+//		writer.println("                <then>");
+//		writer.println("                    <echo level=\"info\">Creating library output jar file...</echo>");
+//		writer.println("                    <property name=\"out.library.jar.file\" location=\"${out.absolute.dir}/classes.jar\" />");
+//		writer.println("                    <if>");
+//		writer.println("                        <condition>");
+//		writer.println("                            <length string=\"${android.package.excludes}\" trim=\"true\" when=\"greater\" length=\"0\" />");
+//		writer.println("                        </condition>");
+//		writer.println("                        <then>");
+//		writer.println("                            <echo level=\"info\">Custom jar packaging exclusion: ${android.package.excludes}</echo>");
+//		writer.println("                        </then>");
+//		writer.println("                    </if>");
+//		
+//		writer.println("                    <propertybyreplace name=\"project.app.package.path\" input=\"${project.app.package}\" replace=\".\" with=\"/\" />");
+//		
+//		writer.println("                    <jar destfile=\"${out.library.jar.file}\">");
+//		writer.println("                        <fileset dir=\"${out.classes.absolute.dir}\"");
+//		writer.println("                                includes=\"**/*.class\"");
+//		writer.println("                                excludes=\"${project.app.package.path}/R.class ${project.app.package.path}/R$*.class ${project.app.package.path}/BuildConfig.class\"/>");
+//		writer.println("                        <fileset dir=\"${source.absolute.dir}\" excludes=\"**/*.java ${android.package.excludes}\" />");
+//		writer.println("                    </jar>");
+//		writer.println("                </then>");
+//		writer.println("            </if>");
+//		
+//		writer.println("        </do-only-if-manifest-hasCode>");
+//		writer.println("    </target>");
+//		
+//		
+//		
+//		
+//		
+//		writer.println("  <loadproperties srcFile=\"project.properties\" />");
+//		
+//		writer.println("  <fail message=\"sdk.dir is missing. Make sure to generate local.properties using 'android update project'\" unless=\"sdk.dir\" />");
+//		
+//		writer.println("  <import file=\"custom_rules.xml\" optional=\"true\" />");
+//		
+//		writer.println("  <!-- version-tag: 1 -->");  // should this be 'custom' instead of 1?
+//		writer.println("  <import file=\"${sdk.dir}/tools/ant/build.xml\" />");
+//		
+//		writer.println("</project>");
+//		writer.flush();
+//		writer.close();
+//	}
+//	
+//	private void writeProjectProps(final File file, int sdkTarget) {
+//		final PrintWriter writer = PApplet.createWriter(file);
+//		writer.println("target=" + sdkTarget);
+//		writer.println();
+//		// http://stackoverflow.com/questions/4821043/includeantruntime-was-not-set-for-android-ant-script
+//		writer.println("# Suppress the javac task warnings about \"includeAntRuntime\"");
+//		writer.println("build.sysclasspath=last");
+//		writer.flush();
+//		writer.close();
+//	}
 	
 	private void writeRes(File resFolder, String className) throws SketchException {
 		File layoutFolder = mkdirs(resFolder, "layout");
 		File layoutFile = new File(layoutFolder, "main.xml");
 		writeResLayoutMainActivity(layoutFile, className);
+	}
+	
+	private void writeRes(File resFolder) throws SketchException {
+		File layoutFolder = mkdirs(resFolder, "layout");
+		writeResLayoutMainActivity(layoutFolder);
 		
-		// write the icon files
+		int comp = getAppComponent();
+		if (comp == FRAGMENT) {
+			File valuesFolder = mkdirs(resFolder, "values");
+			writeResStylesFragment(valuesFolder);
+		}
+		
+		if (comp == WALLPAPER) {
+			File xmlFolder = mkdirs(resFolder, "xml");
+			writeResXMLWallpaper(xmlFolder);
+			
+			File valuesFolder = mkdirs(resFolder, "values");
+			writeResStringsWallpaper(valuesFolder);
+		}
+		
+		if (comp == CARDBOARD) {
+			File valuesFolder = mkdirs(resFolder, "values");
+			writeResStylesCardboard(valuesFolder);
+		}
+		
 		File sketchFolder = getSketchFolder();
+		writeIconFiles(sketchFolder, resFolder);
+		
+		if (comp == WATCHFACE) {
+			File xmlFolder = mkdirs(resFolder, "xml");
+			writeResXMLWatchFace(xmlFolder);
+			
+			// write the preview files
+			File localPrevCircle = new File(sketchFolder, ICON_WATCHFACE_CIRCULAR);
+			File localPrevRect = new File(sketchFolder, ICON_WATCHFACE_RECTANGULAR);
+			
+			File buildPrevCircle = new File(resFolder, "drawable/" + ICON_WATCHFACE_CIRCULAR);
+			File buildPrevRect = new File(resFolder, "drawable/" + ICON_WATCHFACE_RECTANGULAR);
+			
+			if (!localPrevCircle.exists()) {
+				try {
+					Util.copyFile(mode.getContentFile("icons/" + ICON_WATCHFACE_CIRCULAR), buildPrevCircle);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			} else {
+				try {
+					Util.copyFile(localPrevCircle, buildPrevCircle);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			if (!localPrevRect.exists())  {
+				try {
+					Util.copyFile(mode.getContentFile("icons/" + ICON_WATCHFACE_RECTANGULAR), buildPrevRect);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			} else {
+				try {
+					Util.copyFile(localPrevCircle, buildPrevRect);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	private void writeIconFiles(File sketchFolder, File resFolder) {
 		File localIcon36 = new File(sketchFolder, ICON_36);
 		File localIcon48 = new File(sketchFolder, ICON_48);
 		File localIcon72 = new File(sketchFolder, ICON_72);
@@ -1965,172 +2047,319 @@ public class Build {
 		}
 	}
 	
-	public static final String[] DANGEROUS_PERMISSIONS = {
-			"READ_CALENDAR",
-			"WRITE_CALENDAR",
-			"CAMERA",
-			"READ_CONTACTS",
-			"WRITE_CONTACTS",
-			"GET_ACCOUNTS",
-			"ACCESS_FINE_LOCATION",
-			"ACCESS_COARSE_LOCATION",
-			"RECORD_AUDIO",
-			"READ_PHONE_STATE",
-			"CALL_PHONE",
-			"READ_CALL_LOG",
-			"WRITE_CALL_LOG",
-			"ADD_VOICEMAIL",
-			"USE_SIP",
-			"PROCESS_OUTGOING_CALLS",
-			"SEND_SMS",
-			"RECEIVE_SMS",
-			"READ_SMS",
-			"RECEIVE_WAP_PUSH",
-			"RECEIVE_MMS",
-			"READ_EXTERNAL_STORAGE",
-			"WRITE_EXTERNAL_STORAGE"
-	};
+	private void writeMainClass(final File srcDirectory, String renderer) {
+		int comp = getAppComponent();
+		String[] permissions = manifest.getPermissions();
+		if (comp == FRAGMENT) {
+			writeFragmentActivity(srcDirectory, permissions);
+		} else if (comp == WALLPAPER) {
+			writeWallpaperService(srcDirectory, permissions);
+		} else if (comp == WATCHFACE) {
+			if (usesOpenGL()) {
+				writeWatchFaceGLESService(srcDirectory, permissions);
+			} else {
+				writeWatchFaceCanvasService(srcDirectory, permissions);
+			}
+		} else if (comp == CARDBOARD) {
+			writeCardboardActivity(srcDirectory, permissions);
+		}
+	}
+	
+	
+	private void writeFragmentActivity(final File srcDirectory, String[] permissions) {
+		File javaTemplate = mode.getContentFile("templates/" + FRAGMENT_ACTIVITY_TEMPLATE);
+		File javaFile = new File(new File(srcDirectory, getPackageName().replace(".", "/")), "MainActivity.java");
+		
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		replaceMap.put("@@package_name@@", getPackageName());
+		replaceMap.put("@@sketch_class_name@@", sketchClassName);
+		
+		AndroidMode.createFileFromTemplate(javaTemplate, javaFile, replaceMap);
+	}
+	
+	
+	private void writeWallpaperService(final File srcDirectory, String[] permissions) {
+		File javaTemplate = mode.getContentFile("templates/" + WALLPAPER_SERVICE_TEMPLATE);
+		File javaFile = new File(new File(srcDirectory, getPackageName().replace(".", "/")), "MainService.java");
+		
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		replaceMap.put("@@package_name@@", getPackageName());
+		replaceMap.put("@@sketch_class_name@@", sketchClassName);
+		
+		AndroidMode.createFileFromTemplate(javaTemplate, javaFile, replaceMap);
+	}
+	
+	
+	private void writeWatchFaceGLESService(final File srcDirectory, String[] permissions) {
+		File javaTemplate = mode.getContentFile("templates/" + WATCHFACE_SERVICE_TEMPLATE);
+		File javaFile = new File(new File(srcDirectory, getPackageName().replace(".", "/")), "MainService.java");
+		
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		replaceMap.put("@@watchface_classs@@", "PWatchFaceGLES");
+		replaceMap.put("@@package_name@@", getPackageName());
+		replaceMap.put("@@sketch_class_name@@", sketchClassName);
+		
+		AndroidMode.createFileFromTemplate(javaTemplate, javaFile, replaceMap);
+	}
+	
+	
+	private void writeWatchFaceCanvasService(final File srcDirectory, String[] permissions) {
+		File javaTemplate = mode.getContentFile("templates/" + WATCHFACE_SERVICE_TEMPLATE);
+		File javaFile = new File(new File(srcDirectory, getPackageName().replace(".", "/")), "MainService.java");
+		
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		replaceMap.put("@@watchface_classs@@", "PWatchFaceCanvas");
+		replaceMap.put("@@package_name@@", getPackageName());
+		replaceMap.put("@@sketch_class_name@@", sketchClassName);
+		
+		AndroidMode.createFileFromTemplate(javaTemplate, javaFile, replaceMap);
+	}
+	
+	
+	private void writeCardboardActivity(final File srcDirectory, String[] permissions) {
+		File javaTemplate = mode.getContentFile("templates/" + CARDBOARD_ACTIVITY_TEMPLATE);
+		File javaFile = new File(new File(srcDirectory, getPackageName().replace(".", "/")), "MainActivity.java");
+		
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		replaceMap.put("@@package_name@@", getPackageName());
+		replaceMap.put("@@sketch_class_name@@", sketchClassName);
+		
+		AndroidMode.createFileFromTemplate(javaTemplate, javaFile, replaceMap);
+	}
+	
+	
+	private void writeResLayoutMainActivity(final File layoutFolder) {
+		File xmlTemplate = mode.getContentFile("templates/" + LAYOUT_ACTIVITY_TEMPLATE);
+		File xmlFile = new File(layoutFolder, "main.xml");
+		
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		replaceMap.put("@@sketch_class_name@@",sketchClassName);
+		
+		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile, replaceMap);
+	}
+	
+	
+	private void writeResStylesFragment(final File valuesFolder) {
+		File xmlTemplate = mode.getContentFile("templates/" + STYLES_FRAGMENT_TEMPLATE);
+		File xmlFile = new File(valuesFolder, "styles.xml");
+		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile);
+	}
+	
+	
+	private void writeResStylesCardboard(final File valuesFolder) {
+		File xmlTemplate = mode.getContentFile("templates/" + STYLES_CARDBOARD_TEMPLATE);
+		File xmlFile = new File(valuesFolder, "styles.xml");
+		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile);
+	}
+	
+	
+	private void writeResXMLWallpaper(final File xmlFolder) {
+		File xmlTemplate = mode.getContentFile("templates/" + XML_WALLPAPER_TEMPLATE);
+		File xmlFile = new File(xmlFolder, "wallpaper.xml");
+		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile);
+	}
+	
+	
+	private void writeResStringsWallpaper(final File valuesFolder) {
+		File xmlTemplate = mode.getContentFile("templates/" + STRINGS_WALLPAPER_TEMPLATE);
+		File xmlFile = new File(valuesFolder, "strings.xml");
+		
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		replaceMap.put("@@sketch_class_name@@",sketchClassName);
+		
+		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile, replaceMap);
+	}
+	
+	
+	private void writeResXMLWatchFace(final File xmlFolder) {
+		File xmlTemplate = mode.getContentFile("templates/" + XML_WATCHFACE_TEMPLATE);
+		File xmlFile = new File(xmlFolder, "watch_face.xml");
+		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile);
+	}
+	
+	
+	private String generatePermissionsString(final String[] permissions) {
+		String permissionsStr = "";
+		for (String p: permissions) {
+			permissionsStr += (0 < permissionsStr.length() ? "," : "");
+			if (p.indexOf("permission") == -1) {
+				permissionsStr += "Manifest.permission." + p;
+			} else if (p.indexOf("Manifest.permission") == 0) {
+				permissionsStr += p;
+			} else {
+				permissionsStr += "\"" + p + "\"";
+			}
+		}
+		permissionsStr = "{" + permissionsStr + "}";
+		return permissionsStr;
+	}
+	
+//	public static final String[] DANGEROUS_PERMISSIONS = {
+//			"READ_CALENDAR",
+//			"WRITE_CALENDAR",
+//			"CAMERA",
+//			"READ_CONTACTS",
+//			"WRITE_CONTACTS",
+//			"GET_ACCOUNTS",
+//			"ACCESS_FINE_LOCATION",
+//			"ACCESS_COARSE_LOCATION",
+//			"RECORD_AUDIO",
+//			"READ_PHONE_STATE",
+//			"CALL_PHONE",
+//			"READ_CALL_LOG",
+//			"WRITE_CALL_LOG",
+//			"ADD_VOICEMAIL",
+//			"USE_SIP",
+//			"PROCESS_OUTGOING_CALLS",
+//			"SEND_SMS",
+//			"RECEIVE_SMS",
+//			"READ_SMS",
+//			"RECEIVE_WAP_PUSH",
+//			"RECEIVE_MMS",
+//			"READ_EXTERNAL_STORAGE",
+//			"WRITE_EXTERNAL_STORAGE"
+//	};
 	
 	private static final String MAIN_ACTIVITY_NAME = "MainActivity.java";
 	
-	private void writeMainActivity(final File srcDirectory, String[] permissions, String packageName, String sketchClassName) {
-		boolean hasDangerousPermissions = false;
-		
-		outerLoop:
-		for (String p : permissions) {
-			for (String d : DANGEROUS_PERMISSIONS) {
-				if (d.equals(p)) {
-					hasDangerousPermissions = true;
-					break outerLoop;
-				}
-			}
-		}
-		
-		File mainActivityFile = new File(new File(srcDirectory, packageName.replace(".", "/")), MAIN_ACTIVITY_NAME);
-		final PrintWriter writer = PApplet.createWriter(mainActivityFile);
-		writer.println("package " + packageName +";");
-		writer.println("import android.app.Activity;");
-		writer.println("import android.os.Bundle;");
-		writer.println("import android.view.Window;");
-		writer.println("import android.view.WindowManager;");
-		writer.println("import android.widget.FrameLayout;");
-		writer.println("import android.view.ViewGroup.LayoutParams;");
-		writer.println("import android.app.FragmentTransaction;");
-		
-		writer.println("import android.content.pm.PackageManager;");
-		writer.println("import android.support.v4.app.ActivityCompat;");
-		writer.println("import android.support.v4.content.ContextCompat;");
-		writer.println("import java.util.ArrayList;");
-		writer.println("import android.app.AlertDialog;");
-		writer.println("import android.content.DialogInterface;");
-		writer.println("import android.Manifest;");
-		
-		writer.println("import processing.core.PApplet;");
-		writer.println("public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback {"); // Note: changed this to support API level 15
-		writer.println("    PApplet fragment;");
-		writer.println("    private static final String MAIN_FRAGMENT_TAG = \"main_fragment\";");
-		writer.println("    private static final int REQUEST_PERMISSIONS = 1;");
-		writer.println("    int viewId = 0x1000;");
-		writer.println("    @Override");
-		writer.println("    protected void onCreate(Bundle savedInstanceState) {");
-		writer.println("        super.onCreate(savedInstanceState);");
-		writer.println("        Window window = getWindow();");
-		writer.println("        requestWindowFeature(Window.FEATURE_NO_TITLE);");
-		writer.println("        window.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN);");
-		writer.println("        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);");
-		writer.println("        FrameLayout frame = new FrameLayout(this);");
-		writer.println("        frame.setId(viewId);");
-		writer.println("        setContentView(frame, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));");
-		writer.println("        if (savedInstanceState == null) {");
-		writer.println("            fragment = new " + sketchClassName + "();");
-		writer.println("            FragmentTransaction ft = getFragmentManager().beginTransaction();");
-		writer.println("            ft.add(frame.getId(), fragment, MAIN_FRAGMENT_TAG).commit();");
-		writer.println("        } else {");
-		writer.println("            fragment = (PApplet) getFragmentManager().findFragmentByTag(MAIN_FRAGMENT_TAG);");
-		writer.println("        }");
-		writer.println("    }");
-		writer.println("    @Override");
-		writer.println("    public void onBackPressed() {");
-		writer.println("        fragment.onBackPressed();");
-		writer.println("        super.onBackPressed();");
-		writer.println("    }");
-		
-		// Requesting permissions from user when the app resumes.
-		// Nice example on how to handle user response
-		// http://stackoverflow.com/a/35495855   
-		// More on permission in Android 23:
-		// https://inthecheesefactory.com/blog/things-you-need-to-know-about-android-m-permission-developer-edition/en
-		writer.println("    @Override");
-		writer.println("    public void onStart() {");
-		writer.println("        super.onStart();");
-		writer.println("        ArrayList<String> needed = new ArrayList<String>();");
-		if (hasDangerousPermissions) {
-			writer.println("        int check;");
-		}
-		writer.println("        boolean danger = false;");
-		if (hasDangerousPermissions) {
-			for (String p : permissions) {
-				for (String d : DANGEROUS_PERMISSIONS) {
-					if (d.equals(p)) {
-						writer.println("        check = ContextCompat.checkSelfPermission(this, Manifest.permission." + p + ");");
-						writer.println("        if (check != PackageManager.PERMISSION_GRANTED) {");
-						writer.println("          needed.add(Manifest.permission." + p + ");");
-						writer.println("        } else {");
-						writer.println("          danger = true;");
-						writer.println("        }");
-					}
-				}
-			}
-		}
-		writer.println("        if (!needed.isEmpty()) {");
-		writer.println("          ActivityCompat.requestPermissions(this, needed.toArray(new String[needed.size()]), REQUEST_PERMISSIONS);");
-		writer.println("        } else if (danger) {");
-		writer.println("          fragment.onPermissionsGranted();");
-		writer.println("        }");
-		writer.println("    }");
-		
-		// The event handler for the permission result
-		writer.println("    @Override");
-		writer.println("    public void onRequestPermissionsResult(int requestCode,");
-		writer.println("                                           String permissions[], int[] grantResults) {");
-		writer.println("      if (requestCode == REQUEST_PERMISSIONS) {");
-		writer.println("        if (grantResults.length > 0) {");
-		writer.println("          for (int i = 0; i < grantResults.length; i++) {");
-		writer.println("            if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {");
-		writer.println("              AlertDialog.Builder builder = new AlertDialog.Builder(this);");
-		writer.println("              builder.setMessage(\"The app cannot run without these permissions, will quit now.\")");
-		writer.println("                     .setCancelable(false)");
-		writer.println("                     .setPositiveButton(\"OK\", new DialogInterface.OnClickListener() {");
-		writer.println("                          public void onClick(DialogInterface dialog, int id) {");
-		writer.println("                              finish();");
-		writer.println("                          }");
-		writer.println("                     });");
-		writer.println("              AlertDialog alert = builder.create();");
-		writer.println("              alert.show();");
-		writer.println("            }");
-		writer.println("          }");
-		writer.println("          fragment.onPermissionsGranted();");
-		writer.println("        }");
-		writer.println("      }");
-		writer.println("    }");
-		
-		writer.println("}");
-		writer.flush();
-		writer.close();
-	}
-	
-	private void writeResLayoutMainActivity(final File file, String sketchClassName) {
-		final PrintWriter writer = PApplet.createWriter(file);
-		writer.println("<fragment xmlns:android=\"http://schemas.android.com/apk/res/android\"");
-		writer.println("    xmlns:tools=\"http://schemas.android.com/tools\"");
-		writer.println("    android:id=\"@+id/fragment\"");
-		writer.println("    android:name=\"." + sketchClassName + "\"");
-		writer.println("    tools:layout=\"@layout/fragment_main\"");
-		writer.println("    android:layout_width=\"match_parent\"");
-		writer.println("    android:layout_height=\"match_parent\" />");
-		writer.flush();
-		writer.close();
-	}
+//	private void writeMainActivity(final File srcDirectory, String[] permissions, String packageName, String sketchClassName) {
+//		boolean hasDangerousPermissions = false;
+//		
+//		outerLoop:
+//		for (String p : permissions) {
+//			for (String d : DANGEROUS_PERMISSIONS) {
+//				if (d.equals(p)) {
+//					hasDangerousPermissions = true;
+//					break outerLoop;
+//				}
+//			}
+//		}
+//		
+//		File mainActivityFile = new File(new File(srcDirectory, packageName.replace(".", "/")), MAIN_ACTIVITY_NAME);
+//		final PrintWriter writer = PApplet.createWriter(mainActivityFile);
+//		writer.println("package " + packageName +";");
+//		writer.println("import android.app.Activity;");
+//		writer.println("import android.os.Bundle;");
+//		writer.println("import android.view.Window;");
+//		writer.println("import android.view.WindowManager;");
+//		writer.println("import android.widget.FrameLayout;");
+//		writer.println("import android.view.ViewGroup.LayoutParams;");
+//		writer.println("import android.app.FragmentTransaction;");
+//		
+//		writer.println("import android.content.pm.PackageManager;");
+//		writer.println("import android.support.v4.app.ActivityCompat;");
+//		writer.println("import android.support.v4.content.ContextCompat;");
+//		writer.println("import java.util.ArrayList;");
+//		writer.println("import android.app.AlertDialog;");
+//		writer.println("import android.content.DialogInterface;");
+//		writer.println("import android.Manifest;");
+//		
+//		writer.println("import processing.core.PApplet;");
+//		writer.println("public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback {"); // Note: changed this to support API level 15
+//		writer.println("    PApplet fragment;");
+//		writer.println("    private static final String MAIN_FRAGMENT_TAG = \"main_fragment\";");
+//		writer.println("    private static final int REQUEST_PERMISSIONS = 1;");
+//		writer.println("    int viewId = 0x1000;");
+//		writer.println("    @Override");
+//		writer.println("    protected void onCreate(Bundle savedInstanceState) {");
+//		writer.println("        super.onCreate(savedInstanceState);");
+//		writer.println("        Window window = getWindow();");
+//		writer.println("        requestWindowFeature(Window.FEATURE_NO_TITLE);");
+//		writer.println("        window.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN);");
+//		writer.println("        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);");
+//		writer.println("        FrameLayout frame = new FrameLayout(this);");
+//		writer.println("        frame.setId(viewId);");
+//		writer.println("        setContentView(frame, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));");
+//		writer.println("        if (savedInstanceState == null) {");
+//		writer.println("            fragment = new " + sketchClassName + "();");
+//		writer.println("            FragmentTransaction ft = getFragmentManager().beginTransaction();");
+//		writer.println("            ft.add(frame.getId(), fragment, MAIN_FRAGMENT_TAG).commit();");
+//		writer.println("        } else {");
+//		writer.println("            fragment = (PApplet) getFragmentManager().findFragmentByTag(MAIN_FRAGMENT_TAG);");
+//		writer.println("        }");
+//		writer.println("    }");
+//		writer.println("    @Override");
+//		writer.println("    public void onBackPressed() {");
+//		writer.println("        fragment.onBackPressed();");
+//		writer.println("        super.onBackPressed();");
+//		writer.println("    }");
+//		
+//		// Requesting permissions from user when the app resumes.
+//		// Nice example on how to handle user response
+//		// http://stackoverflow.com/a/35495855   
+//		// More on permission in Android 23:
+//		// https://inthecheesefactory.com/blog/things-you-need-to-know-about-android-m-permission-developer-edition/en
+//		writer.println("    @Override");
+//		writer.println("    public void onStart() {");
+//		writer.println("        super.onStart();");
+//		writer.println("        ArrayList<String> needed = new ArrayList<String>();");
+//		if (hasDangerousPermissions) {
+//			writer.println("        int check;");
+//		}
+//		writer.println("        boolean danger = false;");
+//		if (hasDangerousPermissions) {
+//			for (String p : permissions) {
+//				for (String d : DANGEROUS_PERMISSIONS) {
+//					if (d.equals(p)) {
+//						writer.println("        check = ContextCompat.checkSelfPermission(this, Manifest.permission." + p + ");");
+//						writer.println("        if (check != PackageManager.PERMISSION_GRANTED) {");
+//						writer.println("          needed.add(Manifest.permission." + p + ");");
+//						writer.println("        } else {");
+//						writer.println("          danger = true;");
+//						writer.println("        }");
+//					}
+//				}
+//			}
+//		}
+//		writer.println("        if (!needed.isEmpty()) {");
+//		writer.println("          ActivityCompat.requestPermissions(this, needed.toArray(new String[needed.size()]), REQUEST_PERMISSIONS);");
+//		writer.println("        } else if (danger) {");
+//		writer.println("          fragment.onPermissionsGranted();");
+//		writer.println("        }");
+//		writer.println("    }");
+//		
+//		// The event handler for the permission result
+//		writer.println("    @Override");
+//		writer.println("    public void onRequestPermissionsResult(int requestCode,");
+//		writer.println("                                           String permissions[], int[] grantResults) {");
+//		writer.println("      if (requestCode == REQUEST_PERMISSIONS) {");
+//		writer.println("        if (grantResults.length > 0) {");
+//		writer.println("          for (int i = 0; i < grantResults.length; i++) {");
+//		writer.println("            if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {");
+//		writer.println("              AlertDialog.Builder builder = new AlertDialog.Builder(this);");
+//		writer.println("              builder.setMessage(\"The app cannot run without these permissions, will quit now.\")");
+//		writer.println("                     .setCancelable(false)");
+//		writer.println("                     .setPositiveButton(\"OK\", new DialogInterface.OnClickListener() {");
+//		writer.println("                          public void onClick(DialogInterface dialog, int id) {");
+//		writer.println("                              finish();");
+//		writer.println("                          }");
+//		writer.println("                     });");
+//		writer.println("              AlertDialog alert = builder.create();");
+//		writer.println("              alert.show();");
+//		writer.println("            }");
+//		writer.println("          }");
+//		writer.println("          fragment.onPermissionsGranted();");
+//		writer.println("        }");
+//		writer.println("      }");
+//		writer.println("    }");
+//		
+//		writer.println("}");
+//		writer.flush();
+//		writer.close();
+//	}
+//	
+//	private void writeResLayoutMainActivity(final File file, String sketchClassName) {
+//		final PrintWriter writer = PApplet.createWriter(file);
+//		writer.println("<fragment xmlns:android=\"http://schemas.android.com/apk/res/android\"");
+//		writer.println("    xmlns:tools=\"http://schemas.android.com/tools\"");
+//		writer.println("    android:id=\"@+id/fragment\"");
+//		writer.println("    android:name=\"." + sketchClassName + "\"");
+//		writer.println("    tools:layout=\"@layout/fragment_main\"");
+//		writer.println("    android:layout_width=\"match_parent\"");
+//		writer.println("    android:layout_height=\"match_parent\" />");
+//		writer.flush();
+//		writer.close();
+//	}
 	
 	private void copyLibraries(final File libsFolder, final File assetsFolder) throws IOException { //TODO support native library stuffs
 		for (Library library : importedLibraries) {
