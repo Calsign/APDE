@@ -1400,8 +1400,9 @@ public class EditorActivity extends AppCompatActivity {
 	
 	@Override
 	public void onPause() {
-		// Make sure to save the sketch
-		saveSketchForStop();
+		// Disable this. For Science!!
+//		// Make sure to save the sketch
+//		saveSketchForStop();
 		
 		// We do this to avoid messing up the *very* delicate console/code area resizing stuff
 		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
@@ -1764,7 +1765,7 @@ public class EditorActivity extends AppCompatActivity {
 //	    	//Update the current tab
 //	    	tabs.put(tabBar.getSelectedTab(), new SketchFile(tabBar.getSelectedTab().getText().toString(), this));
 //	    	tabs.get(getSelectedCodeIndex()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
-	    	
+			
 			// Update all tabs
 			for (int i = 0; i < tabs.size(); i ++) {
 				// Not all of the tabs are loaded at once
@@ -1782,7 +1783,7 @@ public class EditorActivity extends AppCompatActivity {
 	    			}
 	    		}
 	    	}
-	    	
+			
 	    	if (success) {
 	    		getGlobalState().selectSketch(sketchPath, getGlobalState().getSketchLocationType());
 	    		
