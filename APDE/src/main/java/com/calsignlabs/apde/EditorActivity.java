@@ -1068,7 +1068,7 @@ public class EditorActivity extends AppCompatActivity {
         
         //Register receiver for sketch logs / console output
         registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
-        
+		
         //In case the user has enabled / disabled undo / redo in settings
         supportInvalidateOptionsMenu();
 	}
