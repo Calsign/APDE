@@ -899,17 +899,17 @@ public class EditorActivity extends AppCompatActivity {
 	@Override
 	public void onRestoreInstanceState(Bundle savedInstanceState) {
 		try {
-			if (savedInstanceState != null) {
-				// We're going to re-add all of the fragments, so get rid of the old ones
-				List<Fragment> fragments = getSupportFragmentManager().getFragments();
-				if (fragments != null) {
-					for (Fragment fragment : fragments) {
-						if (fragment != null) {
-							getSupportFragmentManager().beginTransaction().remove(fragment).commit();
-						}
+			// We're going to re-add all of the fragments, so get rid of the old ones
+			List<Fragment> fragments = getSupportFragmentManager().getFragments();
+			if (fragments != null) {
+				for (Fragment fragment : fragments) {
+					if (fragment != null) {
+						getSupportFragmentManager().beginTransaction().remove(fragment).commit();
 					}
 				}
-				
+			}
+			
+			if (savedInstanceState != null) {
 				String consoleText = savedInstanceState.getString("consoleText");
 				final int consoleScrollPos = savedInstanceState.getInt("consoleScrollPos");
 				final int consoleScrollPosX = savedInstanceState.getInt("consoleScrollPosX");
