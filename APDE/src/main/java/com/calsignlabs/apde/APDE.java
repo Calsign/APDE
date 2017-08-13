@@ -48,6 +48,7 @@ import com.calsignlabs.apde.tool.UninstallSketch;
 import com.calsignlabs.apde.vcs.GitRepository;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -56,6 +57,8 @@ import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.lang.reflect.Field;
 import java.math.RoundingMode;
 import java.nio.channels.FileChannel;
@@ -1583,5 +1586,63 @@ public class APDE extends Application {
 		builder.setView(frameLayout);
 		
 		return input;
+	}
+	
+	public static final boolean DEBUG_LOG = true;
+	public static final SimpleDateFormat DEBUG_LOG_TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+	
+	public void writeDebugLog(String tag, String msg) {
+		try {
+			FileOutputStream out = new FileOutputStream(new File(getSketchbookFolder(), "debugLog.txt"), true);
+			Writer writer = new BufferedWriter(new OutputStreamWriter(out));
+			
+			writer.write(DEBUG_LOG_TIMESTAMP_FORMATTER.format(new Date()) + "    " + tag + "    " + msg + "\n");
+			
+			writer.flush();
+			writer.close();
+			out.flush();
+			out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void writeCodeDeletionDebugStatus(String loc) {
+		if (DEBUG_LOG) {
+			StringBuilder msg = new StringBuilder();
+			
+			msg.append("\n");
+			
+			for (SketchFile sketchFile : editor.getSketchFiles()) {
+				File file = new File(getSketchLocation(), sketchFile.getFilename());
+				
+				msg.append("    FS - ");
+				msg.append(sketchFile.getFilename());
+				msg.append(": ");
+				msg.append(file.length());
+				msg.append("\n");
+			}
+			
+			for (SketchFile sketchFile : editor.getSketchFiles()) {
+				msg.append("    SketchFile - ");
+				msg.append(sketchFile.getFilename());
+				msg.append(": ");
+				msg.append(sketchFile.getText().length());
+				msg.append("\n");
+			}
+			
+			CodeEditText codeEditText = editor.getSelectedCodeArea();
+			if (codeEditText != null) {
+				msg.append("    CodeEditText - ");
+				msg.append(editor.getSketchFiles().get(editor.getSelectedCodeIndex()).getFilename());
+				msg.append(": ");
+				msg.append(editor.getSelectedCodeArea().getText().length());
+				msg.append("\n");
+			} else {
+				msg.append("    CodeEditText null\n");
+			}
+			
+			writeDebugLog(loc, msg.toString());
+		}
 	}
 }
