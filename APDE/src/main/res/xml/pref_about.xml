@@ -28,20 +28,12 @@
         <android.support.v7.preference.Preference
             android:key="pref_about_licenses"
             android:title="@string/pref_about_licenses" />
-    </android.support.v7.preference.PreferenceCategory>
     
-    <android.support.v7.preference.PreferenceCategory
-        android:key="pref_whats_new"
-        android:title="@string/pref_whats_new" >
-        
-        <android.support.v7.preference.CheckBoxPreference
-            android:key="pref_whats_new_enable"
-            android:title="@string/pref_whats_new_enable"
-            android:summary="@string/pref_whats_new_enable_desc"
-            android:defaultValue="true" />
-        
         <android.support.v7.preference.Preference
-            android:key="pref_whats_new_display"
-            android:title="@string/pref_whats_new_display" />
+            android:title="@string/pref_whats_new"
+            android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >
+        
+            <extra android:name="resource" android:value="pref_whats_new" />
+        </android.support.v7.preference.Preference>
     </android.support.v7.preference.PreferenceCategory>
 </android.support.v7.preference.PreferenceScreen>

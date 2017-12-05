@@ -3,13 +3,13 @@
         android:key="pref_general_settings"
         android:title="@string/pref_general" >
         
-        <android.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="pref_vibrate"
             android:title="@string/pref_vibrate"
             android:summary="@string/pref_vibrate_desc" />
         
-        <android.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="false"
             android:key="use_hardware_keyboard"
             android:title="@string/use_hardware_keyboard" />
@@ -19,10 +19,9 @@
         android:key="pref_sketchbook"
         android:title="@string/pref_sketchbook" >
         
-        <android.support.v7.preference.com.calsignlabs.apde.support.CustomListPreference
+        <com.calsignlabs.apde.support.CustomListPreference
             android:key="pref_sketchbook_drive"
             android:title="@string/pref_sketchbook_drive"
-            android:summary=""
             android:dialogTitle="@string/pref_sketchbook_drive" />
 		
         <android.support.v7.preference.EditTextPreference
@@ -36,10 +35,22 @@
     </android.support.v7.preference.PreferenceCategory>
     
     <android.support.v7.preference.PreferenceCategory
+        android:key="pref_key_examples"
+        android:title="@string/pref_examples" >
+        
+        <android.support.v7.preference.Preference
+            android:title="@string/pref_examples"
+            android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >
+            
+            <extra android:name="resource" android:value="pref_examples" />
+        </android.support.v7.preference.Preference>
+    </android.support.v7.preference.PreferenceCategory>
+    <android.support.v7.preference.PreferenceCategory
         android:key="pref_debug"
         android:title="@string/pref_debug" >
         
-        <android.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
+            android:defaultValue="false"
             android:key="pref_debug_global_verbose_output"
             android:title="@string/pref_debug_global_verbose_output" />
     </android.support.v7.preference.PreferenceCategory>

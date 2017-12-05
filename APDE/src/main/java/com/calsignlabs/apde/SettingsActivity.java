@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.support.v14.preference.SwitchPreference;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
@@ -42,7 +43,6 @@ import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.support.CustomListPreference;
 import com.calsignlabs.apde.support.StockPreferenceFragment;
 import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompat;
-import com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat;
 
 import java.util.ArrayList;
 import java.util.Stack;
@@ -63,8 +63,6 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 			if (isMultiPane()) {
 				addFirstSettingsFragment();
 			}
-			
-			Log.d("testing... ", "no icicle");
 		} else {
 			boolean wasMultiPane = savedInstanceState.getBoolean(STATE_MULTI_PANE);
 			
@@ -133,7 +131,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 	
 	@SuppressLint("NewApi")
 	public void checkPreferences(PreferenceFragmentCompat frag) {
-		SwitchPreferenceCompat hardwareKeyboard = ((SwitchPreferenceCompat) frag.findPreference("use_hardware_keyboard"));
+		SwitchPreference hardwareKeyboard = ((SwitchPreference) frag.findPreference("use_hardware_keyboard"));
 		
 		if(hardwareKeyboard != null) {
 			hardwareKeyboard.setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
@@ -158,7 +156,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 				((PreferenceCategory) frag.findPreference("pref_general_settings")).removePreference(vibrator);
 		}
 		
-		final SwitchPreferenceCompat enableUndoRedo = (SwitchPreferenceCompat) frag.findPreference("pref_key_undo_redo");
+		final SwitchPreference enableUndoRedo = (SwitchPreference) frag.findPreference("pref_key_undo_redo");
 		
 		if (enableUndoRedo != null) {
 			enableUndoRedo.setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
@@ -593,9 +591,12 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		
 		@Override
 		public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-			if (rootView == null) {
-				rootView = inflater.inflate(R.layout.fragment_settings_headers, container, false);
-			}
+//			if (rootView == null) {
+//				rootView = inflater.inflate(R.layout.fragment_settings_headers, container, false);
+//			}
+			// For some reason reusing rootView causes going back to the headers screen from a
+			// subscreen to hang after upgrading to android-support-preference
+			rootView = inflater.inflate(R.layout.fragment_settings_headers, container, false);
 			
 			return rootView;
 		}

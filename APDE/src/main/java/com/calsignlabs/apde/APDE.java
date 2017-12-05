@@ -15,6 +15,7 @@ import android.os.Environment;
 import android.os.StatFs;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AlertDialog;
+import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -887,7 +888,7 @@ public class APDE extends Application {
 									
 									builder.setTitle(R.string.update_examples_dialog_title);
 									
-									LinearLayout layout = (LinearLayout) View.inflate(APDE.this, R.layout.examples_update_dialog, null);
+									LinearLayout layout = (LinearLayout) View.inflate(new ContextThemeWrapper(editor, R.style.Theme_AppCompat_Dialog), R.layout.examples_update_dialog, null);
 									
 									final CheckBox dontShowAgain = (CheckBox) layout.findViewById(R.id.examples_update_dialog_dont_show_again);
 									final TextView disableWarning = (TextView) layout.findViewById(R.id.examples_update_dialog_disable_warning);

@@ -4,13 +4,13 @@
         android:key="pref_build"
         android:title="@string/pref_build" >
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="pref_build_internal_storage"
             android:title="@string/pref_build_internal_storage"
             android:summary="@string/pref_build_internal_storage_desc" />
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="inject_log_broadcaster"
             android:title="@string/inject_log_broadcaster"
@@ -21,17 +21,17 @@
         android:key="pref_build_debug"
         android:title="@string/pref_debug" >
     
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="false"
             android:key="build_output_verbose"
             android:title="@string/build_output_verbose" />
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="false"
             android:key="pref_build_folder_keep"
             android:title="@string/pref_build_folder_keep" />
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:key="pref_build_aapt_binary"
             android:title="@string/pref_build_aapt_binary"
             android:summary="@string/pref_build_aapt_binary_desc"

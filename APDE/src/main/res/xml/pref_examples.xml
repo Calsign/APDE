@@ -4,12 +4,12 @@
         android:key="pref_key_examples"
         android:title="@string/pref_examples" >
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="update_examples"
             android:title="@string/enable_update_examples" />
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="false"
             android:key="update_examples_mobile_data"
             android:title="@string/enable_update_examples_mobile_data"
