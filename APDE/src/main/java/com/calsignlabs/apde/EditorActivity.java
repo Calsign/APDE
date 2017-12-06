@@ -738,6 +738,8 @@ public class EditorActivity extends AppCompatActivity {
 				addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
 				autoSave();
 			}
+			
+			getGlobalState().writeCodeDeletionDebugStatus("onCreate() after loadSketchStart()");
 		} catch (Exception e) {
 			// Who knows really...
 			e.printStackTrace();
@@ -749,6 +751,8 @@ public class EditorActivity extends AppCompatActivity {
 	@Override
 	public void onStart() {
 		super.onStart();
+		
+		getGlobalState().writeCodeDeletionDebugStatus("onStart()");
 		
 		APDE.StorageDrive.StorageDriveType storageDriveType = getGlobalState().getSketchbookStorageDrive().type;
 		
@@ -877,6 +881,8 @@ public class EditorActivity extends AppCompatActivity {
 	
 	@Override
 	public void onSaveInstanceState(Bundle outState) {
+		getGlobalState().writeCodeDeletionDebugStatus("onSaveInstanceState()");
+		
 		try {
 			TextView messageArea = (TextView) findViewById(R.id.message);
 			TextView console = (TextView) findViewById(R.id.console);
@@ -899,17 +905,17 @@ public class EditorActivity extends AppCompatActivity {
 	@Override
 	public void onRestoreInstanceState(Bundle savedInstanceState) {
 		try {
-			if (savedInstanceState != null) {
-				// We're going to re-add all of the fragments, so get rid of the old ones
-				List<Fragment> fragments = getSupportFragmentManager().getFragments();
-				if (fragments != null) {
-					for (Fragment fragment : fragments) {
-						if (fragment != null) {
-							getSupportFragmentManager().beginTransaction().remove(fragment).commit();
-						}
+			// We're going to re-add all of the fragments, so get rid of the old ones
+			List<Fragment> fragments = getSupportFragmentManager().getFragments();
+			if (fragments != null) {
+				for (Fragment fragment : fragments) {
+					if (fragment != null) {
+						getSupportFragmentManager().beginTransaction().remove(fragment).commit();
 					}
 				}
-				
+			}
+			
+			if (savedInstanceState != null) {
 				String consoleText = savedInstanceState.getString("consoleText");
 				final int consoleScrollPos = savedInstanceState.getInt("consoleScrollPos");
 				final int consoleScrollPosX = savedInstanceState.getInt("consoleScrollPosX");
@@ -946,12 +952,16 @@ public class EditorActivity extends AppCompatActivity {
 			// Who knows really...
 			e.printStackTrace();
 		}
+		
+		getGlobalState().writeCodeDeletionDebugStatus("onRestoreInstanceState()");
 	}
     
     private static SparseArray<ActivityResultCallback> activityResultCodes = new SparseArray<ActivityResultCallback>();
     
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		getGlobalState().writeCodeDeletionDebugStatus("onActivityResult()");
+		
     	//This is the code to delete the old APK file
     	if (requestCode == FLAG_DELETE_APK) {
     		Build.cleanUpPostLaunch(this);
@@ -985,6 +995,8 @@ public class EditorActivity extends AppCompatActivity {
 	@SuppressLint("NewApi")
 	public void onResume() {
     	super.onResume();
+	
+		getGlobalState().writeCodeDeletionDebugStatus("onResume()");
 		
     	//Reference the SharedPreferences text size value
 //    	((CodeEditText) findViewById(R.id.code)).refreshTextSize();
@@ -1068,7 +1080,7 @@ public class EditorActivity extends AppCompatActivity {
         
         //Register receiver for sketch logs / console output
         registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
-        
+		
         //In case the user has enabled / disabled undo / redo in settings
         supportInvalidateOptionsMenu();
 	}
@@ -1400,8 +1412,11 @@ public class EditorActivity extends AppCompatActivity {
 	
 	@Override
 	public void onPause() {
-		// Make sure to save the sketch
-		saveSketchForStop();
+		// Disable this. For Science!!
+//		// Make sure to save the sketch
+//		saveSketchForStop();
+		
+		getGlobalState().writeCodeDeletionDebugStatus("onPause()");
 		
 		// We do this to avoid messing up the *very* delicate console/code area resizing stuff
 		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
@@ -1411,8 +1426,12 @@ public class EditorActivity extends AppCompatActivity {
 	
 	@Override
 	public void onStop() {
+		getGlobalState().writeCodeDeletionDebugStatus("onStop()");
+		
 		// Make sure to save the sketch
 		saveSketchForStop();
+		
+		getGlobalState().writeCodeDeletionDebugStatus("onStop() after saveSketchForStop");
 		
 		super.onStop();
 	}
@@ -1421,7 +1440,9 @@ public class EditorActivity extends AppCompatActivity {
 	public void onDestroy() {
 		//Unregister the log / console receiver
     	unregisterReceiver(consoleBroadcastReceiver);
-    	
+		
+		getGlobalState().writeCodeDeletionDebugStatus("onDestroy()");
+		
     	super.onDestroy();
 	}
 	
@@ -1429,6 +1450,8 @@ public class EditorActivity extends AppCompatActivity {
 	 * Saves the sketch for when the activity is closing
 	 */
 	public void saveSketchForStop() {
+		getGlobalState().writeCodeDeletionDebugStatus("begin saveSketchForStop()");
+		
 		//Automatically save
 		autoSave();
     	
@@ -1476,6 +1499,8 @@ public class EditorActivity extends AppCompatActivity {
 		}
 		
 		writeTempFile("sketchData.txt", sketchData.toString());
+		
+		getGlobalState().writeCodeDeletionDebugStatus("end saveSketchForStop()");
 	}
 	
 	/**
@@ -1525,13 +1550,19 @@ public class EditorActivity extends AppCompatActivity {
 	 * Useful for updating files that have been changed outside of the editor.
 	 */
 	public void reloadSketch() {
+		getGlobalState().writeCodeDeletionDebugStatus("before reloadSketch()");
+		
 		loadSketch(getGlobalState().getSketchPath(), getGlobalState().getSketchLocationType());
+		
+		getGlobalState().writeCodeDeletionDebugStatus("after reloadSketch()");
 	}
 	
 	/**
 	 * Automatically save the sketch, whether it is to the sketchbook folder or to the temp folder
 	 */
 	public void autoSave() {
+		getGlobalState().writeCodeDeletionDebugStatus("before autoSave()");
+		
 		switch(getGlobalState().getSketchLocationType()) {
 		case EXAMPLE:
 		case LIBRARY_EXAMPLE:
@@ -1543,6 +1574,8 @@ public class EditorActivity extends AppCompatActivity {
 			saveSketch();
 			break;
 		}
+		
+		getGlobalState().writeCodeDeletionDebugStatus("end autoSave()");
 		
 		// In case there is still an autosave task in the queue
 		cancelAutoSave();
@@ -1728,6 +1761,8 @@ public class EditorActivity extends AppCompatActivity {
     		//Add this to the recent sketches
     		getGlobalState().putRecentSketch(sketchLocation, sketchPath);
     	}
+		
+		getGlobalState().writeCodeDeletionDebugStatus("after loadSketch()");
     	
     	return success;
 	}
@@ -1749,6 +1784,8 @@ public class EditorActivity extends AppCompatActivity {
             
     		return;
     	}
+	
+		getGlobalState().writeCodeDeletionDebugStatus("begin saveSketch()");
     	
     	boolean success = true;
     	
@@ -1764,7 +1801,7 @@ public class EditorActivity extends AppCompatActivity {
 //	    	//Update the current tab
 //	    	tabs.put(tabBar.getSelectedTab(), new SketchFile(tabBar.getSelectedTab().getText().toString(), this));
 //	    	tabs.get(getSelectedCodeIndex()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
-	    	
+			
 			// Update all tabs
 			for (int i = 0; i < tabs.size(); i ++) {
 				// Not all of the tabs are loaded at once
@@ -1782,7 +1819,7 @@ public class EditorActivity extends AppCompatActivity {
 	    			}
 	    		}
 	    	}
-	    	
+			
 	    	if (success) {
 	    		getGlobalState().selectSketch(sketchPath, getGlobalState().getSketchLocationType());
 	    		
@@ -1809,6 +1846,8 @@ public class EditorActivity extends AppCompatActivity {
     		message(getResources().getText(R.string.sketch_saved));
     		setSaved(true);
     	}
+	
+		getGlobalState().writeCodeDeletionDebugStatus("after saveSketch()");
     }
     
     public void copyToSketchbook() {
@@ -2287,12 +2326,16 @@ public class EditorActivity extends AppCompatActivity {
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
         drawerToggle.syncState(); //The stranger aspects of having a navigation drawer...
+	
+		getGlobalState().writeCodeDeletionDebugStatus("onPostCreate()");
     }
     
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         drawerToggle.onConfigurationChanged(newConfig); //The stranger aspects of having a navigation drawer...
+	
+		getGlobalState().writeCodeDeletionDebugStatus("onConfigurationChanged()");
     }
     
     @Override
