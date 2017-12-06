@@ -14,7 +14,7 @@
 			android:key="use_hardware_keyboard"
 			android:title="@string/use_hardware_keyboard" />
 		
-		<android.support.v4.preference.SwitchPreference
+		<android.support.v14.preference.SwitchPreference
 			android:defaultValue="false"
 			android:key="enable_voice_input"
 			android:title="@string/enable_voice_input" />
