@@ -2622,7 +2622,10 @@ public class EditorActivity extends AppCompatActivity {
 		
 		// Hide the soft keyboard
 		InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-		imm.hideSoftInputFromWindow(findViewById(R.id.content).getWindowToken(), 0);
+    	// For some reason, lint screams at us when we don't cast to LinearLayout here
+		// Even though the cast actually does nothing
+		// And it only screams at us when we do a release build - very strange
+		imm.hideSoftInputFromWindow(((LinearLayout) findViewById(R.id.content)).getWindowToken(), 0);
     	
     	//Clear the console
     	((TextView) findViewById(R.id.console)).setText("");
@@ -2872,7 +2875,7 @@ public class EditorActivity extends AppCompatActivity {
     			// This is the DESIRED height, not the ACTUAL height
     			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
     			
-				findViewById(R.id.buffer).getLayoutParams().height = message;
+				((LinearLayout) findViewById(R.id.buffer)).getLayoutParams().height = message;
 				
     			// Obtain some references
     			View console = findViewById(R.id.console_scroller);
