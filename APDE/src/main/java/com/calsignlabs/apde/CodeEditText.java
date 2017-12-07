@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
+import android.support.v7.widget.AppCompatEditText;
 import android.text.Editable;
 import android.text.TextPaint;
 import android.text.TextWatcher;
@@ -18,7 +19,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 
@@ -39,7 +39,7 @@ import processing.data.XML;
 /**
  * Custom EditText for syntax highlighting, auto-indent, etc.
  */
-public class CodeEditText extends EditText {
+public class CodeEditText extends AppCompatEditText {
 	private Context context;
 	private float textSize = 14;
 	

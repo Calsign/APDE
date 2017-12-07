@@ -116,5 +116,6 @@
         <item >-1</item>
     </string-array>
     <string name="pref_autosave_timeout_default_value">30</string>
+    <string name="pref_debug_code_deletion_debug_logs">Code Deletion Debug Logs</string>
 
 </resources>

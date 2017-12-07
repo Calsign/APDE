@@ -804,7 +804,7 @@ public class EditorActivity extends AppCompatActivity {
 	}
 	
 	public SketchFile getSelectedSketchFile() {
-		return tabs.size() > 0 ? tabs.get(getSelectedCodeIndex()) : null;
+		return tabs.size() > 0 && getSelectedCodeIndex() < tabs.size() ? tabs.get(getSelectedCodeIndex()) : null;
 	}
 	
 	/**
@@ -995,7 +995,7 @@ public class EditorActivity extends AppCompatActivity {
 	@SuppressLint("NewApi")
 	public void onResume() {
     	super.onResume();
-	
+		
 		getGlobalState().writeCodeDeletionDebugStatus("onResume()");
 		
     	//Reference the SharedPreferences text size value
@@ -1003,10 +1003,11 @@ public class EditorActivity extends AppCompatActivity {
 		((TextView) findViewById(R.id.console)).setTextSize(Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(this).getString("textsize_console", "14")));
     	
     	//Disable / enable the soft keyboard
-        if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-        	getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-        else
-        	getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
+        if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+		} else {
+			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
+		}
         
         //Update the syntax highlighter
 //		getSelectedCodeArea().updateTokens();
@@ -1806,7 +1807,12 @@ public class EditorActivity extends AppCompatActivity {
 			for (int i = 0; i < tabs.size(); i ++) {
 				// Not all of the tabs are loaded at once
 				if (tabs.get(i).getFragment().getCodeEditText() != null) {
-					tabs.get(i).update(this, getGlobalState().getPref("pref_key_undo_redo", true));
+					if (tabs.get(i).getFragment().getCodeEditText().getText().length() == 0 && tabs.get(i).getText().length() > 0) {
+						// This condition is where we overwrite code with the code deletion bug
+						getGlobalState().writeDebugLog("saveSketch", "Detected code deletion in tab '" + tabs.get(i).getTitle() + "', not overwriting.");
+					} else {
+						tabs.get(i).update(this, getGlobalState().getPref("pref_key_undo_redo", true));
+					}
 				}
 			}
 			

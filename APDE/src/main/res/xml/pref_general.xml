@@ -59,5 +59,9 @@
 		<android.support.v14.preference.SwitchPreference
 			android:key="pref_debug_global_verbose_output"
 			android:title="@string/pref_debug_global_verbose_output" />
+		
+		<android.support.v14.preference.SwitchPreference
+			android:key="pref_debug_code_deletion_debug_logs"
+			android:title="@string/pref_debug_code_deletion_debug_logs" />
 	</android.support.v7.preference.PreferenceCategory>
 </android.support.v7.preference.PreferenceScreen>

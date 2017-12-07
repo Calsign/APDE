@@ -1589,7 +1589,6 @@ public class APDE extends Application {
 		return input;
 	}
 	
-	public static final boolean DEBUG_LOG = true;
 	public static final SimpleDateFormat DEBUG_LOG_TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
 	
 	public void writeDebugLog(String tag, String msg) {
@@ -1609,7 +1608,13 @@ public class APDE extends Application {
 	}
 	
 	public void writeCodeDeletionDebugStatus(String loc) {
-		if (DEBUG_LOG) {
+		if (getPref("pref_debug_code_deletion_debug_logs", false)) {
+			if (editor == null) {
+				// Sometimes this can happen
+				writeDebugLog(loc, "Editor is null");
+				return;
+			}
+			
 			StringBuilder msg = new StringBuilder();
 			
 			msg.append("\n");
