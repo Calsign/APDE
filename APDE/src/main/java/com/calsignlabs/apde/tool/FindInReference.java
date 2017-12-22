@@ -64,7 +64,7 @@ public class FindInReference implements Tool {
 		}
 		
 		if (foundKeyword == null || foundKeyword.getReferenceTarget().length() == 0) {
-			context.getEditor().messageExt(String.format(Locale.US, context.getResources().getString(R.string.reference_not_found), readableName));
+			context.getEditor().messageExt(String.format(Locale.US, context.getResources().getString(R.string.tool_find_in_reference_failure_not_found), readableName));
 			return;
 		}
 		
@@ -109,7 +109,7 @@ public class FindInReference implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.find_in_reference);
+		return context.getResources().getString(R.string.tool_find_in_reference);
 	}
 	
 	@Override

@@ -6,11 +6,11 @@
         android:icon="@drawable/ic_new_white"
         app:showAsAction="ifRoom"
         android:showAsAction="ifRoom"
-        android:title="@string/menu_new_permission" />
+        android:title="@string/permissions_menu_new_permission" />
     <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         app:showAsAction="never"
         android:showAsAction="never"
-        android:title="@string/action_settings" />
+        android:title="@string/menu_open_settings" />
 </menu>

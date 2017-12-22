@@ -376,8 +376,8 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		
 		AlertDialog.Builder builder = new AlertDialog.Builder(((APDE) context.getApplicationContext()).getEditor());
 		
-		builder.setTitle(R.string.move_to_new_folder_title);
-		builder.setMessage(R.string.move_to_new_folder_description);
+		builder.setTitle(R.string.drawer_move_to_new_folder_title);
+		builder.setMessage(R.string.drawer_move_to_new_folder_message);
     	
 		final EditText input = global.createAlertDialogEditText(global.getEditor(), builder, "", false);
 		
@@ -405,7 +405,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 					if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
 						((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
 					
-					showDialog(R.string.cannot_move_sketch_title, R.string.cannot_move_folder_message, global.getEditor());
+					showDialog(R.string.rename_sketch_failure_title, R.string.rename_move_folder_failure_message, global.getEditor());
 					
 					return;
 				}
@@ -438,7 +438,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		builder.setTitle(R.string.move_temp_to_sketchbook_title);
 		builder.setMessage(String.format(Locale.US, context.getResources().getString(R.string.move_temp_to_sketchbook_message), dragItem.getText()));
 		
-		builder.setPositiveButton(R.string.move, new DialogInterface.OnClickListener() {
+		builder.setPositiveButton(R.string.move_temp_to_sketchbook_button, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				APDE.SketchMeta source = dragItem.getSketch();
@@ -448,7 +448,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 				// TODO Maybe give the user options to replace / keep both in the new location?
 				// We don't need that much right now, they can deal with things manually...
 				if (global.getSketchLocation(dest.getPath(), dest.getLocation()).exists()) {
-					showDialog(R.string.cannot_move_sketch_title, R.string.cannot_move_folder_message, global.getEditor());
+					showDialog(R.string.rename_sketch_failure_title, R.string.rename_move_folder_failure_message, global.getEditor());
 					
 					return;
 				}
@@ -476,7 +476,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		
 		final EditText input = global.createAlertDialogEditText(global.getEditor(), builder, dragItem.getText(), true);
 		
-		builder.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
+		builder.setPositiveButton(R.string.rename_folder_button, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				String folderName = input.getText().toString();
@@ -518,8 +518,8 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		
 		AlertDialog.Builder builder = new AlertDialog.Builder(((APDE) context.getApplicationContext()).getEditor());
 		
-		builder.setTitle(String.format(Locale.US, context.getResources().getString(R.string.delete_sketch_dialog_title), dragItem.getText()));
-		builder.setMessage(String.format(Locale.US, context.getResources().getString(isSketch ? R.string.delete_sketch_dialog_message : R.string.delete_folder_dialog_message), dragItem.getText()));
+		builder.setTitle(String.format(Locale.US, context.getResources().getString(isSketch ? R.string.delete_sketch_dialog_title : R.string.drawer_delete_folder_dialog_title), dragItem.getText()));
+		builder.setMessage(String.format(Locale.US, context.getResources().getString(isSketch ? R.string.delete_sketch_dialog_message : R.string.drawer_delete_folder_dialog_message), dragItem.getText()));
 		
 		builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
 			@Override
@@ -559,7 +559,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 	protected static boolean validateFolderName(String name, Activity activityContext) {
 		//Make sure that the folder name's length > 0
 		if (name.length() <= 0 || name.trim().length() <= 0) {
-			showDialog(R.string.invalid_name, R.string.invalid_name_folder_no_text, activityContext);
+			showDialog(R.string.sketch_name_invalid_dialog_title, R.string.folder_name_invalid_folder_no_text, activityContext);
 			return false;
 		}
 		
@@ -572,7 +572,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			if (c == '_') continue;
 			if (c == ' ') continue;
 			
-			showDialog(R.string.invalid_name, R.string.invalid_name_folder_invalid_char, activityContext);
+			showDialog(R.string.sketch_name_invalid_dialog_title, R.string.folder_name_folder_invalid_char, activityContext);
 			return false;
 		}
 		
@@ -582,14 +582,14 @@ public class FileNavigatorAdapter extends BaseAdapter {
 	protected static boolean validateSketchName(String name, Activity activityContext) {
     	//Make sure that the name contains text
 		if (name.length() <= 0) {
-			showDialog(R.string.invalid_name, R.string.invalid_name_sketch_no_char, activityContext);
+			showDialog(R.string.sketch_name_invalid_dialog_title, R.string.sketch_name_invalid_dialog_message_no_char, activityContext);
 			return false;
 		}
 		
 		//Check to make sure that the first character isn't a number and isn't an underscore
 		char first = name.charAt(0);
 		if ((first >= '0' && first <= '9') || first == '_') {
-			showDialog(R.string.invalid_name, R.string.invalid_name_sketch_first_char, activityContext);
+			showDialog(R.string.sketch_name_invalid_dialog_title, R.string.sketch_name_invalid_dialog_message_first_char, activityContext);
 			return false;
 		}
 		
@@ -601,7 +601,7 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			if (c >= 'A' && c <= 'Z') continue;
 			if (c == '_') continue;
 			
-			showDialog(R.string.invalid_name, R.string.invalid_name_sketch_invalid_char, activityContext);
+			showDialog(R.string.sketch_name_invalid_dialog_title, R.string.sketch_name_invalid_dialog_message_invalid_char, activityContext);
 			return false;
 		}
 		

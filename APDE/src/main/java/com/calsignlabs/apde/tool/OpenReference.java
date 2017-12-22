@@ -20,7 +20,7 @@ public class OpenReference implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.open_reference);
+		return context.getResources().getString(R.string.tool_open_reference);
 	}
 	
 	@Override

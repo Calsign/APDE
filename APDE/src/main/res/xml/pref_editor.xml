@@ -22,8 +22,8 @@
         <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="override_tab"
-            android:title="@string/override_tab"
-            android:summary="@string/override_tab_desc" />
+            android:title="@string/pref_override_tab"
+            android:summary="@string/pref_override_tab_desc" />
     </android.support.v7.preference.PreferenceCategory>
     
     <android.support.v7.preference.PreferenceCategory
@@ -33,30 +33,30 @@
         <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="char_inserts"
-            android:title="@string/char_inserts" />
+            android:title="@string/pref_char_inserts" />
         
         <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="char_inserts_include_numbers"
-            android:title="@string/char_inserts_include_numbers"
+            android:title="@string/pref_char_inserts_include_numbers"
             android:dependency="char_inserts" />
     </android.support.v7.preference.PreferenceCategory>
     
     <android.support.v7.preference.PreferenceCategory
         android:key="pref_key_undo_redo_settings"
-        android:title="@string/undo_redo_settings" >
+        android:title="@string/pref_undo_redo" >
         
         <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="pref_key_undo_redo"
-            android:title="@string/pref_undo_redo" />
+            android:title="@string/pref_undo_redo_enable" />
         
         <android.support.v7.preference.ListPreference
             android:key="pref_key_undo_redo_keep"
             android:title="@string/pref_undo_redo_keep"
-            android:entries="@array/undo_redo_keep_entries"
-            android:entryValues="@array/undo_redo_keep_entry_values"
-            android:defaultValue="@string/undo_redo_keep_default_value"
+            android:entries="@array/pref_undo_redo_keep_entries"
+            android:entryValues="@array/pref_undo_redo_keep_entry_values"
+            android:defaultValue="@string/pref_undo_redo_keep_default_value"
             android:dependency="pref_key_undo_redo" />
     </android.support.v7.preference.PreferenceCategory>
     

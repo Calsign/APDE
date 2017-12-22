@@ -63,7 +63,7 @@ public class ColorSelector implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.color_selector);
+		return context.getResources().getString(R.string.tool_color_selector);
 	}
 	
 	@SuppressLint("InlinedApi")
@@ -71,7 +71,7 @@ public class ColorSelector implements Tool {
 	public void run() {
 		if(dialog == null) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
-			builder.setTitle(R.string.color_selector);
+			builder.setTitle(R.string.tool_color_selector);
 			
 			layout = (LinearLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.color_selector, null);
 				
@@ -179,9 +179,9 @@ public class ColorSelector implements Tool {
 				@Override
 				public void onClick(View view) {
 					((android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE))
-							.setPrimaryClip(android.content.ClipData.newPlainText(context.getResources().getString(R.string.hex_color), hex.getText()));
+							.setPrimaryClip(android.content.ClipData.newPlainText(context.getResources().getString(R.string.tool_color_selector_hex_color), hex.getText()));
 					
-					Toast.makeText(context.getEditor(), R.string.hex_color_copied_to_clipboard, Toast.LENGTH_SHORT).show();
+					Toast.makeText(context.getEditor(), R.string.tool_color_selector_copy_hex_to_clipboard_success, Toast.LENGTH_SHORT).show();
 				}
 			});
 			

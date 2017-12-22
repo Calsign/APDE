@@ -551,13 +551,13 @@ public class GitRepository {
 				}
 			});
 			
-			actions.add(new GitAction(context, this, R.string.git_delete) {
+			actions.add(new GitAction(context, this, R.string.git_delete_repo) {
 				@Override
 				public void run() {
 					AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
 					
-					builder.setTitle(R.string.git_delete_confirmation_dialog_title);
-					builder.setMessage(String.format(Locale.US, context.getResources().getString(R.string.git_delete_confirmation_dialog_message), context.getSketchName()));
+					builder.setTitle(R.string.git_delete_repo_confirmation_dialog_title);
+					builder.setMessage(String.format(Locale.US, context.getResources().getString(R.string.git_delete_repo_confirmation_dialog_message), context.getSketchName()));
 					
 					builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
 						@Override
@@ -576,7 +576,7 @@ public class GitRepository {
 			});
         } else {
 			if (context.getSketchLocationType() == APDE.SketchLocation.SKETCHBOOK || context.getSketchLocationType() == APDE.SketchLocation.EXTERNAL) {
-				actions.add(new GitAction(context, this, R.string.git_init) {
+				actions.add(new GitAction(context, this, R.string.git_init_repo) {
 					@Override
 					public void run() {
 						context.getTaskManager().launchTask("gitInitTask", false, null, true, new Task() {
@@ -595,7 +595,7 @@ public class GitRepository {
 							
 							@Override
 							public CharSequence getTitle() {
-								return context.getResources().getString(R.string.git_init);
+								return context.getResources().getString(R.string.git_init_repo);
 							}
 							
 							@Override
@@ -609,7 +609,7 @@ public class GitRepository {
 			}
 		}
 		
-		actions.add(new GitAction(context, this, R.string.git_clone) {
+		actions.add(new GitAction(context, this, R.string.git_clone_repo) {
 			@Override
 			public void run() {
 				final LinearLayout layout = (LinearLayout) inflateLayout(context, R.layout.git_clone);
@@ -617,7 +617,7 @@ public class GitRepository {
 				GitUser savedUser = new GitUser(context);
 				((EditText) layout.findViewById(R.id.git_credentials_username)).setText(savedUser.getUsername());
 				
-				showLayoutAlert(context.getEditor(), R.string.git_clone, layout, R.string.git_clone_button, new DialogInterface.OnClickListener() {
+				showLayoutAlert(context.getEditor(), R.string.git_clone_repo, layout, R.string.git_clone_button, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int button) {
 						final String remote = ((EditText) layout.findViewById(R.id.git_clone_remote)).getText().toString();
@@ -655,14 +655,14 @@ public class GitRepository {
 							
 							@Override
 							public CharSequence getTitle() {
-								return context.getResources().getString(R.string.git_clone);
+								return context.getResources().getString(R.string.git_clone_repo);
 							}
 							
 							@Override
 							public void cancel() {
 								//Undo progress by deleting the folder
 								context.getTaskManager().launchTask("gitCloneUndoTask", false, null, true,
-										new DeleteFileTask(destDir, context.getResources().getString(R.string.git_delete), null,
+										new DeleteFileTask(destDir, context.getResources().getString(R.string.git_delete_repo), null,
 												context.getResources().getString(R.string.git_task_delete_begin),
 												context.getResources().getString(R.string.git_task_delete_finish),
 												context.getResources().getString(R.string.git_task_delete_fail)));
@@ -678,7 +678,7 @@ public class GitRepository {
 	
 	public void launchGitDeleteTask(APDE context, GitRepository repo) {
 		context.getTaskManager().launchTask("gitDeleteTask", false, null, true,
-				new DeleteFileTask(repo.getGitDir(), context.getResources().getString(R.string.git_delete), null,
+				new DeleteFileTask(repo.getGitDir(), context.getResources().getString(R.string.git_delete_repo), null,
 						context.getResources().getString(R.string.git_task_delete_begin),
 						context.getResources().getString(R.string.git_task_delete_finish),
 						context.getResources().getString(R.string.git_task_delete_fail)));

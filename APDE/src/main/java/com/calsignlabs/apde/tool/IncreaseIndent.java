@@ -63,7 +63,7 @@ public class IncreaseIndent implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.increase_indent);
+		return context.getResources().getString(R.string.tool_increase_indent);
 	}
 	
 	@Override

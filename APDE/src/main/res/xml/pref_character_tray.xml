@@ -7,12 +7,12 @@
         <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="char_inserts"
-            android:title="@string/char_inserts" />
+            android:title="@string/pref_char_inserts" />
         
         <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="char_inserts_include_numbers"
-            android:title="@string/char_inserts_include_numbers"
+            android:title="@string/pref_char_inserts_include_numbers"
             android:dependency="char_inserts" />
     </android.support.v7.preference.PreferenceCategory>
 </android.support.v7.preference.PreferenceScreen>

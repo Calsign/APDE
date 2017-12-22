@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <plurals name="find_replace_replace_all_complete">
-        <item quantity="one">Replaced %1$s occurrence</item>
-        <item quantity="other">Replaced %1$s occurrences</item>
+        <item quantity="one">Replaced <xliff:g id="occurrencesCount" example="1">%1$s</xliff:g> occurrence</item>
+        <item quantity="other">Replaced <xliff:g id="occurrencesCount" example="2">%1$s</xliff:g> occurrences</item>
     </plurals>
 </resources>

@@ -37,7 +37,7 @@ public class ContributionManager {
 		
 		//Copy to the libraries folder
 		if (!copyFile(libraryDir, library.getLibraryFolder(context))) {
-			System.err.println(context.getResources().getString(R.string.install_dir_library_failed_unexpected_error));
+			System.err.println(context.getResources().getString(R.string.install_dir_library_failure_unexpected_error));
 			return false;
 		}
 		
@@ -59,7 +59,7 @@ public class ContributionManager {
 			}
 		} catch (NullPointerException e) {
 			//If we can't find the JARs
-			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.install_library_failed_poor_structure), library.getLibraryJarFolder(context)));
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.install_library_failure_poor_structure), library.getLibraryJarFolder(context)));
 			e.printStackTrace();
 			return false;
 		}
@@ -82,7 +82,7 @@ public class ContributionManager {
 		
 		//Extract to the libraries folder
 		if(!extractFile(libraryZip, library.getLibraryFolder(context))) {
-			System.err.println(context.getResources().getString(R.string.install_zip_library_failed_unexpected_error));
+			System.err.println(context.getResources().getString(R.string.install_zip_library_failure_unexpected_error));
 			return false;
 		}
 		
@@ -104,7 +104,7 @@ public class ContributionManager {
 			}
 		} catch (NullPointerException e) {
 			//If we can't find the JARs
-			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.install_library_failed_poor_structure), library.getLibraryJarFolder(context)));
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.install_library_failure_poor_structure), library.getLibraryJarFolder(context)));
 			e.printStackTrace();
 			return false;
 		}
@@ -317,10 +317,10 @@ public class ContributionManager {
 			int resultCode = com.androidjarjar.dx.command.dexer.Main.run(dexArgs);
 			
 			if (resultCode != 0) {
-				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.dex_jar_failed_error_code), resultCode));
+				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.dex_jar_failure_error_code), resultCode));
 			}
 		} catch (Exception e) {
-			System.err.println(context.getResources().getString(R.string.dex_jar_failed));
+			System.err.println(context.getResources().getString(R.string.dex_jar_failure));
 			e.printStackTrace();
 		}
 	}
@@ -352,7 +352,7 @@ public class ContributionManager {
 		f.renameTo(to);
 		
 		if (!to.delete()) {
-			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failed), f.getAbsolutePath()));
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failure), f.getAbsolutePath()));
 		}
 	}
 }

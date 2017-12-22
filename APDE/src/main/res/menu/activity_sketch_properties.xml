@@ -7,34 +7,30 @@
         android:icon="@drawable/ic_edit_white"
         app:showAsAction="ifRoom"
         android:showAsAction="ifRoom"
-        android:title="@string/menu_rename"/>
+        android:title="@string/editor_menu_rename_sketch"/>
     <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         app:showAsAction="never"
-        android:title="@string/action_settings"/>
+        android:title="@string/menu_open_settings"/>
     <item
         android:id="@+id/menu_new"
         app:showAsAction="never"
-        android:title="@string/menu_new"/>
+        android:title="@string/editor_menu_new_sketch"/>
     <item
         android:id="@+id/menu_copy_sketch"
         app:showAsAction="never"
-        android:title="@string/menu_copy_sketch" />
+        android:title="@string/editor_menu_copy_sketch" />
     <item
         android:id="@+id/menu_copy_to_sketchbook"
         app:showAsAction="never"
-        android:title="@string/copy_to_sketchbook" />
+        android:title="@string/editor_menu_copy_to_sketchbook" />
     <item
         android:id="@+id/menu_move_to_sketchbook"
         app:showAsAction="never"
-        android:title="@string/move_temp_to_sketchbook_title" />
+        android:title="@string/editor_menu_move_temp_to_sketchbook" />
     <item
         android:id="@+id/menu_delete"
         app:showAsAction="never"
-        android:title="@string/menu_delete"/>
-    <item
-        android:id="@+id/menu_export"
-        app:showAsAction="never"
-        android:title="@string/menu_export"/>
+        android:title="@string/editor_menu_delete_sketch"/>
 </menu>

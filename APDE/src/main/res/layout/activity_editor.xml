@@ -83,7 +83,7 @@
 					android:layout_gravity="center"
 					android:adjustViewBounds="true"
 					android:scaleType="centerInside"
-					android:contentDescription="@string/toggle_char_inserts"
+					android:contentDescription="@string/toggle_char_inserts_accessibility_text"
 					android:src="@drawable/ic_caret_left_black"
 					style="@style/Widget.AppCompat.ActionButton" />
 			</LinearLayout>
@@ -142,7 +142,7 @@
 					android:layout_height="wrap_content"
 					android:layout_weight="1"
 					android:src="@drawable/ic_new_black"
-					android:contentDescription="@string/new_folder"
+					android:contentDescription="@string/drawer_new_folder"
 					android:background="@color/holo_select_light"
 					android:padding="8dp" />
 				
@@ -156,7 +156,7 @@
 					android:layout_height="wrap_content"
 					android:layout_weight="1"
 					android:src="@drawable/ic_edit_black"
-					android:contentDescription="@string/edit_folder"
+					android:contentDescription="@string/drawer_edit_folder"
 					android:background="@color/holo_select_light"
 					android:padding="8dp" />
 				
@@ -170,7 +170,7 @@
 					android:layout_height="wrap_content"
 					android:layout_weight="1"
 					android:src="@drawable/ic_delete_black"
-					android:contentDescription="@string/delete_folder"
+					android:contentDescription="@string/drawer_delete_folder"
 					android:background="@color/red_select_light"
 					android:padding="8dp" />
 			</LinearLayout>

@@ -8,7 +8,7 @@
     <TextView android:id="@+id/examples_update_dialog_message"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/update_examples_dialog_message" />
+        android:text="@string/examples_update_dialog_message" />
     
     <CheckBox android:id="@+id/examples_update_dialog_dont_show_again"
         android:layout_width="match_parent"

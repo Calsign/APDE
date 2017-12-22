@@ -31,16 +31,6 @@ import processing.data.XML;
 public class Manifest {
 	public static final String MANIFEST_XML = "AndroidManifest.xml";
 	
-	public static final String WORLD_OF_HURT_COMING =
-			"Errors occurred while reading or writing " + MANIFEST_XML + ",\n" +
-			"which means lots of things are likely to stop working properly.\n" +
-			"To prevent losing any data, it's recommended that you use \"Save As\"\n" +
-			"to save a separate copy of your sketch, and the restart Processing.";
-	public static final String MULTIPLE_ACTIVITIES =
-			"Processing only supports a single Activity in the AndroidManifest.xml\n" +
-			"file. Only the first activity entry will be updated, and you better \n" +
-			"hope that's the right one, smartypants.";
-	
 	public static final String MIN_SDK = "15";
 	
 	public static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd.HHmm", Locale.US);
@@ -83,7 +73,7 @@ public class Manifest {
 		
 		for(String part : parts)
 			if(part.length() > 0)
-				addPermission(PERMISSION_PREFIX, part, context.getResources().getString(R.string.custom_perm), true);
+				addPermission(PERMISSION_PREFIX, part, context.getResources().getString(R.string.permissions_custom_perm), true);
 		
 		//Sort the permissions (custom permissions are unsorted, even though the loaded ones are sorted)
 		sortPermissions();

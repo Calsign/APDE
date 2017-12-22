@@ -41,9 +41,9 @@ public class DeleteFileTask extends Task {
 			title = context.getResources().getString(R.string.delete);
 			desc = null;
 			
-			deleteBegin = context.getResources().getString(R.string.delete_task_begin);
-			deleteFinish = context.getResources().getString(R.string.delete_task_finish);
-			deleteFail = context.getResources().getString(R.string.delete_task_fail);
+			deleteBegin = context.getResources().getString(R.string.task_delete_begin);
+			deleteFinish = context.getResources().getString(R.string.task_delete_finish);
+			deleteFail = context.getResources().getString(R.string.task_delete_failure);
 		}
 	}
 	

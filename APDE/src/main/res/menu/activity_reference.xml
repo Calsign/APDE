@@ -5,10 +5,10 @@
 	<item
 		android:id="@+id/action_open_uri_external"
 		app:showAsAction="never"
-		android:title="@string/action_open_uri_external" />
+		android:title="@string/reference_menu_open_uri_external_browser" />
 	<item
 		android:id="@+id/action_settings"
 		android:orderInCategory="100"
 		app:showAsAction="never"
-		android:title="@string/action_settings" />
+		android:title="@string/menu_open_settings" />
 </menu>

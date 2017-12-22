@@ -13,7 +13,7 @@
             android:id="@+id/find_replace_options_direction_header"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/find_replace_options_direction"
+            android:text="@string/tool_find_replace_options_direction"
             style="?attr/listDividerAlertDialog"
             android:padding="6dp" />
         
@@ -28,14 +28,14 @@
                 android:id="@id/find_replace_options_direction_forward"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/find_replace_options_direction_forward"
+                android:text="@string/tool_find_replace_options_direction_forward"
                 android:padding="6dp" />
             
             <RadioButton
                 android:id="@+id/find_replace_options_direction_backward"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/find_replace_options_direction_backward"
+                android:text="@string/tool_find_replace_options_direction_backward"
                 android:padding="6dp" />
         </RadioGroup>
         
@@ -43,7 +43,7 @@
             android:id="@+id/find_replace_options_scope_header"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/find_replace_options_scope"
+            android:text="@string/tool_find_replace_options_scope"
             style="?attr/listDividerAlertDialog"
             android:padding="6dp" />
         
@@ -58,21 +58,21 @@
                 android:id="@+id/find_replace_options_scope_selection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/find_replace_options_scope_selection"
+                android:text="@string/tool_find_replace_options_scope_selection"
                 android:padding="6dp" />
             
             <RadioButton
                 android:id="@id/find_replace_options_scope_current_tab"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/find_replace_options_scope_current_tab"
+                android:text="@string/tool_find_replace_options_scope_current_tab"
                 android:padding="6dp" />
             
             <RadioButton
                 android:id="@+id/find_replace_options_scope_all_tabs"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/find_replace_options_scope_all_tabs"
+                android:text="@string/tool_find_replace_options_scope_all_tabs"
                 android:padding="6dp" />
         </RadioGroup>
         
@@ -96,7 +96,7 @@
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:layout_marginLeft="5dp"
-				android:text="@string/find_replace_options_highlight_all"
+				android:text="@string/tool_find_replace_options_highlight_all"
 				android:textColor="#FFFFFF" />
         </LinearLayout>
 		
@@ -116,7 +116,7 @@
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:layout_marginLeft="5dp"
-				android:text="@string/find_replace_options_wrap_around"
+				android:text="@string/tool_find_replace_options_wrap_around"
 				android:textColor="#FFFFFF" />
 		</LinearLayout>
 		
@@ -135,7 +135,7 @@
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:layout_marginLeft="5dp"
-				android:text="@string/find_replace_options_case_sensitive"
+				android:text="@string/tool_find_replace_options_case_sensitive"
 				android:textColor="#FFFFFF" />
 		</LinearLayout>
 		
@@ -155,7 +155,7 @@
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:layout_marginLeft="5dp"
-				android:text="@string/find_replace_options_reg_exp"
+				android:text="@string/tool_find_replace_options_reg_exp"
 				android:textColor="#FFFFFF" />
 		</LinearLayout>
     </LinearLayout>

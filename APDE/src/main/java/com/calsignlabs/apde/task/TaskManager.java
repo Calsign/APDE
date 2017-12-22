@@ -179,7 +179,7 @@ public class TaskManager {
 		});
 		
 		if (task.canRunInBackground()) {
-			progressDialog.setButton(DialogInterface.BUTTON_NEUTRAL, context.getResources().getString(R.string.run_in_background), new DialogInterface.OnClickListener() {
+			progressDialog.setButton(DialogInterface.BUTTON_NEUTRAL, context.getResources().getString(R.string.task_run_in_background), new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
 					moveToBackground(task);

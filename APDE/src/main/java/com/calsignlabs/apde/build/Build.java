@@ -134,12 +134,12 @@ public class Build {
 	
 	private void cleanUpError() {
 		cleanUp();
-		editor.errorExt(editor.getResources().getString(R.string.build_failed));
+		editor.errorExt(editor.getResources().getString(R.string.build_message_failed));
 	}
 	
 	private void cleanUpHalt() {
 		cleanUp();
-		editor.messageExt(editor.getResources().getString(R.string.build_halted));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_stopped_early));
 	}
 	
 	private void cleanUp() {
@@ -183,7 +183,7 @@ public class Build {
 		f.renameTo(to);
     	
     	if(!to.delete()) {
-    		System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failed), f.getAbsolutePath()));
+    		System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failure), f.getAbsolutePath()));
     		return false;
     	}
     	
@@ -191,7 +191,7 @@ public class Build {
     }
 	
     public void exportAndroidEclipseProject(File dest, String target) {
-    	editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
+    	editor.messageExt(editor.getResources().getString(R.string.build_message_begin));
 		System.out.println(editor.getResources().getString(R.string.build_initializing));
 		
 		if (verbose) {
@@ -228,7 +228,7 @@ public class Build {
 		Manifest manifest = null;
 		String sketchClassName = null;
 		
-		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_gen_project));
 		
 		try {
 			manifest = new Manifest(this);
@@ -361,7 +361,7 @@ public class Build {
 		}
 		
 		System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_exported_to), dest.getAbsolutePath()));
-		editor.messageExt(editor.getResources().getString(R.string.export_eclipse_project_complete));
+		editor.messageExt(editor.getResources().getString(R.string.export_eclipse_project_success));
     }
 	
 	public static File getAndroidJarLoc(Context context) {
@@ -386,7 +386,7 @@ public class Build {
 		
 		//Throughout this function, perform periodic checks to see if the user has cancelled the build
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_begin));
 		System.out.println(editor.getResources().getString(R.string.build_initializing));
 		
 		if (verbose) {
@@ -436,7 +436,7 @@ public class Build {
 		Manifest manifest = null;
 		String sketchClassName = null;
 		
-		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_gen_project));
 		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
@@ -812,7 +812,7 @@ public class Build {
 		// NOTE: make sure that all places where build folders are specfied
 		// (e.g. "buildFolder") it is followed by ".getAbsolutePath()"!!!!!
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_aapt));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_aapt));
 		
 		//Copy GLSL shader files
 		
@@ -895,7 +895,7 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_ecj));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_ecj));
 		
 		//Run ECJ
 		{
@@ -939,7 +939,7 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_dx));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_dx));
 		
 		//Run DX Dexer
 		try {
@@ -1020,7 +1020,7 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_apkbuilder));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_apkbuilder));
 		
 		//Run APKBuilder
 		try {
@@ -1090,7 +1090,7 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_zipsigner));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_zipsigner));
 		
 		System.out.println(); //Separator
 		
@@ -1109,7 +1109,7 @@ public class Build {
 			signApkRelease(outFilename);
 			
 			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_exported_to), outFilename));
-			editor.messageExt(editor.getResources().getString(R.string.export_signed_package_complete));
+			editor.messageExt(editor.getResources().getString(R.string.export_signed_package_success));
 			
 			cleanUp();
 			return;
@@ -1124,7 +1124,7 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_sketch));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_sketch));
 		
 		System.out.println(editor.getResources().getString(R.string.build_installing_apk));
 		
@@ -2142,7 +2142,7 @@ public class Build {
 			for (File exportFile : library.getAndroidExports((APDE) editor.getApplicationContext())) {
 				String exportName = exportFile.getName();
 				if (!exportFile.exists()) {
-					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_export_library_missing), exportFile.getName()));
+					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_export_library_file_missing), exportFile.getName()));
 				} else if (exportFile.isDirectory()) {
 					//Copy native library folders to the correct location
 					if (exportName.equals("armeabi") ||
@@ -2174,7 +2174,7 @@ public class Build {
 			for (File exportFile : library.getAndroidExports((APDE) editor.getApplicationContext())) {
 				String exportName = exportFile.getName();
 				if (!exportFile.exists()) {
-					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_export_library_missing), exportFile.getName()));
+					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_export_library_file_missing), exportFile.getName()));
 				} else if (exportFile.isDirectory()) {
 					//Copy native library folders to the correct location
 					if (exportName.equals("armeabi") ||

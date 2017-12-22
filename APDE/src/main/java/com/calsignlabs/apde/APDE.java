@@ -147,13 +147,13 @@ public class APDE extends Application {
 		public String toReadableString(Context context) {
 			switch(this) {
 			case SKETCHBOOK:
-				return context.getResources().getString(R.string.sketches);
+				return context.getResources().getString(R.string.drawer_folder_sketches);
 			case EXAMPLE:
-				return context.getResources().getString(R.string.examples);
+				return context.getResources().getString(R.string.drawer_folder_examples);
 			case LIBRARY_EXAMPLE:
-				return context.getResources().getString(R.string.library_examples);
+				return context.getResources().getString(R.string.drawer_folder_library_examples);
 			case TEMPORARY:
-				return context.getResources().getString(R.string.temporary);
+				return context.getResources().getString(R.string.drawer_folder_temporary);
 			default:
 				return "";
 			}
@@ -392,7 +392,7 @@ public class APDE extends Application {
 		//Sanity check...
 		if (directory == null || !directory.isDirectory()) {
 			//Let the user know that the folder is empty...
-			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
+			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
 			
 			return output;
 		}
@@ -414,7 +414,7 @@ public class APDE extends Application {
 		// Perhaps put an error message to this effect here?
 		if (contents == null) {
 			//Let the user know that the folder is empty...
-			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
+			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
 			System.out.println(getResources().getString(R.string.list_sketch_containing_folders_failed_contents_null));
 			
 			return output;
@@ -884,7 +884,7 @@ public class APDE extends Application {
 								public void run() {
 									AlertDialog.Builder builder = new AlertDialog.Builder(editor);
 									
-									builder.setTitle(R.string.update_examples_dialog_title);
+									builder.setTitle(R.string.examples_update_dialog_title);
 									
 									LinearLayout layout = (LinearLayout) View.inflate(APDE.this, R.layout.examples_update_dialog, null);
 									
@@ -893,7 +893,7 @@ public class APDE extends Application {
 									
 									builder.setView(layout);
 									
-									builder.setPositiveButton(R.string.update, new DialogInterface.OnClickListener() {
+									builder.setPositiveButton(R.string.examples_update_dialog_update_button, new DialogInterface.OnClickListener() {
 										@Override
 										public void onClick(DialogInterface dialog, int which) {
 											if (dontShowAgain.isChecked()) {
@@ -929,7 +929,7 @@ public class APDE extends Application {
 										public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 											disableWarning.setVisibility(isChecked ? View.VISIBLE : View.GONE);
 											// Change the behavior if the user wants to get rid of this dialog...
-											updateButton.setText(isChecked ? R.string.close : R.string.update);
+											updateButton.setText(isChecked ? R.string.tool_find_replace_close : R.string.examples_update_dialog_update_button);
 											// Hide the cancel button so that it's unambiguous
 											cancelButton.setEnabled(!isChecked);
 										}
@@ -947,7 +947,7 @@ public class APDE extends Application {
 	}
 	
 	private void updateExamplesRepo() {
-		editor.message(getResources().getString(R.string.examples_updating));
+		editor.message(getResources().getString(R.string.examples_update_progress_message));
 		
 		//We have to do this on a non-UI thread...
 		
@@ -979,7 +979,7 @@ public class APDE extends Application {
 					editor.runOnUiThread(new Runnable() {
 						public void run() {
 							editor.forceDrawerReload();
-							editor.message(getResources().getString(R.string.examples_update));
+							editor.message(getResources().getString(R.string.examples_update_success));
 						}
 					});
 				}
@@ -1031,8 +1031,8 @@ public class APDE extends Application {
 			}).start();
 		} else {
 			AlertDialog.Builder builder = new AlertDialog.Builder(activityContext);
-			builder.setTitle(R.string.update_examples_download_now_mobile_data_error_dialog_title);
-			builder.setMessage(R.string.update_examples_download_now_mobile_data_error_dialog_message);
+			builder.setTitle(R.string.examples_update_settings_download_now_mobile_data_error_dialog_title);
+			builder.setMessage(R.string.examples_update_settings_download_now_mobile_data_error_dialog_message);
 			
 			builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
 				@Override
@@ -1056,8 +1056,8 @@ public class APDE extends Application {
 		if(destFile.exists()) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(activityContext);
 			
-			builder.setTitle(isSketch ? R.string.cannot_move_sketch_title : R.string.cannot_move_folder_title);
-			builder.setMessage(R.string.cannot_move_folder_message);
+			builder.setTitle(isSketch ? R.string.rename_sketch_failure_title : R.string.rename_move_folder_failure_title);
+			builder.setMessage(isSketch ? R.string.rename_sketch_failure_message : R.string.rename_move_folder_failure_message);
 			
 			builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
 				@Override
@@ -1282,7 +1282,7 @@ public class APDE extends Application {
 		
 		if(sketches.size() == 0) {
 			//Let the user know that the folder is empty...
-			fileItems.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
+			fileItems.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
 		}
 		
 		return fileItems;

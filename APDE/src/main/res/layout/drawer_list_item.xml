@@ -18,7 +18,7 @@
         android:layout_below="@+id/drawer_list_item_path"
         android:layout_alignParentLeft="true"
         android:gravity="center_vertical"
-        android:contentDescription="@string/icon" />
+        android:contentDescription="@string/drawer_list_icon_accessibility_text" />
     
     <TextView android:id="@id/drawer_list_item_path"
         android:layout_width="wrap_content"

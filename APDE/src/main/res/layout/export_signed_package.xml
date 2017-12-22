@@ -24,7 +24,7 @@
                 android:layout_height="36dp"
                 android:layout_centerVertical="true"
                 android:layout_toLeftOf="@+id/keystore_new"
-                android:contentDescription="@string/keystore_file_select"
+                android:contentDescription="@string/export_signed_package_keystore_file_select"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_folder_white" />
             
@@ -34,7 +34,7 @@
                 android:layout_height="36dp"
                 android:layout_centerVertical="true"
                 android:layout_alignParentRight="true"
-                android:contentDescription="@string/keystore_new"
+                android:contentDescription="@string/export_signed_package_keystore_new"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_new_white" />
             
@@ -45,7 +45,7 @@
                 android:layout_alignParentLeft="true"
                 android:layout_toLeftOf="@id/keystore_file_select"
                 android:completionThreshold="1"
-                android:hint="@string/keystore_file"
+                android:hint="@string/export_signed_package_keystore_file"
                 android:inputType="textUri"
                 android:dropDownWidth="wrap_content" />
         </RelativeLayout>
@@ -58,7 +58,7 @@
             android:layout_marginLeft="12dp"
             android:layout_marginRight="12dp"
             android:layout_marginTop="6dp"
-            android:hint="@string/keystore_password"
+            android:hint="@string/export_signed_package_keystore_password"
             android:inputType="textPassword" />
         
         <RelativeLayout
@@ -77,7 +77,7 @@
                 android:layout_alignBottom="@+id/alias"
                 android:layout_alignTop="@+id/alias"
                 android:layout_toLeftOf="@+id/alias_new"
-                android:contentDescription="@string/certificate_info"
+                android:contentDescription="@string/export_signed_package_certificate_info"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_info_white" />
             
@@ -88,7 +88,7 @@
                 android:layout_alignBottom="@+id/alias"
                 android:layout_alignParentRight="true"
                 android:layout_alignTop="@+id/alias"
-                android:contentDescription="@string/alias_new"
+                android:contentDescription="@string/export_signed_package_key_alias_new"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_new_white" />
             
@@ -108,7 +108,7 @@
             android:layout_marginLeft="12dp"
             android:layout_marginRight="12dp"
             android:layout_marginTop="6dp"
-            android:hint="@string/alias_password"
+            android:hint="@string/export_signed_package_key_alias_password"
             android:inputType="textPassword" />
         
         <TextView

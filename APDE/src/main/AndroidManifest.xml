@@ -21,7 +21,7 @@
 		android:name=".APDE"
 		android:allowBackup="true"
 		android:icon="@drawable/ic_launcher"
-		android:label="@string/app_name"
+		android:label="@string/apde_app_title"
 		android:theme="@style/AppTheme">
 		
 		<!--
@@ -30,7 +30,7 @@
         -->
 		<activity
 			android:name=".EditorActivity"
-			android:label="@string/app_name"
+			android:label="@string/apde_app_title"
 			android:theme="@style/FullscreenTheme">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN"/>
@@ -88,7 +88,7 @@
 			android:enabled="@bool/use_activity"
 			android:exported="true"
 			android:icon="@drawable/ic_chooser"
-			android:label="@string/chooser_label">
+			android:label="@string/file_chooser_title">
 			<intent-filter>
 				<action android:name="android.intent.action.GET_CONTENT"/>
 				
