@@ -246,38 +246,37 @@ public class FindReplace implements Tool {
 				
 				context.getEditor().initCodeAreaAndConsoleDimensions();
 				
-				findReplaceToolbar.post(new Runnable() {
-					@Override
-					public void run() {
-						contentView.addView(findReplaceToolbar, 0, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-						findReplaceToolbar.getLayoutParams().height = 0; // We want to animate in
-						context.getEditor().setExtraHeaderView(findReplaceToolbar);
-//						context.getEditor().refreshMessageAreaLocation();
-						
-						TabLayout codeTabStrip = context.getEditor().getCodeTabStrip();
-						
-						float height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40, context.getResources().getDisplayMetrics());
-						
-						ViewPager codePager = context.getEditor().getCodePager();
-						ScrollView console = context.getEditor().getConsoleScroller();
-						
-						findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, 0, LinearLayout.LayoutParams.MATCH_PARENT, height));
-						
-						ResizeAnimation<LinearLayout> resizeCode;
-						ResizeAnimation<LinearLayout> resizeConsole;
-						if (codePager.getHeight() - codeTabStrip.getHeight() >= height) {
-							resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight(), LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
-							resizeConsole = null;
-						} else {
-							resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codeTabStrip.getHeight(), false);
-							resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight() + codeTabStrip.getHeight()), false);
-						}
-						codePager.startAnimation(resizeCode);
-						if (resizeConsole != null) {
-							console.startAnimation(resizeConsole);
-						}
+				// Note: the following block used to be in a post() runnable.
+				// But the find/replace bar wasn't coming up on Android 7.0+.
+				// For some reason removing the posted runnable fixes the problem.
+				{
+					contentView.addView(findReplaceToolbar, 0, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+					findReplaceToolbar.getLayoutParams().height = 0; // We want to animate in
+					context.getEditor().setExtraHeaderView(findReplaceToolbar);
+					
+					TabLayout codeTabStrip = context.getEditor().getCodeTabStrip();
+					
+					float height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40, context.getResources().getDisplayMetrics());
+					
+					ViewPager codePager = context.getEditor().getCodePager();
+					ScrollView console = context.getEditor().getConsoleScroller();
+					
+					findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, 0, LinearLayout.LayoutParams.MATCH_PARENT, height));
+					
+					ResizeAnimation<LinearLayout> resizeCode;
+					ResizeAnimation<LinearLayout> resizeConsole;
+					if (codePager.getHeight() - codeTabStrip.getHeight() >= height) {
+						resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight(), LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
+						resizeConsole = null;
+					} else {
+						resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codeTabStrip.getHeight(), false);
+						resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight() + codeTabStrip.getHeight()), false);
 					}
-				});
+					codePager.startAnimation(resizeCode);
+					if (resizeConsole != null) {
+						console.startAnimation(resizeConsole);
+					}
+				}
 				
 				final RelativeLayout replaceBar = (RelativeLayout) findReplaceToolbar.findViewById(R.id.find_replace_replace_bar);
 				//Not visible by default
