@@ -2956,7 +2956,7 @@ public class EditorActivity extends AppCompatActivity {
     			// This is the DESIRED height, not the ACTUAL height
     			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
     			
-				findViewById(R.id.buffer).getLayoutParams().height = message;
+				((LinearLayout) findViewById(R.id.buffer)).getLayoutParams().height = message;
 				
     			// Obtain some references
     			View console = findViewById(R.id.console_scroller);

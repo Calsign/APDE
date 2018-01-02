@@ -22,6 +22,7 @@
 -dontobfuscate
 -dontoptimize
 -dontskipnonpubliclibraryclassmembers
+-dontpreverify # this was causing us problems
 
 -dontwarn android.**
 -dontwarn processing.**
