@@ -42,7 +42,7 @@
             <extra android:name="resource" android:value="pref_character_tray" />
         </android.support.v7.preference.Preference>
         
-        <!-- Undo / redo settings -->
+        <!-- Undo/redo settings -->
         <android.support.v7.preference.Preference
             android:title="@string/undo_redo_settings"
             android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >

@@ -284,6 +284,11 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 			}
 		};
 		
+		if (!getGlobalState().isExample() && !getGlobalState().isTemp()) {
+			// Set "Show Sketch Folder"'s summary to be the absolute path of the sketch
+			findPreference("prop_show_sketch_folder").setSummary(getGlobalState().getSketchLocation().getAbsolutePath());
+		}
+		
 		//Detect changes to the preferences so that we can save them to the manifest file directly
 		//TODO This isn't an optimal solution - we still use SharedPreferences
 		getSharedPreferences(getGlobalState().getSketchName(), 0).registerOnSharedPreferenceChangeListener(prefListener);

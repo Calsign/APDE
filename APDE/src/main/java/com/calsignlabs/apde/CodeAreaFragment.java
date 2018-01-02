@@ -47,6 +47,12 @@ public class CodeAreaFragment extends Fragment {
 	public void onResume() {
 		super.onResume();
 		
+		if (getGlobalState().getPref("enable_voice_input", false)) {
+			code.setPrivateImeOptions("");
+		} else {
+			code.setPrivateImeOptions("nm");
+		}
+		
 		//Correctly size the code area
 		
 		int fullWidth;

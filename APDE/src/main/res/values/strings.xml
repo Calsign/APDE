@@ -119,7 +119,7 @@
 	<string name="copy_hex">Copy Hex to Clipboard</string>
 	<string name="hex_color">Hex Color</string>
 	<string name="hex_color_copied_to_clipboard">Hex color data copied to clipboard.</string>
-	<string name="comment_uncomment">Comment / Uncomment</string>
+	<string name="comment_uncomment">Comment/Uncomment</string>
 	<string name="increase_indent">Increase Indent</string>
 	<string name="decrease_indent">Decrease Indent</string>
 	<string name="folder_empty">Folder is empty</string>
@@ -196,7 +196,7 @@
 	<string name="warning_certificate_empty">Consider providing certificate information</string>
 	<string name="keystore_type_jks">JKS</string>
 	<string name="keystore_type_bks">BKS</string>
-	<string name="export_signed_package_info">Generate an APK in release mode. This is recommended for creating production versions of sketches that are suitable for sharing with friends or uploading to Google Play. However, the Android SDK tools are better suited to this task and should be used in preference, especially for professional and / or commercial applications.\n\nKeystores generated and used by APDE are stored on the device\'s external storage. The security of these keystores is thus tied to the security of the device hardware and any other applications that may have access to the external storage. Additionally, the security of the keys generated and used by APDE is tied to the strength of the passwords used to secure them. APDE recommends a password length of at least eight characters, but this is by no means a guarantee of password security.\n\nIf an application is uploaded to Google Play, it must be signed with the same key / certificate in order for updates to be delivered seamlessly. If a different key / certificate is used, then a new application with a different package name must be created.\n\nCalsignLabs, William Smith, etc. are not responsible for any security or legal damages caused by the use or misuse of the export funtionality provided by APDE.</string>
+	<string name="export_signed_package_info">Generate an APK in release mode. This is recommended for creating production versions of sketches that are suitable for sharing with friends or uploading to Google Play. However, the Android SDK tools are better suited to this task and should be used in preference, especially for professional and/or commercial applications.\n\nKeystores generated and used by APDE are stored on the device\'s external storage. The security of these keystores is thus tied to the security of the device hardware and any other applications that may have access to the external storage. Additionally, the security of the keys generated and used by APDE is tied to the strength of the passwords used to secure them. APDE recommends a password length of at least eight characters, but this is by no means a guarantee of password security.\n\nIf an application is uploaded to Google Play, it must be signed with the same key/certificate in order for updates to be delivered seamlessly. If a different key/certificate is used, then a new application with a different package name must be created.\n\nCalsignLabs, William Smith, etc. are not responsible for any security or legal damages caused by the use or misuse of the export funtionality provided by APDE.</string>
 	<string name="export_signed_package_info_title">Export Signed Package Info</string>
 	<string name="info">Info</string>
 	<string name="certificate_info">Certificate Info</string>

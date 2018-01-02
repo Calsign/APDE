@@ -7,6 +7,7 @@
     <string name="use_hardware_keyboard">Use Hardware Keyboard</string>
     <string name="pref_input">Input</string>
     <string name="pref_vibrate">Enable Vibration</string>
+    <string name="enable_voice_input">Enable Voice Input</string>
     <string name="pref_general">General</string>
     <string name="pref_console">Console</string>
     <string name="pref_scroll_lock">Automatically Scroll</string>

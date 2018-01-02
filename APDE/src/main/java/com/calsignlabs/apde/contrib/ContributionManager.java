@@ -310,10 +310,10 @@ public class ContributionManager {
 			
 			//This is some side-stepping to avoid System.exit() calls
 			
-			com.android.dx.command.dexer.Main.Arguments dexArgs = new com.android.dx.command.dexer.Main.Arguments();
+			com.androidjarjar.dx.command.dexer.Main.Arguments dexArgs = new com.androidjarjar.dx.command.dexer.Main.Arguments();
 			dexArgs.parse(args);
 			
-			int resultCode = com.android.dx.command.dexer.Main.run(dexArgs);
+			int resultCode = com.androidjarjar.dx.command.dexer.Main.run(dexArgs);
 			
 			if (resultCode != 0) {
 				System.err.println("DX Dexer failed, error code: " + resultCode);
