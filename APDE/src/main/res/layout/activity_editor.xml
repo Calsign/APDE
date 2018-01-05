@@ -95,17 +95,18 @@
 				android:layout_width="fill_parent"
 				android:layout_height="0dp"
 				android:scrollbars="vertical"
-				android:fadeScrollbars="false" >
+				android:fadeScrollbars="false"
+				android:padding="1dp">
 				
 				<HorizontalScrollView android:id="@+id/console_scroller_x"
 					android:layout_width="fill_parent"
-					android:layout_height="wrap_content" >
+					android:layout_height="wrap_content">
 					
 					<!-- TODO make text selectable... disabled it because it was causing some problems -->
 					<TextView android:id="@+id/console"
 						android:layout_width="wrap_content"
 						android:layout_height="wrap_content"
-						android:padding="10dp"
+						android:padding="9dp"
 						android:textColor="#FFFFFF"
 						android:textIsSelectable="true"
 						android:textSize="14sp"
