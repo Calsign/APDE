@@ -71,6 +71,8 @@ import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xml.sax.SAXException;
 
 import java.io.BufferedInputStream;
@@ -81,6 +83,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -893,7 +896,7 @@ public class EditorActivity extends AppCompatActivity {
 			outState.putInt("consoleScrollPos", consoleScroller.getScrollY());
 			outState.putInt("consoleScrollPosX", consoleScrollerX.getScrollX());
 			outState.putString("messageText", messageArea.getText().toString());
-			outState.putBoolean("messageIsError", errorMessage); 
+			outState.putBoolean("messageIsError", errorMessage);
 		} catch (Exception e) {
 			// Just to be safe
 			e.printStackTrace();
@@ -1472,6 +1475,8 @@ public class EditorActivity extends AppCompatActivity {
 		sketchData.append(getSelectedCodeIndex());
 		sketchData.append(';');
 		
+		JSONObject undoRedoHistories = new JSONObject();
+		
 		for (int i = 0; i < tabs.size(); i ++) {
 			SketchFile sketchFile = tabs.get(i);
 			
@@ -1497,9 +1502,16 @@ public class EditorActivity extends AppCompatActivity {
 				sketchData.append(sketchFile.getScrollY());
 				sketchData.append(';');
 			}
+			
+			try {
+				undoRedoHistories.put(sketchFile.getFilename(), sketchFile.getUndoRedoHistory());
+			} catch (JSONException | NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}
 		}
 		
 		writeTempFile("sketchData.txt", sketchData.toString());
+		writeTempFile("sketchUndoRedoHistory.json", undoRedoHistories.toString());
 		
 		getGlobalState().writeCodeDeletionDebugStatus("end saveSketchForStop()");
 	}
@@ -1513,6 +1525,7 @@ public class EditorActivity extends AppCompatActivity {
 		try {
 			String sketchData = readTempFile("sketchData.txt");
 			String[] data = sketchData.split(";");
+			JSONObject undoRedoHistories = new JSONObject(readTempFile("sketchUndoRedoHistory.json"));
 			
 			if (data.length < 3) {
 				// On clean installs and after updating
@@ -1535,6 +1548,22 @@ public class EditorActivity extends AppCompatActivity {
 						tabs.get(i - 3).selectionEnd = Integer.parseInt(sketchFileData[1]);
 						tabs.get(i - 3).scrollX = Integer.parseInt(sketchFileData[2]);
 						tabs.get(i - 3).scrollY = Integer.parseInt(sketchFileData[3]);
+					}
+				}
+			}
+			
+			if (success) {
+				for (SketchFile sketchFile : tabs) {
+					try {
+						sketchFile.populateUndoRedoHistory(undoRedoHistories.getJSONObject(sketchFile.getFilename()));
+					} catch (Exception e) {
+						/* If an exception gets through, then this function reports that it was
+						 * not successful. The problem with that is that it will then automatically
+						 * create a default (empty) 'sketch' tab. Even if we already loaded one.
+						 * Which means that data can get overwritten. So we want to ignore any
+						 * error caused by trying to load the undo/redo history.
+						 */
+						e.printStackTrace();
 					}
 				}
 			}
@@ -2114,20 +2143,22 @@ public class EditorActivity extends AppCompatActivity {
 			int bytesRead = 0;
 			
 			//Read the contents of the file
-			while((bytesRead = inputStream.read(contents)) != -1)
+			while((bytesRead = inputStream.read(contents)) != -1) {
 				output += new String(contents, 0, bytesRead);
+			}
 		} catch(Exception e) {
 			//... nothing much to do here
 		} finally {
 			//Make sure to close the stream
 			try {
-				if(inputStream != null)
+				if(inputStream != null) {
 					inputStream.close();
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-    	
+		
     	return output;
     }
     
