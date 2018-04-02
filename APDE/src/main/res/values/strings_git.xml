@@ -1,48 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources >
-    <string name="git_init">Create New Repository</string>
-    <string name="git_clone">Clone Repository</string>
-    <string name="git_delete">Delete Repository</string>
-    <string name="git_pull">Pull</string>
-    <string name="git_push">Push</string>
-    <string name="git_snapshot">Take Snapshot</string>
-    <string name="git_history">History</string>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+	<!-- These are the buttons at the top level of the git manager tool. -->
+	<string name="git_init_repo">Create New Repository</string>
+	<string name="git_clone_repo">Clone Repository</string>
+	<string name="git_delete_repo">Delete Repository</string>
+	<string name="git_pull">Pull</string>
+	<string name="git_push">Push</string>
+	<string name="git_snapshot">Take Snapshot</string>
+	<string name="git_history">History</string>
+	
+	<!-- These are the 'go' buttons at the bottom of each git action dialog. -->
+	<string name="git_clone_button">Clone</string>
+	<string name="git_delete_button">Delete</string>
+	<string name="git_pull_button">Pull</string>
+	<string name="git_push_button">Push</string>
+	<string name="git_snapshot_button">Capture</string>
+	
+	<!-- The login credentials. -->
+	<string name="git_credentials_username">Username</string>
+	<string name="git_credentials_password">Password</string>
+	<!-- The git user info. -->
+	<string name="git_user_info_name">Name</string>
+	<string name="git_user_info_email">Email</string>
+	
+	<!-- Used in clone, push, and pull. -->
+	<string name="git_remote">Remote</string>
+	<!-- Used in clone. -->
+	<string name="git_local_name">Local Name</string>
+	<!-- Used in commit. -->
+	<string name="git_commit_message">Commit Message</string>
+	<!-- Displayed when the git history is empty. -->
+	<string name="git_history_empty">No Commits</string>
+	<!-- Displayed when the git diff is empty. -->
+	<string name="git_diff_empty">No Changes</string>
+	
+	<!-- Various git task messages. -->
+	<string name="git_task_pull_begin">Pulling repository…</string>
+	<string name="git_task_pull_finish">Repository pulled from remote.</string>
+	<string name="git_task_push_begin">Pushing repository…</string>
+	<string name="git_task_push_finish">Repository pushed to remote.</string>
+	<string name="git_task_snapshot_begin">Taking snapshot…</string>
+	<string name="git_task_snapshot_finish">Snapshot captured.</string>
+	<string name="git_task_init_begin">Initializing repository…</string>
+	<string name="git_task_init_gitignore_begin">Setting up .gitignore…</string>
+	<string name="git_task_init_finish">Created repository.</string>
+	<string name="git_task_clone_begin">Cloning repository…</string>
+	<string name="git_task_clone_finish">Repository cloned.</string>
+	<string name="git_task_delete_begin">Deleting repository…</string>
+	<string name="git_task_delete_finish">Repository deleted.</string>
+	<string name="git_task_delete_fail">Failed to delete repository.</string>
+	
+	<!-- The git diff function available from the menu. -->
+	<string name="git_menu_diff">Diff</string>
+	<!-- The git diff function lets the user pick two commits from the list. But they have to pick
+	     exactly two commits - not one and not three. This error is shown when the try to do a diff
+	     of only one commit or they try to select a third commit. -->
+	<string name="git_diff_error_two_items_required">Diff requires two items</string>
+	
+	<!-- Warning dialog shown when trying to delete the git repo. -->
+	<string name="git_delete_repo_confirmation_dialog_title">Delete Repository?</string>
+	<string name="git_delete_repo_confirmation_dialog_message">Are you sure that you want to delete the Git repository for sketch <xliff:g id="sketchName" example="testSketch">%1$s</xliff:g>?\n\nRepository deletion cannot be undone. You will lose all of your local history!</string>
+	
+	<!-- These strings - empty repository and local changes - are placed at the bottom and the
+	     top of the git history activity, respectively. Local changes is used to view the diff for
+	     local changes and both can be used in diffs between different commits. -->
+	<string name="git_history_empty_repository">[Empty Repository]</string>
+	<string name="git_history_local_changes">[Local Changes]</string>
+	
+	<!-- Used in the git diff view when the commit has no author. -->
+	<string name="git_diff_commit_no_author">No Author</string>
 
-    <string name="git_clone_button">Clone</string>
-    <string name="git_delete_button">Delete</string>
-    <string name="git_pull_button">Pull</string>
-    <string name="git_push_button">Push</string>
-    <string name="git_snapshot_button">Capture</string>
-
-    <string name="git_credentials_username">Username</string>
-    <string name="git_credentials_password">Password</string>
-    <string name="git_user_info_name">Name</string>
-    <string name="git_user_info_email">Email</string>
-
-    <string name="git_remote">Remote</string>
-    <string name="git_local_name">Local Name</string>
-    <string name="git_commit_message">Commit Message</string>
-    <string name="git_history_empty">No Commits</string>
-    <string name="git_diff_empty">No Changes</string>
-    
-    <string name="git_task_pull_begin">Pulling repository…</string>
-    <string name="git_task_pull_finish">Repository pulled from remote.</string>
-    <string name="git_task_push_begin">Pushing repository…</string>
-    <string name="git_task_push_finish">Repository pushed to remote.</string>
-    <string name="git_task_snapshot_begin">Taking snapshot…</string>
-    <string name="git_task_snapshot_finish">Snapshot captured.</string>
-    <string name="git_task_init_begin">Initializing repository…</string>
-    <string name="git_task_init_gitignore_begin">Setting up .gitignore…</string>
-    <string name="git_task_init_finish">Created repository.</string>
-    <string name="git_task_clone_begin">Cloning repository…</string>
-    <string name="git_task_clone_finish">Repository cloned.</string>
-    <string name="git_task_delete_begin">Deleting repository…</string>
-    <string name="git_task_delete_finish">Repository deleted.</string>
-    <string name="git_task_delete_fail">Failed to delete repository.</string>
-    
-    <string name="git_diff">Diff</string>
-    <string name="git_diff_two_items">Diff requires two items</string>
-    
-    <string name="git_delete_confirmation_dialog_title">Delete Repository?</string>
-    <string name="git_delete_confirmation_dialog_message">Are you sure that you want to delete the Git repository for sketch %1$s? Repository deletion cannot be undone. You will lose all of your local history!</string>
-</resources >
+</resources>

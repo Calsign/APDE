@@ -2,11 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android" >
     <item
         android:id="@+id/menu_tab_new"
-        android:title="@string/menu_tab_new"/>
+        android:title="@string/editor_menu_tab_new"/>
     <item
         android:id="@+id/menu_tab_rename"
-        android:title="@string/menu_tab_rename"/>
+        android:title="@string/editor_menu_tab_rename"/>
     <item
         android:id="@+id/menu_tab_delete"
-        android:title="@string/menu_tab_delete"/>
+        android:title="@string/editor_menu_tab_delete"/>
 </menu>

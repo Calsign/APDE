@@ -72,8 +72,8 @@ public class GitHistoryActivity extends AppCompatActivity {
 		//TODO Implement infinite scrolling with dynamic loading for sketches with lots of commits
 		commits = repo.getRecentCommits(-1);
 		commitMessages = repo.getRecentCommitMessages(commits, 72);
-		commitMessages.add(0, "[Local Changes]");
-		commitMessages.add("[Empty Repository]");
+		commitMessages.add(0, ((APDE) getApplication()).getString(R.string.git_history_local_changes));
+		commitMessages.add(((APDE) getApplication()).getString(R.string.git_history_empty_repository));
 		
 		repo.close();
 		
@@ -543,7 +543,7 @@ public class GitHistoryActivity extends AppCompatActivity {
 			} else if (selection[1] == -1) {
 				selection[1] = position;
 			} else {
-				Toast.makeText(getActivity(), R.string.git_diff_two_items, Toast.LENGTH_SHORT).show();
+				Toast.makeText(getActivity(), R.string.git_diff_error_two_items_required, Toast.LENGTH_SHORT).show();
 			}
 			
 			selectItems();
@@ -572,7 +572,7 @@ public class GitHistoryActivity extends AppCompatActivity {
 								((GitHistoryActivity) getActivity()).diffCommits(selection[0], selection[1], null);
 								actionMode.finish();
 							} else {
-								Toast.makeText(getActivity(), R.string.git_diff_two_items, Toast.LENGTH_SHORT).show();
+								Toast.makeText(getActivity(), R.string.git_diff_error_two_items_required, Toast.LENGTH_SHORT).show();
 							}
 							
 							return true;
@@ -718,7 +718,7 @@ public class GitHistoryActivity extends AppCompatActivity {
 				String author;
 				
 				if (name.equals("") && email.equals("")) {
-					author = "No Author";
+					author = ((APDE) getActivity().getApplication()).getString(R.string.git_diff_commit_no_author);
 				} else if (name.equals("")) {
 					author = "<" + email + ">";
 				} else if (email.equals("")) {

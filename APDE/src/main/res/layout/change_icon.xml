@@ -20,7 +20,7 @@
                 android:layout_alignBottom="@+id/change_icon_file"
                 android:layout_alignParentRight="true"
                 android:layout_alignTop="@id/change_icon_file"
-                android:contentDescription="@string/icon_file_select"
+                android:contentDescription="@string/change_icon_dialog_icon_file_select"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_folder_white" />
             
@@ -29,7 +29,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentLeft="true"
                 android:layout_toLeftOf="@id/change_icon_file_select"
-                android:hint="@string/icon_file"
+                android:hint="@string/change_icon_dialog_icon_file"
                 android:inputType="textUri" />
         </RelativeLayout>
         
@@ -38,13 +38,13 @@
             android:layout_height="wrap_content"
             android:layout_margin="12dp"
             android:layout_gravity="center_horizontal"
-            android:text="@string/icon_file_not_selected" />
+            android:text="@string/change_icon_dialog_icon_file_not_selected" />
         
         <ImageView android:id="@+id/big_icon"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="12dp"
-            android:contentDescription="@string/sketch_icon"
+            android:contentDescription="@string/change_icon_icon_accessibility_text"
             android:layout_gravity="center_horizontal"
             android:scaleType="centerInside" />
         
@@ -57,19 +57,19 @@
             android:layout_margin="12dp" >
             
             <RadioButton android:id="@id/format_scale_crop"
-                android:text="@string/format_scale_crop"
+                android:text="@string/change_icon_dialog_format_scale_crop"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="6dp" />
             
             <RadioButton android:id="@+id/format_scale_center"
-                android:text="@string/format_scale_center"
+                android:text="@string/change_icon_dialog_format_scale_center"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="6dp" />
             
             <RadioButton android:id="@+id/format_scale_resize"
-                android:text="@string/format_scale_resize"
+                android:text="@string/change_icon_dialog_format_scale_resize"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </RadioGroup>
@@ -78,7 +78,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="12dp"
-            android:contentDescription="@string/sketch_icon"
+            android:contentDescription="@string/change_icon_icon_accessibility_text"
             android:layout_gravity="center_horizontal" />
     </LinearLayout>
 </ScrollView>

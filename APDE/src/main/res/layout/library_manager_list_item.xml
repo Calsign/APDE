@@ -51,7 +51,7 @@
         android:adjustViewBounds="true"
         android:scaleType="centerInside"
         android:src="@drawable/ic_more_horiz_white"
-        android:contentDescription="@string/more"
+        android:contentDescription="@string/overflow_more"
         style="@style/Widget.AppCompat.ActionButton"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"

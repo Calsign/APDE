@@ -438,7 +438,7 @@ public class SketchFile implements Parcelable {
 	}
 	
 	private void applyUndoRedoLimit(Context context) {
-		int limit = Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(context).getString("pref_key_undo_redo_keep", context.getResources().getString(R.string.undo_redo_keep_default_value)));
+		int limit = Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(context).getString("pref_key_undo_redo_keep", context.getResources().getString(R.string.pref_undo_redo_keep_default_value)));
 		
 		if (limit != -1) {
 			trimEntries(limit);

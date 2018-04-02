@@ -135,12 +135,12 @@ public class Build {
 	
 	private void cleanUpError() {
 		cleanUp();
-		editor.errorExt(editor.getResources().getString(R.string.build_failed));
+		editor.errorExt(editor.getResources().getString(R.string.build_message_failed));
 	}
 	
 	private void cleanUpHalt() {
 		cleanUp();
-		editor.messageExt(editor.getResources().getString(R.string.build_halted));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_stopped_early));
 	}
 	
 	private void cleanUp() {
@@ -150,10 +150,10 @@ public class Build {
 	public static void cleanUpPostLaunch(EditorActivity editor) {
 		if(!PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_folder_keep", true)) {
 			//Delete the build folder
-			if (!deleteFile((new Build(((APDE) editor.getApplicationContext())).getBuildFolder()))) {
-				System.out.println("Failed to delete build folder");
+			if (!deleteFile((new Build(((APDE) editor.getApplicationContext())).getBuildFolder()), editor)) {
+				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_failed));
 			} else if (verbose) {
-				System.out.println("Deleted build folder");
+				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_success));
 			}
 		}
 		
@@ -163,18 +163,20 @@ public class Build {
 			
 			File destApkFile = new File(editor.getFilesDir(), ((APDE) editor.getApplicationContext()).getSketchName() + ".apk");
 			if (!destApkFile.delete()) {
-				System.out.println("Failed to delete old APK file");
+				System.out.println(editor.getResources().getString(R.string.build_delete_old_apk_failed));
 			} else if (verbose) {
-				System.out.println("Deleted old APK file");
+				System.out.println(editor.getResources().getString(R.string.build_delete_old_apk_success));
 			}
 		}
 	}
 	
 	//Recursive file deletion
-    public static boolean deleteFile(File f) {
-    	if(f.isDirectory())
-    		for(File c : f.listFiles())
-    			deleteFile(c);
+    public static boolean deleteFile(File f, Context context) {
+    	if(f.isDirectory()) {
+			for (File c : f.listFiles()) {
+				deleteFile(c, context);
+			}
+		}
     	
     	//Renaming solution for the file system lock with EBUSY errors
 		//StackOverflow: http://stackoverflow.com/questions/11539657/open-failed-ebusy-device-or-resource-busy
@@ -182,7 +184,7 @@ public class Build {
 		f.renameTo(to);
     	
     	if(!to.delete()) {
-    		System.err.println("Failed to delete file: " + f);
+    		System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failure), f.getAbsolutePath()));
     		return false;
     	}
     	
@@ -190,11 +192,11 @@ public class Build {
     }
 	
     public void exportAndroidEclipseProject(File dest, String target) {
-    	editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
-		System.out.println("Initializing build sequence...");
+    	editor.messageExt(editor.getResources().getString(R.string.build_message_begin));
+		System.out.println(editor.getResources().getString(R.string.build_initializing));
 		
 		if (verbose) {
-			System.out.println("Target: export");
+			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_target_release_debug), "export"));
 		}
     	
     	buildFolder = dest;
@@ -208,10 +210,10 @@ public class Build {
 		
 		//Wipe the old export folder
 		if(buildFolder.exists()) {
-			if (deleteFile(buildFolder)) {
-				System.out.println("Deleted old export folder");
+			if (deleteFile(buildFolder, editor)) {
+				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_success));
 			} else if (verbose) {
-				System.out.println("Failed to delete old export folder");
+				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_failed));
 			}
 		}
 		
@@ -227,13 +229,13 @@ public class Build {
 		Manifest manifest = null;
 		String sketchClassName = null;
 		
-		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_gen_project));
 		
 		try {
 			manifest = new Manifest(this);
 			
 			if (manifest.needsProcessing3Update()) {
-				System.out.println("Upgrading Manifest.xml to Android Mode 3.0...");
+				System.out.println(editor.getResources().getString(R.string.build_manifest_android_mode_3_upgrade));
 				manifest.updateProcessing3();
 			}
 			
@@ -247,7 +249,7 @@ public class Build {
 			Preferences.setBoolean("preproc.substitute_unicode", true);
 			
 			if (verbose) {
-				System.out.println("Pre-processing...");
+				System.out.println(editor.getResources().getString(R.string.build_preprocessing));
 			}
 			
 			Preproc preproc = new Preproc(sketchName, manifest.getPackageName());
@@ -256,20 +258,20 @@ public class Build {
 			String combinedText = "";
 			for(SketchFile tab : tabs)
 				combinedText += tab.getText();
-			preproc.initSketchSize(combinedText);
-			preproc.initSketchSmooth(combinedText);
+			preproc.initSketchSize(combinedText, editor);
+			preproc.initSketchSmooth(combinedText, editor);
 			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false, false);
 			
 			if(sketchClassName != null) {
 				if (verbose) {
-					System.out.println("Writing AndroidManifest.xml...");
+					System.out.println(editor.getResources().getString(R.string.build_writing_manifest));
 				}
 				
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
 				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
 				
 				if (verbose) {
-					System.out.println("Writing ANT build files...");
+					System.out.println(editor.getResources().getString(R.string.build_writing_ant_files));
 				}
 				
 				writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
@@ -278,7 +280,7 @@ public class Build {
 //				writeLocalProps(new File(buildFolder, "local.properties"));
 				
 				if (verbose) {
-					System.out.println("Writing resources...");
+					System.out.println(editor.getResources().getString(R.string.build_writing_resources));
 				}
 				
 				final File resFolder = new File(buildFolder, "res");
@@ -294,7 +296,7 @@ public class Build {
 				//Copy native libraries
 				
 				if (verbose) {
-					System.out.println("Copying Processing libraries...");
+					System.out.println(editor.getResources().getString(R.string.build_copying_processing_libraries));
 				}
 				
 				String[] libsToCopy = {"processing-core", "android-support-v4"};
@@ -309,7 +311,7 @@ public class Build {
 				}
 				
 				if (verbose) {
-					System.out.println("Copying contributed libaries...");
+					System.out.println(editor.getResources().getString(R.string.build_copying_contributed_libraries));
 				}
 				
 				// Copy any imported libraries (their libs and assets),
@@ -321,7 +323,7 @@ public class Build {
 				final File sketchDataFolder = getSketchDataFolder();
 				if(sketchDataFolder.exists()) {
 					if (verbose) {
-						System.out.println("Copying data folder...");
+						System.out.println(editor.getResources().getString(R.string.build_copying_data_folder));
 					}
 					
 					copyDir(sketchDataFolder, assetsFolder);
@@ -332,7 +334,7 @@ public class Build {
 				final File sketchResFolder = new File(getSketchFolder(), "res");
 				if(sketchResFolder.exists()) {
 					if (verbose) {
-						System.out.println("Copying res folder...");
+						System.out.println(editor.getResources().getString(R.string.build_copying_res_folder));
 					}
 					
 					copyDir(sketchResFolder, resFolder);
@@ -359,8 +361,8 @@ public class Build {
 			return;
 		}
 		
-		System.out.println("Exported to " + dest.getAbsolutePath());
-		editor.messageExt(editor.getResources().getString(R.string.export_eclipse_project_complete));
+		System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_exported_to), dest.getAbsolutePath()));
+		editor.messageExt(editor.getResources().getString(R.string.export_eclipse_project_success));
     }
 	
 	public static File getAndroidJarLoc(Context context) {
@@ -385,11 +387,11 @@ public class Build {
 		
 		//Throughout this function, perform periodic checks to see if the user has cancelled the build
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
-		System.out.println("Initializing build sequence...");
+		editor.messageExt(editor.getResources().getString(R.string.build_message_begin));
+		System.out.println(editor.getResources().getString(R.string.build_initializing));
 		
 		if (verbose) {
-			System.out.println("Target: " + target);
+			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_target_release_debug), target));
 		}
 		
 		if(!running.get()) { //CHECK
@@ -411,10 +413,10 @@ public class Build {
 		
 		//Wipe the old build folder
 		if(buildFolder.exists()) {
-			if (deleteFile(buildFolder)) {
-				System.out.println("Deleted old build folder");
+			if (deleteFile(buildFolder, editor)) {
+				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_success));
 			} else if (verbose) {
-				System.out.println("Failed to delete old build folder");
+				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_failed));
 			}
 		}
 		
@@ -435,7 +437,7 @@ public class Build {
 		Manifest manifest = null;
 		String sketchClassName = null;
 		
-		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_gen_project));
 		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
@@ -453,7 +455,7 @@ public class Build {
 			manifest = new Manifest(this);
 			
 			if (manifest.needsProcessing3Update()) {
-				System.out.println("Upgrading Manifest.xml to Android Mode 3.0...");
+				System.out.println(editor.getResources().getString(R.string.build_manifest_android_mode_3_upgrade));
 				manifest.updateProcessing3();
 			}
 			
@@ -474,7 +476,7 @@ public class Build {
 			Preferences.setBoolean("preproc.substitute_unicode", true);
 			
 			if (verbose) {
-				System.out.println("Pre-processing...");
+				System.out.println(editor.getResources().getString(R.string.build_preprocessing));
 			}
 			
 			Preproc preproc = new Preproc(sketchName, packageName);
@@ -483,8 +485,8 @@ public class Build {
 			String combinedText = "";
 			for(SketchFile tab : tabs)
 				combinedText += tab.getText();
-			preproc.initSketchSize(combinedText);
-			preproc.initSketchSmooth(combinedText);
+			preproc.initSketchSize(combinedText, editor);
+			preproc.initSketchSmooth(combinedText, editor);
 			sketchClassName = preprocess(srcFolder, packageName, preproc, false, debug && injectLogBroadcaster);
 			
 			//Detect if the renderer is one of the OpenGL renderers
@@ -509,7 +511,7 @@ public class Build {
 			
 			if(sketchClassName != null) {
 				if (verbose) {
-					System.out.println("Writing AndroidManifest.xml...");
+					System.out.println(editor.getResources().getString(R.string.build_writing_manifest));
 				}
 				
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
@@ -521,7 +523,7 @@ public class Build {
 				}
 				
 				if (verbose) {
-					System.out.println("Writing resources...");
+					System.out.println(editor.getResources().getString(R.string.build_writing_resources));
 				}
 				
 				final File resFolder = new File(buildFolder, "res");
@@ -529,15 +531,15 @@ public class Build {
 				
 				writeMainActivity(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName);
 				
-				final File libsFolder = mkdirs(buildFolder, "libs");
-				final File assetsFolder = mkdirs(buildFolder, "assets");
+				final File libsFolder = mkdirs(buildFolder, "libs", editor);
+				final File assetsFolder = mkdirs(buildFolder, "assets", editor);
 				
 				AssetManager am = editor.getAssets();
 				
 				// Copy android.jar if it hasn't been done yet
 				if (!androidJarLoc.exists()) {
 					if (verbose) {
-						System.out.println("Copying android.jar...");
+						System.out.println(editor.getResources().getString(R.string.build_copying_android_jar));
 					}
 					
 					copyAndroidJar(editor);
@@ -546,7 +548,7 @@ public class Build {
 				//Copy native libraries
 				
 				if (verbose) {
-					System.out.println("Copying Processing libraries...");
+					System.out.println(editor.getResources().getString(R.string.build_copying_processing_libraries));
 				}
 				
 				String[] libsToCopy = {"processing-core", "android-support-v4"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
@@ -575,7 +577,7 @@ public class Build {
 //				}
 				
 				if (verbose) {
-					System.out.println("Copying dexed Processing libraries...");
+					System.out.println(editor.getResources().getString(R.string.build_copying_dexed_processing_libraries));
 				}
 				
 				String[] dexLibsToCopy = {"all-lib-dex"}; // {"processing-core-dex", "android-support-v4-dex", "annotations-dex"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
@@ -593,7 +595,7 @@ public class Build {
 				}
 				
 				if (verbose) {
-					System.out.println("Copying contributed libaries...");
+					System.out.println(editor.getResources().getString(R.string.build_copying_contributed_libraries));
 				}
 				
 				// Copy any imported libraries (their libs and assets),
@@ -608,7 +610,7 @@ public class Build {
 				final File sketchDataFolder = getSketchDataFolder();
 				if(sketchDataFolder.exists()) {
 					if (verbose) {
-						System.out.println("Copying data folder...");
+						System.out.println(editor.getResources().getString(R.string.build_copying_data_folder));
 					}
 					
 					copyDir(sketchDataFolder, assetsFolder);
@@ -619,7 +621,7 @@ public class Build {
 				final File sketchResFolder = new File(getSketchFolder(), "res");
 				if(sketchResFolder.exists()) {
 					if (verbose) {
-						System.out.println("Copying res folder...");
+						System.out.println(editor.getResources().getString(R.string.build_copying_res_folder));
 					}
 					
 					copyDir(sketchResFolder, resFolder);
@@ -682,7 +684,7 @@ public class Build {
 			return;
 		}
 		
-		System.out.println("Detected architecture " + android.os.Build.CPU_ABI);
+		System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_detected_architecture), android.os.Build.CPU_ABI));
 		
 		String arch = android.os.Build.CPU_ABI.substring(0, 3).toLowerCase(Locale.US);
 		String aaptName;
@@ -690,7 +692,7 @@ public class Build {
 		int numCores = getNumCores();
 		
 		if (verbose) {
-			System.out.println("Available cores: " + numCores);
+			System.out.println(String.format(editor.getResources().getString(R.string.build_available_cores), numCores));
 		}
 		
 		// Position Independent Executables (PIE) were first supported in Jelly Bean 4.1 (API level 16)
@@ -705,7 +707,7 @@ public class Build {
 				aaptName = "aapt-binaries/aapt-x86-pie";
 				
 				if (verbose) {
-					System.out.println("Using position independent executable (PIE) AAPT binary");
+					System.out.println(editor.getResources().getString(R.string.build_using_pie_aapt_binary));
 				}
 			} else {
 				aaptName = "aapt-binaries/aapt-x86";
@@ -734,7 +736,7 @@ public class Build {
 				aaptName = "aapt-binaries/aapt-arm-pie";
 				
 				if (verbose) {
-					System.out.println("Using position independent executable (PIE) AAPT binary");
+					System.out.println(editor.getResources().getString(R.string.build_using_pie_aapt_binary));
 				}
 			} else {
 				aaptName = "aapt-binaries/aapt-arm";
@@ -750,7 +752,7 @@ public class Build {
 		//AAPT setup
 		try {
 			if (verbose) {
-				System.out.println("Copying AAPT...");
+				System.out.println(editor.getResources().getString(R.string.build_copying_aapt));
 			}
 			
 			AssetManager am = editor.getAssets();
@@ -760,7 +762,7 @@ public class Build {
 			inputStream.close();
 			
 			if (verbose) {
-				System.out.println("Changing execution permissions for AAPT...");
+				System.out.println(editor.getResources().getString(R.string.build_changing_aapt_execution_permissions));
 			}
 			
 //			File chmodFile = new File("/system/bin/chmod");
@@ -781,7 +783,7 @@ public class Build {
 			
 			// We don't need to use chmod!!!!!!!
 			if (!aaptLoc.setExecutable(true, true)){
-				System.err.println("Unable to make AAPT executable");
+				System.err.println(editor.getResources().getString(R.string.build_change_aapt_execution_permissions_failed));
 				
 				cleanUpError();
 				return;
@@ -791,7 +793,7 @@ public class Build {
 //				copyStream(chmodProcess.getErrorStream(), System.out);
 //			}
 		} catch (IOException e) {
-			System.out.println("Unable to make AAPT executable");
+			System.out.println(editor.getResources().getString(R.string.build_change_aapt_execution_permissions_failed));
 			e.printStackTrace();
 		}
 //		catch (InterruptedException e) {
@@ -811,7 +813,7 @@ public class Build {
 		// NOTE: make sure that all places where build folders are specfied
 		// (e.g. "buildFolder") it is followed by ".getAbsolutePath()"!!!!!
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_aapt));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_aapt));
 		
 		//Copy GLSL shader files
 		
@@ -820,14 +822,14 @@ public class Build {
 		
 		try {
 			if (verbose) {
-				System.out.println("Copying GLSL shader files...");
+				System.out.println(editor.getResources().getString(R.string.build_copying_glsl));
 			}
 			
 			//Copy the zip archive
 			InputStream inputStream = editor.getAssets().open("glsl/processing.zip");
 			createFileFromInputStream(inputStream, glslFolder);
 		} catch(IOException e) { //Uh-oh...
-			System.out.println("Failed to copy GLSL resources");
+			System.out.println(editor.getResources().getString(R.string.build_copy_glsl_failed));
 			e.printStackTrace();
 			
 			cleanUpError();
@@ -843,7 +845,7 @@ public class Build {
 		
 		//Run AAPT
 		try {
-			System.out.println("Packaging resources with AAPT...");
+			System.out.println(editor.getResources().getString(R.string.build_packaging_aapt));
 			
 			//Create folder structure for R.java TODO why is this necessary?
 			(new File(genFolder.getAbsolutePath() + "/" + mainActivityLoc + "/")).mkdirs();
@@ -864,7 +866,7 @@ public class Build {
 			int code = aaptProcess.waitFor();
 			
 			if (code != 0) {
-				System.err.println("AAPT exited with error code " + code);
+				System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_aapt_failed_error_code), code));
 				
 				cleanUpError();
 				return;
@@ -875,14 +877,14 @@ public class Build {
 			}
 		} catch (IOException e) {
 			//Something weird happened
-			System.out.println("AAPT failed");
+			System.out.println(editor.getResources().getString(R.string.build_aapt_failed));
 			e.printStackTrace();
 			
 			cleanUpError();
 			return;
 		} catch (InterruptedException e) {
 			//Something even weirder happened
-			System.out.println("AAPT failed");
+			System.out.println(editor.getResources().getString(R.string.build_aapt_failed));
 			e.printStackTrace();
 			
 			cleanUpError();
@@ -894,11 +896,11 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_ecj));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_ecj));
 		
 		//Run ECJ
 		{
-			System.out.println("Compiling with ECJ...");
+			System.out.println(editor.getResources().getString(R.string.build_compiling_ecj));
 			
 			Main main = new Main(new PrintWriter(System.out), new PrintWriter(System.err), false, null, null);
 			String[] args = {
@@ -918,7 +920,7 @@ public class Build {
 			};
 			
 			if (verbose) {
-				System.out.println("Compiling: " + srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java");
+				System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_compiling_file), srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java"));
 			}
 			
 			if(main.compile(args)) {
@@ -926,7 +928,7 @@ public class Build {
 			} else {
 				//We have some compilation errors
 				System.out.println();
-				System.out.println("Compilation with ECJ failed");
+				System.out.println(editor.getResources().getString(R.string.build_ecj_failed));
 				
 				cleanUpError();
 				return;
@@ -938,11 +940,11 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_dx));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_dx));
 		
 		//Run DX Dexer
 		try {
-			System.out.println("Dexing with DX Dexer...");
+			System.out.println(editor.getResources().getString(R.string.build_dx_dexer));
 			
 			String[] args;
 			
@@ -970,10 +972,10 @@ public class Build {
 			int resultCode = com.androidjarjar.dx.command.dexer.Main.run(dexArgs);
 			
 			if (resultCode != 0) {
-				System.err.println("DX Dexer result code: " + resultCode);
+				System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_dx_dexer_failed_error_code), resultCode));
 			}
 		} catch(Exception e) {
-			System.out.println("DX Dexer failed");
+			System.out.println(editor.getResources().getString(R.string.build_dx_dexer_failed));
 			e.printStackTrace();
 			
 			cleanUpError();
@@ -987,7 +989,7 @@ public class Build {
 		
 		//Run DX Merger
 		try {
-			System.out.println("Merging DEX files with DX Merger...");
+			System.out.println(editor.getResources().getString(R.string.build_dx_merger));
 			
 			File[] dexedLibs = dexedLibsFolder.listFiles(new FilenameFilter() {
 				@Override
@@ -1007,7 +1009,7 @@ public class Build {
 			
 			com.androidjarjar.dx.merge.DexMerger.main(args);
 		} catch (Exception e) {
-			System.out.println("DX Merger failed");
+			System.out.println(editor.getResources().getString(R.string.build_dx_merger_failed));
 			e.printStackTrace();
 			
 			cleanUpError();
@@ -1019,11 +1021,11 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_apkbuilder));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_apkbuilder));
 		
 		//Run APKBuilder
 		try {
-			System.out.println("Building APK file with APKBuilder...");
+			System.out.println(editor.getResources().getString(R.string.build_building_apkbuilder));
 			
 //			String[] args = {
 //				binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned", //The location of the output APK file (unsigned)
@@ -1050,7 +1052,7 @@ public class Build {
 			//Seal the APK
 			builder.sealApk();
 		} catch(Exception e) {
-			System.out.println("APKBuilder failed");
+			System.out.println(editor.getResources().getString(R.string.build_building_apkbuilder_failed));
 			e.printStackTrace();
 			
 			cleanUpError();
@@ -1089,17 +1091,17 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_zipsigner));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_zipsigner));
 		
 		System.out.println(); //Separator
 		
 		if (debug) {
-			System.out.println("Signing and Zipaligning with ZipSigner...");
+			System.out.println(editor.getResources().getString(R.string.build_zipsigner));
 			
 			//Sign the APK using ZipSigner
 			signApk();
 		} else {
-			System.out.println("Signing with private key...");
+			System.out.println(editor.getResources().getString(R.string.build_signing_private_key));
 			
 			File outputBinFolder = new File((editor.getGlobalState().isExample() || editor.getGlobalState().isTemp()) ? editor.getGlobalState().getSketchbookFolder() : editor.getGlobalState().getSketchLocation(), "bin");
 			String outFilename = outputBinFolder.getAbsolutePath() + "/" + sketchName + ".apk";
@@ -1107,8 +1109,8 @@ public class Build {
 			//We want to sign for release!!!
 			signApkRelease(outFilename);
 			
-			System.out.println("Exported to: " + outFilename);
-			editor.messageExt(editor.getResources().getString(R.string.export_signed_package_complete));
+			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_exported_to), outFilename));
+			editor.messageExt(editor.getResources().getString(R.string.export_signed_package_success));
 			
 			cleanUp();
 			return;
@@ -1123,9 +1125,9 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.run_sketch));
+		editor.messageExt(editor.getResources().getString(R.string.build_message_run_sketch));
 		
-		System.out.println("Installing APK file...");
+		System.out.println(editor.getResources().getString(R.string.build_installing_apk));
 		
 		//Copy the APK file to a new (and hopefully readable) location
 		
@@ -1364,7 +1366,7 @@ public class Build {
 			// append the jar files in the code folder to the class path
 			classPath += File.pathSeparator + codeFolderClassPath;
 			// get list of packages found in those jars
-			codeFolderPackages = packageListFromClassPath(codeFolderClassPath);
+			codeFolderPackages = packageListFromClassPath(codeFolderClassPath, editor);
 		}
 		
 		// 1. concatenate all .pde files to the 'main' pde
@@ -1407,9 +1409,9 @@ public class Build {
 					bigCode.insert(0, text);
 				}
 				
-				System.out.println("Injected log broadcaster");
+				System.out.println(editor.getResources().getString(R.string.build_inject_log_broadcaster_success));
 			} catch (IOException e) {
-				System.err.println("Failed to inject log broadcaster into sketch!");
+				System.err.println(editor.getResources().getString(R.string.build_inject_log_broadcaster_failed));
 				e.printStackTrace();
 			}
 		}
@@ -1448,46 +1450,40 @@ public class Build {
 				// report "line 15" of a 14 line program. Added code to highlightLine()
 				// inside Editor to deal with this situation (since that code is also
 				// useful for other similar situations).
-				throw new SketchException("Found one too many { characters " +
-						"without a } to match it.",
+				throw new SketchException(editor.getResources().getString(R.string.preproc_mismatched_braces),
 						errorFile, errorLine, re.getColumn(), false);
 			}
 			
 			if (msg.contains("expecting LCURLY")) {
 				System.err.println(msg);
-				String suffix = ".";
 				String[] m = PApplet.match(msg, "found ('.*')");
-				if (m != null) {
-					suffix = ", not " + m[1] + ".";
-				}
-				throw new SketchException("Was expecting a { character" + suffix,
+				
+				throw new SketchException(m != null
+						? String.format(Locale.US, editor.getResources().getString(R.string.preproc_missing_left_brace_not), m[1])
+						: editor.getResources().getString(R.string.preproc_missing_left_brace),
 						errorFile, errorLine, re.getColumn(), false);
 			}
 			
 			if (msg.indexOf("expecting RBRACK") != -1) {
 				System.err.println(msg);
-				throw new SketchException("Syntax error, " +
-						"maybe a missing ] character?",
+				throw new SketchException(editor.getResources().getString(R.string.preproc_missing_right_bracket),
 						errorFile, errorLine, re.getColumn(), false);
 			}
 			
 			if (msg.indexOf("expecting SEMI") != -1) {
 				System.err.println(msg);
-				throw new SketchException("Syntax error, " +
-						"maybe a missing semicolon?",
+				throw new SketchException(editor.getResources().getString(R.string.preproc_missing_semi),
 						errorFile, errorLine, re.getColumn(), false);
 			}
 			
 			if (msg.indexOf("expecting RPAREN") != -1) {
 				System.err.println(msg);
-				throw new SketchException("Syntax error, " +
-						"maybe a missing right parenthesis?",
+				throw new SketchException(editor.getResources().getString(R.string.preproc_missing_right_paren),
 						errorFile, errorLine, re.getColumn(), false);
 			}
 			
 			if (msg.indexOf("preproc.web_colors") != -1) {
-				throw new SketchException("A web color (such as #ffcc00) " +
-						"must be six digits.",
+				throw new SketchException(editor.getResources().getString(R.string.preproc_bad_web_color),
 						errorFile, errorLine, re.getColumn(), false);
 			}
 			
@@ -1525,7 +1521,7 @@ public class Build {
 			}
 		} catch (Exception ex) {
 			// TODO (P5) better method for handling this?
-			System.err.println("Uncaught exception type:" + ex.getClass());
+			System.err.println(String.format(Locale.US, editor.getString(R.string.preproc_uncaught_exception), ex.getClass()));
 			ex.printStackTrace();
 			throw new SketchException(ex.toString());
 		}
@@ -1569,7 +1565,7 @@ public class Build {
 					found = true;
 				}
 				if(!found) {
-					System.err.println("No library found for " + entry);
+					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_library_import_missing), entry));
 				}
 			}
 		}
@@ -1631,8 +1627,7 @@ public class Build {
 
 				} catch (IOException e) {
 					e.printStackTrace();
-					String msg = "Problem moving " + filename + " to the build folder";
-					throw new SketchException(msg);
+					throw new SketchException(String.format(Locale.US, editor.getResources().getString(R.string.preproc_problem_moving_file), filename));
 				}
 
 			} else if (meta.getSuffix().equals("pde")) {
@@ -1699,18 +1694,27 @@ public class Build {
 		if (libraries == null) {
 			return null;
 		} else if (libraries.size() > 1) { //This is if there are multiple libraries with the same package name... but when does this ever happen?
-			String primary = "More than one library is competing for this sketch.\n";
-			String secondary = "The import " + pkgName + " points to multiple libraries:\n";
+//			String primary = "More than one library is competing for this sketch.\n";
+//			String secondary = "The import " + pkgName + " points to multiple libraries:\n";
+//			for (Library library : libraries) {
+//				String location = library.getLibraryFolder((APDE) editor.getApplicationContext()).getAbsolutePath();
+////				if (location.startsWith(getLibrariesFolder().getAbsolutePath())) { //Android mode has no core libraries - but we'll leave this just in case
+////					location = "part of Processing";
+////				}
+//				secondary += library.getName() + " (" + location + ")\n";
+//			}
+//			secondary += "Extra libraries need to be removed before this sketch can be used.";
+//			System.err.println("Duplicate Library Problem\n\n" + primary + secondary);
+//			throw new SketchException("Duplicate libraries found for " + pkgName + ".");
+			StringBuilder libraryConflicts = new StringBuilder();
 			for (Library library : libraries) {
-				String location = library.getLibraryFolder((APDE) editor.getApplicationContext()).getAbsolutePath();
-//				if (location.startsWith(getLibrariesFolder().getAbsolutePath())) { //Android mode has no core libraries - but we'll leave this just in case
-//					location = "part of Processing";
-//				}
-				secondary += library.getName() + " (" + location + ")\n";
+				libraryConflicts.append(library.getName());
+				libraryConflicts.append(" (");
+				libraryConflicts.append(library.getLibraryFolder((APDE) editor.getApplicationContext()).getAbsolutePath());
+				libraryConflicts.append(")\n");
 			}
-			secondary += "Extra libraries need to be removed before this sketch can be used.";
-			System.err.println("Duplicate Library Problem\n\n" + primary + secondary);
-			throw new SketchException("Duplicate libraries found for " + pkgName + ".");
+			System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_duplicate_libraries_message), pkgName, libraryConflicts.toString()));
+			throw new SketchException(String.format(Locale.US, editor.getResources().getString(R.string.build_duplicate_libraries), pkgName));
 		} else {
 			return libraries.get(0);
 		}
@@ -1863,7 +1867,7 @@ public class Build {
 	}
 	
 	private void writeRes(File resFolder, String className) throws SketchException {
-		File layoutFolder = mkdirs(resFolder, "layout");
+		File layoutFolder = mkdirs(resFolder, "layout", editor);
 		File layoutFile = new File(layoutFolder, "main.xml");
 		writeResLayoutMainActivity(layoutFile, className);
 		
@@ -1893,42 +1897,42 @@ public class Build {
 					createFileFromInputStream(inputStream, buildIcon36);
 					inputStream.close();
 				} else {
-					System.err.println("Could not create \"drawable-ldpi\" folder.");
+					System.err.println(editor.getResources().getString(R.string.build_write_res_ldpi_failed));
 				}
 				if(buildIcon48.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_48);
 					createFileFromInputStream(inputStream, buildIcon48);
 					inputStream.close();
 				} else {
-					System.err.println("Could not create \"drawable\" folder.");
+					System.err.println(editor.getResources().getString(R.string.build_write_res_mdpi_failed));
 				}
 				if(buildIcon72.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_72);
 					createFileFromInputStream(inputStream, buildIcon72);
 					inputStream.close();
 				} else {
-					System.err.println("Could not create \"drawable-hdpi\" folder.");
+					System.err.println(editor.getResources().getString(R.string.build_write_res_hdpi_failed));
 				}
 				if(buildIcon96.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_96);
 					createFileFromInputStream(inputStream, buildIcon96);
 					inputStream.close();
 				} else {
-					System.err.println("Could not create \"drawable-xhdpi\" folder.");
+					System.err.println(editor.getResources().getString(R.string.build_write_res_xhdpi_failed));
 				}
 				if(buildIcon144.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_144);
 					createFileFromInputStream(inputStream, buildIcon144);
 					inputStream.close();
 				} else {
-					System.err.println("Could not create \"drawable-xxhdpi\" folder.");
+					System.err.println(editor.getResources().getString(R.string.build_write_res_xxhdpi_failed));
 				}
 				if(buildIcon192.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_192);
 					createFileFromInputStream(inputStream, buildIcon192);
 					inputStream.close();
 				} else {
-					System.err.println("Could not create \"drawable-xxxhdpi\" folder.");
+					System.err.println(editor.getResources().getString(R.string.build_write_res_xxxhdpi_failed));
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -1968,7 +1972,7 @@ public class Build {
 					}
 				}
 			} catch (IOException e) {
-				System.err.println("Problem while copying icons.");
+				System.err.println(editor.getResources().getString(R.string.build_write_res_icon_copy_failed));
 				e.printStackTrace();
 			}
 		}
@@ -2147,9 +2151,7 @@ public class Build {
 			for (File exportFile : library.getAndroidExports((APDE) editor.getApplicationContext())) {
 				String exportName = exportFile.getName();
 				if (!exportFile.exists()) {
-					System.err.println(exportFile.getName() +
-							" is mentioned in export.txt, but it's " +
-							"a big fat lie and does not exist.");
+					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_export_library_file_missing), exportFile.getName()));
 				} else if (exportFile.isDirectory()) {
 					//Copy native library folders to the correct location
 					if (exportName.equals("armeabi") ||
@@ -2163,8 +2165,7 @@ public class Build {
 				} else if (exportName.toLowerCase(Locale.US).endsWith(".zip")) {
 					// As of r4 of the Android SDK, it looks like .zip files
 					// are ignored in the libs folder, so rename to .jar
-					System.err.println(".zip files are not allowed in Android libraries.");
-					System.err.println("Please rename " + exportFile.getName() + " to be a .jar file.");
+					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_library_zip), exportFile.getName()));
 					String jarName = exportName.substring(0, exportName.length() - 4) + ".jar";
 					copyFile(exportFile, new File(libsFolder, jarName));
 				} else if (exportName.toLowerCase(Locale.US).endsWith(".jar")) {
@@ -2182,9 +2183,7 @@ public class Build {
 			for (File exportFile : library.getAndroidExports((APDE) editor.getApplicationContext())) {
 				String exportName = exportFile.getName();
 				if (!exportFile.exists()) {
-					System.err.println(exportFile.getName() +
-							" is mentioned in export.txt, but it's " +
-							"a big fat lie and does not exist.");
+					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_export_library_file_missing), exportFile.getName()));
 				} else if (exportFile.isDirectory()) {
 					//Copy native library folders to the correct location
 					if (exportName.equals("armeabi") ||
@@ -2198,8 +2197,7 @@ public class Build {
 				} else if (exportName.toLowerCase(Locale.US).endsWith(".zip")) {
 					// As of r4 of the Android SDK, it looks like .zip files
 					// are ignored in the libs folder, so rename to .jar
-					System.err.println(".zip files are not allowed in Android libraries.");
-					System.err.println("Please rename " + exportFile.getName() + " to be a .jar file.");
+					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_library_zip), exportFile.getName()));
 					String jarName = exportName.substring(0, exportName.length() - 4) + ".jar";
 					copyFile(exportFile, new File(libsFolder, jarName));
 				} else if(exportName.toLowerCase(Locale.US).endsWith("-dex.jar")) {
@@ -2312,11 +2310,11 @@ public class Build {
 //		}
 //	}
 	
-	static public File mkdirs(final File parent, final String name) {
+	static public File mkdirs(final File parent, final String name, Context context) {
 		final File result = new File(parent, name);
 		if(!(result.exists() || result.mkdirs())) {
 			//throw new SketchException("Could not create " + result);
-			System.out.println("Could not create " + result); //TODO changed this around to avoid SketchException for Build Path reasons
+			System.out.println(String.format(Locale.US, context.getResources().getString(R.string.build_dir_create_failed), result.getAbsolutePath())); //TODO changed this around to avoid SketchException for Build Path reasons
 			return null;
 		}
 		return result;
@@ -2439,7 +2437,7 @@ public class Build {
 			throw new IOException("Could not replace " + file.getAbsolutePath());
 	}
 	
-	static public String[] packageListFromClassPath(String path) {
+	static public String[] packageListFromClassPath(String path, Context context) {
 		Hashtable<String, Object> table = new Hashtable<String, Object>();
 		String pieces[] = PApplet.split(path, File.pathSeparatorChar);
 		
@@ -2447,7 +2445,7 @@ public class Build {
 			if(pieces[i].length() == 0) continue;
 			
 			if(pieces[i].toLowerCase(Locale.US).endsWith(".jar") || pieces[i].toLowerCase(Locale.US).endsWith(".zip"))
-				packageListFromZip(pieces[i], table);
+				packageListFromZip(pieces[i], table, context);
 			else {  // it's another type of file or directory
 				File dir = new File(pieces[i]);
 				if(dir.exists() && dir.isDirectory())
@@ -2464,7 +2462,7 @@ public class Build {
 		return output;
 	}
 	
-	static private void packageListFromZip(String filename, Hashtable<String, Object> table) {
+	static private void packageListFromZip(String filename, Hashtable<String, Object> table, Context context) {
 		try {
 			ZipFile file = new ZipFile(filename);
 			Enumeration<? extends ZipEntry> entries = file.entries();
@@ -2487,7 +2485,7 @@ public class Build {
 			}
 			file.close();
 		} catch (IOException e) {
-			System.err.println("Ignoring " + filename + " (" + e.getMessage() + ")");
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.build_package_from_zip_ignoring), filename, e.getMessage()));
 		}
 	}
 	

@@ -13,8 +13,8 @@
         <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="inject_log_broadcaster"
-            android:title="@string/inject_log_broadcaster"
-            android:summary="@string/inject_log_broadcaster_desc" />
+            android:title="@string/pref_inject_log_broadcaster"
+            android:summary="@string/pref_inject_log_broadcaster_desc" />
     </android.support.v7.preference.PreferenceCategory>
     
     <android.support.v7.preference.PreferenceCategory
@@ -24,7 +24,7 @@
         <android.support.v14.preference.SwitchPreference
             android:defaultValue="false"
             android:key="build_output_verbose"
-            android:title="@string/build_output_verbose" />
+            android:title="@string/pref_build_output_verbose" />
         
         <android.support.v14.preference.SwitchPreference
             android:defaultValue="false"

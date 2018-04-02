@@ -31,16 +31,6 @@ import processing.data.XML;
 public class Manifest {
 	public static final String MANIFEST_XML = "AndroidManifest.xml";
 	
-	public static final String WORLD_OF_HURT_COMING =
-			"Errors occurred while reading or writing " + MANIFEST_XML + ",\n" +
-			"which means lots of things are likely to stop working properly.\n" +
-			"To prevent losing any data, it's recommended that you use \"Save As\"\n" +
-			"to save a separate copy of your sketch, and the restart Processing.";
-	public static final String MULTIPLE_ACTIVITIES =
-			"Processing only supports a single Activity in the AndroidManifest.xml\n" +
-			"file. Only the first activity entry will be updated, and you better \n" +
-			"hope that's the right one, smartypants.";
-	
 	public static final String MIN_SDK = "15";
 	
 	public static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd.HHmm", Locale.US);
@@ -83,7 +73,7 @@ public class Manifest {
 		
 		for(String part : parts)
 			if(part.length() > 0)
-				addPermission(PERMISSION_PREFIX, part, context.getResources().getString(R.string.custom_perm), true);
+				addPermission(PERMISSION_PREFIX, part, context.getResources().getString(R.string.permissions_custom_perm), true);
 		
 		//Sort the permissions (custom permissions are unsorted, even though the loaded ones are sorted)
 		sortPermissions();
@@ -197,7 +187,7 @@ public class Manifest {
 		XML[] kids = xml.getChildren("application/activity");
 		if (kids.length != 1) {
 //			Base.showWarning("Don't touch that", MULTIPLE_ACTIVITIES, null);
-			System.err.println(MULTIPLE_ACTIVITIES);
+			System.err.println(build.editor.getResources().getString(R.string.manifest_multiple_activities));
 		}
 		XML activity = kids[0];
 		String currentName = activity.getString("android:name");
@@ -422,7 +412,7 @@ public class Manifest {
 				xml = new XML(manifestFile);
 			} catch (Exception e) {
 				e.printStackTrace();
-				System.err.println("Problem reading AndroidManifest.xml, creating a new version");
+				System.err.println(build.editor.getResources().getString(R.string.manifest_problem_reading_creating_new));
 
 				// remove the old manifest file, rename it with date stamp
 				long lastModified = manifestFile.lastModified();
@@ -430,8 +420,7 @@ public class Manifest {
 				File dest = new File(build.getSketchFolder(), MANIFEST_XML + "." + stamp);
 				boolean moved = manifestFile.renameTo(dest);
 				if (!moved) {
-					System.err.println("Could not move/rename " + manifestFile.getAbsolutePath());
-					System.err.println("You'll have to move or remove it before continuing.");
+					System.err.println(String.format(Locale.US, build.editor.getResources().getString(R.string.manifest_move_rename_failed), manifestFile.getAbsolutePath()));
 					return;
 				}
 			}
@@ -441,7 +430,7 @@ public class Manifest {
 			try {
 				xml = new XML(manifestFile);
 			} catch (FileNotFoundException e) {
-				System.err.println("Could not read " + manifestFile.getAbsolutePath());
+				System.err.println(String.format(Locale.US, build.editor.getResources().getString(R.string.manifest_read_failed), manifestFile.getAbsolutePath()));
 				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -451,13 +440,13 @@ public class Manifest {
 				e.printStackTrace();
 			} catch (RuntimeException e) {
 				//Hopefully this solves some crashes from users doing things that they shouldn't be...
-				System.err.println("Could not read " + manifestFile.getAbsolutePath() + "\nThis might be because your sketch is named \"sketch\"\nor because your AndroidManifest.xml file is corrupted");
+				System.err.println(String.format(Locale.US, build.editor.getResources().getString(R.string.manifest_read_failed_corrupted), manifestFile.getAbsolutePath()));
 				e.printStackTrace();
 			}
 		}
 		if (xml == null) {
 			System.err.println();
-			System.err.println("Error handling " + MANIFEST_XML + " " +  WORLD_OF_HURT_COMING);
+			System.err.println(build.editor.getResources().getString(R.string.manifest_world_of_hurt));
 			System.err.println();
 		}
 	}

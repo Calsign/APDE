@@ -55,7 +55,7 @@
 		            android:layout_alignParentRight="true"
 		            android:layout_marginLeft="12dp"
 		            android:src="@drawable/ic_copy_white"
-		            android:contentDescription="@string/copy_hex" />
+		            android:contentDescription="@string/tool_color_selector_copy_hex_to_clipboard" />
 		        
 		        <TextView android:id="@+id/hex"
 		            android:layout_width="match_parent"
@@ -93,7 +93,7 @@
 							android:layout_gravity="center_vertical"
 							android:padding="5dp"
 							android:layout_marginLeft="5dp"
-							android:text="@string/red_initial" />
+							android:text="@string/tool_color_selector_red_initial" />
 						
 						<view class="com.calsignlabs.apde.tool.ColorSelector$ValueEditText"
 							  android:id="@+id/red"
@@ -101,7 +101,7 @@
 							  android:layout_height="wrap_content"
 							  android:layout_margin="6dp"
 							  android:inputType="number"
-							  android:hint="@string/red"
+							  android:hint="@string/tool_color_selector_red"
 							  android:maxLength="3"
 							  android:imeOptions="flagNoExtractUi"
 							  android:nextFocusForward="@+id/green" />
@@ -117,7 +117,7 @@
 							android:layout_gravity="center_vertical"
 							android:padding="5dp"
 							android:layout_marginLeft="5dp"
-							android:text="@string/green_initial" />
+							android:text="@string/tool_color_selector_green_initial" />
 						
 						<view class="com.calsignlabs.apde.tool.ColorSelector$ValueEditText"
 							  android:id="@id/green"
@@ -125,7 +125,7 @@
 							  android:layout_height="wrap_content"
 							  android:layout_margin="6dp"
 							  android:inputType="number"
-							  android:hint="@string/green"
+							  android:hint="@string/tool_color_selector_green"
 							  android:maxLength="3"
 							  android:imeOptions="flagNoExtractUi"
 							  android:nextFocusForward="@+id/blue" />
@@ -141,7 +141,7 @@
 							android:layout_gravity="center_vertical"
 							android:padding="5dp"
 							android:layout_marginLeft="5dp"
-							android:text="@string/blue_initial" />
+							android:text="@string/tool_color_selector_blue_initial" />
 						
 						<view class="com.calsignlabs.apde.tool.ColorSelector$ValueEditText"
 							  android:id="@id/blue"
@@ -149,7 +149,7 @@
 							  android:layout_height="wrap_content"
 							  android:layout_margin="6dp"
 							  android:inputType="number"
-							  android:hint="@string/blue"
+							  android:hint="@string/tool_color_selector_blue"
 							  android:maxLength="3"
 							  android:imeOptions="flagNoExtractUi" />
 					</LinearLayout>
@@ -171,7 +171,7 @@
 							android:layout_gravity="center_vertical"
 							android:padding="5dp"
 							android:layout_marginLeft="5dp"
-							android:text="@string/hue_initial" />
+							android:text="@string/tool_color_selector_hue_initial" />
 						
 						<view class="com.calsignlabs.apde.tool.ColorSelector$ValueEditText"
 							  android:id="@+id/hue"
@@ -179,7 +179,7 @@
 							  android:layout_height="wrap_content"
 							  android:layout_margin="6dp"
 							  android:inputType="number"
-							  android:hint="@string/hue"
+							  android:hint="@string/tool_color_selector_hue"
 							  android:maxLength="3"
 							  android:imeOptions="flagNoExtractUi"
 							  android:nextFocusForward="@+id/saturation" />
@@ -195,7 +195,7 @@
 							android:layout_gravity="center_vertical"
 							android:padding="5dp"
 							android:layout_marginLeft="5dp"
-							android:text="@string/saturation_initial" />
+							android:text="@string/tool_color_selector_saturation_initial" />
 						
 						<view class="com.calsignlabs.apde.tool.ColorSelector$ValueEditText"
 							  android:id="@id/saturation"
@@ -203,7 +203,7 @@
 							  android:layout_height="wrap_content"
 							  android:layout_margin="6dp"
 							  android:inputType="number"
-							  android:hint="@string/saturation"
+							  android:hint="@string/tool_color_selector_saturation"
 							  android:maxLength="3"
 							  android:imeOptions="flagNoExtractUi"
 							  android:nextFocusForward="@+id/value" />
@@ -219,7 +219,7 @@
 							android:layout_gravity="center_vertical"
 							android:padding="5dp"
 							android:layout_marginLeft="5dp"
-							android:text="@string/brightness_initial" />
+							android:text="@string/tool_color_selector_brightness_initial" />
 						
 						<view class="com.calsignlabs.apde.tool.ColorSelector$ValueEditText"
 							  android:id="@id/value"
@@ -227,7 +227,7 @@
 							  android:layout_height="wrap_content"
 							  android:layout_margin="6dp"
 							  android:inputType="number"
-							  android:hint="@string/brightness"
+							  android:hint="@string/tool_color_selector_brightness"
 							  android:maxLength="3"
 							  android:imeOptions="flagNoExtractUi" />
 					</LinearLayout>

@@ -101,18 +101,18 @@ public class LibraryManagerActivity extends AppCompatActivity {
 						if(isZipExtension(FileUtils.getExtension(path))) {
 							//Make sure that this library doesn't already exist...
 							if(new Library(ContributionManager.detectLibraryName(file)).getLibraryFolder((APDE) getApplicationContext()).exists()) {
-								alert(getResources().getString(R.string.invalid_file_error_title), getResources().getString(R.string.invalid_file_error_message_3));
+								alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_already_installed));
 							} else {
 								addZipLibrary(file);
 							}
 						} else {
-							alert(getResources().getString(R.string.invalid_file_error_title), getResources().getString(R.string.invalid_file_error_message_2));
+							alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_not_zip));
 						}
 					} else {
-						alert(getResources().getString(R.string.invalid_file_error_title), getResources().getString(R.string.invalid_file_error_message_1));
+						alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_nonexistant));
 					}
 				} else {
-					alert(getResources().getString(R.string.invalid_file_error_title), getResources().getString(R.string.invalid_file_error_message_1));
+					alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_nonexistant));
 				}
 			}
 			break;
@@ -224,7 +224,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		//Show a DX Dexer dialog
 		
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setTitle(R.string.action_dx_dexer_tool);		
+		builder.setTitle(R.string.library_manager_menu_dx_dexer);
 		
 		ScrollView layout;
 		
@@ -253,7 +253,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		
 		builder.setView(layout);
 		
-		builder.setPositiveButton(R.string.dex, new DialogInterface.OnClickListener() {
+		builder.setPositiveButton(R.string.dx_dexer_dex_button, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				dxDexerRun();
@@ -357,7 +357,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 			return;
 		}
 		
-		dxDexerErrorMessage.setText(R.string.dx_dexer_ready);
+		dxDexerErrorMessage.setText(R.string.dx_dexer_info_ready);
 		
 		dxDexerDexButton.setEnabled(true);
 	}
@@ -370,14 +370,14 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		
 		dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 		dialog.setIndeterminate(true);
-		dialog.setTitle(getResources().getString(R.string.dx_dexer_tool_dialog_title) + " " + inputFile.getName());
+		dialog.setTitle(getResources().getString(R.string.dx_dexer_dialog_title) + " " + inputFile.getName());
 		dialog.setCanceledOnTouchOutside(false);
 		dialog.setCancelable(false);
 		
 		final Thread dexThread = new Thread(new Runnable() {
 			public void run() {
 				working = true;
-				ContributionManager.dexJar(inputFile, outputFile);
+				ContributionManager.dexJar(inputFile, outputFile, LibraryManagerActivity.this);
 				working = false;
 				
 				dialog.dismiss();
@@ -406,7 +406,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		dexThread.start();
 		dialog.show();
 		
-		dialog.setProgressText(getResources().getString(R.string.dexing) + "...");
+		dialog.setProgressText(getResources().getString(R.string.library_manager_install_message_dexing) + "...");
 	}
 	
 	private void launchSettings() {
@@ -457,7 +457,9 @@ public class LibraryManagerActivity extends AppCompatActivity {
 				TextView desc = (TextView) container.findViewById(R.id.library_manager_list_item_desc);
 				
 				title.setText(Html.fromHtml(toHtmlLinks(lib.getName())));
-				author.setText(Html.fromHtml(toHtmlLinks("by " + lib.getAuthorList((APDE) getApplicationContext()))));
+				author.setText(Html.fromHtml(toHtmlLinks(
+						String.format(getApplication().getString(R.string.library_manager_library_author_by),
+						lib.getAuthorList((APDE) getApplicationContext())))));
 				desc.setText(Html.fromHtml(toHtmlLinks(lib.getSentence((APDE) getApplicationContext()))));
 				
 				title.setMovementMethod(LinkMovementMethod.getInstance());
@@ -541,10 +543,10 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		//Check to make sure that the user really wants to uninstall the library
 		
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setTitle(getResources().getString(R.string.uninstall_warning_title) + " " + lib.getName());
-		builder.setMessage(lib.getName() + " " + getResources().getString(R.string.uninstall_warning_message));
+		builder.setTitle(getResources().getString(R.string.library_manager_contrib_uninstall_warning_title) + " " + lib.getName());
+		builder.setMessage(lib.getName() + " " + getResources().getString(R.string.library_manager_contrib_uninstall_warning_message));
 		
-		builder.setPositiveButton(R.string.uninstall_warning_title, new DialogInterface.OnClickListener() {
+		builder.setPositiveButton(R.string.library_manager_contrib_uninstall_warning_title, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				uninstallLibrary(lib);
@@ -589,13 +591,13 @@ public class LibraryManagerActivity extends AppCompatActivity {
 					public void run() {
 						switch((Library.Status) msg.obj) {
 						case COPYING:
-							dialog.setProgressText(res.getString(R.string.copying) + "...");
+							dialog.setProgressText(res.getString(R.string.library_manager_install_message_copying) + "...");
 							break;
 						case EXTRACTING:
-							dialog.setProgressText(res.getString(R.string.extracting) + "...");
+							dialog.setProgressText(res.getString(R.string.library_manager_install_message_extracting) + "...");
 							break;
 						case DEXING:
-							dialog.setProgressText(res.getString(R.string.dexing) + "...");
+							dialog.setProgressText(res.getString(R.string.library_manager_install_message_dexing) + "...");
 							break;
 						case INSTALLED:
 							dialog.setProgress(2);
@@ -642,7 +644,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 				if (!success) {
 					runOnUiThread(new Runnable() {
 						public void run() {
-							alert(R.string.library_install_failed_title, R.string.library_install_failed_message);
+							alert(R.string.library_install_failure_title, R.string.library_install_failure_message);
 						}
 					});
 				}
@@ -663,7 +665,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		//but we can't get enough out of DEX to pull this off (and the dexer takes almost all of the time...)
 		dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 		dialog.setIndeterminate(true);
-		dialog.setTitle(getResources().getString(R.string.library_install_dialog_title) + " " + libraryName);
+		dialog.setTitle(getResources().getString(R.string.library_manager_install_dialog_title) + " " + libraryName);
 		dialog.setCanceledOnTouchOutside(false);
 		dialog.setCancelable(false);
 		//Or... we won't do this. TODO Can we make this work?
@@ -724,11 +726,11 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		//but we can't get enough out of DEX to pull this off (and the dexer takes almost all of the time...)
 		dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 		dialog.setIndeterminate(true);
-		dialog.setTitle(getResources().getString(R.string.library_uninstall_dialog_title) + " " + library.getName());
+		dialog.setTitle(getResources().getString(R.string.library_manager_library_uninstall_dialog_title) + " " + library.getName());
 		dialog.setCanceledOnTouchOutside(false);
 		dialog.setCancelable(false);
 		
-		dialog.setButton(DialogInterface.BUTTON_NEUTRAL, getResources().getString(R.string.run_in_background), new DialogInterface.OnClickListener() {
+		dialog.setButton(DialogInterface.BUTTON_NEUTRAL, getResources().getString(R.string.task_run_in_background), new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				dialog.dismiss();

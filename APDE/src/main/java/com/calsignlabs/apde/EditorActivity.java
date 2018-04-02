@@ -330,7 +330,7 @@ public class EditorActivity extends AppCompatActivity {
         forceDrawerReload();
         
         // Initialize the drawer drawer toggler
-        drawerToggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.nav_drawer_open, R.string.nav_drawer_close) {
+        drawerToggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.drawer_open_accessibility_text, R.string.drawer_close_accessibility_text) {
             @Override
         	public void onDrawerClosed(View view) {
 				if (isSelectedCodeAreaInitialized()) {
@@ -446,7 +446,7 @@ public class EditorActivity extends AppCompatActivity {
 				if (drawerSketchLocationType != null) {
 					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
 				} else if (drawerRecentSketch) {
-					getSupportActionBar().setSubtitle(getResources().getString(R.string.recent) + "/");
+					getSupportActionBar().setSubtitle(getResources().getString(R.string.drawer_folder_recent) + "/");
 				} else {
 					getSupportActionBar().setSubtitle(null);
 				}
@@ -890,7 +890,7 @@ public class EditorActivity extends AppCompatActivity {
 			TextView messageArea = (TextView) findViewById(R.id.message);
 			TextView console = (TextView) findViewById(R.id.console);
 			ScrollView consoleScroller = (ScrollView) findViewById(R.id.console_scroller);
-			HorizontalScrollView consoleScrollerX = (HorizontalScrollView) findViewById(R.id.console_scroller_x); 
+			HorizontalScrollView consoleScrollerX = (HorizontalScrollView) findViewById(R.id.console_scroller_x);
 			
 			outState.putString("consoleText", console.getText().toString());
 			outState.putInt("consoleScrollPos", consoleScroller.getScrollY());
@@ -1074,7 +1074,7 @@ public class EditorActivity extends AppCompatActivity {
         			//Here goes...
         			loadSketch(sketchFolder.getAbsolutePath(), APDE.SketchLocation.EXTERNAL);
         			
-        			message("Loaded external sketch.");
+        			message(getGlobalState().getString(R.string.sketch_load_external_success));
         		}
         	}
         }
@@ -1273,7 +1273,7 @@ public class EditorActivity extends AppCompatActivity {
 		
 		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
 		
-		alert.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
+		alert.setPositiveButton(R.string.rename_sketch_button, new DialogInterface.OnClickListener() {
 			public void onClick(DialogInterface dialog, int whichButton) {
 				String sketchName = input.getText().toString();
 				
@@ -1805,8 +1805,8 @@ public class EditorActivity extends AppCompatActivity {
     	if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
 				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
-            	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
+            builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
+            	.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
             	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
             		@Override
             		public void onClick(DialogInterface dialog, int which) {}
@@ -1864,11 +1864,11 @@ public class EditorActivity extends AppCompatActivity {
 	    		supportInvalidateOptionsMenu();
 	            
 	            // Inform the user of success
-	    		message(getResources().getText(R.string.sketch_saved));
+	    		message(getResources().getText(R.string.message_sketch_save_success));
 	    		setSaved(true);
 	    	} else {
 	    		// Inform the user of failure
-	    		error(getResources().getText(R.string.sketch_save_failure));
+	    		error(getResources().getText(R.string.message_sketch_save_failure));
 	    	}
     	} else {
     		// If there are no tabs
@@ -1878,7 +1878,7 @@ public class EditorActivity extends AppCompatActivity {
     		forceDrawerReload();
     		
             // Inform the user
-    		message(getResources().getText(R.string.sketch_saved));
+    		message(getResources().getText(R.string.message_sketch_save_success));
     		setSaved(true);
     	}
 	
@@ -1890,8 +1890,8 @@ public class EditorActivity extends AppCompatActivity {
 		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
 				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
-            	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
+            builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
+            	.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
             	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
             		@Override
             		public void onClick(DialogInterface dialog, int which) {}
@@ -1933,11 +1933,11 @@ public class EditorActivity extends AppCompatActivity {
 			updateCodeAreaFocusable();
             
             //Inform the user of success
-    		message(getResources().getText(R.string.sketch_saved));
+    		message(getResources().getText(R.string.message_sketch_save_success));
     		setSaved(true);
     	} catch (IOException e) {
     		//Inform the user of failure
-    		error(getResources().getText(R.string.sketch_save_failure));
+    		error(getResources().getText(R.string.message_sketch_save_failure));
     	}
     }
 	
@@ -1954,7 +1954,7 @@ public class EditorActivity extends AppCompatActivity {
 		builder.setTitle(R.string.move_temp_to_sketchbook_title);
 		builder.setMessage(String.format(Locale.US, getResources().getString(R.string.move_temp_to_sketchbook_message), getGlobalState().getSketchName()));
 		
-		builder.setPositiveButton(R.string.move, new DialogInterface.OnClickListener() {
+		builder.setPositiveButton(R.string.move_temp_to_sketchbook_button, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
@@ -1966,8 +1966,8 @@ public class EditorActivity extends AppCompatActivity {
 				if (getGlobalState().getSketchLocation(dest.getPath(), dest.getLocation()).exists()) {
 					AlertDialog.Builder builder = new AlertDialog.Builder(EditorActivity.this);
 					
-					builder.setTitle(R.string.cannot_move_sketch_title);
-					builder.setMessage(R.string.cannot_move_folder_message);
+					builder.setTitle(R.string.rename_sketch_failure_title);
+					builder.setMessage(R.string.rename_move_folder_failure_message);
 					
 					builder.setPositiveButton(getResources().getString(R.string.ok), new DialogInterface.OnClickListener() {
 						@Override
@@ -2179,11 +2179,11 @@ public class EditorActivity extends AppCompatActivity {
         		items = getGlobalState().listRecentSketches();
         	} else {
         		items = new ArrayList<FileNavigatorAdapter.FileItem>();
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.sketches), FileNavigatorAdapter.FileItemType.FOLDER));
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.examples), FileNavigatorAdapter.FileItemType.FOLDER));
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.library_examples), FileNavigatorAdapter.FileItemType.FOLDER));
-				items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.temporary), FileNavigatorAdapter.FileItemType.FOLDER));
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.recent), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_sketches), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_examples), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_library_examples), FileNavigatorAdapter.FileItemType.FOLDER));
+				items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_temporary), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_recent), FileNavigatorAdapter.FileItemType.FOLDER));
         	}
         }
         
@@ -2255,7 +2255,7 @@ public class EditorActivity extends AppCompatActivity {
         	menu.findItem(R.id.menu_sketch_properties).setVisible(false);
         	
         	// Make sure to hide the sketch name
-        	getSupportActionBar().setTitle(R.string.app_name);
+        	getSupportActionBar().setTitle(R.string.apde_app_title);
         } else {
         	if (getCodeCount() > 0) {
         		// If the drawer is closed and there are tabs
@@ -2731,7 +2731,7 @@ public class EditorActivity extends AppCompatActivity {
 				public void onClick(DialogInterface dialogInterface, int i) {}
 			});
 			
-			builder.setNeutralButton(R.string.info, new DialogInterface.OnClickListener() {
+			builder.setNeutralButton(R.string.export_signed_package_long_info_button, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialogInterface, int i) {
 					startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.screen_overlay_info_wiki_url))));
@@ -3177,8 +3177,8 @@ public class EditorActivity extends AppCompatActivity {
     		return;
     	
     	AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(R.string.delete_dialog_title)
-        	.setMessage(R.string.delete_dialog_message)
+        builder.setTitle(R.string.tab_delete_dialog_title)
+        	.setMessage(R.string.tab_delete_dialog_message)
         	.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
         		@Override
         		public void onClick(DialogInterface dialog, int which) {
@@ -3256,7 +3256,7 @@ public class EditorActivity extends AppCompatActivity {
 			codePagerAdapter.notifyDataSetChanged();
 			
 	    	//Inform the user in the message area
-	    	message(getResources().getText(R.string.tab_deleted));
+	    	message(getResources().getText(R.string.tab_delete_success));
     	}
     }
     
@@ -3325,7 +3325,7 @@ public class EditorActivity extends AppCompatActivity {
 				codePagerAdapter.notifyDataSetChanged();
 				
     	    	//Notify the user of success
-    			message(getResources().getText(R.string.tab_renamed));
+    			message(getResources().getText(R.string.tab_rename_success));
     			
     			break;
     		case NEW_TAB:
@@ -3378,7 +3378,7 @@ public class EditorActivity extends AppCompatActivity {
 //				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
 				
 				//Notify the user of success
-				message(getResources().getText(R.string.tab_created));
+				message(getResources().getText(R.string.tab_new_success));
 				
 				break;
     		}
@@ -3496,14 +3496,14 @@ public class EditorActivity extends AppCompatActivity {
 	protected boolean validateFileName(String title) {
 		//Make sure that the tab name's length > 0
 		if (title.length() <= 0) {
-			error(getResources().getText(R.string.name_invalid_no_char));
+			error(getResources().getText(R.string.tab_name_invalid_no_char));
 			return false;
 		}
 		
 		//Check to make sure that the first character isn't a number and isn't an underscore
 		char first = title.charAt(0);
 		if ((first >= '0' && first <= '9') || first == '_') {
-			error(getResources().getText(R.string.name_invalid_first_char));
+			error(getResources().getText(R.string.tab_name_invalid_first_char));
 			return false;
 		}
 		
@@ -3515,14 +3515,14 @@ public class EditorActivity extends AppCompatActivity {
 			if (c >= 'A' && c <= 'Z') continue;
 			if (c == '_') continue;
 			
-			error(getResources().getText(R.string.name_invalid_char));
+			error(getResources().getText(R.string.tab_name_invalid_char));
 			return false;
 		}
 		
 		//Make sure that this file / tab doesn't already exist
 		for (SketchFile meta : tabs) {
 			if (meta.getTitle().equals(title)) {
-				error(getResources().getText(R.string.name_invalid_same_title));
+				error(getResources().getText(R.string.tab_name_invalid_same_title));
 				return false;
 			}
 		}
@@ -3536,7 +3536,7 @@ public class EditorActivity extends AppCompatActivity {
 		//Display a dialog containing the list of tools
 		
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setTitle(R.string.tools);
+		builder.setTitle(R.string.editor_menu_tools);
 		if(toolList.size() > 0) {
 			//Populate the list
 			builder.setItems(getGlobalState().listToolsInList(), new DialogInterface.OnClickListener() {
@@ -3546,7 +3546,7 @@ public class EditorActivity extends AppCompatActivity {
 			});
 		} else {
 			//Eh... there should ALWAYS be tools, unless something funky is going on
-			System.err.println("Couldn't find any tools... uh-oh...");
+			System.err.println(getResources().getString(R.string.tools_empty));
 		}
 		
 		final AlertDialog dialog = builder.create();
@@ -3562,7 +3562,7 @@ public class EditorActivity extends AppCompatActivity {
 		//Display a dialog containing the list of libraries
 		
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setTitle(R.string.import_library);
+		builder.setTitle(R.string.tool_import_library);
 		if(libList.length > 0) {
 			//Populate the list
 			builder.setItems(libList, new DialogInterface.OnClickListener() {
@@ -3575,7 +3575,7 @@ public class EditorActivity extends AppCompatActivity {
 			//This is a real hack... and a strong argument for using XML / layout inflaters
 			
 			TextView content = new TextView(this);
-			content.setText(R.string.no_contributed_libraries); //The text we want
+			content.setText(R.string.library_manager_no_contributed_libraries); //The text we want
 			content.setTextColor(getResources().getColor(R.color.grayed_out)); //The color we want
 			content.setGravity(Gravity.CENTER); //Centered
 			content.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)); //Centered...
@@ -3586,7 +3586,7 @@ public class EditorActivity extends AppCompatActivity {
 		}
 		
 		//The "Manage Libraries" button - null so that it won't automatically close itself
-		builder.setNeutralButton(R.string.manage_libraries, null);
+		builder.setNeutralButton(R.string.library_manager_open, null);
 		final AlertDialog dialog = builder.create();
 		
 		//Fancy stuff...

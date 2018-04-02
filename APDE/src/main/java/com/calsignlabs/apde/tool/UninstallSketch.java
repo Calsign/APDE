@@ -26,7 +26,7 @@ public class UninstallSketch implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.uninstall_sketch);
+		return context.getResources().getString(R.string.tool_uninstall_sketch);
 	}
 	
 	@Override
@@ -38,8 +38,8 @@ public class UninstallSketch implements Tool {
 			context.getEditor().startActivity(uninstallIntent);
 		} else {
 			AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
-			builder.setTitle(R.string.sketch_not_installed_dialog_title);
-			builder.setMessage(R.string.sketch_not_installed_dialog_message);
+			builder.setTitle(R.string.tool_uninstall_sketch_error_not_installed_dialog_title);
+			builder.setMessage(R.string.tool_uninstall_sketch_error_not_installed_dialog_message);
 			builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {}

@@ -26,7 +26,7 @@ public class GitManager implements Tool {
 
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.git_manager);
+		return context.getResources().getString(R.string.tool_git_manager);
 	}
 
 	@Override
@@ -40,7 +40,7 @@ public class GitManager implements Tool {
 
 		repo.close();
 
-		builder.setTitle(R.string.git_manager);
+		builder.setTitle(R.string.tool_git_manager);
 		builder.setItems(actionNames, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {

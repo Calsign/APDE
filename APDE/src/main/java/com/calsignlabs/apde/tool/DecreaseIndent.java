@@ -74,7 +74,7 @@ public class DecreaseIndent implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.decrease_indent);
+		return context.getResources().getString(R.string.tool_decrease_indent);
 	}
 	
 	@Override

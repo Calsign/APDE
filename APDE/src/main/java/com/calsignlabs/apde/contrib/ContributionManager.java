@@ -1,15 +1,18 @@
 package com.calsignlabs.apde.contrib;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Message;
 
 import com.calsignlabs.apde.APDE;
+import com.calsignlabs.apde.R;
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -34,7 +37,7 @@ public class ContributionManager {
 		
 		//Copy to the libraries folder
 		if (!copyFile(libraryDir, library.getLibraryFolder(context))) {
-			System.err.println("Unexcepted error occurred while copying the library.");
+			System.err.println(context.getResources().getString(R.string.install_dir_library_failure_unexpected_error));
 			return false;
 		}
 		
@@ -52,12 +55,11 @@ public class ContributionManager {
 			
 			//Dex all of the files...
 			for(int i = 0; i < jars.length; i ++) {
-				dexJar(jars[i], dexJars[i]);
+				dexJar(jars[i], dexJars[i], context);
 			}
 		} catch (NullPointerException e) {
 			//If we can't find the JARs
-			System.err.println("Unable to locate the library JAR files at " + library.getLibraryJarFolder(context));
-			System.err.println("Try organizing the folder structure according the Processing library formatting guidelines.");
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.install_library_failure_poor_structure), library.getLibraryJarFolder(context)));
 			e.printStackTrace();
 			return false;
 		}
@@ -80,7 +82,7 @@ public class ContributionManager {
 		
 		//Extract to the libraries folder
 		if(!extractFile(libraryZip, library.getLibraryFolder(context))) {
-			System.err.println("Unexcepted error occurred while extracting the library.");
+			System.err.println(context.getResources().getString(R.string.install_zip_library_failure_unexpected_error));
 			return false;
 		}
 		
@@ -98,12 +100,11 @@ public class ContributionManager {
 			
 			//Dex all of the files...
 			for(int i = 0; i < jars.length; i ++) {
-				dexJar(jars[i], dexJars[i]);
+				dexJar(jars[i], dexJars[i], context);
 			}
 		} catch (NullPointerException e) {
 			//If we can't find the JARs
-			System.err.println("Unable to locate the library JAR files at " + library.getLibraryJarFolder(context));
-			System.err.println("Try organizing the folder structure within the ZIP file according the Processing library formatting guidelines.");
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.install_library_failure_poor_structure), library.getLibraryJarFolder(context)));
 			e.printStackTrace();
 			return false;
 		}
@@ -301,7 +302,7 @@ public class ContributionManager {
 	 * @param input
 	 * @param output
 	 */
-	public static void dexJar(File input, File output) {
+	public static void dexJar(File input, File output, Context context) {
 		try {
 			String[] args = new String[] {
 					"--output=" + output.getAbsolutePath(), //The location of the output DEXed file
@@ -316,10 +317,10 @@ public class ContributionManager {
 			int resultCode = com.androidjarjar.dx.command.dexer.Main.run(dexArgs);
 			
 			if (resultCode != 0) {
-				System.err.println("DX Dexer failed, error code: " + resultCode);
+				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.dex_jar_failure_error_code), resultCode));
 			}
 		} catch (Exception e) {
-			System.err.println("DX Dexer failed");
+			System.err.println(context.getResources().getString(R.string.dex_jar_failure));
 			e.printStackTrace();
 		}
 	}
@@ -330,7 +331,7 @@ public class ContributionManager {
 	 * @param library
 	 */
 	public static void uninstallLibrary(Library library, APDE context) {
-		deleteFile(library.getLibraryFolder(context));
+		deleteFile(library.getLibraryFolder(context), context);
 	}
 	
 	/**
@@ -338,17 +339,20 @@ public class ContributionManager {
 	 * 
 	 * @param f
 	 */
-	public static void deleteFile(File f) {
-		if(f.isDirectory())
-			for(File c : f.listFiles())
-				deleteFile(c);
+	public static void deleteFile(File f, Context context) {
+		if(f.isDirectory()) {
+			for (File c : f.listFiles()) {
+				deleteFile(c, context);
+			}
+		}
 		
 		//Renaming solution for the file system lock with EBUSY errors
 		//StackOverflow: http://stackoverflow.com/questions/11539657/open-failed-ebusy-device-or-resource-busy
 		final File to = new File(f.getAbsolutePath() + System.currentTimeMillis());
 		f.renameTo(to);
 		
-		if(!to.delete())
-			System.err.println("Failed to delete file: " + f);
+		if (!to.delete()) {
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failure), f.getAbsolutePath()));
+		}
 	}
 }

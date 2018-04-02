@@ -177,7 +177,7 @@ public class ExportSignedPackage implements Tool {
 			public void onClick(DialogInterface dialog, int which) {}
 		});
 		
-		builder.setPositiveButton(R.string.export, new DialogInterface.OnClickListener() {
+		builder.setPositiveButton(R.string.export_signed_package_export, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				releaseBuild();
@@ -185,7 +185,7 @@ public class ExportSignedPackage implements Tool {
 		});
 		
 		//Info button - this is mostly warnings and disclaimers
-		builder.setNeutralButton(R.string.info, null);
+		builder.setNeutralButton(R.string.export_signed_package_long_info_button, null);
 		
 		final AlertDialog dialog = builder.create();
 		
@@ -198,8 +198,8 @@ public class ExportSignedPackage implements Tool {
 					public void onClick(View v) {
 						AlertDialog.Builder infoBuilder = new AlertDialog.Builder(context.getEditor());
 						
-						infoBuilder.setTitle(R.string.export_signed_package_info_title);
-						infoBuilder.setMessage(R.string.export_signed_package_info);
+						infoBuilder.setTitle(R.string.export_signed_package_long_info_title);
+						infoBuilder.setMessage(R.string.export_signed_package_long_info_message);
 						
 						infoBuilder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
 							@Override
@@ -247,7 +247,7 @@ public class ExportSignedPackage implements Tool {
 		});
 		
 		ArrayList<String> aliasList = new ArrayList<String>();
-		aliasList.add(context.getResources().getString(R.string.no_aliases));
+		aliasList.add(context.getResources().getString(R.string.export_signed_package_no_aliases));
 		
 		//The alias spinner is empty until the user selects a keystore
 		aliasAdapter = new ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, aliasList);
@@ -257,7 +257,7 @@ public class ExportSignedPackage implements Tool {
 		keystoreFileSelect.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				context.getEditor().selectFile(R.string.keystore_file_select, REQUEST_KEYSTORE_FILE, new EditorActivity.ActivityResultCallback() {
+				context.getEditor().selectFile(R.string.export_signed_package_keystore_file_select, REQUEST_KEYSTORE_FILE, new EditorActivity.ActivityResultCallback() {
 					@Override
 					public void onActivityResult(int requestCode, int resultCode, Intent data) {
 						if (resultCode == Activity.RESULT_OK) {
@@ -291,7 +291,7 @@ public class ExportSignedPackage implements Tool {
 				
 				alias.setEnabled(false);
 				aliasAdapter.clear();
-				aliasAdapter.add(context.getResources().getString(R.string.no_aliases));
+				aliasAdapter.add(context.getResources().getString(R.string.export_signed_package_no_aliases));
 				aliasPassword.setEnabled(false);
 				aliasPassword.setText("");
 				aliasCertificateInfo.setEnabled(false);
@@ -303,7 +303,7 @@ public class ExportSignedPackage implements Tool {
 					keystorePassword.setEnabled(true);
 					//Hide the dropdown
 					keystoreFile.dismissDropDown();
-					messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_keystore_password);
+					messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_password);
 				} else {
 					keystorePassword.setEnabled(false);
 					messageView(exportMessage, result);
@@ -328,11 +328,11 @@ public class ExportSignedPackage implements Tool {
 						loadAliases((ArrayList<String>) result.extra());
 						
 						if (alias.isEnabled()) {
-							messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_key_password);
+							messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_key_password);
 							aliasPassword.setEnabled(true);
 							aliasCertificateInfo.setEnabled(true);
 						} else {
-							messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.info_create_key);
+							messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_create_key);
 							aliasPassword.setEnabled(false);
 							aliasCertificateInfo.setEnabled(false);
 						}
@@ -347,7 +347,7 @@ public class ExportSignedPackage implements Tool {
 						aliasCertificateInfo.setEnabled(false);
 					}
 				} else {
-					messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_keystore_password);
+					messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_password);
 					
 					aliasNew.setEnabled(false);
 					aliasPassword.setEnabled(false);
@@ -385,14 +385,14 @@ public class ExportSignedPackage implements Tool {
 				
 				AlertDialog.Builder infoBuilder = new AlertDialog.Builder(context.getEditor());
 				
-				infoBuilder.setTitle(R.string.certificate_info);
+				infoBuilder.setTitle(R.string.export_signed_package_certificate_info);
 				
 				TableLayout infoLayout;
 				
 				infoLayout = (TableLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.certificate_info, null);
 				
 				((TextView) infoLayout.findViewById(R.id.alias_name)).setText((String) alias.getSelectedItem());
-				((TextView) infoLayout.findViewById(R.id.certificate_expiration)).setText(new SimpleDateFormat(context.getResources().getString(R.string.date_format), Locale.US).format(certificate.getNotAfter()));
+				((TextView) infoLayout.findViewById(R.id.certificate_expiration)).setText(new SimpleDateFormat(context.getResources().getString(R.string.export_signed_package_date_format), Locale.US).format(certificate.getNotAfter()));
 				
 				Principal principal = certificate.getSubjectDN();
 				
@@ -440,7 +440,7 @@ public class ExportSignedPackage implements Tool {
 						e.printStackTrace();
 					} catch (Exception e) {
 						//...
-						System.err.println("Failed to read certificate information");
+						System.err.println(context.getResources().getString(R.string.export_signed_package_certificate_read_failed));
 						e.printStackTrace();
 					}
 				}
@@ -476,9 +476,9 @@ public class ExportSignedPackage implements Tool {
 						exportButton.setEnabled(true);
 						
 						messageView(exportMessage, ValidationResult.MessageSeverity.INFO,
-								String.format(Locale.US, context.getResources().getString(R.string.info_export_ready),
+								String.format(Locale.US, context.getResources().getString(R.string.export_signed_package_info_export_ready),
 										context.getSketchName(),
-										new SimpleDateFormat(context.getResources().getString(R.string.date_format), Locale.US).format(certificate.getNotAfter())));
+										new SimpleDateFormat(context.getResources().getString(R.string.export_signed_package_date_format), Locale.US).format(certificate.getNotAfter())));
 					} else {
 						exportButton.setEnabled(false);
 						
@@ -488,7 +488,7 @@ public class ExportSignedPackage implements Tool {
 					exportButton.setEnabled(false);
 					
 					if (alias.isEnabled()) {
-						messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_key_password);
+						messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_key_password);
 					}
 				}
 			}
@@ -500,7 +500,7 @@ public class ExportSignedPackage implements Tool {
 			public void onTextChanged(CharSequence s, int start, int before, int count) {}
 		});
 		
-		messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_keystore_file);
+		messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_file);
 		
 		if (keystoreAdapter.getCount() > 0) {
 			//Automatically select the first keystore in the list - if the user wants to change it, they can delete the text...
@@ -512,7 +512,7 @@ public class ExportSignedPackage implements Tool {
 	@SuppressLint("InlinedApi")
 	protected void promptCreateKeystore() {
 		AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
-		builder.setTitle(context.getResources().getText(R.string.keystore_new));
+		builder.setTitle(context.getResources().getText(R.string.export_signed_package_keystore_new));
 		
 		final ScrollView layout;
 		
@@ -552,7 +552,7 @@ public class ExportSignedPackage implements Tool {
 		createKeystoreFileSelect.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				context.getEditor().selectFile(R.string.keystore_file_select, REQUEST_KEYSTORE_FILE, new EditorActivity.ActivityResultCallback() {
+				context.getEditor().selectFile(R.string.export_signed_package_keystore_file_select, REQUEST_KEYSTORE_FILE, new EditorActivity.ActivityResultCallback() {
 					@Override
 					public void onActivityResult(int requestCode, int resultCode, Intent data) {
 						if (resultCode == Activity.RESULT_OK) {
@@ -582,7 +582,7 @@ public class ExportSignedPackage implements Tool {
 							File keystoreFileLoc = new File(createKeystoreFile.getText().toString());
 							
 							if (keystoreFileLoc.exists()) {
-								messageView(keystoreMessage, ValidationResult.MessageSeverity.WARNING, R.string.warning_keystore_exists);
+								messageView(keystoreMessage, ValidationResult.MessageSeverity.WARNING, R.string.export_signed_package_warning_keystore_exists);
 							} else if (createKeystorePassword.getText().length() < 8) {
 								//Trying to get users to use stronger passwords... is this a good idea?
 								//This won't stop them, it's just a warning...
@@ -590,24 +590,24 @@ public class ExportSignedPackage implements Tool {
 								//...
 								//It comes down to: Something is better than nothing
 								
-								messageView(keystoreMessage, ValidationResult.MessageSeverity.WARNING, R.string.warning_short_password);
+								messageView(keystoreMessage, ValidationResult.MessageSeverity.WARNING, R.string.export_signed_package_warning_short_password);
 							} else {
 								messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO,
-										String.format(Locale.US, context.getResources().getString(R.string.info_create_keystore_ready),
-												context.getResources().getString(isBksKeystore(keystoreFileLoc) ? R.string.keystore_type_bks : R.string.keystore_type_jks)));
+										String.format(Locale.US, context.getResources().getString(R.string.export_signed_package_info_create_keystore_ready),
+												context.getResources().getString(isBksKeystore(keystoreFileLoc) ? R.string.export_signed_package_keystore_type_bks : R.string.export_signed_package_keystore_type_jks)));
 							}
 							
 							createButton.setEnabled(true);
 							
 							return;
 						} else {
-							messageView(keystoreMessage, ValidationResult.MessageSeverity.ERROR, R.string.error_passwords_disagree);
+							messageView(keystoreMessage, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_passwords_disagree);
 						}
 					} else {
-						messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_keystore_password);
+						messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_password);
 					}
 				} else {
-					messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_keystore_file);
+					messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_file);
 				}
 				
 				createButton.setEnabled(false);
@@ -624,13 +624,13 @@ public class ExportSignedPackage implements Tool {
 		createKeystorePassword.addTextChangedListener(createKeystoreValidator);
 		createKeystorePasswordConfirm.addTextChangedListener(createKeystoreValidator);
 		
-		messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_keystore_file);
+		messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_file);
 	}
 	
 	@SuppressLint("InlinedApi")
 	protected void promptCreateKey() {
 		AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
-		builder.setTitle(context.getResources().getText(R.string.alias_new));
+		builder.setTitle(context.getResources().getText(R.string.export_signed_package_key_alias_new));
 		
 		final ScrollView layout;
 		
@@ -696,7 +696,7 @@ public class ExportSignedPackage implements Tool {
 								} catch (KeyStoreException e) {
 									//Uh-oh... this shouldn't happen
 									
-									messageView(keyMessage, new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.error_unexpected));
+									messageView(keyMessage, new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_unexpected));
 									
 									createButton.setEnabled(false);
 									
@@ -706,9 +706,9 @@ public class ExportSignedPackage implements Tool {
 								}
 								
 								if (containsAlias) {
-									messageView(keyMessage, ValidationResult.MessageSeverity.WARNING, R.string.warning_key_exists);
+									messageView(keyMessage, ValidationResult.MessageSeverity.WARNING, R.string.export_signed_package_warning_key_exists);
 								} else if (Integer.parseInt(createAliasValidity.getText().toString()) < 25) {
-									messageView(keyMessage, ValidationResult.MessageSeverity.WARNING, R.string.warning_certificate_validity_short);
+									messageView(keyMessage, ValidationResult.MessageSeverity.WARNING, R.string.export_signed_package_warning_certificate_validity_short);
 								} else if (createAliasPassword.getText().length() < 8) {
 									//Trying to get users to use stronger passwords... is this a good idea?
 									//This won't stop them, it's just a warning...
@@ -716,7 +716,7 @@ public class ExportSignedPackage implements Tool {
 									//...
 									//It comes down to: Something is better than nothing
 									
-									messageView(keyMessage, ValidationResult.MessageSeverity.WARNING, R.string.warning_short_password);
+									messageView(keyMessage, ValidationResult.MessageSeverity.WARNING, R.string.export_signed_package_warning_short_password);
 								} else if (certificateName.getText().length() == 0
 										|| certificateOrganizationalUnit.getText().length() == 0
 										|| certificateOrganization.getText().length() == 0
@@ -724,25 +724,25 @@ public class ExportSignedPackage implements Tool {
 										|| certificateState.getText().length() == 0
 										|| certificateCountry.getText().length() == 0) {
 									
-									messageView(keyMessage, ValidationResult.MessageSeverity.WARNING, R.string.warning_certificate_empty);
+									messageView(keyMessage, ValidationResult.MessageSeverity.WARNING, R.string.export_signed_package_warning_certificate_empty);
 								} else {
-									messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.info_create_key_ready);
+									messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_create_key_ready);
 								}
 								
 								createButton.setEnabled(true);
 								
 								return;
 							} else {
-								messageView(keyMessage, ValidationResult.MessageSeverity.ERROR, R.string.error_passwords_disagree);
+								messageView(keyMessage, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_passwords_disagree);
 							}
 						} else {
-							messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_certificate_validity);
+							messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_certificate_validity);
 						}
 					} else {
-						messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_alias_password);
+						messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_alias_password);
 					}
 				} else {
-					messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_alias);
+					messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_alias);
 				}
 				
 				createButton.setEnabled(false);
@@ -768,7 +768,7 @@ public class ExportSignedPackage implements Tool {
 		certificateState.addTextChangedListener(createKeyValidator);
 		certificateCountry.addTextChangedListener(createKeyValidator);
 		
-		messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.info_enter_alias);
+		messageView(keyMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_alias);
 	}
 	
 	protected ValidationResult validateKeystoreFile() {
@@ -778,15 +778,15 @@ public class ExportSignedPackage implements Tool {
 			return new ValidationResult(0);
 		} else {
 			if (keystoreFile.getText().length() > 0) {
-				return new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.error_keystore_file_nonexistant);
+				return new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_keystore_file_nonexistant);
 			} else {
-				return new ValidationResult(2, ValidationResult.MessageSeverity.INFO, R.string.info_enter_keystore_file);
+				return new ValidationResult(2, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_file);
 			}
 		}
 	}
 	
 	protected ValidationResult loadKeystore(File file, char[] password) {
-		ValidationResult result = new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.error_unexpected);
+		ValidationResult result = new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_unexpected);
 		
 		FileInputStream in = null;
 		
@@ -808,9 +808,9 @@ public class ExportSignedPackage implements Tool {
 				result = new ValidationResult(0, aliases);
 			} catch (LoadKeystoreException e) {
 				//We have a JKS keystore, but it's either corrupted or we have a bad password
-				result = new ValidationResult(2, ValidationResult.MessageSeverity.ERROR, R.string.error_keystore_not_recoverable);
+				result = new ValidationResult(2, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_keystore_not_recoverable);
 			} catch (FileNotFoundException e) {
-				result = new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.error_keystore_file_nonexistant);
+				result = new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_keystore_file_nonexistant);
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			} catch (CertificateException e) {
@@ -832,7 +832,7 @@ public class ExportSignedPackage implements Tool {
 					
 					result = new ValidationResult(0, aliases);
 				} catch (FileNotFoundException x) {
-					result = new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.error_keystore_file_nonexistant);
+					result = new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_keystore_file_nonexistant);
 				} catch (KeyStoreException x) {
 					e.printStackTrace();
 				} catch (NoSuchAlgorithmException x) {
@@ -842,7 +842,7 @@ public class ExportSignedPackage implements Tool {
 				} catch (IOException x) {
 					//So... it's neither JKS nor BKS...
 					
-					result = new ValidationResult(2, ValidationResult.MessageSeverity.ERROR, R.string.error_keystore_not_recoverable);
+					result = new ValidationResult(2, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_keystore_not_recoverable);
 				} catch (OutOfMemoryError x) {
 					//This seems to happen when trying to load files with names like ".nomedia"
 					//Is this a bug in BouncyCastle? Is it because files starting with dots are hidden? Or is there something wrong with this particular ".nomedia" file?
@@ -897,7 +897,7 @@ public class ExportSignedPackage implements Tool {
 			
 			alias.setEnabled(true);
 		} else {
-			aliasAdapter.add(context.getResources().getString(R.string.no_aliases));
+			aliasAdapter.add(context.getResources().getString(R.string.export_signed_package_no_aliases));
 			alias.setEnabled(false);
 			aliasPassword.setText("");
 		}
@@ -906,7 +906,7 @@ public class ExportSignedPackage implements Tool {
 	protected ValidationResult loadCertificate(File keystoreFile, char[] keystorePassword, String alias) {
 		Security.addProvider(new BouncyCastleProvider());
 		
-		ValidationResult result = new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.error_unexpected);
+		ValidationResult result = new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_unexpected);
 		
 		ValidationResult keystoreResult = loadKeystore(keystoreFile, keystorePassword);
 		
@@ -929,7 +929,7 @@ public class ExportSignedPackage implements Tool {
 	}
 	
 	protected ValidationResult loadKey(File keystoreFile, char[] keystorePassword, String alias, char[] password) {
-		ValidationResult result = new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.error_unexpected);
+		ValidationResult result = new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_unexpected);
 		
 		ValidationResult keystoreResult = loadKeystore(keystoreFile, keystorePassword);
 		
@@ -952,17 +952,17 @@ public class ExportSignedPackage implements Tool {
 			} catch (KeyStoreException e) {
 				e.printStackTrace();
 			} catch (UnrecoverableKeyException e) {
-				result = new ValidationResult(3, ValidationResult.MessageSeverity.ERROR, R.string.error_key_not_recoverable);
+				result = new ValidationResult(3, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_key_not_recoverable);
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			} catch (CertificateExpiredException e) {
 				result = new ValidationResult(4, ValidationResult.MessageSeverity.ERROR,
-						String.format(Locale.US, context.getResources().getString(R.string.error_certificate_expired),
-								new SimpleDateFormat(context.getResources().getString(R.string.date_format), Locale.US).format(certificate.getNotAfter())));
+						String.format(Locale.US, context.getResources().getString(R.string.export_signed_package_error_certificate_expired),
+								new SimpleDateFormat(context.getResources().getString(R.string.export_signed_package_date_format), Locale.US).format(certificate.getNotAfter())));
 			} catch (CertificateNotYetValidException e) {
 				result = new ValidationResult(5, ValidationResult.MessageSeverity.ERROR,
-						String.format(Locale.US, context.getResources().getString(R.string.error_certificate_not_yet_valid),
-								new SimpleDateFormat(context.getResources().getString(R.string.date_format), Locale.US).format(certificate.getNotBefore())));
+						String.format(Locale.US, context.getResources().getString(R.string.export_signed_package_error_certificate_not_yet_valid),
+								new SimpleDateFormat(context.getResources().getString(R.string.export_signed_package_date_format), Locale.US).format(certificate.getNotBefore())));
 			}
 		}
 		
@@ -1090,7 +1090,7 @@ public class ExportSignedPackage implements Tool {
 			value = value.replace(Character.toString(escape), "\\" + escape);
 		}
 		
-		return value.length() > 0 ? value : "Unknown";
+		return value.length() > 0 ? value : context.getString(R.string.export_signed_package_certificate_field_empty_default);
 	}
 	
 	public void putRecentKeystore(String path) {
