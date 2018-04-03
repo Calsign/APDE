@@ -1525,12 +1525,14 @@ public class EditorActivity extends AppCompatActivity {
 		try {
 			String sketchData = readTempFile("sketchData.txt");
 			String[] data = sketchData.split(";");
-			JSONObject undoRedoHistories = new JSONObject(readTempFile("sketchUndoRedoHistory.json"));
+			String jsonData = readTempFile("sketchUndoRedoHistory.json");
 			
-			if (data.length < 3) {
+			if (data.length < 3 || jsonData.length() == 0) {
 				// On clean installs and after updating
 				return false;
 			}
+			
+			JSONObject undoRedoHistories = new JSONObject(jsonData);
 			
 			String sketchPath = data[0];
 			APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(data[1]);
