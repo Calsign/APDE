@@ -43,13 +43,27 @@
 			<!-- Open .PDE files with APDE -->
 			<intent-filter>
 				<action android:name="android.intent.action.VIEW"/>
+				<action android:name="android.intent.action.EDIT"/>
 				
 				<category android:name="android.intent.category.DEFAULT"/>
+				<category android:name="android.intent.category.BROWSABLE"/>
 				
 				<data android:scheme="file"/>
 				<data android:host="*"/>
-				<data android:mimeType="*/*"/>
-				<data android:pathPattern=".*\\.pde"/>
+				<data android:mimeType="\*/\*"/>
+				<data android:pathPattern=".*.pde"/>
+			</intent-filter>
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW"/>
+				<action android:name="android.intent.action.EDIT"/>
+				
+				<category android:name="android.intent.category.DEFAULT"/>
+				<category android:name="android.intent.category.BROWSABLE"/>
+				
+				<data android:scheme="content"/>
+				<data android:host="*"/>
+				<data android:mimeType="\*/\*"/>
+				<data android:pathPattern=".*.pde"/>
 			</intent-filter>
 		</activity>
 		<activity

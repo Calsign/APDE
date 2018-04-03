@@ -1047,37 +1047,44 @@ public class EditorActivity extends AppCompatActivity {
 //		findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
 //		findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
 		
-		//Let's see if the user is trying to open a .PDE file...
+		// Let's see if the user is trying to open a .PDE file...
 		
 		Intent intent = getIntent();
-        
-        if(intent.getAction().equals(Intent.ACTION_VIEW) && intent.getType() != null) {
-        	String scheme = intent.getData().getScheme();
-        	String filePath = intent.getData().getPath();
-        	
-        	//Let's make sure we don't have any bad data...
-        	if(scheme != null && scheme.equalsIgnoreCase("file") && filePath != null) {
-        		//Try to get the file...
-        		File file = new File(filePath);
-        		
-        		String ext = "";
-        		int lastDot = filePath.lastIndexOf('.');
-    			if(lastDot != -1) {
-    				ext = filePath.substring(lastDot);
-    			}
-    			
-        		//Is this a good file?
-        		if(file.exists() && !file.isDirectory() && ext.equalsIgnoreCase(".pde")) {
-        			//Let's get the sketch folder...
-        			File sketchFolder = file.getParentFile();
-        			
-        			//Here goes...
-        			loadSketch(sketchFolder.getAbsolutePath(), APDE.SketchLocation.EXTERNAL);
-        			
-        			message(getGlobalState().getString(R.string.sketch_load_external_success));
-        		}
-        	}
-        }
+		
+		if ((intent.getAction().equals(Intent.ACTION_VIEW) || intent.getAction().equals(Intent.ACTION_EDIT))) {
+			String scheme = intent.getData().getScheme();
+			String filePath = intent.getData().getPath();
+			
+			// Let's make sure we don't have any bad data...
+			if (scheme != null && (scheme.equalsIgnoreCase("file") || scheme.equalsIgnoreCase("content")) && filePath != null && filePath.length() != 0) {
+				// There are many different formats that are caught by the below if-else branching.
+				// I have tested numerous file managers and they produce things like:
+				//  - /sdcard/path/to/sketch.pde (normal, good)
+				//  - /external_file/sdcard/path/to/sketch.pde (weird prefix)
+				//  - /path/to/sketch.pde (missing root)
+				
+				// Try like normal
+				if (!loadExternalSketch(filePath)) {
+					// Sometimes file managers give us weird prefixes
+					String crop = filePath;
+					// Trim all beginning slashes
+					if (crop.length() > 1) {
+						while (crop.charAt(0) == '/') crop = crop.substring(1);
+					}
+					// Trim everything leading up to the next slash
+					int slashIndex = crop.indexOf('/');
+					if (slashIndex != -1 && crop.length() > slashIndex + 1) {
+						crop = crop.substring(slashIndex);
+						// Get rid of extra slashes, leaving only one behind
+						while (crop.length() > 2 && crop.charAt(1) == '/') crop = crop.substring(1);
+					}
+					if (!loadExternalSketch(crop)) {
+						// Sometimes file managers give us paths starting in /sdcard/
+						loadExternalSketch(Environment.getExternalStorageDirectory().getPath() + filePath);
+					}
+				}
+			}
+		}
         
         //Make Processing 3.0 behave properly
         getGlobalState().initProcessingPrefs();
@@ -1087,6 +1094,29 @@ public class EditorActivity extends AppCompatActivity {
 		
         //In case the user has enabled / disabled undo / redo in settings
         supportInvalidateOptionsMenu();
+	}
+	
+	private boolean loadExternalSketch(String filePath) {
+		//Try to get the file...
+		File file = new File(filePath);
+		
+		String ext = "";
+		int lastDot = filePath.lastIndexOf('.');
+		if (lastDot != -1) {
+			ext = filePath.substring(lastDot);
+		}
+		
+		// Is this a good file?
+		if (ext.equalsIgnoreCase(".pde") && file.exists() && !file.isDirectory()) {
+			// Let's get the sketch folder...
+			File sketchFolder = file.getParentFile();
+			// Here goes...
+			loadSketch(sketchFolder.getAbsolutePath(), APDE.SketchLocation.EXTERNAL);
+			message(getGlobalState().getString(R.string.sketch_load_external_success));
+			return true;
+		}
+		
+		return false;
 	}
     
     public HashMap<String, KeyBinding> getKeyBindings() {
