@@ -20,6 +20,7 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
@@ -440,14 +441,26 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 	}
 	
 	public void launchSketchFolder() {
-		//TODO make this browse, not request a file...
-		//TODO also, get rid of Google Drive and such - only allow local file browsers (that support the external storage)
+		// This is very broken. Most file manager seem unable to display a folder.
+		// The only file manager that works is Open Intents (OI), which uses a separate mechanism.
+		// TODO Need to create an in-app file browser to avoid depending on an external file browser
 		
 		File sketchFolder = getGlobalState().getSketchLocation();
+		Intent intent = new Intent(Intent.ACTION_VIEW);
+		Uri uri;
 		
-		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-		intent.setDataAndType(Uri.fromFile(sketchFolder), "*/*");
-		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //Start this in a separate task
+		if (android.os.Build.VERSION.SDK_INT >= 24) {
+			// Need to use FileProvider
+			uri = FileProvider.getUriForFile(this, "com.calsignlabs.apde.fileprovider", sketchFolder);
+			intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		} else {
+			uri = Uri.fromFile(sketchFolder);
+		}
+		
+		// Support OI File Manager - perhaps the only file manager that supports displaying folders
+		intent.putExtra("org.openintents.extra.ABSOLUTE_PATH", sketchFolder.getAbsolutePath());
+		intent.setDataAndType(uri, "*/*");
+		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Start this in a separate task
 		startActivity(Intent.createChooser(intent, getResources().getString(R.string.show_sketch_folder_title)));
 	}
 	
