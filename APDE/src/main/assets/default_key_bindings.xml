@@ -2,6 +2,8 @@
 <bindings>
     <!-- this file defines the default key bindings -->
     
+    <!-- key numbers are keycode values: https://developer.android.com/reference/android/view/KeyEvent.html -->
+    
     <binding key="47" mod="ctrl">save_sketch</binding>
     <binding key="42" mod="ctrl">new_sketch</binding>
     <binding key="43" mod="ctrl">open_sketch</binding>
@@ -28,4 +30,23 @@
     <binding key="53" mod="ctrl">redo</binding>
     
     <binding key="34" mod="ctrl">find_replace</binding>
+    <binding key="35" mod="ctrl">find_next</binding> <!-- not yet implemented -->
+    <binding key="35" mod="ctrl|shift">find_next</binding> <!-- not yet implemented -->
+    <binding key="33" mod="ctrl">find_selection</binding> <!-- not yet implemented -->
+    
+    <binding key="39" mod="ctrl|shift">view_sketches</binding>
+    <binding key="43" mod="ctrl|shift">view_examples</binding>
+    <binding key="40" mod="ctrl|shift">view_recent</binding>
+    
+    <binding key="55" mod="ctrl">settings</binding>
+    <binding key="56" mod="ctrl">sketch_properties</binding>
+    <binding key="56" mod="ctrl|shift">sketch_permissions</binding> <!-- not yet implemented -->
+    
+    <binding key="39" mod="ctrl">show_sketch_folder</binding>
+    <binding key="29" mod="ctrl|shift">add_file</binding> <!-- not yet implemented -->
+    
+    <binding key="31" mod="ctrl|shift">color_selector</binding>
+    
+    <binding key="36" mod="ctrl">open_reference</binding>
+    <binding key="34" mod="ctrl|shift">find_in_reference</binding>
 </bindings>

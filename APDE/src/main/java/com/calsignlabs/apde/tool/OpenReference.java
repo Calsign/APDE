@@ -25,7 +25,7 @@ public class OpenReference implements Tool {
 	
 	@Override
 	public KeyBinding getKeyBinding() {
-		return null;
+		return context.getEditor().getKeyBindings().get("open_reference");
 	}
 	
 	@Override

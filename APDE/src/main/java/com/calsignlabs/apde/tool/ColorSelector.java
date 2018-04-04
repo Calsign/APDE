@@ -194,7 +194,7 @@ public class ColorSelector implements Tool {
 	
 	@Override
 	public KeyBinding getKeyBinding() {
-		return null;
+		return context.getEditor().getKeyBindings().get("color_selector");
 	}
 	
 	@Override

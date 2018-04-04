@@ -234,13 +234,16 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		launchSketchFolder.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
 			@Override
 			public boolean onPreferenceClick(Preference preference) { 
-				launchSketchFolder();
+				getGlobalState().launchSketchFolder(SketchPropertiesActivity.this);
 				return true;
 			}
 		});
 		
-		if (getGlobalState().isTemp()) {
+		if (getGlobalState().isTemp() || getGlobalState().isSketchbook() &&
+				getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.INTERNAL)) {
+			
 			// We can't show the sketch folder of a temp sketch because it's in the internal storage
+			// And we can't show sketches when the drive is set to internal
 			launchSketchFolder.setEnabled(false);
 		}
 		
@@ -438,30 +441,6 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		
 		Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.select_file));
 	    startActivityForResult(intent, REQUEST_CHOOSER);
-	}
-	
-	public void launchSketchFolder() {
-		// This is very broken. Most file manager seem unable to display a folder.
-		// The only file manager that works is Open Intents (OI), which uses a separate mechanism.
-		// TODO Need to create an in-app file browser to avoid depending on an external file browser
-		
-		File sketchFolder = getGlobalState().getSketchLocation();
-		Intent intent = new Intent(Intent.ACTION_VIEW);
-		Uri uri;
-		
-		if (android.os.Build.VERSION.SDK_INT >= 24) {
-			// Need to use FileProvider
-			uri = FileProvider.getUriForFile(this, "com.calsignlabs.apde.fileprovider", sketchFolder);
-			intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-		} else {
-			uri = Uri.fromFile(sketchFolder);
-		}
-		
-		// Support OI File Manager - perhaps the only file manager that supports displaying folders
-		intent.putExtra("org.openintents.extra.ABSOLUTE_PATH", sketchFolder.getAbsolutePath());
-		intent.setDataAndType(uri, "*/*");
-		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Start this in a separate task
-		startActivity(Intent.createChooser(intent, getResources().getString(R.string.show_sketch_folder_title)));
 	}
 	
 	@SuppressLint({ "InlinedApi", "NewApi" })

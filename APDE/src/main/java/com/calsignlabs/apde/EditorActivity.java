@@ -353,9 +353,11 @@ public class EditorActivity extends AppCompatActivity {
                     // Display the relative path in the action bar
                     if(drawerSketchLocationType != null) {
     					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
-    				} else {
-    					getSupportActionBar().setSubtitle(null);
-    				}
+    				} else if (drawerRecentSketch) {
+						getSupportActionBar().setSubtitle(getResources().getString(R.string.drawer_folder_recent) + "/");
+					} else {
+							getSupportActionBar().setSubtitle(null);
+					}
             	} else { // Detect a close event
             		// Re-enable the code area
 					if (isSelectedCodeAreaInitialized()) {
@@ -399,6 +401,8 @@ public class EditorActivity extends AppCompatActivity {
 						drawerSketchLocationType = APDE.SketchLocation.TEMPORARY;
 						break;
 					case 4:
+						drawerSketchLocationType = null;
+						drawerSketchPath = "";
 						drawerRecentSketch = true;
 						break;
 					}
@@ -441,14 +445,6 @@ public class EditorActivity extends AppCompatActivity {
 						
 						break;
 					}
-				}
-				
-				if (drawerSketchLocationType != null) {
-					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
-				} else if (drawerRecentSketch) {
-					getSupportActionBar().setSubtitle(getResources().getString(R.string.drawer_folder_recent) + "/");
-				} else {
-					getSupportActionBar().setSubtitle(null);
 				}
 				
 				forceDrawerReload();
@@ -1199,58 +1195,96 @@ public class EditorActivity extends AppCompatActivity {
     	//Check for the key bindings
     	//...this is where functional programming would come in handy
     	
-    	if(keyBindings.get("save_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("save_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		saveSketch();
     		return true;
     	}
-    	if(keyBindings.get("new_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("new_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		createNewSketch();
     		return true;
     	}
-    	if(keyBindings.get("open_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("open_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		loadSketch();
     		return true;
     	}
     	
-    	if(keyBindings.get("run_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("run_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		runApplication();
     		return true;
     	}
-    	if(keyBindings.get("stop_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("stop_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		stopApplication();
     		return true;
     	}
     	
-    	if(keyBindings.get("new_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		if(!getGlobalState().isExample())
+    	if (keyBindings.get("new_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		if (!getGlobalState().isExample())
     			addTabWithDialog();
     		return true;
     	}
-    	if(keyBindings.get("delete_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		if(!getGlobalState().isExample())
+    	if (keyBindings.get("delete_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		if (!getGlobalState().isExample())
     			deleteTab();
     		return true;
     	}
-    	if(keyBindings.get("rename_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		if(!getGlobalState().isExample())
+    	if (keyBindings.get("rename_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		if (!getGlobalState().isExample())
     			renameTab();
     		return true;
     	}
     	
-    	if(keyBindings.get("undo").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("undo").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		if (!getGlobalState().isExample() && getCodeCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
     			tabs.get(getSelectedCodeIndex()).undo(this);
     		}
     		return true;
     	}
-    	if(keyBindings.get("redo").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("redo").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		if (!getGlobalState().isExample() && getCodeCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
     			tabs.get(getSelectedCodeIndex()).redo(this);
     		}
     		
     		return true;
     	}
-    	
+		
+		if (keyBindings.get("view_sketches").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			loadSketch();
+			selectDrawerFolder(APDE.SketchLocation.SKETCHBOOK);
+			return true;
+		}
+		if (keyBindings.get("view_examples").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			loadSketch();
+			selectDrawerFolder(APDE.SketchLocation.EXAMPLE);
+			return true;
+		}
+		if (keyBindings.get("view_recent").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			loadSketch();
+			selectDrawerRecent();
+			return true;
+		}
+		
+		if (keyBindings.get("settings").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			launchSettings();
+			return true;
+		}
+		if (keyBindings.get("sketch_properties").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			launchSketchProperties();
+			return true;
+		}
+		if (keyBindings.get("sketch_permissions").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			// TODO Sketch permissions
+			return true;
+		}
+		
+		if (keyBindings.get("show_sketch_folder").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			getGlobalState().launchSketchFolder(this);
+			return true;
+		}
+		if (keyBindings.get("add_file").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			// TODO Add file
+			return true;
+		}
+		
     	//Handle tool keyboard shortcuts
     	//TODO Potential conflicts... for now, two tools with the same shortcut will both run
     	
@@ -2198,6 +2232,18 @@ public class EditorActivity extends AppCompatActivity {
      * Reloads the navigation drawer
      */
     public void forceDrawerReload() {
+    	if (drawerOpen) {
+    		if (drawerSketchLocationType != null) {
+				getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
+			} else if (drawerRecentSketch) {
+				getSupportActionBar().setSubtitle(getResources().getString(R.string.drawer_folder_recent) + "/");
+			} else {
+				getSupportActionBar().setSubtitle(null);
+			}
+		} else {
+			getSupportActionBar().setSubtitle(null);
+		}
+    	
         final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
         
         ArrayList<FileNavigatorAdapter.FileItem> items;
@@ -2247,12 +2293,21 @@ public class EditorActivity extends AppCompatActivity {
 		});
     }
     
-    public void setDrawerLocation(APDE.SketchMeta folder) {
-    	drawerSketchLocationType = folder.getLocation();
-    	drawerSketchPath = folder.getPath();
+    public void selectDrawerFolder(APDE.SketchLocation location) {
+    	drawerSketchLocationType = location;
+    	drawerSketchPath = "";
+    	drawerRecentSketch = false;
     	
     	forceDrawerReload();
     }
+    
+    public void selectDrawerRecent() {
+    	drawerSketchLocationType = null;
+    	drawerSketchPath = "";
+    	drawerRecentSketch = true;
+    	
+    	forceDrawerReload();
+	}
     
     /**
      * @return the APDE application global state

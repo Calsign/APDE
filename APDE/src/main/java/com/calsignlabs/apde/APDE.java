@@ -5,15 +5,18 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
 import android.preference.PreferenceManager;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.view.ContextThemeWrapper;
 import android.view.View;
@@ -1212,6 +1215,13 @@ public class APDE extends Application {
 		return sketchLocation.equals(SketchLocation.TEMPORARY);
 	}
 	
+	/**
+	 * @return whether or not the sketch is in the sketchbook
+	 */
+	public boolean isSketchbook() {
+		return sketchLocation.equals(SketchLocation.SKETCHBOOK);
+	}
+	
 	public void putRecentSketch(SketchLocation location, String path) {
 		ArrayList<SketchMeta> oldSketches = getRecentSketches();
 		SketchMeta[] sketches = new SketchMeta[oldSketches.size() + 1];
@@ -1586,6 +1596,37 @@ public class APDE extends Application {
 		builder.setView(frameLayout);
 		
 		return input;
+	}
+	
+	public void launchSketchFolder(Activity activityContext) {
+		if (isExample() || isTemp() || (isSketchbook()
+				&& getSketchbookDrive().type.equals(StorageDrive.StorageDriveType.INTERNAL))) {
+			
+			// Don't try opening sketches that are in places that we can't see
+			return;
+		}
+		
+		// This is very broken. Most file manager seem unable to display a folder.
+		// The only file manager that works is Open Intents (OI), which uses a separate mechanism.
+		// TODO Need to create an in-app file browser to avoid depending on an external file browser
+		
+		File sketchFolder = getSketchLocation();
+		Intent intent = new Intent(Intent.ACTION_VIEW);
+		Uri uri;
+		
+		if (android.os.Build.VERSION.SDK_INT >= 24) {
+			// Need to use FileProvider
+			uri = FileProvider.getUriForFile(activityContext, "com.calsignlabs.apde.fileprovider", sketchFolder);
+			intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		} else {
+			uri = Uri.fromFile(sketchFolder);
+		}
+		
+		// Support OI File Manager - perhaps the only file manager that supports displaying folders
+		intent.putExtra("org.openintents.extra.ABSOLUTE_PATH", sketchFolder.getAbsolutePath());
+		intent.setDataAndType(uri, "*/*");
+		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Start this in a separate task
+		activityContext.startActivity(Intent.createChooser(intent, getResources().getString(R.string.show_sketch_folder_title)));
 	}
 	
 	public static final SimpleDateFormat DEBUG_LOG_TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());

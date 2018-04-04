@@ -114,7 +114,7 @@ public class FindInReference implements Tool {
 	
 	@Override
 	public KeyBinding getKeyBinding() {
-		return null;
+		return context.getEditor().getKeyBindings().get("find_in_reference");
 	}
 	
 	@Override

@@ -225,7 +225,9 @@ public class FindReplace implements Tool {
 	@Override
 	public void run() {
 		if (context.getEditor().findViewById(R.id.find_replace_toolbar) != null) {
-			//If it's already there, then leave it
+			// If it's already there, then leave it
+			// But switch focus
+			findTextField.requestFocus();
 			return;
 		}
 		
@@ -486,6 +488,13 @@ public class FindReplace implements Tool {
 				
 				//Make sure to update the layout
 				contentView.invalidate();
+				
+				findReplaceToolbar.post(new Runnable() {
+					@Override
+					public void run() {
+						findTextField.requestFocus();
+					}
+				});
 			}
 		});
 	}
