@@ -961,7 +961,7 @@ public class EditorActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		getGlobalState().writeCodeDeletionDebugStatus("onActivityResult()");
 		
-    	//This is the code to delete the old APK file
+    	// This is the code to delete the old APK file
     	if (requestCode == FLAG_DELETE_APK) {
     		Build.cleanUpPostLaunch(this);
     	}
@@ -3300,49 +3300,39 @@ public class EditorActivity extends AppCompatActivity {
     	return false;
     }
     
-    //Called internally from delete tab dialog
+    /**
+     * Called internally from delete tab dialog
+     */
     private void deleteTabContinue() {
     	if(tabs.size() > 0) {
-    		//Get the tab
-//    		Tab cur = tabBar.getSelectedTab(); //TODO there'll be problems here for sure
-    		//Delete the tab from the sketch folder
+    		// Delete the tab from the sketch folder
     		deleteLocalFile(getSelectedSketchFile().getFilename());
-			//Disable the tab
-//    		tabs.get(cur).disable();
+			// Disable the tab (prevents it from being saved if we don't do things quite right)
 			getSelectedSketchFile().disable();
-    		//Remove the tab
-//    		tabBar.removeSelectedTab();
+	  
+			// Get the index before we delete the tab and
+			int selectedCodeIndex = getSelectedCodeIndex();
 			
-			// We have to do this whole hop-skip thing because of peculiarities in the PagerSlidingTabStrip library...
-			selectCode(getSelectedCodeIndex() - 1);
-			tabs.remove(getSelectedCodeIndex() + 1);
-//	    	tabs.remove(cur);
-	    	
-	    	//If there are no more tabs
+			tabs.remove(selectedCodeIndex);
+			
+	    	// If there are no more tabs
 	    	if(getCodeCount() <= 0) {
-//	    		//Clear the code text area
-//		    	CodeEditText code = ((CodeEditText) findViewById(R.id.code));
-//		    	code.setNoUndoText("");
-//		    	code.setSelection(0);
-//		    	
-//		    	//Get rid of previous syntax highlighter data
-//	    		code.clearTokens();
-//	    		
-//	    		//Disable the code text area if there is no selected tab
-//		    	code.setFocusable(false);
-//	    		code.setFocusableInTouchMode(false);
-	    		
-	    		//Force remove all tabs
-//	    		tabBar.removeAllTabs();
+	    		// Force remove all tabs
 	    		tabs.clear();
 	    		
-	    		//Force action menu refresh
+	    		// Force action menu refresh
 	    		supportInvalidateOptionsMenu();
 	    	}
-		
+			
 			codePagerAdapter.notifyDataSetChanged();
 			
-	    	//Inform the user in the message area
+			if (selectedCodeIndex == 0) {
+				selectCode(0);
+			} else if (selectedCodeIndex >= tabs.size() && tabs.size() > 0) {
+				selectCode(tabs.size() - 1);
+			}
+			
+	    	// Inform the user in the message area
 	    	message(getResources().getText(R.string.tab_delete_success));
     	}
     }
