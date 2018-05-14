@@ -17,7 +17,7 @@
             android:layout_marginLeft="12dp"
             android:layout_marginRight="12dp"
             android:layout_marginTop="12dp"
-            android:hint="@string/alias"
+            android:hint="@string/export_signed_package_key_alias"
             android:inputType="text" />
         
         <EditText
@@ -28,7 +28,7 @@
             android:layout_marginLeft="12dp"
             android:layout_marginRight="12dp"
             android:layout_marginTop="6dp"
-            android:hint="@string/alias_password"
+            android:hint="@string/export_signed_package_key_alias_password"
             android:inputType="textPassword" />
         
         <EditText
@@ -39,7 +39,7 @@
             android:layout_marginLeft="12dp"
             android:layout_marginRight="12dp"
             android:layout_marginTop="6dp"
-            android:hint="@string/alias_password_confirm"
+            android:hint="@string/export_signed_package_key_alias_password_confirm"
             android:inputType="textPassword" />
         
         <LinearLayout
@@ -54,7 +54,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/certificate_validity" />
+                android:text="@string/export_signed_package_certificate_validity" />
             
             <EditText
                 android:id="@+id/create_alias_validity"
@@ -62,7 +62,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="6dp"
                 android:inputType="number"
-                android:text="@string/default_certificate_validity" />
+                android:text="@string/export_signed_package_certificate_validity_default" />
         </LinearLayout>
         
         <TableLayout
@@ -82,7 +82,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/certificate_name" />
+                    android:text="@string/export_signed_package_certificate_name" />
                 
                 <EditText
                     android:id="@+id/create_alias_certificate_name"
@@ -99,7 +99,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/certificate_organizational_unit" />
+                    android:text="@string/export_signed_package_certificate_organizational_unit" />
                 
                 <EditText
                     android:id="@+id/create_alias_certificate_organizational_unit"
@@ -116,7 +116,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/certificate_organization" />
+                    android:text="@string/export_signed_package_certificate_organization" />
                 
                 <EditText
                     android:id="@+id/create_alias_certificate_organization"
@@ -133,7 +133,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/certificate_city" />
+                    android:text="@string/export_signed_package_certificate_city" />
                 
                 <EditText
                     android:id="@+id/create_alias_certificate_city"
@@ -150,7 +150,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/certificate_state" />
+                    android:text="@string/export_signed_package_certificate_state" />
                 
                 <EditText
                     android:id="@+id/create_alias_certificate_state"
@@ -167,7 +167,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/certificate_country" />
+                    android:text="@string/export_signed_package_certificate_country" />
                 
                 <EditText
                     android:id="@+id/create_alias_certificate_country"

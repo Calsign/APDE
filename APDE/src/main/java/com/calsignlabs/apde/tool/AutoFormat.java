@@ -22,7 +22,7 @@ public class AutoFormat implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.auto_format);
+		return context.getResources().getString(R.string.tool_auto_format);
 	}
 	
 	@Override
@@ -35,7 +35,7 @@ public class AutoFormat implements Tool {
 			code.setUpdateText((new processing.mode.java.AutoFormat()).format(code.getText().toString()));
 			code.clearTokens();
 			
-			context.getEditor().message(context.getResources().getString(R.string.auto_formatter_complete));
+			context.getEditor().message(context.getResources().getString(R.string.tool_auto_format_success));
 		}
 	}
 	

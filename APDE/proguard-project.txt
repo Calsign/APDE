@@ -22,6 +22,15 @@
 -dontobfuscate
 -dontoptimize
 -dontskipnonpubliclibraryclassmembers
+-dontpreverify # this was causing us problems
+
+#-dontwarn java.awt.**
+#-dontwarn javax.**
+#-dontwarn processing.mode.java.pdex.**
+#-dontwarn org.ietf.**
+#-dontwarn com.googlecode.javaewah.**
+#-dontwarn org.apache.**
+#-dontwarn sun.**
 
 -dontwarn android.**
 -dontwarn processing.**

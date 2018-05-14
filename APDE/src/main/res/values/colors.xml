@@ -31,4 +31,6 @@
     <color name="find_replace_bar">#ff324f7a</color>
     <color name="find_replace_replace_bar">#ff365988</color>
     <color name="find_replace_find_not_found">#bfff1209</color>
+    
+    <color name="colorPrimary">@color/bar_overlay</color>
 </resources>

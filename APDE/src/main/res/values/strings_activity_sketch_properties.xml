@@ -1,19 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+	<!-- Manifest properties. -->
+	
     <string name="prop_manifest">Manifest</string>
+	
     <string name="prop_permissions">Sketch Permissions</string>
     <string name="prop_permissions_desc">Required for specific functionality</string>
+	
     <string name="prop_min_sdk">Minimum SDK</string>
     <string name="prop_min_sdk_default">15</string>
     <string name="prop_target_sdk">Target SDK</string>
     <string name="prop_target_sdk_default">15</string>
-    <string-array name="orientations">
+	
+	<string name="prop_pretty_name">Sketch Display Name</string>
+	<string name="prop_version_code">Version Code</string>
+	<string name="prop_version_code_default">1</string>
+	<string name="prop_pretty_version">Version Name</string>
+	<string name="prop_pretty_version_default">1.0</string>
+	
+    <string-array name="prop_orientation_orientations">
         <item>None</item>
         <item>Portrait</item>
         <item>Landscape</item>
         <item>Reverse Landscape</item>
     </string-array>
-    <string-array name="orientation_values">
+    <string-array name="prop_orientation_orientation_values">
         <item>unspecified</item>
         <item>portrait</item>
         <item>landscape</item>
@@ -21,25 +32,25 @@
     </string-array>
     <string name="prop_orientation">Locked Orientation</string>
     <string name="prop_orientation_default">unspecified</string>
-    <string name="use_custom_manifest">Use Custom Manifest</string>
-    <string name="use_custom_manifest_desc">Located in sketch folder</string>
-    <string name="prop_pretty_name">Sketch Display Name</string>
+	
+	<!-- Sketch folder properties. -->
+	
     <string name="prop_sketch_folder">Sketch Folder</string>
     <string name="prop_add_file">Add File</string>
     <string name="prop_add_file_desc">Add a file to the sketch\'s data folder</string>
+	<!-- The button shown in settings: -->
     <string name="prop_show_sketch_folder">Show Sketch Folder</string>
+	<!-- The title of the activity that is started after pressing the button in settings: -->
+    <string name="show_sketch_folder_title">Show Sketch Folder</string>
     <string name="select_file">Select File</string>
-    <string name="show_sketch_folder">Show Sketch Folder</string>
-    <string name="prop_version_code">Version Code</string>
-    <string name="prop_version_code_default">1</string>
-    <string name="prop_pretty_version">Version Name</string>
-    <string name="prop_pretty_version_default">1.0</string>
-    <string name="prop_change_icon">Change Sketch Icon</string>
-    <string name="sketch_icon">Sketch Icon</string>
-    <string name="icon_file_select">Select Icon File</string>
-    <string name="icon_file">Icon File</string>
-    <string name="format_scale_crop">Crop</string>
-    <string name="format_scale_center">Center</string>
-    <string name="format_scale_resize">Resize</string>
-    <string name="icon_file_not_selected">No Icon File Selected</string>
+	
+	<!-- Change sketch icon button and dialog. -->
+	<string name="prop_change_icon">Change Sketch Icon</string>
+    <string name="change_icon_icon_accessibility_text">Sketch Icon</string>
+    <string name="change_icon_dialog_icon_file_select">Select Icon File</string>
+    <string name="change_icon_dialog_icon_file">Icon File</string>
+    <string name="change_icon_dialog_format_scale_crop">Crop</string>
+    <string name="change_icon_dialog_format_scale_center">Center</string>
+    <string name="change_icon_dialog_format_scale_resize">Resize</string>
+    <string name="change_icon_dialog_icon_file_not_selected">No Icon File Selected</string>
 </resources>

@@ -3,16 +3,16 @@
         android:key="pref_code_assistance_settings"
         android:title="@string/pref_code_assistance" >
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="auto_indent"
-            android:title="@string/auto_indent" />
+            android:title="@string/pref_auto_indent" />
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:dependency="auto_indent"
             android:key="curly_brace_insertion"
-            android:summary="@string/curly_brace_insertion_desc"
-            android:title="@string/curly_brace_insertion" />
+            android:summary="@string/pref_curly_brace_insertion_desc"
+            android:title="@string/pref_curly_brace_insertion" />
     </android.support.v7.preference.PreferenceCategory>
 </android.support.v7.preference.PreferenceScreen>

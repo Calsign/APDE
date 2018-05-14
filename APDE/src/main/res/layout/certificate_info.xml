@@ -20,7 +20,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/key_alias" />
+            android:text="@string/export_signed_package_certificate_info_key_alias" />
         
         <TextView
             android:id="@+id/alias_name"
@@ -41,7 +41,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/expiration_date" />
+            android:text="@string/export_signed_package_certificate_info_expiration_date" />
         
         <TextView
             android:id="@+id/certificate_expiration"
@@ -63,7 +63,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/certificate_name" />
+            android:text="@string/export_signed_package_certificate_name" />
         
         <TextView
             android:id="@+id/alias_certificate_name"
@@ -84,7 +84,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/certificate_organizational_unit" />
+            android:text="@string/export_signed_package_certificate_organizational_unit" />
         
         <TextView
             android:id="@+id/alias_certificate_organizational_unit"
@@ -105,7 +105,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/certificate_organization" />
+            android:text="@string/export_signed_package_certificate_organization" />
         
         <TextView
             android:id="@+id/alias_certificate_organization"
@@ -126,7 +126,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/certificate_city" />
+            android:text="@string/export_signed_package_certificate_city" />
         
         <TextView
             android:id="@+id/alias_certificate_city"
@@ -147,7 +147,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/certificate_state" />
+            android:text="@string/export_signed_package_certificate_state" />
         
         <TextView
             android:id="@+id/alias_certificate_state"
@@ -168,7 +168,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/certificate_country" />
+            android:text="@string/export_signed_package_certificate_country" />
         
         <TextView
             android:id="@+id/alias_certificate_country"

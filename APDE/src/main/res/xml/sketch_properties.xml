@@ -54,8 +54,8 @@
         
         <ListPreference android:key="prop_orientation"
 	        android:title="@string/prop_orientation"
-	        android:entries="@array/orientations"
-	        android:entryValues="@array/orientation_values"
+	        android:entries="@array/prop_orientation_orientations"
+	        android:entryValues="@array/prop_orientation_orientation_values"
 	        android:defaultValue="@string/prop_orientation_default" />
 	</PreferenceCategory>
 	

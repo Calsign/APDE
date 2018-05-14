@@ -8,11 +8,19 @@ import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 /*
@@ -126,6 +134,46 @@ public class SketchFile implements Parcelable {
 				return new FileChange[size];
 			}
 		};
+		
+		public JSONObject toJsonObject() throws JSONException {
+			JSONObject json = new JSONObject();
+			
+			json.put("changeIndex", changeIndex);
+			json.put("beforeText", beforeText);
+			json.put("afterText", afterText);
+			
+			json.put("beforeSelectionStart", beforeSelectionStart);
+			json.put("beforeSelectionEnd", beforeSelectionEnd);
+			
+			json.put("afterSelectionStart", afterSelectionStart);
+			json.put("afterSelectionEnd", afterSelectionEnd);
+			
+			json.put("beforeScrollX", beforeScrollX);
+			json.put("beforeScrollY", beforeScrollY);
+			
+			json.put("afterScrollX", afterScrollX);
+			json.put("afterScrollY", afterScrollY);
+			
+			return json;
+		}
+		
+		public FileChange(JSONObject json) throws JSONException {
+			changeIndex = json.getInt("changeIndex");
+			beforeText = json.getString("beforeText");
+			afterText = json.getString("afterText");
+			
+			beforeSelectionStart = json.getInt("beforeSelectionStart");
+			beforeSelectionEnd = json.getInt("beforeSelectionEnd");
+			
+			afterSelectionStart = json.getInt("afterSelectionStart");
+			afterSelectionEnd = json.getInt("afterSelectionEnd");
+			
+			beforeScrollX = json.getInt("beforeScrollX");
+			beforeScrollY = json.getInt("beforeScrollY");
+			
+			afterScrollX = json.getInt("afterScrollX");
+			afterScrollY = json.getInt("afterScrollY");
+		}
 	}
 	
 	public SketchFile(String title) {
@@ -390,7 +438,7 @@ public class SketchFile implements Parcelable {
 	}
 	
 	private void applyUndoRedoLimit(Context context) {
-		int limit = Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(context).getString("pref_key_undo_redo_keep", context.getResources().getString(R.string.undo_redo_keep_default_value)));
+		int limit = Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(context).getString("pref_key_undo_redo_keep", context.getResources().getString(R.string.pref_undo_redo_keep_default_value)));
 		
 		if (limit != -1) {
 			trimEntries(limit);
@@ -514,7 +562,7 @@ public class SketchFile implements Parcelable {
 		}
 	}
 	
-	private void updateEditor(EditorActivity context) {
+	protected void updateEditor(EditorActivity context) {
 		final CodeEditText code = fragment.getCodeEditText();
 		final HorizontalScrollView scrollerX = fragment.getCodeScrollerX();
 		final ScrollView scrollerY = fragment.getCodeScroller();
@@ -777,8 +825,8 @@ public class SketchFile implements Parcelable {
 		undo = new LinkedList<FileChange>();
 		redo = new LinkedList<FileChange>();
 		
-		source.readList(undo, null);
-		source.readList(redo, null);
+		source.readList(undo, getClass().getClassLoader());
+		source.readList(redo, getClass().getClassLoader());
 		
 		enabled = source.readByte() != 0;
 		
@@ -816,5 +864,58 @@ public class SketchFile implements Parcelable {
 		SketchFile otherSketchFile = (SketchFile) other;
 		
 		return otherSketchFile.getFilename().equals(getFilename()) && otherSketchFile.getText().equals(getText());
+	}
+	
+	public JSONObject getUndoRedoHistory() throws JSONException, NoSuchAlgorithmException {
+		JSONObject history = new JSONObject();
+		
+		String md5 = getChecksum(getText());
+		
+		JSONArray undoList = new JSONArray(), redoList = new JSONArray();
+		
+		// Save in reverse order so that we can populate back-to-front
+		Iterator<FileChange> iterator = undo.descendingIterator();
+		while (iterator.hasNext()) undoList.put(iterator.next().toJsonObject());
+		iterator = redo.descendingIterator();
+		while (iterator.hasNext()) redoList.put(iterator.next().toJsonObject());
+		
+		history.put("checksum", md5);
+		history.put("undo", undoList);
+		history.put("redo", redoList);
+		
+		return history;
+	}
+	
+	public void populateUndoRedoHistory(JSONObject history) throws JSONException, NoSuchAlgorithmException {
+		if (undo.size() != 0 || redo.size() != 0) {
+			throw new IllegalStateException("Trying to populate undo/redo history when there is already history");
+		}
+		
+		// If the user edited the files with a different app *gasp* then undo/redo will be broken.
+		// Prevent breaking things by comparing checksums.
+		String md5Current = getChecksum(text), md5Previous = history.getString("checksum");
+		if (!md5Current.equals(md5Previous)) {
+			System.err.println("File " + getFilename() + " has been modified since last saved with APDE.");
+			System.err.println("This is perfectly fine, but undo/redo history will be lost.");
+			return;
+		}
+		
+		JSONArray undoArray = history.getJSONArray("undo");
+		for (int i = 0; i < undoArray.length(); i ++) undo.push(new FileChange(undoArray.getJSONObject(i)));
+		JSONArray redoArray = history.getJSONArray("redo");
+		for (int i = 0; i < redoArray.length(); i ++) redo.push(new FileChange(redoArray.getJSONObject(i)));
+	}
+	
+	/**
+	 * Calculate the MD5 checksum of the given text. Returns the hash in hexadecimal.
+	 *
+	 * @param text the text to hash
+	 * @return the hex hash
+	 * @throws NoSuchAlgorithmException
+	 */
+	private static String getChecksum(String text) throws NoSuchAlgorithmException {
+		MessageDigest hasher = MessageDigest.getInstance("MD5");
+		hasher.update(text.getBytes());
+		return (new BigInteger(1, hasher.digest())).toString(16);
 	}
 }

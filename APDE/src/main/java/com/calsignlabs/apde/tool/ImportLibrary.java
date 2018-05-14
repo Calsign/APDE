@@ -21,7 +21,7 @@ public class ImportLibrary implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.import_library);
+		return context.getResources().getString(R.string.tool_import_library);
 	}
 	
 	@Override

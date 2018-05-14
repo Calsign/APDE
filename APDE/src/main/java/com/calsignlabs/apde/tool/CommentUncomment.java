@@ -83,7 +83,7 @@ public class CommentUncomment implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.comment_uncomment);
+		return context.getResources().getString(R.string.tool_comment_uncomment);
 	}
 	
 	@Override

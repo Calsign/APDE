@@ -19,6 +19,10 @@ Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 package com.calsignlabs.apde.build;
 
+import android.content.Context;
+
+import com.calsignlabs.apde.R;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
@@ -47,12 +51,11 @@ public class Preproc extends PdePreprocessor {
 		this.packageName = packageName;
 	}
 	
-	public SurfaceInfo initSketchSize(String code) throws SketchException {
-		SurfaceInfo surfaceInfo = parseSketchSizeCustom(code, true);
+	public SurfaceInfo initSketchSize(String code, Context context) throws SketchException {
+		SurfaceInfo surfaceInfo = parseSketchSizeCustom(code, true, context);
 		if (surfaceInfo == null) {
-			System.err.println("More about the size() command on Android can be");
-			System.err.println("found here: http://wiki.processing.org/w/Android");
-			throw new SketchException("Could not parse the size() command.");
+			System.err.println(context.getResources().getString(R.string.preproc_bad_size_command_more_info));
+			throw new SketchException(context.getResources().getString(R.string.preproc_bad_size_command));
 		}
 		
 		try {
@@ -66,12 +69,11 @@ public class Preproc extends PdePreprocessor {
 		return surfaceInfo;
 	}
 	
-	public String[] initSketchSmooth(String code) throws SketchException {
-		String[] info = parseSketchSmooth(code, true);
+	public String[] initSketchSmooth(String code, Context context) throws SketchException {
+		String[] info = parseSketchSmooth(code, true, context);
 		if (info == null) {
-			System.err.println("More about the size() command on Android can be");
-			System.err.println("found here: http://wiki.processing.org/w/Android");
-			throw new SketchException("Could not parse the size() command.");
+			System.err.println(context.getResources().getString(R.string.preproc_bad_size_command_more_info));
+			throw new SketchException(context.getResources().getString(R.string.preproc_bad_size_command));
 		}
 		smoothStatement = info[0];
 		sketchQuality = info[1];
@@ -85,7 +87,7 @@ public class Preproc extends PdePreprocessor {
 	 * @param fussy true if it should show an error message if bad size()
 	 * @return null if there was an error, otherwise an array (might contain some/all nulls)
 	 */
-	static public SurfaceInfo parseSketchSizeCustom(String code, boolean fussy) throws SketchException {
+	static public SurfaceInfo parseSketchSizeCustom(String code, boolean fussy, Context context) throws SketchException {
 		// This matches against any uses of the size() function, whether numbers
 		// or variables or whatever. This way, no warning is shown if size() isn't
 		// actually used in the applet, which is the case especially for anyone
@@ -131,7 +133,7 @@ public class Preproc extends PdePreprocessor {
 						if (match != null) {
 							searchArea = uncommented.substring(start + 1, match.end() - 1);
 						} else {
-							throw new SketchException("Found a { that's missing a matching }", false);
+							throw new SketchException(context.getResources().getString(R.string.preproc_missing_right_brace), false);
 						}
 					}
 				}
@@ -156,7 +158,7 @@ public class Preproc extends PdePreprocessor {
 		String[] noContents = matchMethod("noSmooth", searchArea);
 		if (noContents != null) {
 			if (extraStatements.size() != 0) {
-				throw new SketchException("smooth() and noSmooth() cannot be used in the same sketch");
+				throw new SketchException(context.getResources().getString(R.string.preproc_smooth_and_nosmooth));
 			} else {
 				extraStatements.append(noContents[0]);
 			}
@@ -176,7 +178,7 @@ public class Preproc extends PdePreprocessor {
 		// First check and make sure they aren't both being used, otherwise it'll
 		// throw a confusing state exception error that one "can't be used here".
 		if (sizeContents != null && fullContents != null) {
-			throw new SketchException("size() and fullScreen() cannot be used in the same sketch", false);
+			throw new SketchException(context.getString(R.string.preproc_size_and_fullscreen), false);
 		}
 		
 		// Get everything inside the parens for the size() method
@@ -200,23 +202,23 @@ public class Preproc extends PdePreprocessor {
 			// making a square sketch window? Not going to
 			
 //			if (info.hasOldSyntax()) {
-			if (hasOldSyntax(info)) {
+			if (hasOldSyntax(info, context)) {
 //        return null;
-				throw new SketchException("Please update your code to continue.", false);
+				throw new SketchException(context.getResources().getString(R.string.preproc_old_syntax), false);
 			}
 			
 //			if (info.hasBadSize() && fussy) {
 			if (hasBadSize(info) && fussy) {
 				// found a reference to size, but it didn't seem to contain numbers
-				final String message =
-						"The size of this sketch could not be determined from your code.\n" +
-								"Use only numbers (not variables) for the size() command.\n" +
-								"Read the size() reference for more details.";
+//				final String message =
+//						"The size of this sketch could not be determined from your code.\n" +
+//								"Use only numbers (not variables) for the size() command.\n" +
+//								"Read the size() reference for more details.";
 //				Messages.showWarning("Could not find sketch size", message, null);
-				showWarning("Could not find sketch size", message);
+				showWarning(context.getResources().getString(R.string.preproc_no_size), context.getResources().getString(R.string.preproc_no_size_message));
 //        new Exception().printStackTrace(System.out);
 //        return null;
-				throw new SketchException("Please fix the size() line to continue.", false);
+				throw new SketchException(context.getResources().getString(R.string.preproc_bad_size), false);
 			}
 			
 			info.addStatements(extraStatements);
@@ -250,7 +252,7 @@ public class Preproc extends PdePreprocessor {
 					setPrivateSurfaceInfoField(info, "renderer", args0);
 					setPrivateSurfaceInfoField(info, "display", args.get(1).trim());
 				} else {
-					throw new SketchException("That's too many parameters for fullScreen()");
+					throw new SketchException(context.getResources().getString(R.string.preproc_bad_fullscreen));
 				}
 			}
 //			info.width = "displayWidth";
@@ -342,7 +344,7 @@ public class Preproc extends PdePreprocessor {
 		return null;
 	}
 	
-	private static boolean hasOldSyntax(SurfaceInfo surfaceInfo) {
+	private static boolean hasOldSyntax(SurfaceInfo surfaceInfo, Context context) {
 		String width = getPrivateSurfaceInfoField(surfaceInfo, "width", String.class);
 		String height = getPrivateSurfaceInfoField(surfaceInfo, "height", String.class);
 		
@@ -354,24 +356,24 @@ public class Preproc extends PdePreprocessor {
 				width.equals("screenHeight") ||
 				height.equals("screenHeight") ||
 				height.equals("screenWidth")) {
-			final String message =
-					"The screenWidth and screenHeight variables are named\n" +
-							"displayWidth and displayHeight in Processing 3.\n" +
-							"Or you can use the fullScreen() method instead of size().";
+//			final String message =
+//					"The screenWidth and screenHeight variables are named\n" +
+//							"displayWidth and displayHeight in Processing 3.\n" +
+//							"Or you can use the fullScreen() method instead of size().";
 //			Messages.showWarning("Time for a quick update", message, null);
-			showWarning("Time for a quick update", message);
+			showWarning(context.getResources().getString(R.string.preproc_display_variables_quick_update), context.getResources().getString(R.string.preproc_display_variables_screen_quick_update));
 			return true;
 		}
 		if (width.equals("screen.width") ||
 				width.equals("screen.height") ||
 				height.equals("screen.height") ||
 				height.equals("screen.width")) {
-			final String message =
-					"The screen.width and screen.height variables are named\n" +
-							"displayWidth and displayHeight in Processing 3.\n" +
-							"Or you can use the fullScreen() method instead of size().";
+//			final String message =
+//					"The screen.width and screen.height variables are named\n" +
+//							"displayWidth and displayHeight in Processing 3.\n" +
+//							"Or you can use the fullScreen() method instead of size().";
 //			Messages.showWarning("Time for a quick update", message, null);
-			showWarning("Time for a quick update", message);
+			showWarning(context.getResources().getString(R.string.preproc_display_variables_quick_update), context.getResources().getString(R.string.preproc_display_variables_screen_dot_quick_update));
 			return true;
 		}
 		return false;
@@ -398,7 +400,7 @@ public class Preproc extends PdePreprocessor {
 		return false;
 	}
 	
-	static public String[] parseSketchSmooth(String code, boolean fussy) {
+	static public String[] parseSketchSmooth(String code, boolean fussy, Context context) {
 		String[] matches = PApplet.match(scrubComments(code), SMOOTH_REGEX);
 		
 		if (matches != null) {
@@ -410,13 +412,13 @@ public class Preproc extends PdePreprocessor {
 			
 			if (badSmooth && fussy) {
 				// found a reference to smooth, but it didn't seem to contain numbers
-				final String message =
-						"The smooth level of this applet could not automatically\n" +
-								"be determined from your code. Use only a numeric\n" +
-								"value (not variables) for the smooth() command.\n" +
-								"See the smooth() reference for an explanation.";
+//				final String message =
+//						"The smooth level of this applet could not automatically\n" +
+//								"be determined from your code. Use only a numeric\n" +
+//								"value (not variables) for the smooth() command.\n" +
+//								"See the smooth() reference for an explanation.";
 //				Messages.showWarning("Could not find smooth level", message, null);
-				showWarning("Could not find smooth level", message);
+				showWarning(context.getResources().getString(R.string.preproc_no_smooth), context.getResources().getString(R.string.preproc_no_smooth_message));
 //        new Exception().printStackTrace(System.out);
 				return null;
 			}

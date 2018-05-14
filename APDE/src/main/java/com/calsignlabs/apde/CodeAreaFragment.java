@@ -41,11 +41,15 @@ public class CodeAreaFragment extends Fragment {
 		if (getArguments() != null) {
 			sketchFile = (SketchFile) getArguments().getParcelable("sketchFile");
 		}
+		
+		getGlobalState().writeCodeDeletionDebugStatus("fragment onCreate()");
 	}
 	
 	@Override
 	public void onResume() {
 		super.onResume();
+		
+		getGlobalState().writeCodeDeletionDebugStatus("begin fragment onResume()");
 		
 		if (getGlobalState().getPref("enable_voice_input", false)) {
 			code.setPrivateImeOptions("");
@@ -122,12 +126,15 @@ public class CodeAreaFragment extends Fragment {
 		});
 		
 		updateWithSketchFile();
+		sketchFile.updateEditor(getGlobalState().getEditor());
 		
 		getCodeEditText().setupCustomActionMode();
 		getCodeEditText().setupTextListener();
 		
 		getCodeEditText().refreshTextSize();
 		getCodeEditText().flagRefreshTokens();
+		
+		getGlobalState().writeCodeDeletionDebugStatus("end fragment onResume()");
 	}
 	
 	public CodeEditText getCodeEditText() {
@@ -158,10 +165,14 @@ public class CodeAreaFragment extends Fragment {
 		code = (CodeEditText) getView().findViewById(R.id.code);
 		codeScroller = (ScrollView) getView().findViewById(R.id.code_scroller);
 		codeScrollerX = (HorizontalScrollView) getView().findViewById(R.id.code_scroller_x);
+		
+		getGlobalState().writeCodeDeletionDebugStatus("fragment onActivityCreated()");
 	}
 	
 	@Override
 	public void onDestroyView() {
+		getGlobalState().writeCodeDeletionDebugStatus("fragment onDestroyView()");
+		
 		// Make sure we save our state
 		sketchFile.update(getGlobalState().getEditor(), getGlobalState().getPref("pref_key_undo_redo", true));
 		

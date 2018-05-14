@@ -1,81 +1,5 @@
 <resources>
-	
-    <string name="pref_textsize_default">14</string>
-    <string name="pref_textsize_title">Font Size</string>
-    <string name="pref_syntax_highlight">Syntax Highlighting</string>
-    <string name="pref_editor">Editor</string>
-    <string name="use_hardware_keyboard">Use Hardware Keyboard</string>
-    <string name="pref_input">Input</string>
-    <string name="pref_vibrate">Enable Vibration</string>
-    <string name="enable_voice_input">Enable Voice Input</string>
-    <string name="pref_general">General</string>
-    <string name="pref_console">Console</string>
-    <string name="pref_scroll_lock">Automatically Scroll</string>
-    <string name="pref_scroll_lock_desc">When the console is updated</string>
-    <string name="override_tab">Use Tab for Indentation</string>
-    <string name="pref_sketchbook">Sketchbook</string>
-    <string name="internal_storage_sketchbook">Use Internal Storage</string>
-    <string name="pref_sketchbook_location">Location on External Storage</string>
-    <string name="char_inserts">Enable Special Character Tray</string>
-    <string name="pref_code_assistance">Coding Assistance</string>
-    <string name="auto_indent">Auto Indentation</string>
-    <string name="curly_brace_insertion">Close Code Blocks</string>
-    <string name="curly_brace_insertion_desc">Assist in placement of curly braces</string>
-    <string name="char_inserts_include_numbers">Include Numbers</string>
-    <string name="pref_build">Build</string>
-    <string name="pref_build_internal_storage">Build on Internal Storage</string>
-    <string name="pref_build_internal_storage_desc">May consume additional internal storage space</string>
-    <string name="pref_build_folder_keep">Keep Build Folder</string>
-    <string name="pref_vibrate_desc">May consume battery</string>
-    <string name="override_tab_desc">Overrides tab for accessibility</string>
-    <string name="inject_log_broadcaster">Inject Log Broadcaster</string>
-    <string name="inject_log_broadcaster_desc">Allows console to display sketch output</string>
-    <string name="undo_redo_settings">Undo/Redo</string>
-    <string name="pref_undo_redo">Enable Undo/Redo</string>
-    <string name="pref_undo_redo_keep">Keep Entries</string>
-    <string-array name="undo_redo_keep_entries">
-        <item>All</item>
-        <item >50</item>
-        <item >100</item>
-        <item >500</item>
-        <item >1,000</item>
-        <item >5,000</item>
-        <item >10,000</item>
-    </string-array>
-    <string-array name="undo_redo_keep_entry_values">
-        <item>-1</item>
-        <item >50</item>
-        <item >100</item>
-        <item >500</item>
-        <item >1000</item>
-        <item >5000</item>
-        <item >10000</item>
-    </string-array>
-    <string name="undo_redo_keep_default_value">-1</string>
-    <string name="build_output_verbose">Verbose Output</string>
-    <string name="title_activity_examples_settings"/>
-    <string name="pref_examples">Examples Updates</string>
-    <string name="enable_update_examples">Examples Updates</string>
-    <string name="enable_update_examples_mobile_data">Over Mobile Network</string>
-    <string name="enable_update_examples_mobile_data_desc">Will consume mobile data</string>
-    <string name="pref_about">About</string>
-    <string name="pref_about_version">App Version</string>
-    <string name="pref_about_google_play">APDE on Google Play</string>
-    <string name="pref_about_github">APDE on GitHub</string>
-    <string name="pref_about_email_dev">Email Developer</string>
-    <string name="pref_about_licenses">Open Source Licenses</string>
-    <string name="pref_about_github_uri">https://github.com/Calsign/APDE/</string>
-    <string name="pref_about_email_address">calsignlabs@gmail.com</string>
-    <string name="pref_about_email_subject">APDE - Android Processing IDE</string>
-    <string name="pref_about_preview_channel">APDE Preview Channel</string>
-    <string name="pref_about_preview_channel_desc">Join community to receive preview releases</string>
-    <string name="pref_about_preview_channel_uri">https://plus.google.com/communities/117703520591262292626</string>
-    <string name="pref_whats_new">Recent Changes</string>
-    <string name="pref_whats_new_enable">Show \"What\'s New\" Screen</string>
-    <string name="pref_whats_new_enable_desc">When APDE updates</string>
-    <string name="pref_whats_new_display">View Recent Changes</string>
-    <string name="pref_sketchbook_drive">Sketchbook Location</string>
-    <string-array name="settings_headers">
+	<string-array name="settings_headers">
 		<item>@string/pref_general</item>
 		<item>@string/pref_editor</item>
 		<item>@string/pref_build</item>
@@ -89,10 +13,128 @@
 		<item>pref_code_assistance</item>
 		<item>pref_about</item>
 	</string-array>
-    <string name="pref_debug">Debug</string>
-    <string name="pref_debug_global_verbose_output">Global Verbose Output</string>
-    <string name="pref_build_aapt_binary">Use pre-v0.3.3 AAPT Binary</string>
-    <string name="pref_build_aapt_binary_desc">Potential fix for devices where v0.3.3 broke the build process</string>
-    <string name="pref_build_recopy_android_jar">Re-copy android.jar file</string>
-
+	
+	<!-- General -->
+	
+	<string name="pref_general">General</string>
+	<string name="pref_vibrate">Enable Vibration</string>
+	<string name="pref_vibrate_desc">May consume battery</string>
+	<string name="pref_use_hardware_keyboard">Use Hardware Keyboard</string>
+	<string name="pref_enable_voice_input">Enable Voice Input</string>
+	
+	<string name="pref_sketchbook">Sketchbook</string>
+	<string name="pref_sketchbook_drive">Sketchbook Location</string>
+	<string name="pref_sketchbook_location">Location on External Storage</string>
+	
+	<string name="pref_examples_updates">Examples Updates</string>
+	<string name="pref_examples_updates_enable">Examples Updates</string>
+	<string name="pref_examples_updates_enable_mobile_data">Over Mobile Network</string>
+	<string name="pref_examples_updates_enable_mobile_data_desc">Will consume mobile data</string>
+	
+	<string name="pref_debug">Debug</string>
+	<string name="pref_debug_global_verbose_output">Global Verbose Output</string>
+	<string name="pref_debug_code_deletion_debug_logs">Code Deletion Debug Logs</string>
+	
+	<!-- Editor -->
+	
+	<string name="pref_editor">Editor</string>
+	<string name="pref_textsize_title">Font Size</string>
+	<string name="pref_textsize_default">14</string>
+	<string name="pref_syntax_highlight">Syntax Highlighting</string>
+	<string name="pref_override_tab">Use Tab for Indentation</string>
+	<string name="pref_override_tab_desc">Overrides tab for accessibility</string>
+	
+	<string name="pref_autosave_timeout">Autosave Timeout</string>
+	<string-array name="pref_autosave_timeout_entries">
+		<item >5 seconds</item>
+		<item >10 seconds</item>
+		<item >15 seconds</item>
+		<item >20 seconds</item>
+		<item >30 seconds</item>
+		<item >1 minute</item>
+		<item >2 minutes</item>
+		<item>Never</item>
+	</string-array>
+	<string-array name="pref_autosave_timeout_values">
+		<item >5</item>
+		<item >10</item>
+		<item >15</item>
+		<item >20</item>
+		<item >30</item>
+		<item >60</item>
+		<item >120</item>
+		<item >-1</item>
+	</string-array>
+	<string name="pref_autosave_timeout_default_value">30</string>
+	
+	<string name="pref_char_inserts">Enable Special Character Tray</string>
+	<string name="pref_char_inserts_include_numbers">Include Numbers</string>
+	
+	<string name="pref_undo_redo">Undo/Redo</string>
+	<string name="pref_undo_redo_enable">Enable Undo/Redo</string>
+	<string name="pref_undo_redo_keep">Keep Entries</string>
+	<string-array name="pref_undo_redo_keep_entries">
+		<item>All</item>
+		<item>50</item>
+		<item>100</item>
+		<item>500</item>
+		<item>1,000</item>
+		<item>5,000</item>
+		<item>10,000</item>
+	</string-array>
+	<string-array name="pref_undo_redo_keep_entry_values">
+		<item>-1</item>
+		<item>50</item>
+		<item>100</item>
+		<item>500</item>
+		<item>1000</item>
+		<item>5000</item>
+		<item>10000</item>
+	</string-array>
+	<string name="pref_undo_redo_keep_default_value">-1</string>
+	
+	<string name="pref_console">Console</string>
+	<string name="pref_scroll_lock">Automatically Scroll</string>
+	<string name="pref_scroll_lock_desc">When the console is updated</string>
+	
+	<!-- Build -->
+	
+	<string name="pref_build">Build</string>
+	<string name="pref_build_internal_storage">Build on Internal Storage</string>
+	<string name="pref_build_internal_storage_desc">May consume additional internal storage space</string>
+	<string name="pref_inject_log_broadcaster">Inject Log Broadcaster</string>
+	<string name="pref_inject_log_broadcaster_desc">Allows console to display sketch output</string>
+	
+	<string name="pref_build_output_verbose">Verbose Output</string>
+	<string name="pref_build_folder_keep">Keep Build Folder</string>
+	<string name="pref_build_aapt_binary">Use pre-v0.3.3 AAPT Binary</string>
+	<string name="pref_build_aapt_binary_desc">Potential fix for devices where v0.3.3 broke the build process</string>
+	<string name="pref_build_recopy_android_jar">Re-copy android.jar file</string>
+	
+	<!-- Coding Assistance -->
+	
+	<string name="pref_code_assistance">Coding Assistance</string>
+	<string name="pref_auto_indent">Auto Indentation</string>
+	<string name="pref_curly_brace_insertion">Close Code Blocks</string>
+	<string name="pref_curly_brace_insertion_desc">Assist in placement of curly braces</string>
+	
+	<!-- About -->
+	
+	<string name="pref_about">About</string>
+	<string name="pref_about_version">App Version</string>
+	<string name="pref_about_google_play">APDE on Google Play</string>
+	<string name="pref_about_github">APDE on GitHub</string>
+	<string name="pref_about_github_uri">https://github.com/Calsign/APDE/</string>
+	<string name="pref_about_preview_channel">APDE Preview Channel</string>
+	<string name="pref_about_preview_channel_desc">Join community to receive preview releases</string>
+	<string name="pref_about_preview_channel_uri">https://plus.google.com/communities/117703520591262292626</string>
+	<string name="pref_about_email_dev">Email Developer</string>
+	<string name="pref_about_email_address">calsignlabs@gmail.com</string>
+	<string name="pref_about_email_subject">APDE - Android Processing IDE</string>
+	<string name="pref_about_licenses">Open Source Licenses</string>
+	
+	<string name="pref_whats_new">Recent Changes</string>
+	<string name="pref_whats_new_enable">Show \"What\'s New\" Screen</string>
+	<string name="pref_whats_new_enable_desc">When APDE updates</string>
+	<string name="pref_whats_new_display">View Recent Changes</string>
 </resources>

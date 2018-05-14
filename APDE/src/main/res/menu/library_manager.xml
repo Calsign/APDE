@@ -4,20 +4,20 @@
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         app:showAsAction="never"
-        android:title="@string/action_settings" />
+        android:title="@string/menu_open_settings" />
     <item
         android:id="@+id/action_get_libraries"
         app:showAsAction="never"
         android:showAsAction="never"
-        android:title="@string/action_get_libraries" />
+        android:title="@string/library_manager_menu_get_libraries" />
     <item
         android:id="@+id/action_install_zip_library"
         app:showAsAction="never"
         android:showAsAction="never"
-        android:title="@string/action_install_zip_library" />
+        android:title="@string/library_manager_menu_install_zip_library" />
     <item
         android:id="@+id/action_dx_dexer_tool"
         app:showAsAction="never"
         android:showAsAction="never"
-        android:title="@string/action_dx_dexer_tool" />
+        android:title="@string/library_manager_menu_dx_dexer" />
 </menu>

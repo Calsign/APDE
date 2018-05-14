@@ -4,5 +4,5 @@
 	android:layout_height="match_parent"
 	android:textSize="18sp"
 	android:textColor="@android:color/white"
-	android:background="@drawable/list_item_selector"
+	android:background="?attr/selectableItemBackground"
 	android:padding="10dp" />

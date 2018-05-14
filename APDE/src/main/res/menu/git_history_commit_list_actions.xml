@@ -2,6 +2,6 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/menu_git_diff"
-        android:title="@string/git_diff"
+        android:title="@string/git_menu_diff"
         android:icon="@drawable/ic_diff_white" />
 </menu>

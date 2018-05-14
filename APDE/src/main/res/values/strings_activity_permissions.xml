@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="menu_new_permission">Create Permission</string>
-    <string name="new_permission_dialog_title">Create Permission</string>
-    <string name="new_permission_dialog_message">Enter the permission value:</string>
-    <string name="delete_perm">Delete Custom Permission</string>
-    <string name="delete_perm_dialog_title">Delete Permission?</string>
-    <string name="delete_perm_dialog_message">Deleting this custom permission will also delete it from all other sketches. This cannot be undone!</string>
+    <!-- Strings in the permissions screen from sketch properties. -->
+	<string name="title_activity_permissions">Sketch Permissions</string>
+    <string name="permissions_menu_new_permission">Create Permission</string>
+    <string name="permissions_new_permission_dialog_title">Create Permission</string>
+    <string name="permissions_new_permission_dialog_message">Enter the permission value:</string>
+    <string name="permissions_delete_permission">Delete Custom Permission</string>
+    <string name="permissions_delete_permission_dialog_title">Delete Permission?</string>
+    <string name="permissions_delete_permission_dialog_message">Deleting this custom permission will also delete it from all other sketches. This cannot be undone!</string>
+	<!-- The text displayed to indicate that a permission is custom. -->
+	<string name="permissions_custom_perm">Custom Permission</string>
 </resources>

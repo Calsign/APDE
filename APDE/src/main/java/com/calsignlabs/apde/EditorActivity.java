@@ -15,7 +15,6 @@ import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Parcelable;
 import android.preference.PreferenceManager;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
@@ -72,6 +71,8 @@ import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.xml.sax.SAXException;
 
 import java.io.BufferedInputStream;
@@ -82,6 +83,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -90,6 +92,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Stack;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -161,10 +166,24 @@ public class EditorActivity extends AppCompatActivity {
 	//It's because adding views to the char insert tray is somehow breaking the retrieval of this view by ID...
 	private ImageButton toggleCharInserts;
 	
-	private boolean twoFingerSwipe = false;
-	
 	//Intent flag to delete the old just-installed APK file
 	public static final int FLAG_DELETE_APK = 5;
+	
+	public ScheduledThreadPoolExecutor autoSaveTimer;
+	public ScheduledFuture<?> autoSaveTimerTask;
+	public Runnable autoSaveTimerAction = new Runnable() {
+		@Override
+		public void run() {
+			// This looks really messy, but we need to run on the UI thread in order to display
+			// the "sketch has been saved" message in the message area
+			runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					autoSave();
+				}
+			});
+		}
+	};
 	
     @SuppressLint("NewApi")
 	@Override
@@ -311,7 +330,7 @@ public class EditorActivity extends AppCompatActivity {
         forceDrawerReload();
         
         // Initialize the drawer drawer toggler
-        drawerToggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.nav_drawer_open, R.string.nav_drawer_close) {
+        drawerToggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.drawer_open_accessibility_text, R.string.drawer_close_accessibility_text) {
             @Override
         	public void onDrawerClosed(View view) {
 				if (isSelectedCodeAreaInitialized()) {
@@ -334,9 +353,11 @@ public class EditorActivity extends AppCompatActivity {
                     // Display the relative path in the action bar
                     if(drawerSketchLocationType != null) {
     					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
-    				} else {
-    					getSupportActionBar().setSubtitle(null);
-    				}
+    				} else if (drawerRecentSketch) {
+						getSupportActionBar().setSubtitle(getResources().getString(R.string.drawer_folder_recent) + "/");
+					} else {
+							getSupportActionBar().setSubtitle(null);
+					}
             	} else { // Detect a close event
             		// Re-enable the code area
 					if (isSelectedCodeAreaInitialized()) {
@@ -380,6 +401,8 @@ public class EditorActivity extends AppCompatActivity {
 						drawerSketchLocationType = APDE.SketchLocation.TEMPORARY;
 						break;
 					case 4:
+						drawerSketchLocationType = null;
+						drawerSketchPath = "";
 						drawerRecentSketch = true;
 						break;
 					}
@@ -422,14 +445,6 @@ public class EditorActivity extends AppCompatActivity {
 						
 						break;
 					}
-				}
-				
-				if (drawerSketchLocationType != null) {
-					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
-				} else if (drawerRecentSketch) {
-					getSupportActionBar().setSubtitle(getResources().getString(R.string.recent) + "/");
-				} else {
-					getSupportActionBar().setSubtitle(null);
 				}
 				
 				forceDrawerReload();
@@ -705,7 +720,7 @@ public class EditorActivity extends AppCompatActivity {
 					layout.setLayoutParams(new FrameLayout.LayoutParams(w, h));
 				}
 			});
-		} else {
+		} else if (savedInstanceState == null) {
 			// If the "What's New" screen is visible, wait to show the examples updates screen
 			
 			// Update examples repository
@@ -714,18 +729,29 @@ public class EditorActivity extends AppCompatActivity {
 		
 		codePagerAdapter.notifyDataSetChanged();
 		codeTabStrip.setupWithViewPager(codePager);
-	
-		// Try to load the auto-save sketch, otherwise set the editor up as a new sketch
-		if (!loadSketchStart()) {
-			getGlobalState().selectNewTempSketch();
-			addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
-			autoSave();
+		
+		try {
+			// Try to load the auto-save sketch, otherwise set the editor up as a new sketch
+			if (!loadSketchStart()) {
+				getGlobalState().selectNewTempSketch();
+				addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
+				autoSave();
+			}
+			
+			getGlobalState().writeCodeDeletionDebugStatus("onCreate() after loadSketchStart()");
+		} catch (Exception e) {
+			// Who knows really...
+			e.printStackTrace();
 		}
+		
+		autoSaveTimer = new ScheduledThreadPoolExecutor(1);
     }
 	
 	@Override
 	public void onStart() {
 		super.onStart();
+		
+		getGlobalState().writeCodeDeletionDebugStatus("onStart()");
 		
 		APDE.StorageDrive.StorageDriveType storageDriveType = getGlobalState().getSketchbookStorageDrive().type;
 		
@@ -777,7 +803,7 @@ public class EditorActivity extends AppCompatActivity {
 	}
 	
 	public SketchFile getSelectedSketchFile() {
-		return tabs.size() > 0 ? tabs.get(getSelectedCodeIndex()) : null;
+		return tabs.size() > 0 && getSelectedCodeIndex() < tabs.size() ? tabs.get(getSelectedCodeIndex()) : null;
 	}
 	
 	/**
@@ -851,71 +877,91 @@ public class EditorActivity extends AppCompatActivity {
 	public View getExtraHeaderView() {
 		return extraHeaderView;
 	}
-    
-    @Override
-    protected void onSaveInstanceState(Bundle icicle) {
-    	//Save the selected tab
-    	icicle.putInt("selected_tab", getSelectedCodeIndex());
-    	
-    	SketchFile[] tabMetas = new SketchFile[tabs.size()];
-//    	int count = 0;
-    	
-//    	for (Map.Entry<ActionBar.Tab, SketchFile> entry : tabs.entrySet()) {
-//    		int num = tabBar.indexOfTab(entry.getKey());
-//    		SketchFile meta = entry.getValue();
-//    		
-//    		meta.tabNum = num;
-//    		
-//    		tabMetas[count] = meta;
-//    		count ++;
-//    	}
+	
+	@Override
+	public void onSaveInstanceState(Bundle outState) {
+		getGlobalState().writeCodeDeletionDebugStatus("onSaveInstanceState()");
 		
-		for (int i = 0; i < tabs.size(); i ++) {
-			SketchFile sketchFile = tabs.get(i);
-			sketchFile.tabNum = i;
-			tabMetas[i] = sketchFile;
+		try {
+			TextView messageArea = (TextView) findViewById(R.id.message);
+			TextView console = (TextView) findViewById(R.id.console);
+			ScrollView consoleScroller = (ScrollView) findViewById(R.id.console_scroller);
+			HorizontalScrollView consoleScrollerX = (HorizontalScrollView) findViewById(R.id.console_scroller_x);
+			
+			outState.putString("consoleText", console.getText().toString());
+			outState.putInt("consoleScrollPos", consoleScroller.getScrollY());
+			outState.putInt("consoleScrollPosX", consoleScrollerX.getScrollX());
+			outState.putString("messageText", messageArea.getText().toString());
+			outState.putBoolean("messageIsError", errorMessage);
+		} catch (Exception e) {
+			// Just to be safe
+			e.printStackTrace();
 		}
-    	
-    	//We have to right a map... this seems to be unnecessarily difficult
-    	icicle.putParcelableArray("tabs", getTabMetas());
-    }
-    
-    @Override
-    protected void onRestoreInstanceState(Bundle icicle) {
-    	if (icicle != null) {
-    		//Restore the selected tab (this should only happen when the screen rotates)
-    		selectCode(icicle.getInt("selected_tab"));
-    		
-    		//Refresh the syntax highlighter AGAIN so that it can take into account the restored selected tab
-    		//The tokens end up getting refreshed 3+ times on a rotation... but it doesn't seem to have much of an impact on performance, so it's fine for now
-//			getSelectedCodeArea().flagRefreshTokens();
-			
-			Parcelable[] tabMetaParcels = icicle.getParcelableArray("tabs");
-			
-			//Fix an all-too-common crash report that hides the stack trace that we really want
-			loadTabs:
-			if (tabMetaParcels instanceof SketchFile[]) {
-				SketchFile[] tabMetas = (SketchFile[]) tabMetaParcels;
-				
-				if (tabs.size() > 0 && tabMetas[0].equals(tabs.get(0))) {
-					break loadTabs;
+		
+		super.onSaveInstanceState(outState);
+	}
+	
+	@Override
+	public void onRestoreInstanceState(Bundle savedInstanceState) {
+		try {
+			// We're going to re-add all of the fragments, so get rid of the old ones
+			List<Fragment> fragments = getSupportFragmentManager().getFragments();
+			if (fragments != null) {
+				for (Fragment fragment : fragments) {
+					if (fragment != null) {
+						getSupportFragmentManager().beginTransaction().remove(fragment).commit();
+					}
 				}
-				
-				for (SketchFile tabMeta : tabMetas) {
-//					tabs.put(tabBar.getTab(tabMeta.tabNum), tabMeta);
-					addTab(tabMeta);
-				}
-			} else {
-				System.err.println("Error occurred restoring state, likely caused by\na crash in an activity further down the hierarchy");
 			}
-    	}
-    }
+			
+			if (savedInstanceState != null) {
+				String consoleText = savedInstanceState.getString("consoleText");
+				final int consoleScrollPos = savedInstanceState.getInt("consoleScrollPos");
+				final int consoleScrollPosX = savedInstanceState.getInt("consoleScrollPosX");
+				String messageText = savedInstanceState.getString("messageText");
+				boolean messageIsError = savedInstanceState.getBoolean("messageIsError");
+				
+				TextView console = (TextView) findViewById(R.id.console);
+				final ScrollView consoleScroller = (ScrollView) findViewById(R.id.console_scroller);
+				final HorizontalScrollView consoleScrollerX = (HorizontalScrollView) findViewById(R.id.console_scroller_x);
+				
+				if (consoleText != null) {
+					// Assume that they're all there...
+					
+					console.setText(consoleText);
+					
+					// This doesn't actually work in practice because the text is always
+					// replaced with "The sketch has been saved"...
+					if (messageIsError) {
+						error(messageText);
+					} else {
+						message(messageText);
+					}
+					
+					console.post(new Runnable() {
+						@Override
+						public void run() {
+							consoleScroller.scrollTo(0, consoleScrollPos);
+							consoleScrollerX.scrollTo(consoleScrollPosX, 0);
+						}
+					});
+				}
+			}
+		} catch (Exception e) {
+			// Who knows really...
+			e.printStackTrace();
+		}
+		
+		getGlobalState().writeCodeDeletionDebugStatus("onRestoreInstanceState()");
+	}
     
     private static SparseArray<ActivityResultCallback> activityResultCodes = new SparseArray<ActivityResultCallback>();
     
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-    	//This is the code to delete the old APK file
+		getGlobalState().writeCodeDeletionDebugStatus("onActivityResult()");
+		
+    	// This is the code to delete the old APK file
     	if (requestCode == FLAG_DELETE_APK) {
     		Build.cleanUpPostLaunch(this);
     	}
@@ -949,15 +995,18 @@ public class EditorActivity extends AppCompatActivity {
 	public void onResume() {
     	super.onResume();
 		
+		getGlobalState().writeCodeDeletionDebugStatus("onResume()");
+		
     	//Reference the SharedPreferences text size value
 //    	((CodeEditText) findViewById(R.id.code)).refreshTextSize();
 		((TextView) findViewById(R.id.console)).setTextSize(Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(this).getString("textsize_console", "14")));
     	
     	//Disable / enable the soft keyboard
-        if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-        	getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-        else
-        	getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
+        if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+		} else {
+			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
+		}
         
         //Update the syntax highlighter
 //		getSelectedCodeArea().updateTokens();
@@ -994,37 +1043,44 @@ public class EditorActivity extends AppCompatActivity {
 //		findViewById(R.id.code_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
 //		findViewById(R.id.console_scroller_x).setLayoutParams(new android.widget.ScrollView.LayoutParams(maxWidth, android.widget.ScrollView.LayoutParams.MATCH_PARENT));
 		
-		//Let's see if the user is trying to open a .PDE file...
+		// Let's see if the user is trying to open a .PDE file...
 		
 		Intent intent = getIntent();
-        
-        if(intent.getAction().equals(Intent.ACTION_VIEW) && intent.getType() != null) {
-        	String scheme = intent.getData().getScheme();
-        	String filePath = intent.getData().getPath();
-        	
-        	//Let's make sure we don't have any bad data...
-        	if(scheme != null && scheme.equalsIgnoreCase("file") && filePath != null) {
-        		//Try to get the file...
-        		File file = new File(filePath);
-        		
-        		String ext = "";
-        		int lastDot = filePath.lastIndexOf('.');
-    			if(lastDot != -1) {
-    				ext = filePath.substring(lastDot);
-    			}
-    			
-        		//Is this a good file?
-        		if(file.exists() && !file.isDirectory() && ext.equalsIgnoreCase(".pde")) {
-        			//Let's get the sketch folder...
-        			File sketchFolder = file.getParentFile();
-        			
-        			//Here goes...
-        			loadSketch(sketchFolder.getAbsolutePath(), APDE.SketchLocation.EXTERNAL);
-        			
-        			message("Loaded external sketch.");
-        		}
-        	}
-        }
+		
+		if ((intent.getAction().equals(Intent.ACTION_VIEW) || intent.getAction().equals(Intent.ACTION_EDIT))) {
+			String scheme = intent.getData().getScheme();
+			String filePath = intent.getData().getPath();
+			
+			// Let's make sure we don't have any bad data...
+			if (scheme != null && (scheme.equalsIgnoreCase("file") || scheme.equalsIgnoreCase("content")) && filePath != null && filePath.length() != 0) {
+				// There are many different formats that are caught by the below if-else branching.
+				// I have tested numerous file managers and they produce things like:
+				//  - /sdcard/path/to/sketch.pde (normal, good)
+				//  - /external_file/sdcard/path/to/sketch.pde (weird prefix)
+				//  - /path/to/sketch.pde (missing root)
+				
+				// Try like normal
+				if (!loadExternalSketch(filePath)) {
+					// Sometimes file managers give us weird prefixes
+					String crop = filePath;
+					// Trim all beginning slashes
+					if (crop.length() > 1) {
+						while (crop.charAt(0) == '/') crop = crop.substring(1);
+					}
+					// Trim everything leading up to the next slash
+					int slashIndex = crop.indexOf('/');
+					if (slashIndex != -1 && crop.length() > slashIndex + 1) {
+						crop = crop.substring(slashIndex);
+						// Get rid of extra slashes, leaving only one behind
+						while (crop.length() > 2 && crop.charAt(1) == '/') crop = crop.substring(1);
+					}
+					if (!loadExternalSketch(crop)) {
+						// Sometimes file managers give us paths starting in /sdcard/
+						loadExternalSketch(Environment.getExternalStorageDirectory().getPath() + filePath);
+					}
+				}
+			}
+		}
         
         //Make Processing 3.0 behave properly
         getGlobalState().initProcessingPrefs();
@@ -1034,6 +1090,29 @@ public class EditorActivity extends AppCompatActivity {
 		
         //In case the user has enabled / disabled undo / redo in settings
         supportInvalidateOptionsMenu();
+	}
+	
+	private boolean loadExternalSketch(String filePath) {
+		//Try to get the file...
+		File file = new File(filePath);
+		
+		String ext = "";
+		int lastDot = filePath.lastIndexOf('.');
+		if (lastDot != -1) {
+			ext = filePath.substring(lastDot);
+		}
+		
+		// Is this a good file?
+		if (ext.equalsIgnoreCase(".pde") && file.exists() && !file.isDirectory()) {
+			// Let's get the sketch folder...
+			File sketchFolder = file.getParentFile();
+			// Here goes...
+			loadSketch(sketchFolder.getAbsolutePath(), APDE.SketchLocation.EXTERNAL);
+			message(getGlobalState().getString(R.string.sketch_load_external_success));
+			return true;
+		}
+		
+		return false;
 	}
     
     public HashMap<String, KeyBinding> getKeyBindings() {
@@ -1116,58 +1195,96 @@ public class EditorActivity extends AppCompatActivity {
     	//Check for the key bindings
     	//...this is where functional programming would come in handy
     	
-    	if(keyBindings.get("save_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("save_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		saveSketch();
     		return true;
     	}
-    	if(keyBindings.get("new_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("new_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		createNewSketch();
     		return true;
     	}
-    	if(keyBindings.get("open_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("open_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		loadSketch();
     		return true;
     	}
     	
-    	if(keyBindings.get("run_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("run_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		runApplication();
     		return true;
     	}
-    	if(keyBindings.get("stop_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("stop_sketch").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		stopApplication();
     		return true;
     	}
     	
-    	if(keyBindings.get("new_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		if(!getGlobalState().isExample())
+    	if (keyBindings.get("new_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		if (!getGlobalState().isExample())
     			addTabWithDialog();
     		return true;
     	}
-    	if(keyBindings.get("delete_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		if(!getGlobalState().isExample())
+    	if (keyBindings.get("delete_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		if (!getGlobalState().isExample())
     			deleteTab();
     		return true;
     	}
-    	if(keyBindings.get("rename_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
-    		if(!getGlobalState().isExample())
+    	if (keyBindings.get("rename_tab").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    		if (!getGlobalState().isExample())
     			renameTab();
     		return true;
     	}
     	
-    	if(keyBindings.get("undo").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("undo").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		if (!getGlobalState().isExample() && getCodeCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
     			tabs.get(getSelectedCodeIndex()).undo(this);
     		}
     		return true;
     	}
-    	if(keyBindings.get("redo").matches(key, ctrl, meta, func, alt, sym, shift)) {
+    	if (keyBindings.get("redo").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		if (!getGlobalState().isExample() && getCodeCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
     			tabs.get(getSelectedCodeIndex()).redo(this);
     		}
     		
     		return true;
     	}
-    	
+		
+		if (keyBindings.get("view_sketches").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			loadSketch();
+			selectDrawerFolder(APDE.SketchLocation.SKETCHBOOK);
+			return true;
+		}
+		if (keyBindings.get("view_examples").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			loadSketch();
+			selectDrawerFolder(APDE.SketchLocation.EXAMPLE);
+			return true;
+		}
+		if (keyBindings.get("view_recent").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			loadSketch();
+			selectDrawerRecent();
+			return true;
+		}
+		
+		if (keyBindings.get("settings").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			launchSettings();
+			return true;
+		}
+		if (keyBindings.get("sketch_properties").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			launchSketchProperties();
+			return true;
+		}
+		if (keyBindings.get("sketch_permissions").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			// TODO Sketch permissions
+			return true;
+		}
+		
+		if (keyBindings.get("show_sketch_folder").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			getGlobalState().launchSketchFolder(this);
+			return true;
+		}
+		if (keyBindings.get("add_file").matches(key, ctrl, meta, func, alt, sym, shift)) {
+			// TODO Add file
+			return true;
+		}
+		
     	//Handle tool keyboard shortcuts
     	//TODO Potential conflicts... for now, two tools with the same shortcut will both run
     	
@@ -1220,7 +1337,7 @@ public class EditorActivity extends AppCompatActivity {
 		
 		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
 		
-		alert.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
+		alert.setPositiveButton(R.string.rename_sketch_button, new DialogInterface.OnClickListener() {
 			public void onClick(DialogInterface dialog, int whichButton) {
 				String sketchName = input.getText().toString();
 				
@@ -1363,8 +1480,11 @@ public class EditorActivity extends AppCompatActivity {
 	
 	@Override
 	public void onPause() {
-		// Make sure to save the sketch
-		saveSketchForStop();
+		// Disable this. For Science!!
+//		// Make sure to save the sketch
+//		saveSketchForStop();
+		
+		getGlobalState().writeCodeDeletionDebugStatus("onPause()");
 		
 		// We do this to avoid messing up the *very* delicate console/code area resizing stuff
 		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
@@ -1374,8 +1494,12 @@ public class EditorActivity extends AppCompatActivity {
 	
 	@Override
 	public void onStop() {
+		getGlobalState().writeCodeDeletionDebugStatus("onStop()");
+		
 		// Make sure to save the sketch
 		saveSketchForStop();
+		
+		getGlobalState().writeCodeDeletionDebugStatus("onStop() after saveSketchForStop");
 		
 		super.onStop();
 	}
@@ -1384,7 +1508,9 @@ public class EditorActivity extends AppCompatActivity {
 	public void onDestroy() {
 		//Unregister the log / console receiver
     	unregisterReceiver(consoleBroadcastReceiver);
-    	
+		
+		getGlobalState().writeCodeDeletionDebugStatus("onDestroy()");
+		
     	super.onDestroy();
 	}
 	
@@ -1392,6 +1518,8 @@ public class EditorActivity extends AppCompatActivity {
 	 * Saves the sketch for when the activity is closing
 	 */
 	public void saveSketchForStop() {
+		getGlobalState().writeCodeDeletionDebugStatus("begin saveSketchForStop()");
+		
 		//Automatically save
 		autoSave();
     	
@@ -1399,11 +1527,57 @@ public class EditorActivity extends AppCompatActivity {
 		
 		//Save the relative path to the current sketch
 		String sketchPath = getGlobalState().getSketchPath();
-		writeTempFile("sketchPath.txt", sketchPath);
     	
     	//Save the location of the current sketch
 		String sketchLocation = getGlobalState().getSketchLocationType().toString();
-		writeTempFile("sketchLocation.txt", sketchLocation);
+		
+		StringBuilder sketchData = new StringBuilder();
+		sketchData.append(sketchPath);
+		sketchData.append(';');
+		sketchData.append(sketchLocation);
+		sketchData.append(';');
+		sketchData.append(getSelectedCodeIndex());
+		sketchData.append(';');
+		
+		JSONObject undoRedoHistories = new JSONObject();
+		
+		for (int i = 0; i < tabs.size(); i ++) {
+			SketchFile sketchFile = tabs.get(i);
+			
+			if (sketchFile.getFragment() != null && sketchFile.getFragment().isInitialized()) {
+				sketchData.append(sketchFile.getFragment().getCodeEditText().getSelectionStart());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getFragment().getCodeEditText().getSelectionEnd());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getFragment().getCodeScroller().getScrollX());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getFragment().getCodeScroller().getScrollY());
+				sketchData.append(';');
+			} else {
+				// The fragment is unloaded if it isn't visible or adjacent to the visible tab, but
+				// the data is stored on the SketchFile
+				
+				sketchData.append(sketchFile.getSelectionStart());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getSelectionEnd());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getScrollX());
+				sketchData.append(',');
+				sketchData.append(sketchFile.getScrollY());
+				sketchData.append(';');
+			}
+			
+			try {
+				undoRedoHistories.put(sketchFile.getFilename(), sketchFile.getUndoRedoHistory());
+			} catch (JSONException | NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		writeTempFile("sketchData.txt", sketchData.toString());
+		writeTempFile("sketchUndoRedoHistory.json", undoRedoHistories.toString());
+		
+		getGlobalState().writeCodeDeletionDebugStatus("end saveSketchForStop()");
 	}
 	
 	/**
@@ -1413,12 +1587,56 @@ public class EditorActivity extends AppCompatActivity {
 	 */
 	public boolean loadSketchStart() {
 		try {
-			//Load the temp files
-			String sketchPath = readTempFile("sketchPath.txt");
-			APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(readTempFile("sketchLocation.txt"));
+			String sketchData = readTempFile("sketchData.txt");
+			String[] data = sketchData.split(";");
+			String jsonData = readTempFile("sketchUndoRedoHistory.json");
 			
-			return loadSketch(sketchPath, sketchLocation);
+			if (data.length < 3 || jsonData.length() == 0) {
+				// On clean installs and after updating
+				return false;
+			}
+			
+			JSONObject undoRedoHistories = new JSONObject(jsonData);
+			
+			String sketchPath = data[0];
+			APDE.SketchLocation sketchLocation = APDE.SketchLocation.fromString(data[1]);
+			
+			boolean success = loadSketch(sketchPath, sketchLocation);
+			
+			selectCode(Integer.parseInt(data[2]));
+			
+			if (success && tabs.size() == data.length - 3) {
+				for (int i = 3; i < data.length; i ++) {
+					String[] sketchFileData = data[i].split(",");
+					
+					if (sketchFileData.length > 0) {
+						tabs.get(i - 3).selectionStart = Integer.parseInt(sketchFileData[0]);
+						tabs.get(i - 3).selectionEnd = Integer.parseInt(sketchFileData[1]);
+						tabs.get(i - 3).scrollX = Integer.parseInt(sketchFileData[2]);
+						tabs.get(i - 3).scrollY = Integer.parseInt(sketchFileData[3]);
+					}
+				}
+			}
+			
+			if (success) {
+				for (SketchFile sketchFile : tabs) {
+					try {
+						sketchFile.populateUndoRedoHistory(undoRedoHistories.getJSONObject(sketchFile.getFilename()));
+					} catch (Exception e) {
+						/* If an exception gets through, then this function reports that it was
+						 * not successful. The problem with that is that it will then automatically
+						 * create a default (empty) 'sketch' tab. Even if we already loaded one.
+						 * Which means that data can get overwritten. So we want to ignore any
+						 * error caused by trying to load the undo/redo history.
+						 */
+						e.printStackTrace();
+					}
+				}
+			}
+			
+			return success;
 		} catch(Exception e) { //Meh...
+			e.printStackTrace();
 			return false;
 		}
 	}
@@ -1428,13 +1646,19 @@ public class EditorActivity extends AppCompatActivity {
 	 * Useful for updating files that have been changed outside of the editor.
 	 */
 	public void reloadSketch() {
+		getGlobalState().writeCodeDeletionDebugStatus("before reloadSketch()");
+		
 		loadSketch(getGlobalState().getSketchPath(), getGlobalState().getSketchLocationType());
+		
+		getGlobalState().writeCodeDeletionDebugStatus("after reloadSketch()");
 	}
 	
 	/**
 	 * Automatically save the sketch, whether it is to the sketchbook folder or to the temp folder
 	 */
 	public void autoSave() {
+		getGlobalState().writeCodeDeletionDebugStatus("before autoSave()");
+		
 		switch(getGlobalState().getSketchLocationType()) {
 		case EXAMPLE:
 		case LIBRARY_EXAMPLE:
@@ -1445,6 +1669,30 @@ public class EditorActivity extends AppCompatActivity {
 		case TEMPORARY:
 			saveSketch();
 			break;
+		}
+		
+		getGlobalState().writeCodeDeletionDebugStatus("end autoSave()");
+		
+		// In case there is still an autosave task in the queue
+		cancelAutoSave();
+	}
+	
+	public void cancelAutoSave() {
+		if (autoSaveTimerTask != null && !autoSaveTimerTask.isDone() && !autoSaveTimerTask.isCancelled()) {
+			autoSaveTimerTask.cancel(false);
+		}
+	}
+	
+	public void scheduleAutoSave() {
+		// By default autosave after 30 seconds of inactivity
+		// But the user can change the timeout in settings
+		
+		cancelAutoSave();
+		
+		long timeout = Long.parseLong(getGlobalState().getPref("pref_key_autosave_timeout", getGlobalState().getString(R.string.pref_autosave_timeout_default_value)));
+		
+		if (timeout != -1L) {
+			autoSaveTimerTask = autoSaveTimer.schedule(autoSaveTimerAction, timeout, TimeUnit.SECONDS);
 		}
 	}
 	
@@ -1609,6 +1857,8 @@ public class EditorActivity extends AppCompatActivity {
     		//Add this to the recent sketches
     		getGlobalState().putRecentSketch(sketchLocation, sketchPath);
     	}
+		
+		getGlobalState().writeCodeDeletionDebugStatus("after loadSketch()");
     	
     	return success;
 	}
@@ -1621,8 +1871,8 @@ public class EditorActivity extends AppCompatActivity {
     	if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
 				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
-            	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
+            builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
+            	.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
             	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
             		@Override
             		public void onClick(DialogInterface dialog, int which) {}
@@ -1630,6 +1880,8 @@ public class EditorActivity extends AppCompatActivity {
             
     		return;
     	}
+	
+		getGlobalState().writeCodeDeletionDebugStatus("begin saveSketch()");
     	
     	boolean success = true;
     	
@@ -1645,12 +1897,17 @@ public class EditorActivity extends AppCompatActivity {
 //	    	//Update the current tab
 //	    	tabs.put(tabBar.getSelectedTab(), new SketchFile(tabBar.getSelectedTab().getText().toString(), this));
 //	    	tabs.get(getSelectedCodeIndex()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
-	    	
+			
 			// Update all tabs
 			for (int i = 0; i < tabs.size(); i ++) {
 				// Not all of the tabs are loaded at once
 				if (tabs.get(i).getFragment().getCodeEditText() != null) {
-					tabs.get(i).update(this, getGlobalState().getPref("pref_key_undo_redo", true));
+					if (tabs.get(i).getFragment().getCodeEditText().getText().length() == 0 && tabs.get(i).getText().length() > 0) {
+						// This condition is where we overwrite code with the code deletion bug
+						getGlobalState().writeDebugLog("saveSketch", "Detected code deletion in tab '" + tabs.get(i).getTitle() + "', not overwriting.");
+					} else {
+						tabs.get(i).update(this, getGlobalState().getPref("pref_key_undo_redo", true));
+					}
 				}
 			}
 			
@@ -1663,7 +1920,7 @@ public class EditorActivity extends AppCompatActivity {
 	    			}
 	    		}
 	    	}
-	    	
+			
 	    	if (success) {
 	    		getGlobalState().selectSketch(sketchPath, getGlobalState().getSketchLocationType());
 	    		
@@ -1673,11 +1930,11 @@ public class EditorActivity extends AppCompatActivity {
 	    		supportInvalidateOptionsMenu();
 	            
 	            // Inform the user of success
-	    		message(getResources().getText(R.string.sketch_saved));
+	    		message(getResources().getText(R.string.message_sketch_save_success));
 	    		setSaved(true);
 	    	} else {
 	    		// Inform the user of failure
-	    		error(getResources().getText(R.string.sketch_save_failure));
+	    		error(getResources().getText(R.string.message_sketch_save_failure));
 	    	}
     	} else {
     		// If there are no tabs
@@ -1687,9 +1944,11 @@ public class EditorActivity extends AppCompatActivity {
     		forceDrawerReload();
     		
             // Inform the user
-    		message(getResources().getText(R.string.sketch_saved));
+    		message(getResources().getText(R.string.message_sketch_save_success));
     		setSaved(true);
     	}
+	
+		getGlobalState().writeCodeDeletionDebugStatus("after saveSketch()");
     }
     
     public void copyToSketchbook() {
@@ -1697,8 +1956,8 @@ public class EditorActivity extends AppCompatActivity {
 		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
 				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
-            	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
+            builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
+            	.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
             	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
             		@Override
             		public void onClick(DialogInterface dialog, int which) {}
@@ -1740,11 +1999,11 @@ public class EditorActivity extends AppCompatActivity {
 			updateCodeAreaFocusable();
             
             //Inform the user of success
-    		message(getResources().getText(R.string.sketch_saved));
+    		message(getResources().getText(R.string.message_sketch_save_success));
     		setSaved(true);
     	} catch (IOException e) {
     		//Inform the user of failure
-    		error(getResources().getText(R.string.sketch_save_failure));
+    		error(getResources().getText(R.string.message_sketch_save_failure));
     	}
     }
 	
@@ -1761,7 +2020,7 @@ public class EditorActivity extends AppCompatActivity {
 		builder.setTitle(R.string.move_temp_to_sketchbook_title);
 		builder.setMessage(String.format(Locale.US, getResources().getString(R.string.move_temp_to_sketchbook_message), getGlobalState().getSketchName()));
 		
-		builder.setPositiveButton(R.string.move, new DialogInterface.OnClickListener() {
+		builder.setPositiveButton(R.string.move_temp_to_sketchbook_button, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
@@ -1773,8 +2032,8 @@ public class EditorActivity extends AppCompatActivity {
 				if (getGlobalState().getSketchLocation(dest.getPath(), dest.getLocation()).exists()) {
 					AlertDialog.Builder builder = new AlertDialog.Builder(EditorActivity.this);
 					
-					builder.setTitle(R.string.cannot_move_sketch_title);
-					builder.setMessage(R.string.cannot_move_folder_message);
+					builder.setTitle(R.string.rename_sketch_failure_title);
+					builder.setMessage(R.string.rename_move_folder_failure_message);
 					
 					builder.setPositiveButton(getResources().getString(R.string.ok), new DialogInterface.OnClickListener() {
 						@Override
@@ -1950,20 +2209,22 @@ public class EditorActivity extends AppCompatActivity {
 			int bytesRead = 0;
 			
 			//Read the contents of the file
-			while((bytesRead = inputStream.read(contents)) != -1)
+			while((bytesRead = inputStream.read(contents)) != -1) {
 				output += new String(contents, 0, bytesRead);
+			}
 		} catch(Exception e) {
 			//... nothing much to do here
 		} finally {
 			//Make sure to close the stream
 			try {
-				if(inputStream != null)
+				if(inputStream != null) {
 					inputStream.close();
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-    	
+		
     	return output;
     }
     
@@ -1971,6 +2232,18 @@ public class EditorActivity extends AppCompatActivity {
      * Reloads the navigation drawer
      */
     public void forceDrawerReload() {
+    	if (drawerOpen) {
+    		if (drawerSketchLocationType != null) {
+				getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
+			} else if (drawerRecentSketch) {
+				getSupportActionBar().setSubtitle(getResources().getString(R.string.drawer_folder_recent) + "/");
+			} else {
+				getSupportActionBar().setSubtitle(null);
+			}
+		} else {
+			getSupportActionBar().setSubtitle(null);
+		}
+    	
         final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
         
         ArrayList<FileNavigatorAdapter.FileItem> items;
@@ -1984,11 +2257,11 @@ public class EditorActivity extends AppCompatActivity {
         		items = getGlobalState().listRecentSketches();
         	} else {
         		items = new ArrayList<FileNavigatorAdapter.FileItem>();
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.sketches), FileNavigatorAdapter.FileItemType.FOLDER));
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.examples), FileNavigatorAdapter.FileItemType.FOLDER));
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.library_examples), FileNavigatorAdapter.FileItemType.FOLDER));
-				items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.temporary), FileNavigatorAdapter.FileItemType.FOLDER));
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.recent), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_sketches), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_examples), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_library_examples), FileNavigatorAdapter.FileItemType.FOLDER));
+				items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_temporary), FileNavigatorAdapter.FileItemType.FOLDER));
+        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_recent), FileNavigatorAdapter.FileItemType.FOLDER));
         	}
         }
         
@@ -2020,12 +2293,21 @@ public class EditorActivity extends AppCompatActivity {
 		});
     }
     
-    public void setDrawerLocation(APDE.SketchMeta folder) {
-    	drawerSketchLocationType = folder.getLocation();
-    	drawerSketchPath = folder.getPath();
+    public void selectDrawerFolder(APDE.SketchLocation location) {
+    	drawerSketchLocationType = location;
+    	drawerSketchPath = "";
+    	drawerRecentSketch = false;
     	
     	forceDrawerReload();
     }
+    
+    public void selectDrawerRecent() {
+    	drawerSketchLocationType = null;
+    	drawerSketchPath = "";
+    	drawerRecentSketch = true;
+    	
+    	forceDrawerReload();
+	}
     
     /**
      * @return the APDE application global state
@@ -2060,7 +2342,7 @@ public class EditorActivity extends AppCompatActivity {
         	menu.findItem(R.id.menu_sketch_properties).setVisible(false);
         	
         	// Make sure to hide the sketch name
-        	getSupportActionBar().setTitle(R.string.app_name);
+        	getSupportActionBar().setTitle(R.string.apde_app_title);
         } else {
         	if (getCodeCount() > 0) {
         		// If the drawer is closed and there are tabs
@@ -2168,12 +2450,16 @@ public class EditorActivity extends AppCompatActivity {
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
         drawerToggle.syncState(); //The stranger aspects of having a navigation drawer...
+	
+		getGlobalState().writeCodeDeletionDebugStatus("onPostCreate()");
     }
     
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         drawerToggle.onConfigurationChanged(newConfig); //The stranger aspects of having a navigation drawer...
+	
+		getGlobalState().writeCodeDeletionDebugStatus("onConfigurationChanged()");
     }
     
     @Override
@@ -2451,6 +2737,13 @@ public class EditorActivity extends AppCompatActivity {
 		if (!checkScreenOverlay()) {
 			return;
 		}
+		
+		// Hide the soft keyboard
+		InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+    	// For some reason, lint screams at us when we don't cast to LinearLayout here
+		// Even though the cast actually does nothing
+		// And it only screams at us when we do a release build - very strange
+		imm.hideSoftInputFromWindow(((LinearLayout) findViewById(R.id.content)).getWindowToken(), 0);
     	
     	//Clear the console
     	((TextView) findViewById(R.id.console)).setText("");
@@ -2525,7 +2818,7 @@ public class EditorActivity extends AppCompatActivity {
 				public void onClick(DialogInterface dialogInterface, int i) {}
 			});
 			
-			builder.setNeutralButton(R.string.info, new DialogInterface.OnClickListener() {
+			builder.setNeutralButton(R.string.export_signed_package_long_info_button, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialogInterface, int i) {
 					startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.screen_overlay_info_wiki_url))));
@@ -2700,7 +2993,7 @@ public class EditorActivity extends AppCompatActivity {
     			// This is the DESIRED height, not the ACTUAL height
     			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
     			
-				findViewById(R.id.buffer).getLayoutParams().height = message;
+				((LinearLayout) findViewById(R.id.buffer)).getLayoutParams().height = message;
 				
     			// Obtain some references
     			View console = findViewById(R.id.console_scroller);
@@ -2971,8 +3264,8 @@ public class EditorActivity extends AppCompatActivity {
     		return;
     	
     	AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(R.string.delete_dialog_title)
-        	.setMessage(R.string.delete_dialog_message)
+        builder.setTitle(R.string.tab_delete_dialog_title)
+        	.setMessage(R.string.tab_delete_dialog_message)
         	.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
         		@Override
         		public void onClick(DialogInterface dialog, int which) {
@@ -3007,50 +3300,40 @@ public class EditorActivity extends AppCompatActivity {
     	return false;
     }
     
-    //Called internally from delete tab dialog
+    /**
+     * Called internally from delete tab dialog
+     */
     private void deleteTabContinue() {
     	if(tabs.size() > 0) {
-    		//Get the tab
-//    		Tab cur = tabBar.getSelectedTab(); //TODO there'll be problems here for sure
-    		//Delete the tab from the sketch folder
+    		// Delete the tab from the sketch folder
     		deleteLocalFile(getSelectedSketchFile().getFilename());
-			//Disable the tab
-//    		tabs.get(cur).disable();
+			// Disable the tab (prevents it from being saved if we don't do things quite right)
 			getSelectedSketchFile().disable();
-    		//Remove the tab
-//    		tabBar.removeSelectedTab();
+	  
+			// Get the index before we delete the tab and
+			int selectedCodeIndex = getSelectedCodeIndex();
 			
-			// We have to do this whole hop-skip thing because of peculiarities in the PagerSlidingTabStrip library...
-			selectCode(getSelectedCodeIndex() - 1);
-			tabs.remove(getSelectedCodeIndex() + 1);
-//	    	tabs.remove(cur);
-	    	
-	    	//If there are no more tabs
+			tabs.remove(selectedCodeIndex);
+			
+	    	// If there are no more tabs
 	    	if(getCodeCount() <= 0) {
-//	    		//Clear the code text area
-//		    	CodeEditText code = ((CodeEditText) findViewById(R.id.code));
-//		    	code.setNoUndoText("");
-//		    	code.setSelection(0);
-//		    	
-//		    	//Get rid of previous syntax highlighter data
-//	    		code.clearTokens();
-//	    		
-//	    		//Disable the code text area if there is no selected tab
-//		    	code.setFocusable(false);
-//	    		code.setFocusableInTouchMode(false);
-	    		
-	    		//Force remove all tabs
-//	    		tabBar.removeAllTabs();
+	    		// Force remove all tabs
 	    		tabs.clear();
 	    		
-	    		//Force action menu refresh
+	    		// Force action menu refresh
 	    		supportInvalidateOptionsMenu();
 	    	}
-		
+			
 			codePagerAdapter.notifyDataSetChanged();
 			
-	    	//Inform the user in the message area
-	    	message(getResources().getText(R.string.tab_deleted));
+			if (selectedCodeIndex == 0) {
+				selectCode(0);
+			} else if (selectedCodeIndex >= tabs.size() && tabs.size() > 0) {
+				selectCode(tabs.size() - 1);
+			}
+			
+	    	// Inform the user in the message area
+	    	message(getResources().getText(R.string.tab_delete_success));
     	}
     }
     
@@ -3119,7 +3402,7 @@ public class EditorActivity extends AppCompatActivity {
 				codePagerAdapter.notifyDataSetChanged();
 				
     	    	//Notify the user of success
-    			message(getResources().getText(R.string.tab_renamed));
+    			message(getResources().getText(R.string.tab_rename_success));
     			
     			break;
     		case NEW_TAB:
@@ -3172,7 +3455,7 @@ public class EditorActivity extends AppCompatActivity {
 //				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
 				
 				//Notify the user of success
-				message(getResources().getText(R.string.tab_created));
+				message(getResources().getText(R.string.tab_new_success));
 				
 				break;
     		}
@@ -3290,14 +3573,14 @@ public class EditorActivity extends AppCompatActivity {
 	protected boolean validateFileName(String title) {
 		//Make sure that the tab name's length > 0
 		if (title.length() <= 0) {
-			error(getResources().getText(R.string.name_invalid_no_char));
+			error(getResources().getText(R.string.tab_name_invalid_no_char));
 			return false;
 		}
 		
 		//Check to make sure that the first character isn't a number and isn't an underscore
 		char first = title.charAt(0);
 		if ((first >= '0' && first <= '9') || first == '_') {
-			error(getResources().getText(R.string.name_invalid_first_char));
+			error(getResources().getText(R.string.tab_name_invalid_first_char));
 			return false;
 		}
 		
@@ -3309,14 +3592,14 @@ public class EditorActivity extends AppCompatActivity {
 			if (c >= 'A' && c <= 'Z') continue;
 			if (c == '_') continue;
 			
-			error(getResources().getText(R.string.name_invalid_char));
+			error(getResources().getText(R.string.tab_name_invalid_char));
 			return false;
 		}
 		
 		//Make sure that this file / tab doesn't already exist
 		for (SketchFile meta : tabs) {
 			if (meta.getTitle().equals(title)) {
-				error(getResources().getText(R.string.name_invalid_same_title));
+				error(getResources().getText(R.string.tab_name_invalid_same_title));
 				return false;
 			}
 		}
@@ -3330,7 +3613,7 @@ public class EditorActivity extends AppCompatActivity {
 		//Display a dialog containing the list of tools
 		
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setTitle(R.string.tools);
+		builder.setTitle(R.string.editor_menu_tools);
 		if(toolList.size() > 0) {
 			//Populate the list
 			builder.setItems(getGlobalState().listToolsInList(), new DialogInterface.OnClickListener() {
@@ -3340,7 +3623,7 @@ public class EditorActivity extends AppCompatActivity {
 			});
 		} else {
 			//Eh... there should ALWAYS be tools, unless something funky is going on
-			System.err.println("Couldn't find any tools... uh-oh...");
+			System.err.println(getResources().getString(R.string.tools_empty));
 		}
 		
 		final AlertDialog dialog = builder.create();
@@ -3356,7 +3639,7 @@ public class EditorActivity extends AppCompatActivity {
 		//Display a dialog containing the list of libraries
 		
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setTitle(R.string.import_library);
+		builder.setTitle(R.string.tool_import_library);
 		if(libList.length > 0) {
 			//Populate the list
 			builder.setItems(libList, new DialogInterface.OnClickListener() {
@@ -3369,7 +3652,7 @@ public class EditorActivity extends AppCompatActivity {
 			//This is a real hack... and a strong argument for using XML / layout inflaters
 			
 			TextView content = new TextView(this);
-			content.setText(R.string.no_contributed_libraries); //The text we want
+			content.setText(R.string.library_manager_no_contributed_libraries); //The text we want
 			content.setTextColor(getResources().getColor(R.color.grayed_out)); //The color we want
 			content.setGravity(Gravity.CENTER); //Centered
 			content.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)); //Centered...
@@ -3380,7 +3663,7 @@ public class EditorActivity extends AppCompatActivity {
 		}
 		
 		//The "Manage Libraries" button - null so that it won't automatically close itself
-		builder.setNeutralButton(R.string.manage_libraries, null);
+		builder.setNeutralButton(R.string.library_manager_open, null);
 		final AlertDialog dialog = builder.create();
 		
 		//Fancy stuff...

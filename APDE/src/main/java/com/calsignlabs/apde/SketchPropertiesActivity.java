@@ -20,6 +20,7 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
@@ -154,7 +155,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 			APDE.copyFile(source, dest);
 		} catch (IOException e) {
 			//Something bad happened
-			System.err.println("Failed to add file to sketch, error output:");
+			System.err.println(getResources().getString(R.string.sketch_properties_add_file_failure));
 			e.printStackTrace();
 		}
 	}
@@ -233,13 +234,16 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		launchSketchFolder.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
 			@Override
 			public boolean onPreferenceClick(Preference preference) { 
-				launchSketchFolder();
+				getGlobalState().launchSketchFolder(SketchPropertiesActivity.this);
 				return true;
 			}
 		});
 		
-		if (getGlobalState().isTemp()) {
+		if (getGlobalState().isTemp() || getGlobalState().isSketchbook() &&
+				getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.INTERNAL)) {
+			
 			// We can't show the sketch folder of a temp sketch because it's in the internal storage
+			// And we can't show sketches when the drive is set to internal
 			launchSketchFolder.setEnabled(false);
 		}
 		
@@ -385,9 +389,6 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 	private void initOptionsMenu(Menu menu) {
 		getMenuInflater().inflate(R.menu.activity_sketch_properties, menu);
 		
-		//Not using this - we have "Export Eclipse Project" and "Export Signed Package" tools now
-		menu.findItem(R.id.menu_export).setVisible(false);
-		
 		switch(getGlobalState().getSketchLocationType()) {
 		case SKETCHBOOK:
 			menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
@@ -440,18 +441,6 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		
 		Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.select_file));
 	    startActivityForResult(intent, REQUEST_CHOOSER);
-	}
-	
-	public void launchSketchFolder() {
-		//TODO make this browse, not request a file...
-		//TODO also, get rid of Google Drive and such - only allow local file browsers (that support the external storage)
-		
-		File sketchFolder = getGlobalState().getSketchLocation();
-		
-		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-		intent.setDataAndType(Uri.fromFile(sketchFolder), "*/*");
-		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); //Start this in a separate task
-		startActivity(Intent.createChooser(intent, getResources().getString(R.string.show_sketch_folder)));
 	}
 	
 	@SuppressLint({ "InlinedApi", "NewApi" })
@@ -735,8 +724,8 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
 				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
-            	.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
+            builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
+            	.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
             	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
             		@Override
             		public void onClick(DialogInterface dialog, int which) {}
@@ -753,8 +742,8 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
 				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
-			.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
+			builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
+			.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
 			.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {}
@@ -773,8 +762,8 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
 				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder.setTitle(getResources().getText(R.string.external_storage_dialog_title))
-					.setMessage(getResources().getText(R.string.external_storage_dialog_message)).setCancelable(false)
+			builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
+					.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
 					.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
@@ -819,7 +808,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 			getGlobalState().getEditor().setSaved(true);
 		} catch (IOException e) {
 			//Inform the user of failure
-			getGlobalState().getEditor().error(getResources().getText(R.string.sketch_save_failure));
+			getGlobalState().getEditor().error(getResources().getText(R.string.message_sketch_save_failure));
 		}
 	}
 	
@@ -829,7 +818,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		builder.setTitle(R.string.move_temp_to_sketchbook_title);
 		builder.setMessage(String.format(Locale.US, getResources().getString(R.string.move_temp_to_sketchbook_message), getGlobalState().getSketchName()));
 		
-		builder.setPositiveButton(R.string.move, new DialogInterface.OnClickListener() {
+		builder.setPositiveButton(R.string.move_temp_to_sketchbook_button, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
@@ -841,8 +830,8 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 				if (getGlobalState().getSketchLocation(dest.getPath(), dest.getLocation()).exists()) {
 					AlertDialog.Builder builder = new AlertDialog.Builder(SketchPropertiesActivity.this);
 					
-					builder.setTitle(R.string.cannot_move_sketch_title);
-					builder.setMessage(R.string.cannot_move_folder_message);
+					builder.setTitle(R.string.rename_sketch_failure_title);
+					builder.setMessage(R.string.rename_move_folder_failure_message);
 					
 					builder.setPositiveButton(getResources().getString(R.string.ok), new DialogInterface.OnClickListener() {
 						@Override
@@ -933,7 +922,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		
 		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
     	
-    	alert.setPositiveButton(R.string.rename, new DialogInterface.OnClickListener() {
+    	alert.setPositiveButton(R.string.rename_sketch_button, new DialogInterface.OnClickListener() {
     		public void onClick(DialogInterface dialog, int whichButton) {
     			String before = getGlobalState().getSketchName();
     			String after = input.getText().toString();

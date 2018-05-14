@@ -17,9 +17,9 @@ public class CopyAndroidJarTask extends Task {
 	@Override
 	public void run() {
 		try {
-			postStatus("Copying android.jar file...");
+			postStatus(global.getString(R.string.task_copy_android_jar_file_running));
 			Build.copyAndroidJar(global);
-			postStatus("Copied android.jar file");
+			postStatus(global.getString(R.string.task_copy_android_jar_file_completed));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -27,6 +27,6 @@ public class CopyAndroidJarTask extends Task {
 	
 	@Override
 	public CharSequence getTitle() {
-		return global.getResources().getString(R.string.pref_build_recopy_android_jar);
+		return global.getString(R.string.pref_build_recopy_android_jar);
 	}
 }

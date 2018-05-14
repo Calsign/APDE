@@ -10,7 +10,7 @@
     
     <CheckBox
         android:id="@+id/char_inserts"
-        android:text="@string/char_inserts"
+        android:text="@string/pref_char_inserts"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 </LinearLayout>

@@ -4,7 +4,7 @@
         android:key="pref_whats_new"
         android:title="@string/pref_whats_new" >
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:key="pref_whats_new_enable"
             android:title="@string/pref_whats_new_enable"
             android:summary="@string/pref_whats_new_enable_desc"

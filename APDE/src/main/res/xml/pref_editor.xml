@@ -4,7 +4,7 @@
         android:title="@string/pref_editor" >
 
         <!-- maxLength sets the max number of characters... don't want font sizes of 1000!!! -->
-        <android.support.v7.preference.EditTextPreference
+        <com.takisoft.fix.support.v7.preference.EditTextPreference
             android:defaultValue="@string/pref_textsize_default"
             android:inputType="number"
             android:key="textsize"
@@ -13,51 +13,49 @@
             android:selectAllOnFocus="true"
             android:singleLine="true"
             android:title="@string/pref_textsize_title" />
-
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+		
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="syntax_highlight"
             android:title="@string/pref_syntax_highlight" />
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="override_tab"
-            android:title="@string/override_tab"
-            android:summary="@string/override_tab_desc" />
-    </android.support.v7.preference.PreferenceCategory>
-    
-    <android.support.v7.preference.PreferenceCategory
-        android:key="pref_key_character_tray"
-        android:title="@string/title_activity_character_tray_settings" >
-        
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
-            android:defaultValue="true"
-            android:key="char_inserts"
-            android:title="@string/char_inserts" />
-        
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
-            android:defaultValue="true"
-            android:key="char_inserts_include_numbers"
-            android:title="@string/char_inserts_include_numbers"
-            android:dependency="char_inserts" />
-    </android.support.v7.preference.PreferenceCategory>
-    
-    <android.support.v7.preference.PreferenceCategory
-        android:key="pref_key_undo_redo_settings"
-        android:title="@string/undo_redo_settings" >
-        
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
-            android:defaultValue="true"
-            android:key="pref_key_undo_redo"
-            android:title="@string/pref_undo_redo" />
-        
+            android:title="@string/pref_override_tab"
+            android:summary="@string/pref_override_tab_desc" />
+    	
         <android.support.v7.preference.ListPreference
-            android:key="pref_key_undo_redo_keep"
-            android:title="@string/pref_undo_redo_keep"
-            android:entries="@array/undo_redo_keep_entries"
-            android:entryValues="@array/undo_redo_keep_entry_values"
-            android:defaultValue="@string/undo_redo_keep_default_value"
-            android:dependency="pref_key_undo_redo" />
+            android:key="pref_key_autosave_timeout"
+            android:title="@string/pref_autosave_timeout"
+            android:entries="@array/pref_autosave_timeout_entries"
+            android:entryValues="@array/pref_autosave_timeout_values"
+            android:defaultValue="@string/pref_autosave_timeout_default_value" />
+        
+        <!-- We haven't figured this out yet... -->
+        <!-- <Preference
+            android:title="@string/title_activity_character_tray_settings" >
+            
+            <intent
+                android:action="android.intent.action.VIEW"
+                android:targetClass="com.calsignlabs.apde.CharacterTraySettingsActivity"
+                android:targetPackage="com.calsignlabs.apde" />
+        </Preference> -->
+        <!-- Use this for now... -->
+        <android.support.v7.preference.Preference
+            android:title="@string/title_activity_character_tray_settings"
+            android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >
+            
+            <extra android:name="resource" android:value="pref_character_tray" />
+        </android.support.v7.preference.Preference>
+        
+        <!-- Undo/redo settings -->
+        <android.support.v7.preference.Preference
+            android:title="@string/pref_undo_redo"
+            android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >
+            
+            <extra android:name="resource" android:value="pref_undo_redo" />
+        </android.support.v7.preference.Preference>
     </android.support.v7.preference.PreferenceCategory>
     
     <android.support.v7.preference.PreferenceCategory
@@ -65,7 +63,7 @@
         android:title="@string/pref_console" >
 
         <!-- maxLength sets the max number of characters... don't want font sizes of 1000!!! -->
-        <android.support.v7.preference.EditTextPreference
+        <com.takisoft.fix.support.v7.preference.EditTextPreference
             android:defaultValue="@string/pref_textsize_default"
             android:inputType="number"
             android:key="textsize_console"
@@ -75,7 +73,7 @@
             android:singleLine="true"
             android:title="@string/pref_textsize_title" />
 
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="pref_scroll_lock"
             android:summary="@string/pref_scroll_lock_desc"

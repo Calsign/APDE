@@ -219,13 +219,15 @@ public class FindReplace implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.find_replace);
+		return context.getResources().getString(R.string.tool_find_replace);
 	}
 	
 	@Override
 	public void run() {
 		if (context.getEditor().findViewById(R.id.find_replace_toolbar) != null) {
-			//If it's already there, then leave it
+			// If it's already there, then leave it
+			// But switch focus
+			findTextField.requestFocus();
 			return;
 		}
 		
@@ -311,12 +313,12 @@ public class FindReplace implements Tool {
 				//TODO Regular Expressions aren't currently implemented
 				options.findViewById(R.id.find_replace_options_reg_exp_container).setVisibility(View.GONE);
 				
-				assignLongPressDescription(context, findButton, R.string.find);
-				assignLongPressDescription(context, replaceButton, R.string.replace_and_find);
-				assignLongPressDescription(context, replaceAllButton, R.string.replace_all);
+				assignLongPressDescription(context, findButton, R.string.tool_find_replace_find);
+				assignLongPressDescription(context, replaceButton, R.string.tool_find_replace_replace_and_find);
+				assignLongPressDescription(context, replaceAllButton, R.string.tool_find_replace_replace_all);
 				
-				assignLongPressDescription(context, closeButton, R.string.close);
-				assignLongPressDescription(context, expandCollapseButton, R.string.expand);
+				assignLongPressDescription(context, closeButton, R.string.tool_find_replace_close);
+				assignLongPressDescription(context, expandCollapseButton, R.string.tool_find_replace_expand);
 				
 				assignEnumRadioGroup(context, "direction", 0, new RadioButton[]{directionForward, directionBackward}, new Direction[]{Direction.FORWARD, Direction.BACKWARD}, direction);
 				assignEnumRadioGroup(context, "scope", 1, new RadioButton[]{scopeSelection, scopeCurrentTab, scopeAllTabs}, new Scope[]{Scope.SELECTION, Scope.CURRENT_TAB, Scope.ALL_TABS}, scope);
@@ -375,7 +377,7 @@ public class FindReplace implements Tool {
 							
 							TabLayout codeTabStrip = context.getEditor().getCodeTabStrip();
 							
-							assignLongPressDescription(context, expandCollapseButton, R.string.collapse);
+							assignLongPressDescription(context, expandCollapseButton, R.string.tool_find_replace_collapse);
 							
 							findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, height, LinearLayout.LayoutParams.MATCH_PARENT, height * 2));
 							
@@ -399,7 +401,7 @@ public class FindReplace implements Tool {
 							
 //							context.getEditor().refreshMessageAreaLocation();
 							
-							assignLongPressDescription(context, expandCollapseButton, R.string.expand);
+							assignLongPressDescription(context, expandCollapseButton, R.string.tool_find_replace_expand);
 							
 							ResizeAnimation<LinearLayout> resize = new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, height * 2, LinearLayout.LayoutParams.MATCH_PARENT, height);
 							resize.setAnimationListener(new Animation.AnimationListener() {
@@ -462,7 +464,7 @@ public class FindReplace implements Tool {
 					@Override
 					public void onClick(View v) {
 						AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
-						builder.setTitle(R.string.find_replace);
+						builder.setTitle(R.string.tool_find_replace);
 						
 						builder.setView(options);
 						
@@ -486,6 +488,13 @@ public class FindReplace implements Tool {
 				
 				//Make sure to update the layout
 				contentView.invalidate();
+				
+				findReplaceToolbar.post(new Runnable() {
+					@Override
+					public void run() {
+						findTextField.requestFocus();
+					}
+				});
 			}
 		});
 	}
@@ -789,7 +798,7 @@ public class FindReplace implements Tool {
 	public void nextFindMatch() {
 		if (findMatches.size() == 0) {
 			//There aren't any more matches
-			context.getEditor().message(context.getResources().getString(R.string.find_replace_end));
+			context.getEditor().message(context.getResources().getString(R.string.tool_find_replace_end));
 			
 			return;
 		}
@@ -824,7 +833,7 @@ public class FindReplace implements Tool {
 		
 		if (nextFindMatch == -1) {
 			//There aren't any more matches
-			context.getEditor().message(context.getResources().getString(R.string.find_replace_end));
+			context.getEditor().message(context.getResources().getString(R.string.tool_find_replace_end));
 			
 			return;
 		}
@@ -853,7 +862,7 @@ public class FindReplace implements Tool {
 		
 		if (cursorFindMatch == -1) {
 			//There aren't any more matches
-			context.getEditor().message(context.getResources().getString(R.string.find_replace_end));
+			context.getEditor().message(context.getResources().getString(R.string.tool_find_replace_end));
 			
 			return;
 		}
@@ -1095,7 +1104,7 @@ public class FindReplace implements Tool {
 			
 			@Override
 			public CharSequence getTitle() {
-				return context.getResources().getString(R.string.replace_all);
+				return context.getResources().getString(R.string.tool_find_replace_replace_all);
 			}
 		});
 	}

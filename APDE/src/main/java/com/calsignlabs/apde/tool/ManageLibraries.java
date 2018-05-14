@@ -21,7 +21,7 @@ public class ManageLibraries implements Tool {
 	
 	@Override
 	public String getMenuTitle() {
-		return context.getResources().getString(R.string.manage_libraries);
+		return context.getResources().getString(R.string.library_manager_open);
 	}
 	
 	@Override

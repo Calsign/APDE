@@ -5,16 +5,20 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
 import android.preference.PreferenceManager;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
+import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -48,6 +52,7 @@ import com.calsignlabs.apde.tool.UninstallSketch;
 import com.calsignlabs.apde.vcs.GitRepository;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -56,6 +61,8 @@ import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.lang.reflect.Field;
 import java.math.RoundingMode;
 import java.nio.channels.FileChannel;
@@ -147,13 +154,13 @@ public class APDE extends Application {
 		public String toReadableString(Context context) {
 			switch(this) {
 			case SKETCHBOOK:
-				return context.getResources().getString(R.string.sketches);
+				return context.getResources().getString(R.string.drawer_folder_sketches);
 			case EXAMPLE:
-				return context.getResources().getString(R.string.examples);
+				return context.getResources().getString(R.string.drawer_folder_examples);
 			case LIBRARY_EXAMPLE:
-				return context.getResources().getString(R.string.library_examples);
+				return context.getResources().getString(R.string.drawer_folder_library_examples);
 			case TEMPORARY:
-				return context.getResources().getString(R.string.temporary);
+				return context.getResources().getString(R.string.drawer_folder_temporary);
 			default:
 				return "";
 			}
@@ -392,7 +399,7 @@ public class APDE extends Application {
 		//Sanity check...
 		if (directory == null || !directory.isDirectory()) {
 			//Let the user know that the folder is empty...
-			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
+			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
 			
 			return output;
 		}
@@ -414,8 +421,8 @@ public class APDE extends Application {
 		// Perhaps put an error message to this effect here?
 		if (contents == null) {
 			//Let the user know that the folder is empty...
-			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
-			System.out.println("failed - contents null");
+			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
+			System.out.println(getResources().getString(R.string.list_sketch_containing_folders_failed_contents_null));
 			
 			return output;
 		}
@@ -679,8 +686,7 @@ public class APDE extends Application {
 		if (savedDrive == null) {
 			// The drive has probably been removed
 			
-			System.err.println("Sketchbook drive could not be found, it may\n" +
-					"have been removed. Reverting to default drive.");
+			System.err.println(getResources().getString(R.string.sketchbook_drive_not_found));
 			
 			SharedPreferences.Editor edit = prefs.edit();
 			edit.putString(storageDrivePref, getDefaultSketchbookStorageDrive(storageDrives).root.toString());
@@ -885,16 +891,16 @@ public class APDE extends Application {
 								public void run() {
 									AlertDialog.Builder builder = new AlertDialog.Builder(editor);
 									
-									builder.setTitle(R.string.update_examples_dialog_title);
+									builder.setTitle(R.string.examples_update_dialog_title);
 									
-									LinearLayout layout = (LinearLayout) View.inflate(APDE.this, R.layout.examples_update_dialog, null);
+									LinearLayout layout = (LinearLayout) View.inflate(new ContextThemeWrapper(editor, R.style.Theme_AppCompat_Dialog), R.layout.examples_update_dialog, null);
 									
 									final CheckBox dontShowAgain = (CheckBox) layout.findViewById(R.id.examples_update_dialog_dont_show_again);
 									final TextView disableWarning = (TextView) layout.findViewById(R.id.examples_update_dialog_disable_warning);
 									
 									builder.setView(layout);
 									
-									builder.setPositiveButton(R.string.update, new DialogInterface.OnClickListener() {
+									builder.setPositiveButton(R.string.examples_update_dialog_update_button, new DialogInterface.OnClickListener() {
 										@Override
 										public void onClick(DialogInterface dialog, int which) {
 											if (dontShowAgain.isChecked()) {
@@ -930,7 +936,7 @@ public class APDE extends Application {
 										public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 											disableWarning.setVisibility(isChecked ? View.VISIBLE : View.GONE);
 											// Change the behavior if the user wants to get rid of this dialog...
-											updateButton.setText(isChecked ? R.string.close : R.string.update);
+											updateButton.setText(isChecked ? R.string.tool_find_replace_close : R.string.examples_update_dialog_update_button);
 											// Hide the cancel button so that it's unambiguous
 											cancelButton.setEnabled(!isChecked);
 										}
@@ -948,7 +954,7 @@ public class APDE extends Application {
 	}
 	
 	private void updateExamplesRepo() {
-		editor.message(getResources().getString(R.string.examples_updating));
+		editor.message(getResources().getString(R.string.examples_update_progress_message));
 		
 		//We have to do this on a non-UI thread...
 		
@@ -980,7 +986,7 @@ public class APDE extends Application {
 					editor.runOnUiThread(new Runnable() {
 						public void run() {
 							editor.forceDrawerReload();
-							editor.message(getResources().getString(R.string.examples_update));
+							editor.message(getResources().getString(R.string.examples_update_success));
 						}
 					});
 				}
@@ -1032,8 +1038,8 @@ public class APDE extends Application {
 			}).start();
 		} else {
 			AlertDialog.Builder builder = new AlertDialog.Builder(activityContext);
-			builder.setTitle(R.string.update_examples_download_now_mobile_data_error_dialog_title);
-			builder.setMessage(R.string.update_examples_download_now_mobile_data_error_dialog_message);
+			builder.setTitle(R.string.examples_update_settings_download_now_mobile_data_error_dialog_title);
+			builder.setMessage(R.string.examples_update_settings_download_now_mobile_data_error_dialog_message);
 			
 			builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
 				@Override
@@ -1057,8 +1063,8 @@ public class APDE extends Application {
 		if(destFile.exists()) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(activityContext);
 			
-			builder.setTitle(isSketch ? R.string.cannot_move_sketch_title : R.string.cannot_move_folder_title);
-			builder.setMessage(R.string.cannot_move_folder_message);
+			builder.setTitle(isSketch ? R.string.rename_sketch_failure_title : R.string.rename_move_folder_failure_title);
+			builder.setMessage(isSketch ? R.string.rename_sketch_failure_message : R.string.rename_move_folder_failure_message);
 			
 			builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
 				@Override
@@ -1085,7 +1091,7 @@ public class APDE extends Application {
 		try {
 			copyFile(sourceFile, destFile);
 		} catch (IOException e) {
-			System.err.println("Error moving sketch...");
+			System.err.println(getResources().getString(R.string.move_folder_error_moving_sketch));
 			e.printStackTrace();
 			
 			return false;
@@ -1094,7 +1100,7 @@ public class APDE extends Application {
 		try {
 			deleteFile(sourceFile);
 		} catch (IOException e) {
-			System.err.println("Error deleting old sketch after moving...");
+			System.err.println(getResources().getString(R.string.move_folder_error_deleting_old_sketch));
 			e.printStackTrace();
 			
 			return false;
@@ -1209,6 +1215,13 @@ public class APDE extends Application {
 		return sketchLocation.equals(SketchLocation.TEMPORARY);
 	}
 	
+	/**
+	 * @return whether or not the sketch is in the sketchbook
+	 */
+	public boolean isSketchbook() {
+		return sketchLocation.equals(SketchLocation.SKETCHBOOK);
+	}
+	
 	public void putRecentSketch(SketchLocation location, String path) {
 		ArrayList<SketchMeta> oldSketches = getRecentSketches();
 		SketchMeta[] sketches = new SketchMeta[oldSketches.size() + 1];
@@ -1283,7 +1296,7 @@ public class APDE extends Application {
 		
 		if(sketches.size() == 0) {
 			//Let the user know that the folder is empty...
-			fileItems.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
+			fileItems.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
 		}
 		
 		return fileItems;
@@ -1377,7 +1390,7 @@ public class APDE extends Application {
 		
 		File contribLibrariesFolder = getLibrariesFolder();
 		if (contribLibrariesFolder != null) {
-			contributedLibraries = Library.list(contribLibrariesFolder);
+			contributedLibraries = Library.list(contribLibrariesFolder, this);
 			for (Library lib : contributedLibraries) {
 				lib.addPackageList(importToLibraryTable,
 						(APDE) editor.getApplicationContext());
@@ -1459,19 +1472,19 @@ public class APDE extends Application {
 			list.add(tool);
 			table.put(toolName, tool);
 		} catch (ClassNotFoundException e) {
-			System.err.println("Failed to load tool " + toolName);
+			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		} catch (InstantiationException e) {
-			System.err.println("Failed to load tool " + toolName);
+			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
-			System.err.println("Failed to load tool " + toolName);
+			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		} catch (Error e) {
-			System.err.println("Failed to load tool " + toolName);
+			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		} catch (Exception e) {
-			System.err.println("Failed to load tool " + toolName);
+			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		}
 	}
@@ -1583,5 +1596,99 @@ public class APDE extends Application {
 		builder.setView(frameLayout);
 		
 		return input;
+	}
+	
+	public void launchSketchFolder(Activity activityContext) {
+		if (isExample() || isTemp() || (isSketchbook()
+				&& getSketchbookDrive().type.equals(StorageDrive.StorageDriveType.INTERNAL))) {
+			
+			// Don't try opening sketches that are in places that we can't see
+			return;
+		}
+		
+		// This is very broken. Most file manager seem unable to display a folder.
+		// The only file manager that works is Open Intents (OI), which uses a separate mechanism.
+		// TODO Need to create an in-app file browser to avoid depending on an external file browser
+		
+		File sketchFolder = getSketchLocation();
+		Intent intent = new Intent(Intent.ACTION_VIEW);
+		Uri uri;
+		
+		if (android.os.Build.VERSION.SDK_INT >= 24) {
+			// Need to use FileProvider
+			uri = FileProvider.getUriForFile(activityContext, "com.calsignlabs.apde.fileprovider", sketchFolder);
+			intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		} else {
+			uri = Uri.fromFile(sketchFolder);
+		}
+		
+		// Support OI File Manager - perhaps the only file manager that supports displaying folders
+		intent.putExtra("org.openintents.extra.ABSOLUTE_PATH", sketchFolder.getAbsolutePath());
+		intent.setDataAndType(uri, "*/*");
+		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Start this in a separate task
+		activityContext.startActivity(Intent.createChooser(intent, getResources().getString(R.string.show_sketch_folder_title)));
+	}
+	
+	public static final SimpleDateFormat DEBUG_LOG_TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+	
+	public void writeDebugLog(String tag, String msg) {
+		try {
+			FileOutputStream out = new FileOutputStream(new File(getSketchbookFolder(), "debugLog.txt"), true);
+			Writer writer = new BufferedWriter(new OutputStreamWriter(out));
+			
+			writer.write(DEBUG_LOG_TIMESTAMP_FORMATTER.format(new Date()) + "    " + tag + "    " + msg + "\n");
+			
+			writer.flush();
+			writer.close();
+			out.flush();
+			out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void writeCodeDeletionDebugStatus(String loc) {
+		if (getPref("pref_debug_code_deletion_debug_logs", false)) {
+			if (editor == null) {
+				// Sometimes this can happen
+				writeDebugLog(loc, "Editor is null");
+				return;
+			}
+			
+			StringBuilder msg = new StringBuilder();
+			
+			msg.append("\n");
+			
+			for (SketchFile sketchFile : editor.getSketchFiles()) {
+				File file = new File(getSketchLocation(), sketchFile.getFilename());
+				
+				msg.append("    FS - ");
+				msg.append(sketchFile.getFilename());
+				msg.append(": ");
+				msg.append(file.length());
+				msg.append("\n");
+			}
+			
+			for (SketchFile sketchFile : editor.getSketchFiles()) {
+				msg.append("    SketchFile - ");
+				msg.append(sketchFile.getFilename());
+				msg.append(": ");
+				msg.append(sketchFile.getText().length());
+				msg.append("\n");
+			}
+			
+			CodeEditText codeEditText = editor.getSelectedCodeArea();
+			if (codeEditText != null) {
+				msg.append("    CodeEditText - ");
+				msg.append(editor.getSketchFiles().get(editor.getSelectedCodeIndex()).getFilename());
+				msg.append(": ");
+				msg.append(editor.getSelectedCodeArea().getText().length());
+				msg.append("\n");
+			} else {
+				msg.append("    CodeEditText null\n");
+			}
+			
+			writeDebugLog(loc, msg.toString());
+		}
 	}
 }

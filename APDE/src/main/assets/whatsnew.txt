@@ -1,3 +1,11 @@
+v0.4.1-pre2 Alpha:
+ - Fix most code deletion bugs
+ - Android multi-window support on 7.0+ (Nougat)
+ - Timer-based autosave
+ - Many other bug fixes and improvements
+
+------------------------------------------------------------------------
+
 v0.4.0 Alpha
 
  - Material design
@@ -10,9 +18,7 @@ v0.4.0 Alpha
  - Updated default sketch icons
  - Lots of bug fixes and smaller improvements
 
-Notes:
-
-This release drops support for Android 2.3.3 Gingerbread (API level 10),
+Note: This release drops support for Android 2.3.3 Gingerbread (API level 10),
 which the desktop version has also done. The new minimum Android version
 is Android 4.0.3 Ice Cream Sandwich (API level 15).
 

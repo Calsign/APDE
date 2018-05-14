@@ -174,8 +174,8 @@ public class PermissionsActivity extends AppCompatActivity {
 				public void onClick(View view) {
 					AlertDialog.Builder builder = new AlertDialog.Builder(PermissionsActivity.this);
 					
-					builder.setTitle(R.string.delete_perm_dialog_title);
-					builder.setMessage(R.string.delete_perm_dialog_message);
+					builder.setTitle(R.string.permissions_delete_permission_dialog_title);
+					builder.setMessage(R.string.permissions_delete_permission_dialog_message);
 					
 					builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
 						@Override
@@ -254,8 +254,8 @@ public class PermissionsActivity extends AppCompatActivity {
 	public void newPermission() {
 		//Create the alert
 		AlertDialog.Builder build = new AlertDialog.Builder(this);
-		build.setTitle(R.string.new_permission_dialog_title);
-		build.setMessage(R.string.new_permission_dialog_message);
+		build.setTitle(R.string.permissions_new_permission_dialog_title);
+		build.setMessage(R.string.permissions_new_permission_dialog_message);
 		
 		APDE global = (APDE) getApplicationContext();
 		
@@ -266,7 +266,7 @@ public class PermissionsActivity extends AppCompatActivity {
 			public void onClick(DialogInterface dialog, int which) { //TODO let the user customize the prefix and the description
 				saveData();
 				
-				Manifest.addCustomPermission(input.getText().toString(), getResources().getString(R.string.custom_perm), getApplicationContext());
+				Manifest.addCustomPermission(input.getText().toString(), getResources().getString(R.string.permissions_custom_perm), getApplicationContext());
 				Manifest.sortPermissions();
 				adapter.notifyDataSetChanged();
 				

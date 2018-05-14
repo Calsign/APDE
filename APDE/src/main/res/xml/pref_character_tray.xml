@@ -4,15 +4,15 @@
         android:key="pref_key_character_tray"
         android:title="@string/title_activity_character_tray_settings" >
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="char_inserts"
-            android:title="@string/char_inserts" />
+            android:title="@string/pref_char_inserts" />
         
-        <com.takisoft.fix.support.v7.preference.SwitchPreferenceCompat
+        <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"
             android:key="char_inserts_include_numbers"
-            android:title="@string/char_inserts_include_numbers"
+            android:title="@string/pref_char_inserts_include_numbers"
             android:dependency="char_inserts" />
     </android.support.v7.preference.PreferenceCategory>
 </android.support.v7.preference.PreferenceScreen>

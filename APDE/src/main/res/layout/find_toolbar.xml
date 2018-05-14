@@ -19,7 +19,7 @@
             android:layout_alignTop="@+id/find_replace_find_text"
             android:layout_alignBottom="@id/find_replace_find_text"
             android:layout_toLeftOf="@+id/find_replace_more_options"
-            android:contentDescription="@string/find"
+            android:contentDescription="@string/tool_find_replace_find"
             style="@style/Widget.AppCompat.Light.ActionButton" />
         
         <ImageButton
@@ -30,7 +30,7 @@
             android:layout_alignTop="@id/find_replace_find_text"
             android:layout_alignBottom="@id/find_replace_find_text"
             android:layout_toLeftOf="@+id/find_replace_close"
-            android:contentDescription="@string/more_options"
+            android:contentDescription="@string/tool_find_replace_more_options"
             style="@style/Widget.AppCompat.Light.ActionButton" />
         
         <ImageButton
@@ -41,7 +41,7 @@
             android:layout_alignTop="@id/find_replace_find_text"
             android:layout_alignBottom="@id/find_replace_find_text"
             android:layout_alignParentRight="true"
-            android:contentDescription="@string/close"
+            android:contentDescription="@string/tool_find_replace_close"
             style="@style/Widget.AppCompat.Light.ActionButton" />
         
         <EditText
@@ -49,7 +49,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textFilter"
-            android:hint="@string/find"
+            android:hint="@string/tool_find_replace_find"
             android:layout_alignParentLeft="true"
             android:layout_toLeftOf="@id/find_replace_find" />
     </RelativeLayout>
@@ -68,7 +68,7 @@
             android:layout_alignTop="@+id/find_replace_replace_text"
             android:layout_alignBottom="@id/find_replace_replace_text"
             android:layout_toLeftOf="@+id/find_replace_all"
-            android:contentDescription="@string/replace_and_find"
+            android:contentDescription="@string/tool_find_replace_replace_and_find"
             style="@style/Widget.AppCompat.Light.ActionButton" />
         
         <ImageButton
@@ -79,7 +79,7 @@
             android:layout_alignTop="@id/find_replace_replace_text"
             android:layout_alignBottom="@id/find_replace_replace_text"
             android:layout_toLeftOf="@+id/find_replace_expand_collapse_wrapper"
-            android:contentDescription="@string/replace_all"
+            android:contentDescription="@string/tool_find_replace_replace_all"
             style="@style/Widget.AppCompat.Light.ActionButton" />
         
         <!-- Wrapper layout so that we can change the background
@@ -98,7 +98,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:src="@drawable/ic_caret_down_white"
-                android:contentDescription="@string/expand_collapse"
+                android:contentDescription="@string/tool_find_replace_expand_collapse"
                 style="@style/Widget.AppCompat.Light.ActionButton" />
         </FrameLayout>
         
@@ -107,7 +107,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textFilter"
-            android:hint="@string/replace"
+            android:hint="@string/tool_find_replace_replace"
             android:layout_alignParentLeft="true"
             android:layout_toLeftOf="@id/find_replace_replace" />
     </RelativeLayout>
