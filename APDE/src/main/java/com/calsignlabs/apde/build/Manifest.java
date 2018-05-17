@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -31,8 +32,6 @@ import processing.data.XML;
 public class Manifest {
 	public static final String MANIFEST_XML = "AndroidManifest.xml";
 	
-	public static final String MIN_SDK = "15";
-	
 	public static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd.HHmm", Locale.US);
 	
 	public static ArrayList<Permission> permissions;
@@ -42,9 +41,16 @@ public class Manifest {
 	/** the manifest data read from the file */
 	private XML xml;
 	
-	public Manifest(Build build) {
+	static private final String[] MANIFEST_TEMPLATE = {
+			"AppManifest.xml.tmpl",
+			"WallpaperManifest.xml.tmpl",
+			"WatchFaceManifest.xml.tmpl",
+			"VRManifest.xml.tmpl",
+	};
+	
+	public Manifest(Build build, int appComp, boolean forceNew) {
 		this.build = build;
-		load();
+		load(forceNew, appComp);
 	}
 	
 	public static void loadPermissions(Context context) {
@@ -198,68 +204,31 @@ public class Manifest {
 		}
 	}
 	
-	public void writeBlankManifest(final File file) {
-		PrintWriter writer;
-		
-		try {
-			writer = new PrintWriter(file);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			return;
+	private void writeBlankManifest(final File xmlFile, final int appComp) {
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		if (appComp == Build.APP) {
+			replaceMap.put("@@min_sdk@@", Build.MIN_SDK_APP);
+		} else if (appComp == Build.WALLPAPER) {
+			replaceMap.put("@@min_sdk@@", Build.MIN_SDK_WALLPAPER);
+		} else if (appComp == Build.WATCHFACE) {
+			replaceMap.put("@@min_sdk@@", Build.MIN_SDK_WATCHFACE);
+		} else if (appComp == Build.VR) {
+			replaceMap.put("@@min_sdk@@", Build.MIN_SDK_VR);
 		}
+		replaceMap.put("@@target_sdk@@", Integer.toString(getDefaultTargetSdk()));
 		
-		writer.println("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-		writer.println("<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" ");
-//		writer.println("          package=\"" + defaultPackageName() + "\" ");
-		writer.println("          package=\"\" ");
-		
-		// Tempting to use 'preferExternal' here, but might annoy some users.
-		// 'auto' at least enables it to be moved back and forth
-		// http://developer.android.com/guide/appendix/install-location.html
-//		writer.println("          android:installLocation=\"auto\" ");
-		// Disabling this for now (0190), requires default.properties to use API 8
-		
-		// This is just a number (like the Processing 'revision'). It should
-		// increment with each release. Perhaps P5 should do this automatically
-		// with each build or read/write of the manifest file?
-		writer.println("          android:versionCode=\"1\" ");
-		// This is the version number/name seen by users
-		writer.println("          android:versionName=\"1.0\">");
-		
-		// for now including this... we're wiring to a particular SDK version anyway...
-		writer.println("  <uses-sdk android:minSdkVersion=\"" + MIN_SDK + "\" />");
-//		writer.println("  <uses-sdk android:minSdkVersion=\"\" />");  // insert sdk version
-//		writer.println("  <application android:label=\"@string/app_name\"");
-		writer.println("  <application android:label=\"\"");  // insert pretty name
-		writer.println("               android:icon=\"@drawable/icon\"");
-		writer.println("               android:debuggable=\"true\">");
-		
-		// turns out label is not required for the activity, so nixing it
-//		writer.println("    <activity android:name=\"\"");  // insert class name prefixed w/ dot
-////	writer.println("              android:label=\"@string/app_name\">");  // pretty name
-//		writer.println("              android:label=\"\">");
-		
-		// activity/android:name should be the full name (package + class name) of
-		// the actual activity class. or the package can be replaced by a single
-		// dot as a prefix as an easier shorthand.
-		writer.println("    <activity android:name=\".MainActivity\"");
-		writer.println("              android:theme=\"@android:style/Theme.NoTitleBar\">");
-		writer.println("      <intent-filter>");
-		writer.println("        <action android:name=\"android.intent.action.MAIN\" />");
-		writer.println("        <category android:name=\"android.intent.category.LAUNCHER\" />");
-		writer.println("      </intent-filter>");
-		writer.println("    </activity>");
-		writer.println("  </application>");
-		writer.println("</manifest>");
-		writer.flush();
-		writer.close();
+		Build.createFileFromTemplate(MANIFEST_TEMPLATE[appComp], xmlFile, replaceMap, build.editor);
+	}
+	
+	private int getDefaultTargetSdk() {
+		return Integer.parseInt(build.editor.getGlobalState().getString(R.string.prop_target_sdk_default));
 	}
 	
 	/**
 	 * Save a new version of the manifest info to the build location.
 	 * Also fill in any missing attributes that aren't yet set properly.
 	 */
-	protected void writeBuild(File file, String className, boolean debug) throws IOException {
+	protected void writeCopy(File file, String className, int appComp) throws IOException {
 		// write a copy to the build location
 		save(file);
 		
@@ -280,19 +249,59 @@ public class Manifest {
 			if (label.length() == 0) {
 				app.setString("android:label", className);
 			}
-			app.setString("android:debuggable", debug ? "true" : "false");
+			app.setString("android:debuggable", "true");
 			
-//			XML activity = app.getChild("activity");
-			// the '.' prefix is just an alias for the full package name
-			// http://developer.android.com/guide/topics/manifest/activity-element.html#name
-//			activity.setString("android:name", "." + className); // this has to be right
+			// Services need the label also in the service section
+			if (appComp == Build.WALLPAPER || appComp == Build.WATCHFACE) {
+				XML serv = app.getChild("service");
+				label = serv.getString("android:label");
+				if (label.length() == 0) {
+					serv.setString("android:label", className);
+				}
+			}
 			
-			PrintWriter writer = new PrintWriter(file);
-			writer.print(mf.toString());
+			// Make sure that the required permissions for watch faces and VR apps are
+			// included.
+			if (appComp == Build.WATCHFACE || appComp == Build.VR) {
+				fixPermissions(mf, appComp);
+			}
+			
+			PrintWriter writer = PApplet.createWriter(file);
+			writer.print(mf.format(4));
 			writer.flush();
 			writer.close();
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+	
+	private void fixPermissions(XML mf, int appComp) {
+		boolean hasWakeLock = false;
+		boolean hasVibrate = false;
+		boolean hasReadExtStorage = false;
+		for (XML kid : mf.getChildren("uses-permission")) {
+			String name = kid.getString("android:name");
+			if (appComp == Build.WATCHFACE && name.equals(PERMISSION_PREFIX + "WAKE_LOCK")) {
+				hasWakeLock = true;
+				continue;
+			}
+			if (appComp == Build.VR && name.equals(PERMISSION_PREFIX + "VIBRATE")) {
+				hasVibrate = true;
+				continue;
+			}
+			if (appComp == Build.VR && name.equals(PERMISSION_PREFIX + "READ_EXTERNAL_STORAGE")) {
+				hasReadExtStorage = true;
+				continue;
+			}
+		}
+		if (appComp == Build.WATCHFACE && !hasWakeLock) {
+			mf.addChild("uses-permission").setString("android:name", PERMISSION_PREFIX + "WAKE_LOCK");
+		}
+		if (appComp == Build.VR && !hasVibrate) {
+			mf.addChild("uses-permission").setString("android:name", PERMISSION_PREFIX + "VIBRATE");
+		}
+		if (appComp == Build.VR && !hasReadExtStorage) {
+			mf.addChild("uses-permission").setString("android:name", PERMISSION_PREFIX + "READ_EXTERNAL_STORAGE");
 		}
 	}
 	
@@ -405,7 +414,7 @@ public class Manifest {
 		return xml.getChild("application").getChild("activity").getString("android:screenOrientation", context.getResources().getString(R.string.prop_orientation_default));
 	}
 	
-	public void load() {
+	public void load(boolean forceNew, int appComp) {
 		File manifestFile = getManifestFile();
 		if (manifestFile.exists()) {
 			try {
@@ -413,7 +422,7 @@ public class Manifest {
 			} catch (Exception e) {
 				e.printStackTrace();
 				System.err.println(build.editor.getResources().getString(R.string.manifest_problem_reading_creating_new));
-
+				
 				// remove the old manifest file, rename it with date stamp
 				long lastModified = manifestFile.lastModified();
 				String stamp = getDateStamp(lastModified);
@@ -425,10 +434,56 @@ public class Manifest {
 				}
 			}
 		}
+		
+		String[] permissionNames = null;
+		String pkgName = null;
+		int versionCode = -1;
+		String versionName = null;
+		int targetSdk = -1;
+		String orientation = null;
+		String prettyName = null;
+		if (xml != null && forceNew) {
+			permissionNames = getPermissions();
+			pkgName = getPackageName();
+			versionCode = getVersionCode(build.editor);
+			versionName = getPrettyVersion(build.editor);
+			targetSdk = getTargetSdk(build.editor);
+			orientation = getOrientation(build.editor);
+			prettyName = getPrettyName();
+			xml = null;
+			
+			// If this sketch is out of date, give it the latest and greatest
+			if (targetSdk < build.getMinSdk()) {
+				targetSdk = getDefaultTargetSdk();
+			}
+		}
+		
 		if (xml == null) {
-			writeBlankManifest(manifestFile);
+			writeBlankManifest(manifestFile, appComp);
 			try {
 				xml = new XML(manifestFile);
+				if (permissionNames != null) {
+					setPermissions(permissionNames);
+				}
+				if (pkgName != null) {
+					xml.setString("package", pkgName);
+				}
+				if (versionCode != -1) {
+					xml.setString("android:versionCode", Integer.toString(versionCode));
+				}
+				if (versionName != null) {
+					xml.setString("android:versionName", versionName);
+				}
+				if (targetSdk != -1) {
+					xml.getChild("uses-sdk").setString("android:targetSdkVersion", Integer.toString(targetSdk));
+				}
+				if (orientation != null) {
+					xml.getChild("application").getChild("activity").setString("android:screenOrientation", orientation);
+				}
+				if (prettyName != null && !prettyName.equals(".")) {
+					//Don't want the default "." sketch!
+					xml.getChild("application").setString("android:label", prettyName);
+				}
 			} catch (FileNotFoundException e) {
 				System.err.println(String.format(Locale.US, build.editor.getResources().getString(R.string.manifest_read_failed), manifestFile.getAbsolutePath()));
 				e.printStackTrace();
@@ -439,7 +494,7 @@ public class Manifest {
 			} catch (SAXException e) {
 				e.printStackTrace();
 			} catch (RuntimeException e) {
-				//Hopefully this solves some crashes from users doing things that they shouldn't be...
+				// Hopefully this solves some crashes from users doing things that they shouldn't be...
 				System.err.println(String.format(Locale.US, build.editor.getResources().getString(R.string.manifest_read_failed_corrupted), manifestFile.getAbsolutePath()));
 				e.printStackTrace();
 			}
@@ -491,11 +546,11 @@ public class Manifest {
 	
 	public void updateProcessing3() {
 		xml.getChild("application").getChild("activity").setString("android:name", ".MainActivity");
-		if (xml.getChild("uses-sdk").getInt("android:minSdkVersion") < 15) {
-			xml.getChild("uses-sdk").setInt("android:minSdkVersion", 15);
+		if (xml.getChild("uses-sdk").getInt("android:minSdkVersion") < 17) {
+			xml.getChild("uses-sdk").setInt("android:minSdkVersion", 17);
 		}
-		if (xml.getChild("uses-sdk").getInt("android:targetSdkVersion") < 15) {
-			xml.getChild("uses-sdk").setInt("android:targetSdkVersion", 15);
+		if (xml.getChild("uses-sdk").getInt("android:targetSdkVersion") < 17) {
+			xml.getChild("uses-sdk").setInt("android:targetSdkVersion", 17);
 		}
 		
 		// Don't overwrite examples... they should be updated through the repository

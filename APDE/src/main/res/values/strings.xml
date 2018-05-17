@@ -201,8 +201,8 @@
 	<string name="move_temp_to_sketchbook_button">Move</string>
 	
 	<!-- Export eclipse project tool. -->
-	<string name="export_eclipse_project">Export Eclipse Project</string>
-	<string name="export_eclipse_project_success">The Eclipse project has been exported.</string>
+	<string name="export_gradle_project">Export Gradle Project</string>
+	<string name="export_gradle_project_success">The Gradle project has been exported.</string>
 	
 	<!-- Export signed package tool. -->
 	<string name="export_signed_package">Export Signed Package</string>

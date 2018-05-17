@@ -30,6 +30,7 @@ import org.spongycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
@@ -39,7 +40,9 @@ import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.security.Security;
 import java.util.ArrayList;
@@ -47,21 +50,20 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 import kellinwood.security.zipsigner.ZipSigner;
 import kellinwood.security.zipsigner.optional.CustomKeySigner;
 import processing.app.Preferences;
-import processing.app.Util;
 import processing.core.PApplet;
 import processing.data.StringList;
 import processing.mode.java.preproc.PdePreprocessor;
 import processing.mode.java.preproc.PreprocessorResult;
-
-import static android.R.attr.mode;
 
 public class Build {
 	public static final String PACKAGE_REGEX ="(?:^|\\s|;)package\\s+(\\S+)\\;";
@@ -87,12 +89,29 @@ public class Build {
 	
 	protected boolean foundMain;
 	
+	// Main activity or service
+	static private final String APP_ACTIVITY_TEMPLATE = "AppActivity.java.tmpl";
+	static private final String WALLPAPER_SERVICE_TEMPLATE = "WallpaperService.java.tmpl";
+	static private final String WATCHFACE_SERVICE_TEMPLATE = "WatchFaceService.java.tmpl";
+	static private final String VR_ACTIVITY_TEMPLATE = "VRActivity.java.tmpl";
+	
+	// Additional resources
+	static private final String LAYOUT_ACTIVITY_TEMPLATE = "LayoutActivity.xml.tmpl";
+	static private final String STYLES_FRAGMENT_TEMPLATE = "StylesFragment.xml.tmpl";
+	static private final String STYLES_VR_TEMPLATE = "StylesVR.xml.tmpl";
+	static private final String XML_WALLPAPER_TEMPLATE = "XMLWallpaper.xml.tmpl";
+	static private final String STRINGS_WALLPAPER_TEMPLATE = "StringsWallpaper.xml.tmpl";
+	static private final String XML_WATCHFACE_TEMPLATE = "XMLWatchFace.xml.tmpl";
+	
+	// Icons
 	private static final String ICON_192 = "icon-192.png";
 	private static final String ICON_144 = "icon-144.png";
 	private static final String ICON_96 = "icon-96.png";
 	private static final String ICON_72 = "icon-72.png";
 	private static final String ICON_48 = "icon-48.png";
 	private static final String ICON_36 = "icon-36.png";
+	static final String WATCHFACE_ICON_CIRCULAR = "preview_circular.png";
+	static final String WATCHFACE_ICON_RECTANGULAR = "preview_rectangular.png";
 	
 	// Prefer the higher-resolution icons
 	public static final String[] ICON_LIST = {ICON_192, ICON_144, ICON_96, ICON_72, ICON_48, ICON_36};
@@ -110,10 +129,15 @@ public class Build {
 	
 	private int appComponent;
 	
-	static final int FRAGMENT = 0;
-	static final int WALLPAPER = 1;
-	static final int WATCHFACE = 2;
-	static final int CARDBOARD = 3;
+	public static final int APP = 0;
+	public static final int WALLPAPER = 1;
+	public static final int WATCHFACE = 2;
+	public static final int VR = 3;
+	
+	static public final String MIN_SDK_APP = "17"; // Android 4.2
+	static public final String MIN_SDK_WALLPAPER = "17"; // Android 4.2
+	static public final String MIN_SDK_VR = "19"; // Android 4.4
+	static public final String MIN_SDK_WATCHFACE = "25"; // Android 7.1.1
 	
 	public Build(APDE global) {
 		this.editor = global.getEditor();
@@ -129,6 +153,17 @@ public class Build {
 	
 	public int getAppComponent() {
 		return appComponent;
+	}
+	
+	public int getMinSdk() {
+		String minSdk;
+		switch (getAppComponent()) {
+			case WALLPAPER: minSdk =  MIN_SDK_WALLPAPER;
+			case VR: minSdk = MIN_SDK_VR;
+			case WATCHFACE: minSdk = MIN_SDK_WATCHFACE;
+			case APP: default: minSdk = MIN_SDK_APP;
+		}
+		return Integer.parseInt(minSdk);
 	}
 	
 	public void setKey(String keystore, char[] keystorePassword, String keyAlias, char[] keyAliasPassword) {
@@ -187,371 +222,24 @@ public class Build {
 	
 	//Recursive file deletion
     public static boolean deleteFile(File f, Context context) {
-    	if(f.isDirectory()) {
+		if (f.isDirectory()) {
 			for (File c : f.listFiles()) {
 				deleteFile(c, context);
 			}
 		}
-    	
-    	//Renaming solution for the file system lock with EBUSY errors
+	
+		//Renaming solution for the file system lock with EBUSY errors
 		//StackOverflow: http://stackoverflow.com/questions/11539657/open-failed-ebusy-device-or-resource-busy
 		final File to = new File(f.getAbsolutePath() + System.currentTimeMillis());
 		f.renameTo(to);
-    	
-    	if(!to.delete()) {
-    		System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failure), f.getAbsolutePath()));
-    		return false;
-    	}
-    	
-    	return true;
-    }
 	
-//    public void exportAndroidEclipseProject(File dest, String target) {
-//    	editor.messageExt(editor.getResources().getString(R.string.build_sketch_message));
-//		System.out.println("Initializing build sequence...");
-//
-//		if (verbose) {
-//			System.out.println("Target: export");
-//		}
-//
-//    	buildFolder = dest;
-//		srcFolder = new File(buildFolder, "src");
-//		genFolder = new File(buildFolder, "gen");
-//		libsFolder = new File(buildFolder, "libs");
-//		assetsFolder = new File(buildFolder, "assets");
-//		binFolder = new File(buildFolder, "bin");
-//
-//		File buildFile = new File(buildFolder, "build.xml");
-//
-//		//Wipe the old export folder
-//		if(buildFolder.exists()) {
-//			if (deleteFile(buildFolder)) {
-//				System.out.println("Deleted old export folder");
-//			} else if (verbose) {
-//				System.out.println("Failed to delete old export folder");
-//			}
-//		}
-//
-//		buildFolder.mkdir();
-//		srcFolder.mkdir();
-//		libsFolder.mkdir();
-//		assetsFolder.mkdir();
-//		binFolder.mkdir();
-//
-//		//Make sure we have the latest version of the libraries folder
-//		((APDE) editor.getApplicationContext()).rebuildLibraryList();
-//
-//		Manifest manifest = null;
-//		String sketchClassName = null;
-//
-//		editor.messageExt(editor.getResources().getString(R.string.gen_project_message));
-//
-//		try {
-//			manifest = new Manifest(this);
-//
-//			if (manifest.needsProcessing3Update()) {
-//				System.out.println("Upgrading Manifest.xml to Android Mode 3.0...");
-//				manifest.updateProcessing3();
-//			}
-//
-//			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
-//
-//			//Enable all of the fancy preprocessor stuff
-//			Preferences.setBoolean("preproc.enhanced_casting", true);
-//			Preferences.setBoolean("preproc.web_colors", true);
-//			Preferences.setBoolean("preproc.color_datatype", true);
-//			Preferences.setBoolean("preproc.substitute_floats", true);
-//			Preferences.setBoolean("preproc.substitute_unicode", true);
-//
-//			if (verbose) {
-//				System.out.println("Pre-processing...");
-//			}
-//
-//			Preproc preproc = new Preproc(sketchName, manifest.getPackageName());
-//
-//			//Combine all of the tabs to check for size
-//			String combinedText = "";
-//			for(SketchFile tab : tabs)
-//				combinedText += tab.getText();
-//			preproc.initSketchSize(combinedText);
-//			preproc.initSketchSmooth(combinedText);
-//			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false, false);
-//
-//			if(sketchClassName != null) {
-//				if (verbose) {
-//					System.out.println("Writing AndroidManifest.xml...");
-//				}
-//
-//				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
-//				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
-//
-//				if (verbose) {
-//					System.out.println("Writing ANT build files...");
-//				}
-//
-//				writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
-//				writeBuildXML(buildFile, sketchName);
-//				writeProjectProps(new File(buildFolder, "project.properties"), manifest.getTargetSdk(editor));
-////				writeLocalProps(new File(buildFolder, "local.properties"));
-//
-//				if (verbose) {
-//					System.out.println("Writing resources...");
-//				}
-//
-//				final File resFolder = new File(buildFolder, "res");
-//				writeRes(resFolder, sketchClassName);
-//
-//				writeMainActivity(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName);
-//
-////				final File libsFolder = mkdirs(buildFolder, "libs");
-////				final File assetsFolder = mkdirs(buildFolder, "assets");
-//
-//				AssetManager am = editor.getAssets();
-//
-//				//Copy native libraries
-//
-//				if (verbose) {
-//					System.out.println("Copying Processing libraries...");
-//				}
-//
-//				String[] libsToCopy = {"processing-core", "android-support-v4"};
-//				String prefix = "libs/";
-//				String suffix = ".jar";
-//
-//				//Copy for the compiler
-//				for(String lib : libsToCopy) {
-//					InputStream inputStream = am.open(prefix + lib + suffix);
-//					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
-//					inputStream.close();
-//				}
-//
-//				if (verbose) {
-//					System.out.println("Copying contributed libaries...");
-//				}
-//
-//				// Copy any imported libraries (their libs and assets),
-//				// and anything in the code folder contents to the project.
-//				copyLibraries(libsFolder, assetsFolder);
-//				copyCodeFolder(libsFolder);
-//
-//				// Copy the data folder (if one exists) to the project's 'assets' folder
-//				final File sketchDataFolder = getSketchDataFolder();
-//				if(sketchDataFolder.exists()) {
-//					if (verbose) {
-//						System.out.println("Copying data folder...");
-//					}
-//
-//					copyDir(sketchDataFolder, assetsFolder);
-//				}
-//
-//				// Do the same for the 'res' folder.
-//				// http://code.google.com/p/processing/issues/detail?id=767
-//				final File sketchResFolder = new File(getSketchFolder(), "res");
-//				if(sketchResFolder.exists()) {
-//					if (verbose) {
-//						System.out.println("Copying res folder...");
-//					}
-//
-//					copyDir(sketchResFolder, resFolder);
-//				}
-//			}
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		} catch (SketchException e) {
-//			e.printStackTrace();
-//
-//			editor.errorExt(e.getMessage());
-//			editor.highlightLineExt(e.getCodeIndex(), e.getCodeLine());
-//
-//			//Bail out
-//			cleanUp();
-//			return;
-//		} catch (RuntimeException e) {
-//			e.printStackTrace();
-//
-//			editor.errorExt(e.getMessage());
-//
-//			//Bail out
-//			cleanUp();
-//			return;
-//		}
-//
-//		System.out.println("Exported to " + dest.getAbsolutePath());
-//		editor.messageExt(editor.getResources().getString(R.string.export_eclipse_project_complete));
-//    }
-    public void exportAndroidEclipseProject(File dest, String target) {
-    	editor.messageExt(editor.getResources().getString(R.string.build_message_begin));
-		System.out.println(editor.getResources().getString(R.string.build_initializing));
-		
-		if (verbose) {
-			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_target_release_debug), "export"));
+		if (!to.delete()) {
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failure), f.getAbsolutePath()));
+			return false;
 		}
-    	
-    	buildFolder = dest;
-		srcFolder = new File(buildFolder, "src");
-		genFolder = new File(buildFolder, "gen");
-		libsFolder = new File(buildFolder, "libs");
-		assetsFolder = new File(buildFolder, "assets");
-		binFolder = new File(buildFolder, "bin");
-		
-		File buildFile = new File(buildFolder, "build.xml");
-		
-		//Wipe the old export folder
-		if(buildFolder.exists()) {
-			if (deleteFile(buildFolder, editor)) {
-				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_success));
-			} else if (verbose) {
-				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_failed));
-			}
-		}
-		
-		buildFolder.mkdir();
-		srcFolder.mkdir();
-		libsFolder.mkdir();
-		assetsFolder.mkdir();
-		binFolder.mkdir();
-		
-		//Make sure we have the latest version of the libraries folder
-		((APDE) editor.getApplicationContext()).rebuildLibraryList();
-		
-		Manifest manifest = null;
-		String sketchClassName = null;
-		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_gen_project));
-		
-		try {
-			manifest = new Manifest(this);
-			
-			if (manifest.needsProcessing3Update()) {
-				System.out.println(editor.getResources().getString(R.string.build_manifest_android_mode_3_upgrade));
-				manifest.updateProcessing3();
-			}
-			
-			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
-			
-			//Enable all of the fancy preprocessor stuff
-			Preferences.setBoolean("preproc.enhanced_casting", true);
-			Preferences.setBoolean("preproc.web_colors", true);
-			Preferences.setBoolean("preproc.color_datatype", true);
-			Preferences.setBoolean("preproc.substitute_floats", true);
-			Preferences.setBoolean("preproc.substitute_unicode", true);
-			
-			if (verbose) {
-				System.out.println(editor.getResources().getString(R.string.build_preprocessing));
-			}
-			
-			Preproc preproc = new Preproc(sketchName, manifest.getPackageName());
-			
-			//Combine all of the tabs to check for size
-			String combinedText = "";
-			for(SketchFile tab : tabs)
-				combinedText += tab.getText();
-			preproc.initSketchSize(combinedText, editor);
-			preproc.initSketchSmooth(combinedText, editor);
-			sketchClassName = preprocess(srcFolder, manifest.getPackageName(), preproc, false, false);
-			
-			if(sketchClassName != null) {
-				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_writing_manifest));
-				}
-				
-				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
-				manifest.writeBuild(tempManifest, sketchClassName, target.equals("debug"));
-				
-				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_writing_ant_files));
-				}
-				
-				writeAntProps(new File(buildFolder, "ant.properties"), manifest.getPackageName());
-				writeBuildXML(buildFile, sketchName);
-				writeProjectProps(new File(buildFolder, "project.properties"), manifest.getTargetSdk(editor));
-//				writeLocalProps(new File(buildFolder, "local.properties"));
-				
-				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_writing_resources));
-				}
-				
-				final File resFolder = new File(buildFolder, "res");
-				writeRes(resFolder, sketchClassName);
-				
-				writeMainActivity(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName);
-				
-//				final File libsFolder = mkdirs(buildFolder, "libs");
-//				final File assetsFolder = mkdirs(buildFolder, "assets");
-				
-				AssetManager am = editor.getAssets();
-				
-				//Copy native libraries
-				
-				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_copying_processing_libraries));
-				}
-				
-				String[] libsToCopy = {"processing-core", "android-support-v4"};
-				String prefix = "libs/";
-				String suffix = ".jar";
-				
-				//Copy for the compiler
-				for(String lib : libsToCopy) {
-					InputStream inputStream = am.open(prefix + lib + suffix);
-					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
-					inputStream.close();
-				}
-				
-				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_copying_contributed_libraries));
-				}
-				
-				// Copy any imported libraries (their libs and assets),
-				// and anything in the code folder contents to the project.
-				copyLibraries(libsFolder, assetsFolder);
-				copyCodeFolder(libsFolder);
-				
-				// Copy the data folder (if one exists) to the project's 'assets' folder
-				final File sketchDataFolder = getSketchDataFolder();
-				if(sketchDataFolder.exists()) {
-					if (verbose) {
-						System.out.println(editor.getResources().getString(R.string.build_copying_data_folder));
-					}
-					
-					copyDir(sketchDataFolder, assetsFolder);
-				}
-				
-				// Do the same for the 'res' folder.
-				// http://code.google.com/p/processing/issues/detail?id=767
-				final File sketchResFolder = new File(getSketchFolder(), "res");
-				if(sketchResFolder.exists()) {
-					if (verbose) {
-						System.out.println(editor.getResources().getString(R.string.build_copying_res_folder));
-					}
-					
-					copyDir(sketchResFolder, resFolder);
-				}
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (SketchException e) {
-			e.printStackTrace();
-			
-			editor.errorExt(e.getMessage());
-			editor.highlightLineExt(e.getCodeIndex(), e.getCodeLine());
-			
-			//Bail out
-			cleanUp();
-			return;
-		} catch (RuntimeException e) {
-			e.printStackTrace();
-			
-			editor.errorExt(e.getMessage());
-			
-			//Bail out
-			cleanUp();
-			return;
-		}
-		
-		System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_exported_to), dest.getAbsolutePath()));
-		editor.messageExt(editor.getResources().getString(R.string.export_eclipse_project_success));
-    }
+	
+		return true;
+	}
 	
 	public static File getAndroidJarLoc(Context context) {
 		return new File(getTempFolder(context), "android.jar");
@@ -640,7 +328,8 @@ public class Build {
 		File androidJarLoc = getAndroidJarLoc(editor);
 		
 		try {
-			manifest = new Manifest(this);
+			// Force a new manifest to update older versions to the current version of Android mode
+			manifest = new Manifest(this, getAppComponent(), true);
 			
 			if (manifest.needsProcessing3Update()) {
 				System.out.println(editor.getResources().getString(R.string.build_manifest_android_mode_3_upgrade));
@@ -703,7 +392,7 @@ public class Build {
 				}
 				
 				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
-				manifest.writeBuild(tempManifest, sketchClassName, debug);
+				manifest.writeCopy(tempManifest, sketchClassName, getAppComponent());
 				
 				if(!running.get()) { //CHECK
 					cleanUpHalt();
@@ -717,12 +406,18 @@ public class Build {
 				final File resFolder = new File(buildFolder, "res");
 				writeRes(resFolder, sketchClassName);
 				
-				writeMainActivity(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName);
+				writeMainClass(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName, manifest.getPackageName(), false, injectLogBroadcaster);
 				
 				final File libsFolder = mkdirs(buildFolder, "libs", editor);
 				final File assetsFolder = mkdirs(buildFolder, "assets", editor);
 				
 				AssetManager am = editor.getAssets();
+				
+				// Copy AppCompat res files
+				
+				File supportResFolder = new File(buildFolder, "support-res");
+				resFolder.mkdir();
+				createFolderFromZippedAssets(editor.getAssets(), "support-res.zip", supportResFolder);
 				
 				// Copy android.jar if it hasn't been done yet
 				if (!androidJarLoc.exists()) {
@@ -739,7 +434,7 @@ public class Build {
 					System.out.println(editor.getResources().getString(R.string.build_copying_processing_libraries));
 				}
 				
-				String[] libsToCopy = {"processing-core"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
+				String[] libsToCopy = {"processing-core", "support-core-utils", "support-compat", "appcompat", "support-fragment"};//, "support-vector-drawable"};
 				String prefix = "libs/";
 				String suffix = ".jar";
 				
@@ -821,15 +516,13 @@ public class Build {
 				}
 				
 				if (debug && injectLogBroadcaster) {
-					//Add ("LogBroadcasterActive.pde" or "LogBroadcasterStatic.pde") and "APDEInternalLogBroadcasterUtil.java" to the code
-					//We need two versions to support both active and static modes
-					//The static version goes before the code and the active version goes after it
-					//The .pde file contains the code that initializes the output streams and the broadcaster
-					//The .java file contains the classes that are used by the .pde file
+					// Add "LogBroadcasterInsert.java" and "APDEInternalLogBroadcasterUtil.java" to the code
+					// The insert goes directly in the code
+					// The util file contains the classes that are used by the insert
 					
-					//Read the .java file
+					// Read the .java file
 					
-					InputStream stream = am.open("APDEInternalLogBroadcasterUtil.java");
+					InputStream stream = am.open("log-broadcaster/APDEInternalLogBroadcasterUtil.java");
 					
 					int size = stream.available();
 					byte[] buffer = new byte[size];
@@ -839,10 +532,10 @@ public class Build {
 					
 					String text = new String(buffer);
 					
-					//Add the package declaration
+					// Add the package declaration
 					text = "package " + manifest.getPackageName() + ";\n\n" + text;
 					
-					//Save the .java file
+					// Save the .java file
 					saveFile(text, new File(srcFolder.getAbsolutePath(), manifest.getPackageName().replace('.', '/') + "/APDEInternalLogBroadcasterUtil.java"));
 				}
 				
@@ -906,20 +599,6 @@ public class Build {
 			// Default to ARM, just in case
 			
 			if (usePie) {
-//				// Check to see if the user wants to use the old, pre-0.3.3 AAPT PIE binary.
-//				// This is for debugging... because for some reason, the new one that was
-//				// supposed to fix incompatibilities with some devices is - wait for it -
-//				// incompatible with some devices. This seems to be a pattern.
-//				if (PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_aapt_binary", false)) {
-//					aaptName = "aapt-binaries/aapt-arm-pie-old";
-//					
-//					if (verbose) {
-//						System.out.println("Using pre-0.3.3 AAPT binary");
-//					}
-//				} else {
-//					aaptName = "aapt-binaries/aapt-arm-pie";
-//				}
-				
 				// Disabled above pref because old aapt contains vulnerable version of libpng
 				aaptName = "aapt-binaries/aapt-arm-pie";
 				
@@ -953,22 +632,6 @@ public class Build {
 				System.out.println(editor.getResources().getString(R.string.build_changing_aapt_execution_permissions));
 			}
 			
-//			File chmodFile = new File("/system/bin/chmod");
-//			System.out.println("chmod file " + (chmodFile.exists() ? "exists" : "doesn't exist"));
-			
-//			//Run "chmod" on aapt so that we can execute it
-//			String[] chmod = {"chmod", "744", aaptLoc.getAbsolutePath()};
-//			Process chmodProcess = Runtime.getRuntime().exec(chmod);
-//			
-//			int code = chmodProcess.waitFor();
-//			
-//			if (code != 0) {
-//				System.err.println("Unable to make AAPT executable, error code: " + code);
-//				
-//				cleanUpError();
-//				return;
-//			}
-			
 			// We don't need to use chmod!!!!!!!
 			if (!aaptLoc.setExecutable(true, true)){
 				System.err.println(editor.getResources().getString(R.string.build_change_aapt_execution_permissions_failed));
@@ -976,25 +639,17 @@ public class Build {
 				cleanUpError();
 				return;
 			}
-			
-//			if (verbose) {
-//				copyStream(chmodProcess.getErrorStream(), System.out);
-//			}
 		} catch (IOException e) {
 			System.out.println(editor.getResources().getString(R.string.build_change_aapt_execution_permissions_failed));
 			e.printStackTrace();
 		}
-//		catch (InterruptedException e) {
-//			System.out.println("Unable to make AAPT executable");
-//			e.printStackTrace();
-//		}
 		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
 			return;
 		}
 		
-		//Let's try a different method - who needs ANT, anyway?
+		// Let's try a different method - who needs ANT, anyway?
 		
 		String mainActivityLoc = manifest.getPackageName().replace(".", "/");
 		
@@ -1003,10 +658,10 @@ public class Build {
 		
 		editor.messageExt(editor.getResources().getString(R.string.build_message_run_aapt));
 		
-		//Copy GLSL shader files
+		// Copy GLSL shader files
 		
-		//GLSL files need to be placed in the root of the APK file
-		File glslFolder = new File(binFolder, "processing.zip");
+		// GLSL files need to be placed in the root of the APK file
+		File glslFolder = new File(binFolder, "glsl-processing.zip");
 		
 		try {
 			if (verbose) {
@@ -1014,7 +669,7 @@ public class Build {
 			}
 			
 			//Copy the zip archive
-			InputStream inputStream = editor.getAssets().open("glsl/processing.zip");
+			InputStream inputStream = editor.getAssets().open("glsl-processing.zip");
 			createFileFromInputStream(inputStream, glslFolder);
 		} catch(IOException e) { //Uh-oh...
 			System.out.println(editor.getResources().getString(R.string.build_copy_glsl_failed));
@@ -1031,25 +686,35 @@ public class Build {
 		
 		System.out.println(); //Separator
 		
-		//Run AAPT
+		// Run AAPT
 		try {
 			System.out.println(editor.getResources().getString(R.string.build_packaging_aapt));
 			
-			//Create folder structure for R.java TODO why is this necessary?
+			// Create folder structure for R.java TODO why is this necessary?
 			(new File(genFolder.getAbsolutePath() + "/" + mainActivityLoc + "/")).mkdirs();
 			
 			String[] args = {
-				aaptLoc.getAbsolutePath(), //The location of AAPT
-				"package", "-v", "-f", "-m",
-				"-S", buildFolder.getAbsolutePath() + "/res/", //The location of the /res folder
-				"-J", genFolder.getAbsolutePath(), //The location of the /gen folder
-				"-A", assetsFolder.getAbsolutePath(), //The location of the /assets folder
-				"-M", buildFolder.getAbsolutePath() + "/AndroidManifest.xml", //The location of the AndroidManifest.xml file
-				"-I", androidJarLoc.getAbsolutePath(), //The location of the android.jar resource
-				"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res" //The location of the output .apk.res file
+				aaptLoc.getAbsolutePath(), // The location of AAPT
+				"package", "-v", "-f", "-m", "--auto-add-overlay",
+				"-S", buildFolder.getAbsolutePath() + "/res/", // The location of the /res folder
+				"-S", buildFolder.getAbsolutePath() + "/support-res/", // The location of the support lib res folder
+				"--extra-packages", "android.support.v7.appcompat", // Make AAPT generate R.java for AppCompat
+				"-J", genFolder.getAbsolutePath(), // The location of the /gen folder
+				"-A", assetsFolder.getAbsolutePath(), // The location of the /assets folder
+				"-M", buildFolder.getAbsolutePath() + "/AndroidManifest.xml", // The location of the AndroidManifest.xml file
+				"-I", androidJarLoc.getAbsolutePath(), // The location of the android.jar resource
+				"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res" // The location of the output .apk.res file
 			};
 			
 			Process aaptProcess = Runtime.getRuntime().exec(args);
+			
+			// We have to give it an output stream for some reason
+			// So give it one that ignores the data
+			// We don't want to print the standard out to the console because it is WAY too much stuff
+			// It even causes APDE to crash because there is too much text in the console to fit in a transaction
+			// We want to show the error stream in verbose mode though because this lets us debug things
+			copyStream(aaptProcess.getInputStream(), new NullOutputStream());
+			copyStream(aaptProcess.getErrorStream(), verbose ? System.err : new NullOutputStream());
 			
 			int code = aaptProcess.waitFor();
 			
@@ -1058,10 +723,6 @@ public class Build {
 				
 				cleanUpError();
 				return;
-			}
-			
-			if (verbose) {
-				copyStream(aaptProcess.getErrorStream(), System.out);
 			}
 		} catch (IOException e) {
 			//Something weird happened
@@ -1074,7 +735,7 @@ public class Build {
 			//Something even weirder happened
 			System.out.println(editor.getResources().getString(R.string.build_aapt_failed));
 			e.printStackTrace();
-			
+
 			cleanUpError();
 			return;
 		}
@@ -1105,6 +766,8 @@ public class Build {
 				"-d", binFolder.getAbsolutePath() + "/classes/", // The location of the output folder
 				srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java", // The location of the sketch file
 				srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + MAIN_ACTIVITY_NAME, // The location of the main activity
+				genFolder.getAbsolutePath() + "/" + mainActivityLoc + "/R.java", // The location of R.java
+				genFolder.getAbsolutePath() + "/android/support/v7/appcompat/R.java", // The location of the support lib's R.java
 			};
 			
 			if (verbose) {
@@ -1450,91 +1113,6 @@ public class Build {
 		}
 	}
 	
-//	public void antBuildProblems(String outPile, String errPile) throws SketchException {
-//		final String[] outLines = outPile.split(System.getProperty("line.separator"));
-//		final String[] errLines = errPile.split(System.getProperty("line.separator"));
-//
-//		for(final String line : outLines) {
-//			final String javacPrefix = "[javac]";
-//			final int javacIndex = line.indexOf(javacPrefix);
-//			
-//			if(javacIndex != -1) {
-//				int offset = javacIndex + javacPrefix.length() + 1;
-//				String[] pieces = PApplet.match(line.substring(offset), "^(.+):([0-9]+):\\s+(.+)$");
-//				
-//				if(pieces != null) {
-//					String fileName = pieces[1];
-//					// remove the path from the front of the filename
-//					fileName = fileName.substring(fileName.lastIndexOf(File.separatorChar) + 1);
-//					final int lineNumber = PApplet.parseInt(pieces[2]) - 1;
-//					SketchException rex = placeException(pieces[3], fileName, lineNumber);
-//					if(rex != null)
-//						throw rex;
-//				}
-//			}
-//		}
-//		
-//		// Couldn't parse the exception, so send something generic
-//		SketchException skex = new SketchException("Error from inside the Android tools, check the console.");
-//		
-//		// Try to parse anything else we might know about
-//		for(final String line : errLines) {
-//			if(line.contains("Unable to resolve target '" + Manifest.MIN_SDK + "'")) {
-//				System.err.println("Use the Android SDK Manager (under the Android");
-//				System.err.println("menu) to install the SDK platform and ");
-//				System.err.println("Google APIs for Android " + Manifest.MIN_SDK +
-//						" (API " + Manifest.MIN_SDK + ")");
-//				skex = new SketchException("Please install the SDK platform and " +
-//						"Google APIs for API " + Manifest.MIN_SDK);
-//			}
-//		}
-//		// Stack trace is not relevant, just the message.
-//		skex.hideStackTrace();
-//		throw skex;
-//	}
-	
-//	public SketchException placeException(String message, String dotJavaFilename, int dotJavaLine) {
-//		int codeIndex = 0;
-//		int codeLine = -1;
-//		
-//		// first check to see if it's a .java file
-//		for(int i = 0; i < tabs.length; i++) {
-//			SketchFile meta = tabs[i];
-//			
-//			if(meta.getSuffix().equals("java")) {
-//				if(dotJavaFilename.equals(meta.getFilename())) {
-//					codeIndex = i;
-//					codeLine = dotJavaLine;
-//					return new SketchException(message, codeIndex, codeLine);
-//				}
-//			}
-//		}
-//		
-//		// If not the preprocessed file at this point, then need to get out
-//		if(!dotJavaFilename.equals(sketchName + ".java"))
-//			return null;
-//		
-//		// if it's not a .java file, codeIndex will still be 0
-//		// this section searches through the list of .pde files
-//		codeIndex = 0;
-//		for(int i = 0; i < tabs.length; i++) {
-//			SketchFile meta = tabs[i];
-//			
-//			if(meta.getSuffix().equals("pde")) {
-//				if(meta.getPreprocOffset() <= dotJavaLine) {
-//					codeIndex = i;
-//					codeLine = dotJavaLine - meta.getPreprocOffset();
-//				}
-//			}
-//		}
-//		// could not find a proper line number, so deal with this differently.
-//		// but if it was in fact the .java file we're looking for, though,
-//		// send the error message through.
-//		// this is necessary because 'import' statements will be at a line
-//		// that has a lower number than the preproc offset, for instance.
-//		return new SketchException(message, codeIndex, codeLine, -1, false); // changed for 0194 for compile errors, but...
-//	}
-	
 	public String preprocess(File srcFolder, String packageName, PdePreprocessor preprocessor, boolean sizeWarning, boolean localInjectLogBroadcaster) throws SketchException {
 		if(getSketchFolder().exists());
 		
@@ -1568,39 +1146,6 @@ public class Build {
 				bigCode.append(meta.getText());
 				bigCode.append("\n");
 				bigCount += numLines(meta.getText());
-			}
-		}
-		
-		if (localInjectLogBroadcaster) {
-			//Add ("LogBroadcasterActive.pde" or "LogBroadcasterStatic.pde") and "APDEInternalLogBroadcasterUtil.java" to the code
-			//We need two versions to support both active and static modes
-			//The static version goes before the code and the active version goes after it
-			//The .pde file contains the code that initializes the output streams and the broadcaster
-			//The .java file contains the classes that are used by the .pde file
-			
-			try {
-				boolean active = active(bigCode);
-				
-				InputStream stream = editor.getAssets().open(active ? "LogBroadcasterActive.pde" : "LogBroadcasterStatic.pde");
-				
-				int size = stream.available();
-				byte[] buffer = new byte[size];
-				
-				stream.read(buffer);
-				stream.close();
-				
-				String text = new String(buffer);
-				
-				if (active) {
-					bigCode.append(text);
-				} else {
-					bigCode.insert(0, text);
-				}
-				
-				System.out.println(editor.getResources().getString(R.string.build_inject_log_broadcaster_success));
-			} catch (IOException e) {
-				System.err.println(editor.getResources().getString(R.string.build_inject_log_broadcaster_failed));
-				e.printStackTrace();
 			}
 		}
 		
@@ -1919,215 +1464,36 @@ public class Build {
 		return 0; // i give up
 	}
 	
-//	private void writeAntProps(final File file, String packageName) {
-//		final PrintWriter writer = PApplet.createWriter(file);
-//		writer.println("application-package=" + packageName);
-//		writer.flush();
-//		writer.close();
-//	}
-//
-//
-//	private void writeBuildXML(final File file, final String projectName) {
-//		final PrintWriter writer = PApplet.createWriter(file);
-//		writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-//
-//		writer.println("<project name=\"" + projectName + "\" default=\"help\">");
-//
-//		writer.println("  <property file=\"local.properties\" />");
-//		writer.println("  <property file=\"ant.properties\" />");
-//
-//		writer.println("  <property environment=\"env\" />");
-//		writer.println("  <condition property=\"sdk.dir\" value=\"${env.ANDROID_HOME}\">");
-//		writer.println("       <isset property=\"env.ANDROID_HOME\" />");
-//		writer.println("  </condition>");
-//
-////		writer.println("  <property name=\"jdt.core\" value=\"" + Base.getToolsFolder() + "/../modes/java/mode/org.eclipse.jdt.core.jar\" />");
-////		writer.println("  <property name=\"jdtCompilerAdapter\" value=\"" + Base.getToolsFolder() + "/../modes/java/mode/jdtCompilerAdapter.jar\" />");
-//		writer.println("  <property name=\"build.compiler\" value=\"org.eclipse.jdt.core.JDTCompilerAdapter\" />");
-//
-//		writer.println("  <mkdir dir=\"bin\" />");
-//
-//		writer.println("  <echo message=\"${build.compiler}\" />");
-//
-//// Override target from maint android build file
-//		writer.println("    <target name=\"-compile\" depends=\"-pre-build, -build-setup, -code-gen, -pre-compile\">");
-//		writer.println("        <do-only-if-manifest-hasCode elseText=\"hasCode = false. Skipping...\">");
-//		writer.println("            <path id=\"project.javac.classpath\">");
-//		writer.println("                <path refid=\"project.all.jars.path\" />");
-//		writer.println("                <path refid=\"tested.project.classpath\" />");
-//		writer.println("                <path path=\"${java.compiler.classpath}\" />");
-//		writer.println("            </path>");
-//		writer.println("            <javac encoding=\"${java.encoding}\"");
-//		writer.println("                    source=\"${java.source}\" target=\"${java.target}\"");
-//		writer.println("                    debug=\"true\" extdirs=\"\" includeantruntime=\"false\"");
-//		writer.println("                    destdir=\"${out.classes.absolute.dir}\"");
-//		writer.println("                    bootclasspathref=\"project.target.class.path\"");
-//		writer.println("                    verbose=\"${verbose}\"");
-//		writer.println("                    classpathref=\"project.javac.classpath\"");
-//		writer.println("                    fork=\"${need.javac.fork}\">");
-//		writer.println("                <src path=\"${source.absolute.dir}\" />");
-//		writer.println("                <src path=\"${gen.absolute.dir}\" />");
-//		writer.println("                <compilerarg line=\"${java.compilerargs}\" />");
-//		writer.println("                <compilerclasspath path=\"${jdtCompilerAdapter};${jdt.core}\" />");
-//		writer.println("            </javac>");
-//
-//		writer.println("            <if condition=\"${build.is.instrumented}\">");
-//		writer.println("                <then>");
-//		writer.println("                    <echo level=\"info\">Instrumenting classes from ${out.absolute.dir}/classes...</echo>");
-//
-//
-//		writer.println("                    <getemmafilter");
-//		writer.println("                            appPackage=\"${project.app.package}\"");
-//		writer.println("                            libraryPackagesRefId=\"project.library.packages\"");
-//		writer.println("                            filterOut=\"emma.default.filter\"/>");
-//
-//
-//		writer.println("                    <property name=\"emma.coverage.absolute.file\" location=\"${out.absolute.dir}/coverage.em\" />");
-//
-//
-//		writer.println("                    <emma enabled=\"true\">");
-//		writer.println("                        <instr verbosity=\"${verbosity}\"");
-//		writer.println("                               mode=\"overwrite\"");
-//		writer.println("                               instrpath=\"${out.absolute.dir}/classes\"");
-//		writer.println("                               outdir=\"${out.absolute.dir}/classes\"");
-//		writer.println("                               metadatafile=\"${emma.coverage.absolute.file}\">");
-//		writer.println("                            <filter excludes=\"${emma.default.filter}\" />");
-//		writer.println("                            <filter value=\"${emma.filter}\" />");
-//		writer.println("                        </instr>");
-//		writer.println("                    </emma>");
-//		writer.println("                </then>");
-//		writer.println("            </if>");
-//
-//		writer.println("            <if condition=\"${project.is.library}\">");
-//		writer.println("                <then>");
-//		writer.println("                    <echo level=\"info\">Creating library output jar file...</echo>");
-//		writer.println("                    <property name=\"out.library.jar.file\" location=\"${out.absolute.dir}/classes.jar\" />");
-//		writer.println("                    <if>");
-//		writer.println("                        <condition>");
-//		writer.println("                            <length string=\"${android.package.excludes}\" trim=\"true\" when=\"greater\" length=\"0\" />");
-//		writer.println("                        </condition>");
-//		writer.println("                        <then>");
-//		writer.println("                            <echo level=\"info\">Custom jar packaging exclusion: ${android.package.excludes}</echo>");
-//		writer.println("                        </then>");
-//		writer.println("                    </if>");
-//
-//		writer.println("                    <propertybyreplace name=\"project.app.package.path\" input=\"${project.app.package}\" replace=\".\" with=\"/\" />");
-//
-//		writer.println("                    <jar destfile=\"${out.library.jar.file}\">");
-//		writer.println("                        <fileset dir=\"${out.classes.absolute.dir}\"");
-//		writer.println("                                includes=\"**/*.class\"");
-//		writer.println("                                excludes=\"${project.app.package.path}/R.class ${project.app.package.path}/R$*.class ${project.app.package.path}/BuildConfig.class\"/>");
-//		writer.println("                        <fileset dir=\"${source.absolute.dir}\" excludes=\"**/*.java ${android.package.excludes}\" />");
-//		writer.println("                    </jar>");
-//		writer.println("                </then>");
-//		writer.println("            </if>");
-//
-//		writer.println("        </do-only-if-manifest-hasCode>");
-//		writer.println("    </target>");
-//
-//
-//
-//
-//
-//		writer.println("  <loadproperties srcFile=\"project.properties\" />");
-//
-//		writer.println("  <fail message=\"sdk.dir is missing. Make sure to generate local.properties using 'android update project'\" unless=\"sdk.dir\" />");
-//
-//		writer.println("  <import file=\"custom_rules.xml\" optional=\"true\" />");
-//
-//		writer.println("  <!-- version-tag: 1 -->");  // should this be 'custom' instead of 1?
-//		writer.println("  <import file=\"${sdk.dir}/tools/ant/build.xml\" />");
-//
-//		writer.println("</project>");
-//		writer.flush();
-//		writer.close();
-//	}
-//
-//	private void writeProjectProps(final File file, int sdkTarget) {
-//		final PrintWriter writer = PApplet.createWriter(file);
-//		writer.println("target=" + sdkTarget);
-//		writer.println();
-//		// http://stackoverflow.com/questions/4821043/includeantruntime-was-not-set-for-android-ant-script
-//		writer.println("# Suppress the javac task warnings about \"includeAntRuntime\"");
-//		writer.println("build.sysclasspath=last");
-//		writer.flush();
-//		writer.close();
-//	}
-	
 	private void writeRes(File resFolder, String className) throws SketchException {
 		File layoutFolder = mkdirs(resFolder, "layout", editor);
-		File layoutFile = new File(layoutFolder, "main.xml");
-		writeResLayoutMainActivity(layoutFile, className);
-	}
-	
-	private void writeRes(File resFolder) throws SketchException {
-		File layoutFolder = mkdirs(resFolder, "layout");
-		writeResLayoutMainActivity(layoutFolder);
+		writeResLayoutMainActivity(layoutFolder, className);
 		
 		int comp = getAppComponent();
-		if (comp == FRAGMENT) {
-			File valuesFolder = mkdirs(resFolder, "values");
+		if (comp == APP) {
+			File valuesFolder = mkdirs(resFolder, "values", editor);
 			writeResStylesFragment(valuesFolder);
 		}
 		
 		if (comp == WALLPAPER) {
-			File xmlFolder = mkdirs(resFolder, "xml");
+			File xmlFolder = mkdirs(resFolder, "xml", editor);
 			writeResXMLWallpaper(xmlFolder);
 			
-			File valuesFolder = mkdirs(resFolder, "values");
-			writeResStringsWallpaper(valuesFolder);
+			File valuesFolder = mkdirs(resFolder, "values", editor);
+			writeResStringsWallpaper(valuesFolder, className);
 		}
 		
-		if (comp == CARDBOARD) {
-			File valuesFolder = mkdirs(resFolder, "values");
-			writeResStylesCardboard(valuesFolder);
+		if (comp == VR) {
+			File valuesFolder = mkdirs(resFolder, "values", editor);
+			writeResStylesVR(valuesFolder);
 		}
 		
 		File sketchFolder = getSketchFolder();
 		writeIconFiles(sketchFolder, resFolder);
-		
-		if (comp == WATCHFACE) {
-			File xmlFolder = mkdirs(resFolder, "xml");
-			writeResXMLWatchFace(xmlFolder);
-			
-			// write the preview files
-			File localPrevCircle = new File(sketchFolder, ICON_WATCHFACE_CIRCULAR);
-			File localPrevRect = new File(sketchFolder, ICON_WATCHFACE_RECTANGULAR);
-			
-			File buildPrevCircle = new File(resFolder, "drawable/" + ICON_WATCHFACE_CIRCULAR);
-			File buildPrevRect = new File(resFolder, "drawable/" + ICON_WATCHFACE_RECTANGULAR);
-			
-			if (!localPrevCircle.exists()) {
-				try {
-					Util.copyFile(mode.getContentFile("icons/" + ICON_WATCHFACE_CIRCULAR), buildPrevCircle);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			} else {
-				try {
-					Util.copyFile(localPrevCircle, buildPrevCircle);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-			
-			if (!localPrevRect.exists())  {
-				try {
-					Util.copyFile(mode.getContentFile("icons/" + ICON_WATCHFACE_RECTANGULAR), buildPrevRect);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			} else {
-				try {
-					Util.copyFile(localPrevCircle, buildPrevRect);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
 	}
 	
 	private void writeIconFiles(File sketchFolder, File resFolder) {
+		AssetManager am = editor.getAssets();
+		
 		File localIcon36 = new File(sketchFolder, ICON_36);
 		File localIcon48 = new File(sketchFolder, ICON_48);
 		File localIcon72 = new File(sketchFolder, ICON_72);
@@ -2144,8 +1510,6 @@ public class Build {
 		
 		if (!localIcon36.exists() && !localIcon48.exists() && !localIcon72.exists() && !localIcon96.exists() && !localIcon144.exists() && !localIcon192.exists()) {
 			try {
-				AssetManager am = editor.getAssets();
-				
 				// if no icons are in the sketch folder, then copy all the defaults
 				if(buildIcon36.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_36);
@@ -2231,138 +1595,184 @@ public class Build {
 				e.printStackTrace();
 			}
 		}
-	}
-	
-	private void writeMainClass(final File srcDirectory, String renderer) {
-		int comp = getAppComponent();
-		String[] permissions = manifest.getPermissions();
-		if (comp == FRAGMENT) {
-			writeFragmentActivity(srcDirectory, permissions);
-		} else if (comp == WALLPAPER) {
-			writeWallpaperService(srcDirectory, permissions);
-		} else if (comp == WATCHFACE) {
-			if (usesOpenGL()) {
-				writeWatchFaceGLESService(srcDirectory, permissions);
-			} else {
-				writeWatchFaceCanvasService(srcDirectory, permissions);
+		
+		if (getAppComponent() == VR) {
+			File localIconCircle = new File(sketchFolder, WATCHFACE_ICON_CIRCULAR);
+			File localIconRect = new File(sketchFolder, WATCHFACE_ICON_RECTANGULAR);
+			
+			File buildIconCircle = new File(resFolder, "drawable/" + WATCHFACE_ICON_CIRCULAR);
+			File buildIconRect = new File(resFolder, "drawable-ldpi/" + WATCHFACE_ICON_RECTANGULAR);
+			
+			try {
+				if (localIconCircle.exists()) {
+					if (new File(resFolder, "drawable").mkdirs()) {
+						copyFile(localIconCircle, buildIconCircle);
+					}
+				} else {
+					InputStream inputStream = am.open("icons/" + WATCHFACE_ICON_CIRCULAR);
+					createFileFromInputStream(inputStream, buildIconCircle);
+					inputStream.close();
+				}
+				
+				if (localIconRect.exists()) {
+					if (new File(resFolder, "drawable").mkdirs()) {
+						copyFile(localIconRect, buildIconRect);
+					}
+				} else {
+					InputStream inputStream = am.open("icons/" + WATCHFACE_ICON_RECTANGULAR);
+					createFileFromInputStream(inputStream, buildIconRect);
+					inputStream.close();
+				}
+			} catch (IOException e) {
+				System.err.println(editor.getResources().getString(R.string.build_write_res_icon_copy_failed));
+				e.printStackTrace();
 			}
-		} else if (comp == CARDBOARD) {
-			writeCardboardActivity(srcDirectory, permissions);
 		}
 	}
 	
-	
-	private void writeFragmentActivity(final File srcDirectory, String[] permissions) {
-		File javaTemplate = mode.getContentFile("templates/" + FRAGMENT_ACTIVITY_TEMPLATE);
-		File javaFile = new File(new File(srcDirectory, getPackageName().replace(".", "/")), "MainActivity.java");
-		
-		HashMap<String, String> replaceMap = new HashMap<String, String>();
-		replaceMap.put("@@package_name@@", getPackageName());
-		replaceMap.put("@@sketch_class_name@@", sketchClassName);
-		
-		AndroidMode.createFileFromTemplate(javaTemplate, javaFile, replaceMap);
+	private static boolean isOpenGL(String renderer) {
+		return renderer != null && (renderer.equals("P2D") || renderer.equals("P3D"));
 	}
 	
-	
-	private void writeWallpaperService(final File srcDirectory, String[] permissions) {
-		File javaTemplate = mode.getContentFile("templates/" + WALLPAPER_SERVICE_TEMPLATE);
-		File javaFile = new File(new File(srcDirectory, getPackageName().replace(".", "/")), "MainService.java");
-		
-		HashMap<String, String> replaceMap = new HashMap<String, String>();
-		replaceMap.put("@@package_name@@", getPackageName());
-		replaceMap.put("@@sketch_class_name@@", sketchClassName);
-		
-		AndroidMode.createFileFromTemplate(javaTemplate, javaFile, replaceMap);
+	private void writeMainClass(final File srcDirectory, String[] permissions, String renderer, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+		int comp = getAppComponent();
+		if (comp == APP) {
+			writeFragmentActivity(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
+		} else if (comp == WALLPAPER) {
+			writeWallpaperService(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
+		} else if (comp == WATCHFACE) {
+			if (isOpenGL(renderer)) {
+				writeWatchFaceGLESService(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
+			} else {
+				writeWatchFaceCanvasService(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
+			}
+		} else if (comp == VR) {
+			writeVRActivity(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
+		}
 	}
 	
+	private String getLogBroadcasterInsert() {
+		try {
+			InputStream stream = editor.getAssets().open("log-broadcaster/LogBroadcasterInsert.java");
+			
+			int size = stream.available();
+			byte[] buffer = new byte[size];
+			
+			stream.read(buffer);
+			stream.close();
+			
+			String out = new String(buffer);
+			
+			System.out.println(editor.getResources().getString(R.string.build_inject_log_broadcaster_success));
+			
+			return out;
+		} catch (IOException e) {
+			System.err.println(editor.getResources().getString(R.string.build_inject_log_broadcaster_failed));
+			e.printStackTrace();
+			
+			return "";
+		}
+	}
 	
-	private void writeWatchFaceGLESService(final File srcDirectory, String[] permissions) {
-		File javaTemplate = mode.getContentFile("templates/" + WATCHFACE_SERVICE_TEMPLATE);
-		File javaFile = new File(new File(srcDirectory, getPackageName().replace(".", "/")), "MainService.java");
+	private void writeFragmentActivity(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+		File javaFile = new File(new File(srcDirectory, packageName.replace(".", "/")), "MainActivity.java");
+		
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		replaceMap.put("@@package_name@@", packageName);
+		replaceMap.put("@@sketch_class_name@@", sketchClassName);
+		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
+		replaceMap.put("@@log_broadcaster@@", injectLogBroadcaster ? getLogBroadcasterInsert() : "");
+		
+		createFileFromTemplate(APP_ACTIVITY_TEMPLATE, javaFile, replaceMap, editor);
+	}
+	
+	private void writeWallpaperService(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+		File javaFile = new File(new File(srcDirectory, packageName.replace(".", "/")), "MainService.java");
+		
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		replaceMap.put("@@package_name@@", packageName);
+		replaceMap.put("@@sketch_class_name@@", sketchClassName);
+		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
+		// TODO inject log broadcaster
+		
+		createFileFromTemplate(WALLPAPER_SERVICE_TEMPLATE, javaFile, replaceMap, editor);
+	}
+	
+	private void writeWatchFaceGLESService(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+		File javaFile = new File(new File(srcDirectory, packageName.replace(".", "/")), "MainService.java");
 		
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
 		replaceMap.put("@@watchface_classs@@", "PWatchFaceGLES");
-		replaceMap.put("@@package_name@@", getPackageName());
+		replaceMap.put("@@package_name@@", packageName);
 		replaceMap.put("@@sketch_class_name@@", sketchClassName);
+		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
+		// TODO inject log broadcaster
 		
-		AndroidMode.createFileFromTemplate(javaTemplate, javaFile, replaceMap);
+		createFileFromTemplate(WATCHFACE_SERVICE_TEMPLATE, javaFile, replaceMap, editor);
 	}
 	
-	
-	private void writeWatchFaceCanvasService(final File srcDirectory, String[] permissions) {
-		File javaTemplate = mode.getContentFile("templates/" + WATCHFACE_SERVICE_TEMPLATE);
-		File javaFile = new File(new File(srcDirectory, getPackageName().replace(".", "/")), "MainService.java");
+	private void writeWatchFaceCanvasService(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+		File javaFile = new File(new File(srcDirectory, packageName.replace(".", "/")), "MainService.java");
 		
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
 		replaceMap.put("@@watchface_classs@@", "PWatchFaceCanvas");
-		replaceMap.put("@@package_name@@", getPackageName());
+		replaceMap.put("@@package_name@@", packageName);
 		replaceMap.put("@@sketch_class_name@@", sketchClassName);
+		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
+		// TODO inject log broadcaster
 		
-		AndroidMode.createFileFromTemplate(javaTemplate, javaFile, replaceMap);
+		createFileFromTemplate(WATCHFACE_SERVICE_TEMPLATE, javaFile, replaceMap, editor);
 	}
 	
-	
-	private void writeCardboardActivity(final File srcDirectory, String[] permissions) {
-		File javaTemplate = mode.getContentFile("templates/" + CARDBOARD_ACTIVITY_TEMPLATE);
-		File javaFile = new File(new File(srcDirectory, getPackageName().replace(".", "/")), "MainActivity.java");
+	private void writeVRActivity(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+		File javaFile = new File(new File(srcDirectory, packageName.replace(".", "/")), "MainActivity.java");
 		
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
-		replaceMap.put("@@package_name@@", getPackageName());
+		replaceMap.put("@@package_name@@", packageName);
 		replaceMap.put("@@sketch_class_name@@", sketchClassName);
+		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
+		// TODO inject log broadcaster
 		
-		AndroidMode.createFileFromTemplate(javaTemplate, javaFile, replaceMap);
+		createFileFromTemplate(VR_ACTIVITY_TEMPLATE, javaFile, replaceMap, editor);
 	}
 	
-	
-	private void writeResLayoutMainActivity(final File layoutFolder) {
-		File xmlTemplate = mode.getContentFile("templates/" + LAYOUT_ACTIVITY_TEMPLATE);
+	private void writeResLayoutMainActivity(final File layoutFolder, String sketchClassName) {
 		File xmlFile = new File(layoutFolder, "main.xml");
 		
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
-		replaceMap.put("@@sketch_class_name@@",sketchClassName);
+		replaceMap.put("@@sketch_class_name@@", sketchClassName);
 		
-		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile, replaceMap);
+		createFileFromTemplate(LAYOUT_ACTIVITY_TEMPLATE, xmlFile, replaceMap, editor);
 	}
-	
 	
 	private void writeResStylesFragment(final File valuesFolder) {
-		File xmlTemplate = mode.getContentFile("templates/" + STYLES_FRAGMENT_TEMPLATE);
 		File xmlFile = new File(valuesFolder, "styles.xml");
-		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile);
+		createFileFromTemplate(STYLES_FRAGMENT_TEMPLATE, xmlFile, null, editor);
 	}
 	
-	
-	private void writeResStylesCardboard(final File valuesFolder) {
-		File xmlTemplate = mode.getContentFile("templates/" + STYLES_CARDBOARD_TEMPLATE);
+	private void writeResStylesVR(final File valuesFolder) {
 		File xmlFile = new File(valuesFolder, "styles.xml");
-		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile);
+		createFileFromTemplate(STYLES_VR_TEMPLATE, xmlFile, null, editor);
 	}
-	
 	
 	private void writeResXMLWallpaper(final File xmlFolder) {
-		File xmlTemplate = mode.getContentFile("templates/" + XML_WALLPAPER_TEMPLATE);
 		File xmlFile = new File(xmlFolder, "wallpaper.xml");
-		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile);
+		createFileFromTemplate(XML_WALLPAPER_TEMPLATE, xmlFile, null, editor);
 	}
 	
-	
-	private void writeResStringsWallpaper(final File valuesFolder) {
-		File xmlTemplate = mode.getContentFile("templates/" + STRINGS_WALLPAPER_TEMPLATE);
+	private void writeResStringsWallpaper(final File valuesFolder, String sketchClassName) {
 		File xmlFile = new File(valuesFolder, "strings.xml");
 		
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
-		replaceMap.put("@@sketch_class_name@@",sketchClassName);
+		replaceMap.put("@@sketch_class_name@@", sketchClassName);
 		
-		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile, replaceMap);
+		createFileFromTemplate(STRINGS_WALLPAPER_TEMPLATE, xmlFile, replaceMap, editor);
 	}
-	
 	
 	private void writeResXMLWatchFace(final File xmlFolder) {
-		File xmlTemplate = mode.getContentFile("templates/" + XML_WATCHFACE_TEMPLATE);
 		File xmlFile = new File(xmlFolder, "watch_face.xml");
-		AndroidMode.createFileFromTemplate(xmlTemplate, xmlFile);
+		createFileFromTemplate(XML_WATCHFACE_TEMPLATE, xmlFile, null, editor);
 	}
-	
 	
 	private String generatePermissionsString(final String[] permissions) {
 		String permissionsStr = "";
@@ -2380,172 +1790,7 @@ public class Build {
 		return permissionsStr;
 	}
 	
-//	public static final String[] DANGEROUS_PERMISSIONS = {
-//			"READ_CALENDAR",
-//			"WRITE_CALENDAR",
-//			"CAMERA",
-//			"READ_CONTACTS",
-//			"WRITE_CONTACTS",
-//			"GET_ACCOUNTS",
-//			"ACCESS_FINE_LOCATION",
-//			"ACCESS_COARSE_LOCATION",
-//			"RECORD_AUDIO",
-//			"READ_PHONE_STATE",
-//			"CALL_PHONE",
-//			"READ_CALL_LOG",
-//			"WRITE_CALL_LOG",
-//			"ADD_VOICEMAIL",
-//			"USE_SIP",
-//			"PROCESS_OUTGOING_CALLS",
-//			"SEND_SMS",
-//			"RECEIVE_SMS",
-//			"READ_SMS",
-//			"RECEIVE_WAP_PUSH",
-//			"RECEIVE_MMS",
-//			"READ_EXTERNAL_STORAGE",
-//			"WRITE_EXTERNAL_STORAGE"
-//	};
-	
 	private static final String MAIN_ACTIVITY_NAME = "MainActivity.java";
-	
-//	private void writeMainActivity(final File srcDirectory, String[] permissions, String packageName, String sketchClassName) {
-//		boolean hasDangerousPermissions = false;
-//
-//		outerLoop:
-//		for (String p : permissions) {
-//			for (String d : DANGEROUS_PERMISSIONS) {
-//				if (d.equals(p)) {
-//					hasDangerousPermissions = true;
-//					break outerLoop;
-//				}
-//			}
-//		}
-//
-//		File mainActivityFile = new File(new File(srcDirectory, packageName.replace(".", "/")), MAIN_ACTIVITY_NAME);
-//		final PrintWriter writer = PApplet.createWriter(mainActivityFile);
-//		writer.println("package " + packageName +";");
-//		writer.println("import android.app.Activity;");
-//		writer.println("import android.os.Bundle;");
-//		writer.println("import android.view.Window;");
-//		writer.println("import android.view.WindowManager;");
-//		writer.println("import android.widget.FrameLayout;");
-//		writer.println("import android.view.ViewGroup.LayoutParams;");
-//		writer.println("import android.app.FragmentTransaction;");
-//
-//		writer.println("import android.content.pm.PackageManager;");
-//		writer.println("import android.support.v4.app.ActivityCompat;");
-//		writer.println("import android.support.v4.content.ContextCompat;");
-//		writer.println("import java.util.ArrayList;");
-//		writer.println("import android.app.AlertDialog;");
-//		writer.println("import android.content.DialogInterface;");
-//		writer.println("import android.Manifest;");
-//
-//		writer.println("import processing.core.PApplet;");
-//		writer.println("public class MainActivity extends Activity implements ActivityCompat.OnRequestPermissionsResultCallback {"); // Note: changed this to support API level 15
-//		writer.println("    PApplet fragment;");
-//		writer.println("    private static final String MAIN_FRAGMENT_TAG = \"main_fragment\";");
-//		writer.println("    private static final int REQUEST_PERMISSIONS = 1;");
-//		writer.println("    int viewId = 0x1000;");
-//		writer.println("    @Override");
-//		writer.println("    protected void onCreate(Bundle savedInstanceState) {");
-//		writer.println("        super.onCreate(savedInstanceState);");
-//		writer.println("        Window window = getWindow();");
-//		writer.println("        requestWindowFeature(Window.FEATURE_NO_TITLE);");
-//		writer.println("        window.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN);");
-//		writer.println("        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);");
-//		writer.println("        FrameLayout frame = new FrameLayout(this);");
-//		writer.println("        frame.setId(viewId);");
-//		writer.println("        setContentView(frame, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));");
-//		writer.println("        if (savedInstanceState == null) {");
-//		writer.println("            fragment = new " + sketchClassName + "();");
-//		writer.println("            FragmentTransaction ft = getFragmentManager().beginTransaction();");
-//		writer.println("            ft.add(frame.getId(), fragment, MAIN_FRAGMENT_TAG).commit();");
-//		writer.println("        } else {");
-//		writer.println("            fragment = (PApplet) getFragmentManager().findFragmentByTag(MAIN_FRAGMENT_TAG);");
-//		writer.println("        }");
-//		writer.println("    }");
-//		writer.println("    @Override");
-//		writer.println("    public void onBackPressed() {");
-//		writer.println("        fragment.onBackPressed();");
-//		writer.println("        super.onBackPressed();");
-//		writer.println("    }");
-//
-//		// Requesting permissions from user when the app resumes.
-//		// Nice example on how to handle user response
-//		// http://stackoverflow.com/a/35495855
-//		// More on permission in Android 23:
-//		// https://inthecheesefactory.com/blog/things-you-need-to-know-about-android-m-permission-developer-edition/en
-//		writer.println("    @Override");
-//		writer.println("    public void onStart() {");
-//		writer.println("        super.onStart();");
-//		writer.println("        ArrayList<String> needed = new ArrayList<String>();");
-//		if (hasDangerousPermissions) {
-//			writer.println("        int check;");
-//		}
-//		writer.println("        boolean danger = false;");
-//		if (hasDangerousPermissions) {
-//			for (String p : permissions) {
-//				for (String d : DANGEROUS_PERMISSIONS) {
-//					if (d.equals(p)) {
-//						writer.println("        check = ContextCompat.checkSelfPermission(this, Manifest.permission." + p + ");");
-//						writer.println("        if (check != PackageManager.PERMISSION_GRANTED) {");
-//						writer.println("          needed.add(Manifest.permission." + p + ");");
-//						writer.println("        } else {");
-//						writer.println("          danger = true;");
-//						writer.println("        }");
-//					}
-//				}
-//			}
-//		}
-//		writer.println("        if (!needed.isEmpty()) {");
-//		writer.println("          ActivityCompat.requestPermissions(this, needed.toArray(new String[needed.size()]), REQUEST_PERMISSIONS);");
-//		writer.println("        } else if (danger) {");
-//		writer.println("          fragment.onPermissionsGranted();");
-//		writer.println("        }");
-//		writer.println("    }");
-//
-//		// The event handler for the permission result
-//		writer.println("    @Override");
-//		writer.println("    public void onRequestPermissionsResult(int requestCode,");
-//		writer.println("                                           String permissions[], int[] grantResults) {");
-//		writer.println("      if (requestCode == REQUEST_PERMISSIONS) {");
-//		writer.println("        if (grantResults.length > 0) {");
-//		writer.println("          for (int i = 0; i < grantResults.length; i++) {");
-//		writer.println("            if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {");
-//		writer.println("              AlertDialog.Builder builder = new AlertDialog.Builder(this);");
-//		writer.println("              builder.setMessage(\"The app cannot run without these permissions, will quit now.\")");
-//		writer.println("                     .setCancelable(false)");
-//		writer.println("                     .setPositiveButton(\"OK\", new DialogInterface.OnClickListener() {");
-//		writer.println("                          public void onClick(DialogInterface dialog, int id) {");
-//		writer.println("                              finish();");
-//		writer.println("                          }");
-//		writer.println("                     });");
-//		writer.println("              AlertDialog alert = builder.create();");
-//		writer.println("              alert.show();");
-//		writer.println("            }");
-//		writer.println("          }");
-//		writer.println("          fragment.onPermissionsGranted();");
-//		writer.println("        }");
-//		writer.println("      }");
-//		writer.println("    }");
-//
-//		writer.println("}");
-//		writer.flush();
-//		writer.close();
-//	}
-//
-//	private void writeResLayoutMainActivity(final File file, String sketchClassName) {
-//		final PrintWriter writer = PApplet.createWriter(file);
-//		writer.println("<fragment xmlns:android=\"http://schemas.android.com/apk/res/android\"");
-//		writer.println("    xmlns:tools=\"http://schemas.android.com/tools\"");
-//		writer.println("    android:id=\"@+id/fragment\"");
-//		writer.println("    android:name=\"." + sketchClassName + "\"");
-//		writer.println("    tools:layout=\"@layout/fragment_main\"");
-//		writer.println("    android:layout_width=\"match_parent\"");
-//		writer.println("    android:layout_height=\"match_parent\" />");
-//		writer.flush();
-//		writer.close();
-//	}
 	
 	private void copyLibraries(final File libsFolder, final File assetsFolder) throws IOException { //TODO support native library stuffs
 		for (Library library : importedLibraries) {
@@ -2648,8 +1893,63 @@ public class Build {
 		}
 	}
 	
-	//http://stackoverflow.com/questions/11820142/how-to-pass-a-file-path-which-is-in-assets-folder-to-filestring-path
+	// https://gist.github.com/tylerchesley/6198074
+	private static File createFolderFromAssets(AssetManager am, String folder, File destFile) {
+		String[] assets = null;
+		try {
+			assets = am.list(folder);
+			if (assets.length == 0) {
+				createFileFromInputStream(am.open(folder), destFile);
+			} else {
+				if (!destFile.exists()) {
+					destFile.mkdir();
+				}
+				
+				for (String asset : assets) {
+					createFolderFromAssets(am, folder + "/" + asset, new File(destFile, asset));
+				}
+			}
+			
+			return destFile;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	private static File createFolderFromZippedAssets(AssetManager am, String zipFile, File destFile) {
+		try {
+			ZipInputStream inputStream = new ZipInputStream(am.open(zipFile));
+			
+			ZipEntry zipEntry = null;
+			while ((zipEntry = inputStream.getNextEntry()) != null) {
+				File file = new File(destFile.getAbsolutePath(), zipEntry.getName());
+				
+				if (zipEntry.isDirectory()) {
+					file.mkdirs();
+				} else {
+					createFileFromInputStream(inputStream, file, false);
+					inputStream.closeEntry();
+				}
+			}
+			
+			inputStream.close();
+			
+			return destFile;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
 	private static File createFileFromInputStream(InputStream inputStream, File destFile) {
+		return createFileFromInputStream(inputStream, destFile, true);
+	}
+	
+	// http://stackoverflow.com/questions/11820142/how-to-pass-a-file-path-which-is-in-assets-folder-to-filestring-path
+	private static File createFileFromInputStream(InputStream inputStream, File destFile, boolean close) {
 		try {
 			// Make sure that the parent folder exists
 			destFile.getParentFile().mkdirs();
@@ -2662,7 +1962,9 @@ public class Build {
 				outputStream.write(buffer, 0, length);
 			
 			outputStream.close();
-			inputStream.close();
+			if (close) {
+				inputStream.close();
+			}
 			
 			return destFile;
 		} catch (IOException e) {
@@ -2671,46 +1973,6 @@ public class Build {
 		
 		return null;
 	}
-	
-	//http://stackoverflow.com/questions/16983989/copy-directory-from-assets-to-data-folder
-//	private static boolean copyAssetFolder(AssetManager assetManager, String fromAssetPath, String toPath) {
-//		try {
-//			String[] files = assetManager.list(fromAssetPath);
-//			new File(toPath).mkdirs();
-//			boolean res = true;
-//			for(String file : files)
-//				if((file.contains(".") && !file.equals("android-4.4")) || file.equals("aapt") || file.equals("aidl")) //TODO changed this, it's awfully hard-coded now
-//					res &= copyAsset(assetManager, fromAssetPath + "/" + file, toPath + "/" + file);
-//				else 
-//					res &= copyAssetFolder(assetManager, fromAssetPath + "/" + file, toPath + "/" + file);
-//			
-//			return res;
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			return false;
-//		}
-//	}
-
-//	private static boolean copyAsset(AssetManager assetManager, String fromAssetPath, String toPath) {
-//		InputStream in = null;
-//		OutputStream out = null;
-//		try {
-//			in = assetManager.open(fromAssetPath);
-//			new File(toPath).createNewFile();
-//			out = new FileOutputStream(toPath);
-//			copyFile(in, out);
-//			in.close();
-//			in = null;
-//			out.flush();
-//			out.close();
-//			out = null;
-//			
-//			return true;
-//		} catch(Exception e) {
-//			e.printStackTrace();
-//			return false;
-//		}
-//	}
 	
 	static public File mkdirs(final File parent, final String name, Context context) {
 		final File result = new File(parent, name);
@@ -2753,13 +2015,6 @@ public class Build {
 		targetFile.setLastModified(sourceFile.lastModified());
 		targetFile.setExecutable(sourceFile.canExecute());
 	}
-	
-//	private static void copyFile(InputStream in, OutputStream out) throws IOException {
-//		byte[] buffer = new byte[1024];
-//		int read;
-//		while((read = in.read(buffer)) != -1)
-//			out.write(buffer, 0, read);
-//	}
 	
 	static public void copyDir(File sourceDir, File targetDir) throws IOException {
 		if(sourceDir.equals(targetDir)) {
@@ -2946,7 +2201,7 @@ public class Build {
 	//StackOverflow: http://codereview.stackexchange.com/questions/8835/java-most-compact-way-to-print-inputstream-to-system-out
 	public static long copyStream(InputStream is, OutputStream os) {
 		final int BUFFER_SIZE = 8192;
-
+		
 		byte[] buf = new byte[BUFFER_SIZE];
 		long total = 0;
 		int len = 0;
@@ -2959,5 +2214,54 @@ public class Build {
 			throw new RuntimeException("error reading stream", ioe);
 		}
 		return total;
+	}
+	
+	/**
+	 * Create a file from the specified template using the provided replaceMap.
+	 *
+	 * @param template name of the template file
+	 * @param dest destination file
+	 * @param replaceMap map of replacements
+	 * @param context context
+	 */
+	public static void createFileFromTemplate(String template, File dest, Map<String, String> replaceMap, Context context) {
+		try {
+			BufferedReader reader = new BufferedReader(new InputStreamReader(context.getAssets().open("templates/" + template)));
+			PrintStream writer = new PrintStream(new FileOutputStream(dest));
+			
+			String line = null;
+			while ((line = reader.readLine()) != null) {
+				// From AndroidUtil.java in processing/processing-android
+				if (line.contains("@@") && replaceMap != null) {
+					StringBuilder sb = new StringBuilder(line);
+					int index = 0;
+					for (String key : replaceMap.keySet()) {
+						String val = replaceMap.get(key);
+						while ((index = sb.indexOf(key)) != -1) {
+							sb.replace(index, index + key.length(), val);
+						}
+					}
+					line = sb.toString();
+				}
+				
+				writer.println(line);
+			}
+			
+			reader.close();
+			writer.flush();
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Takes output and does nothing with it.
+	 */
+	protected class NullOutputStream extends OutputStream {
+		public NullOutputStream() {}
+		
+		@Override
+		public void write(int i) throws IOException {}
 	}
 }

@@ -38,7 +38,7 @@ import com.calsignlabs.apde.tool.AutoFormat;
 import com.calsignlabs.apde.tool.ColorSelector;
 import com.calsignlabs.apde.tool.CommentUncomment;
 import com.calsignlabs.apde.tool.DecreaseIndent;
-import com.calsignlabs.apde.tool.ExportEclipseProject;
+import com.calsignlabs.apde.tool.ExportGradleProject;
 import com.calsignlabs.apde.tool.ExportSignedPackage;
 import com.calsignlabs.apde.tool.FindInReference;
 import com.calsignlabs.apde.tool.FindReplace;
@@ -1371,8 +1371,8 @@ public class APDE extends Application {
 	 * @return the manifest associated with the current sketch
 	 */
 	public Manifest getManifest() {
-		Manifest mf = new Manifest(new com.calsignlabs.apde.build.Build(this));
-		mf.load();
+		Manifest mf = new Manifest(new com.calsignlabs.apde.build.Build(this), com.calsignlabs.apde.build.Build.APP, false);
+		mf.load(false, com.calsignlabs.apde.build.Build.APP);
 		
 		return mf;
 	}
@@ -1445,7 +1445,7 @@ public class APDE extends Application {
 		
 		String[] coreTools = new String[] { AutoFormat.PACKAGE_NAME, ImportLibrary.PACKAGE_NAME, ManageLibraries.PACKAGE_NAME, ColorSelector.PACKAGE_NAME,
 				CommentUncomment.PACKAGE_NAME, IncreaseIndent.PACKAGE_NAME, DecreaseIndent.PACKAGE_NAME,
-				ExportEclipseProject.PACKAGE_NAME, ExportSignedPackage.PACKAGE_NAME,
+				ExportGradleProject.PACKAGE_NAME, ExportSignedPackage.PACKAGE_NAME,
 				FindInReference.PACKAGE_NAME, OpenReference.PACKAGE_NAME,
 				GitManager.PACKAGE_NAME, FindReplace.PACKAGE_NAME, UninstallSketch.PACKAGE_NAME};
 		
@@ -1539,9 +1539,9 @@ public class APDE extends Application {
 		
 		if (!dir.exists()) {
 			dir.mkdir();
-
+			
 			//Put the default preferences file where Processing will look for it
-			EditorActivity.copyAssetFolder(getAssets(), "processing_default", dir.getAbsolutePath());
+			EditorActivity.copyAssetFolder(getAssets(), "processing-default", dir.getAbsolutePath());
 		}
 		
 		//Some magic to put our own platform in place

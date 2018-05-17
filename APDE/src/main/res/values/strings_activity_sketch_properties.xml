@@ -8,9 +8,9 @@
     <string name="prop_permissions_desc">Required for specific functionality</string>
 	
     <string name="prop_min_sdk">Minimum SDK</string>
-    <string name="prop_min_sdk_default">15</string>
+    <string name="prop_min_sdk_default">17</string>
     <string name="prop_target_sdk">Target SDK</string>
-    <string name="prop_target_sdk_default">15</string>
+    <string name="prop_target_sdk_default">26</string>
 	
 	<string name="prop_pretty_name">Sketch Display Name</string>
 	<string name="prop_version_code">Version Code</string>

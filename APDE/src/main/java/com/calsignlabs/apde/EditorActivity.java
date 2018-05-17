@@ -4037,12 +4037,7 @@ public class EditorActivity extends AppCompatActivity {
 		// v0.4.0 Alpha-pre1
 		
 		// Upgrade to Android Mode 3.0, changes minSdk from API 10 to 15; update android.jar file
-		upgradeChanges.add(new UpgradeChange(16) {
-			@Override
-			public void run() {
-				getGlobalState().getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new CopyAndroidJarTask());
-			}
-		});
+		// Removed - moved down below
 		
 		// Switch to the new examples repo
 		upgradeChanges.add(new UpgradeChange(16) {
@@ -4060,6 +4055,17 @@ public class EditorActivity extends AppCompatActivity {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+			}
+		});
+		
+		// branch android-mode-4, projected inclusion v0.5.0
+		// TODO change version code to correct one
+		
+		// Upgrade android.jar to latest version (API level 27)
+		upgradeChanges.add(new UpgradeChange(21) {
+			@Override
+			public void run() {
+				getGlobalState().getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new CopyAndroidJarTask());
 			}
 		});
 		
