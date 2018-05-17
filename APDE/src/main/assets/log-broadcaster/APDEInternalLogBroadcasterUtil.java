@@ -1,18 +1,20 @@
 public class APDEInternalLogBroadcasterUtil {
+	private static android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+	
 	public static class APDEInternalExceptionHandler implements Thread.UncaughtExceptionHandler {
 		private Thread.UncaughtExceptionHandler defaultHandler;
 		
-		private android.app.Activity activity;
+		private android.content.Context context;
 		
-		public APDEInternalExceptionHandler(android.app.Activity activity) {
+		public APDEInternalExceptionHandler(android.content.Context context) {
 			defaultHandler = Thread.getDefaultUncaughtExceptionHandler();
 			
-			this.activity = activity;
+			this.context = context;
 		}
 		
 		public void uncaughtException(Thread t, Throwable e) {
 			e.printStackTrace();
-			APDEInternalBroadcastMessage(e.getMessage(), 'x', e.getClass().getName(), activity);
+			APDEInternalBroadcastMessage(e.getMessage(), 'x', e.getClass().getName(), context);
 			defaultHandler.uncaughtException(t, e);
 		}
 	}
@@ -21,12 +23,12 @@ public class APDEInternalLogBroadcasterUtil {
 		private final byte single[] = new byte[1];
 		private final char severity;
 		
-		private android.app.Activity activity;
+		private android.content.Context context;
 		
-		public APDEInternalConsoleStream(char severity, android.app.Activity activity) {
+		public APDEInternalConsoleStream(char severity, android.content.Context context) {
 			this.severity = severity;
 			
-			this.activity = activity;
+			this.context = context;
 		}
 		
 		@Override
@@ -41,7 +43,7 @@ public class APDEInternalLogBroadcasterUtil {
 		
 		@Override
 		public void write(byte b[], int offset, int length) {
-			APDEInternalBroadcastMessage(new String(b, offset, length), severity, "", activity);
+			APDEInternalBroadcastMessage(new String(b, offset, length), severity, "", context);
 		}
 		
 		@Override
@@ -51,8 +53,8 @@ public class APDEInternalLogBroadcasterUtil {
 		}
 	}
 	
-	public static void APDEInternalBroadcastMessage(final String message, final char severity, final String exception, final android.app.Activity context) {
-		context.runOnUiThread(new Runnable() {
+	public static void APDEInternalBroadcastMessage(final String message, final char severity, final String exception, final android.content.Context context) {
+		handler.post(new Runnable() {
 			public void run() {
 				android.content.Intent intent = new android.content.Intent();
 				intent.setAction("com.calsignlabs.apde.LogBroadcast");

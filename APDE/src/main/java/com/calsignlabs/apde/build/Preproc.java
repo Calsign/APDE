@@ -51,8 +51,8 @@ public class Preproc extends PdePreprocessor {
 		this.packageName = packageName;
 	}
 	
-	public SurfaceInfo initSketchSize(String code, Context context) throws SketchException {
-		SurfaceInfo surfaceInfo = parseSketchSizeCustom(code, true, context);
+	public SurfaceInfo initSketchSize(String code, Context context, int comp) throws SketchException {
+		SurfaceInfo surfaceInfo = parseSketchSizeCustom(code, true, context, comp);
 		if (surfaceInfo == null) {
 			System.err.println(context.getResources().getString(R.string.preproc_bad_size_command_more_info));
 			throw new SketchException(context.getResources().getString(R.string.preproc_bad_size_command));
@@ -87,7 +87,7 @@ public class Preproc extends PdePreprocessor {
 	 * @param fussy true if it should show an error message if bad size()
 	 * @return null if there was an error, otherwise an array (might contain some/all nulls)
 	 */
-	static public SurfaceInfo parseSketchSizeCustom(String code, boolean fussy, Context context) throws SketchException {
+	static public SurfaceInfo parseSketchSizeCustom(String code, boolean fussy, Context context, int comp) throws SketchException {
 		// This matches against any uses of the size() function, whether numbers
 		// or variables or whatever. This way, no warning is shown if size() isn't
 		// actually used in the applet, which is the case especially for anyone
@@ -187,14 +187,27 @@ public class Preproc extends PdePreprocessor {
 			StringList args = breakCommas(sizeContents[1]);
 			SurfaceInfo info = new SurfaceInfo();
 //      info.statement = sizeContents[0];
-			info.addStatement(sizeContents[0]);
-//			info.width = args.get(0).trim();
-//			info.height = args.get(1).trim();
-//			info.renderer = (args.size() >= 3) ? args.get(2).trim() : null;
-//			info.path = (args.size() >= 4) ? args.get(3).trim() : null;
+			String rendererArg = (args.size() >= 3) ? args.get(2).trim() : null;
+			
+			switch (comp) {
+				case Build.APP:
+				case Build.WATCHFACE:
+				case Build.VR:
+					// Use size like normal
+					info.addStatement(sizeContents[0]);
+					break;
+				case Build.WALLPAPER:
+					// Replace size with fullScreen - for some reason size breaks things
+					// This is hacky but it will let old examples work
+					info.addStatement("fullScreen(" + rendererArg + ");");
+					break;
+				default:
+					throw new IllegalStateException("Illegal app comp: " + comp);
+			}
+			
 			setPrivateSurfaceInfoField(info, "width", (args.size() >= 1) ? args.get(0).trim() : null);
 			setPrivateSurfaceInfoField(info, "height", (args.size() >= 2) ? args.get(1).trim() : null);
-			setPrivateSurfaceInfoField(info, "renderer", (args.size() >= 3) ? args.get(2).trim() : null);
+			setPrivateSurfaceInfoField(info, "renderer", rendererArg);
 			setPrivateSurfaceInfoField(info, "path", (args.size() >= 4) ? args.get(3).trim() : null);
 			
 			// Trying to remember why we wanted to allow people to use displayWidth

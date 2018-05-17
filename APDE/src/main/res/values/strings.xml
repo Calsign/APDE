@@ -336,6 +336,9 @@
 	<string name="tool_uninstall_sketch_error_not_installed_dialog_title">Sketch Not Installed</string>
 	<string name="tool_uninstall_sketch_error_not_installed_dialog_message">The sketch cannot be uninstalled because it is not installed.</string>
 	
+	<!-- Manage wallpapers tool. -->
+	<string name="tool_manage_wallpapers">Live Wallpapers</string>
+	
 	<!-- What's new dialog. -->
 	<string name="whats_new">What\'s New</string>
 	<string name="whats_new_more">More changes</string>

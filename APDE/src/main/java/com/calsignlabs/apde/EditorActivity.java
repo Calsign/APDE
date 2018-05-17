@@ -166,8 +166,10 @@ public class EditorActivity extends AppCompatActivity {
 	//It's because adding views to the char insert tray is somehow breaking the retrieval of this view by ID...
 	private ImageButton toggleCharInserts;
 	
-	//Intent flag to delete the old just-installed APK file
+	// Intent flag to delete the old just-installed APK file
 	public static final int FLAG_DELETE_APK = 5;
+	// Intent flag to set the just-installed wallpaper
+	public static final int FLAG_SET_WALLPAPER = 6;
 	
 	public ScheduledThreadPoolExecutor autoSaveTimer;
 	public ScheduledFuture<?> autoSaveTimerTask;
@@ -964,7 +966,10 @@ public class EditorActivity extends AppCompatActivity {
     	// This is the code to delete the old APK file
     	if (requestCode == FLAG_DELETE_APK) {
     		Build.cleanUpPostLaunch(this);
-    	}
+    	} else if (requestCode == FLAG_SET_WALLPAPER) {
+    		Build.setWallpaperPostLaunch(this);
+			Build.cleanUpPostLaunch(this);
+		}
     	
     	ActivityResultCallback action = activityResultCodes.get(requestCode);
     	
@@ -2755,7 +2760,8 @@ public class EditorActivity extends AppCompatActivity {
     		@Override
     		public void run() {
     			building = true;
-    			builder.build("debug");
+				// TODO allow user to select app component
+    			builder.build("debug", Build.WALLPAPER);
     			building = false;
     	}});
     	buildThread.start();

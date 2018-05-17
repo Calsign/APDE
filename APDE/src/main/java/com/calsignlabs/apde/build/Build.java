@@ -9,6 +9,8 @@
 package com.calsignlabs.apde.build;
 
 import android.annotation.SuppressLint;
+import android.app.WallpaperManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
@@ -220,6 +222,21 @@ public class Build {
 		}
 	}
 	
+	public static void setWallpaperPostLaunch(EditorActivity editor) {
+		Intent intent = new Intent();
+		
+		if (android.os.Build.VERSION.SDK_INT >= 16) {
+			intent.setAction(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER);
+			String packageName = editor.getGlobalState().getManifest().getPackageName();
+			String canonicalName = packageName + "." + "MainService";
+			intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, new ComponentName(packageName, canonicalName));
+		} else {
+			intent.setAction(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER);
+		}
+		
+		editor.startActivity(intent);
+	}
+	
 	//Recursive file deletion
     public static boolean deleteFile(File f, Context context) {
 		if (f.isDirectory()) {
@@ -256,8 +273,9 @@ public class Build {
 	 */
 	@SuppressLint("WorldReadableFiles")
 	@SuppressWarnings("deprecation")
-	public void build(String target) {
+	public void build(String target, int comp) {
 		boolean debug = target.equals("debug");
+		appComponent = comp;
 		
 		running.set(true);
 		
@@ -362,9 +380,9 @@ public class Build {
 			String combinedText = "";
 			for(SketchFile tab : tabs)
 				combinedText += tab.getText();
-			preproc.initSketchSize(combinedText, editor);
+			preproc.initSketchSize(combinedText, editor, getAppComponent());
 			preproc.initSketchSmooth(combinedText, editor);
-			sketchClassName = preprocess(srcFolder, packageName, preproc, false, debug && injectLogBroadcaster);
+			sketchClassName = preprocess(srcFolder, packageName, preproc, false);
 			
 			//Detect if the renderer is one of the OpenGL renderers
 			//XTODO support custom renderers that require OpenGL or... other problems that may arise
@@ -406,7 +424,7 @@ public class Build {
 				final File resFolder = new File(buildFolder, "res");
 				writeRes(resFolder, sketchClassName);
 				
-				writeMainClass(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName, manifest.getPackageName(), false, injectLogBroadcaster);
+				writeMainClass(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
 				
 				final File libsFolder = mkdirs(buildFolder, "libs", editor);
 				final File assetsFolder = mkdirs(buildFolder, "assets", editor);
@@ -764,10 +782,8 @@ public class Build {
 				"-target", "1.6", // Target Java level
 				"-proc:none", // Disable annotation processors...
 				"-d", binFolder.getAbsolutePath() + "/classes/", // The location of the output folder
-				srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java", // The location of the sketch file
-				srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + MAIN_ACTIVITY_NAME, // The location of the main activity
-				genFolder.getAbsolutePath() + "/" + mainActivityLoc + "/R.java", // The location of R.java
-				genFolder.getAbsolutePath() + "/android/support/v7/appcompat/R.java", // The location of the support lib's R.java
+				srcFolder.getAbsolutePath() + "/",
+				genFolder.getAbsolutePath() + "/",
 			};
 			
 			if (verbose) {
@@ -1018,8 +1034,10 @@ public class Build {
 			Uri apkUri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", apkFile);
 			promptInstall = new Intent(Intent.ACTION_INSTALL_PACKAGE).setData(apkUri).setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 			
-			// Launch in adjacent window when in multiple-window mode
-			promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+			if (getAppComponent() == APP || getAppComponent() == VR) {
+				// Launch in adjacent window when in multiple-window mode
+				promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+			}
 		} else {
 			// The package manager doesn't seem to like FileProvider...
 			promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
@@ -1038,7 +1056,7 @@ public class Build {
 		imm.hideSoftInputFromWindow(editor.findViewById(R.id.content).getWindowToken(), 0);
 		
 		//Get a result so that we can delete the APK file
-		editor.startActivityForResult(promptInstall, EditorActivity.FLAG_DELETE_APK);
+		editor.startActivityForResult(promptInstall, getAppComponent() == WALLPAPER ? EditorActivity.FLAG_SET_WALLPAPER : EditorActivity.FLAG_DELETE_APK);
 		
 		cleanUp();
 	}
@@ -1113,7 +1131,7 @@ public class Build {
 		}
 	}
 	
-	public String preprocess(File srcFolder, String packageName, PdePreprocessor preprocessor, boolean sizeWarning, boolean localInjectLogBroadcaster) throws SketchException {
+	public String preprocess(File srcFolder, String packageName, PdePreprocessor preprocessor, boolean sizeWarning) throws SketchException {
 		if(getSketchFolder().exists());
 		
 		classPath = binFolder.getAbsolutePath();
@@ -1693,7 +1711,7 @@ public class Build {
 		replaceMap.put("@@package_name@@", packageName);
 		replaceMap.put("@@sketch_class_name@@", sketchClassName);
 		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
-		// TODO inject log broadcaster
+		replaceMap.put("@@log_broadcaster@@", injectLogBroadcaster ? getLogBroadcasterInsert() : "");
 		
 		createFileFromTemplate(WALLPAPER_SERVICE_TEMPLATE, javaFile, replaceMap, editor);
 	}
@@ -1789,8 +1807,6 @@ public class Build {
 		permissionsStr = "{" + permissionsStr + "}";
 		return permissionsStr;
 	}
-	
-	private static final String MAIN_ACTIVITY_NAME = "MainActivity.java";
 	
 	private void copyLibraries(final File libsFolder, final File assetsFolder) throws IOException { //TODO support native library stuffs
 		for (Library library : importedLibraries) {

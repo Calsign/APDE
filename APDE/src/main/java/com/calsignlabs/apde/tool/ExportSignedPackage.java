@@ -1266,7 +1266,8 @@ public class ExportSignedPackage implements Tool {
 		new Thread(new Runnable() {
 			public void run() {
 				exporting = true;
-				builder.build("release");
+				// TODO allow user to select app component
+				builder.build("release", Build.APP);
 				exporting = false;
 			}
 		}).start();
