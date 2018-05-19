@@ -7,6 +7,31 @@
         android:icon="@drawable/ic_run_white"
         app:showAsAction="ifRoom"
         android:title="@string/editor_menu_run_sketch" />
+	<item
+		android:id="@+id/menu_comp_select"
+		android:icon="@drawable/ic_comp_app"
+		app:showAsAction="ifRoom"
+		android:title="@string/editor_menu_comp_select_app">
+		
+		<menu>
+			<item
+				android:id="@+id/menu_comp_select_app"
+				android:title="@string/editor_menu_comp_select_app"
+				android:icon="@drawable/ic_comp_app" />
+			<item
+				android:id="@+id/menu_comp_select_wallpaper"
+				android:title="@string/editor_menu_comp_select_wallpaper"
+				android:icon="@drawable/ic_comp_wallpaper" />
+			<item
+				android:id="@+id/menu_comp_select_watchface"
+				android:title="@string/editor_menu_comp_select_watchface"
+				android:icon="@drawable/ic_comp_watchface" />
+			<item
+				android:id="@+id/menu_comp_select_vr"
+				android:title="@string/editor_menu_comp_select_vr"
+				android:icon="@drawable/ic_comp_vr" />
+		</menu>
+	</item>
     <item
         android:id="@+id/menu_stop"
         android:icon="@drawable/ic_stop_white"

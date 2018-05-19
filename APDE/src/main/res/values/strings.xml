@@ -9,6 +9,10 @@
 	<string name="editor_menu_load_sketch">Load Sketch</string>
 	<string name="editor_menu_run_sketch">Run</string>
 	<string name="editor_menu_stop_sketch">Stop</string>
+	<string name="editor_menu_comp_select_app">App</string>
+	<string name="editor_menu_comp_select_wallpaper">Wallpaper</string>
+	<string name="editor_menu_comp_select_watchface">Watchface</string>
+	<string name="editor_menu_comp_select_vr">VR</string>
 	<string name="editor_menu_undo">Undo</string>
 	<string name="editor_menu_redo">Redo</string>
 	<string name="editor_menu_tools">Tools</string>

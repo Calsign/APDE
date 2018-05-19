@@ -41,14 +41,7 @@ public class Manifest {
 	/** the manifest data read from the file */
 	private XML xml;
 	
-	static private final String[] MANIFEST_TEMPLATE = {
-			"AppManifest.xml.tmpl",
-			"WallpaperManifest.xml.tmpl",
-			"WatchFaceManifest.xml.tmpl",
-			"VRManifest.xml.tmpl",
-	};
-	
-	public Manifest(Build build, int appComp, boolean forceNew) {
+	public Manifest(Build build, ComponentTarget appComp, boolean forceNew) {
 		this.build = build;
 		load(forceNew, appComp);
 	}
@@ -204,20 +197,12 @@ public class Manifest {
 		}
 	}
 	
-	private void writeBlankManifest(final File xmlFile, final int appComp) {
+	private void writeBlankManifest(final File xmlFile, final ComponentTarget appComp) {
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
-		if (appComp == Build.APP) {
-			replaceMap.put("@@min_sdk@@", Build.MIN_SDK_APP);
-		} else if (appComp == Build.WALLPAPER) {
-			replaceMap.put("@@min_sdk@@", Build.MIN_SDK_WALLPAPER);
-		} else if (appComp == Build.WATCHFACE) {
-			replaceMap.put("@@min_sdk@@", Build.MIN_SDK_WATCHFACE);
-		} else if (appComp == Build.VR) {
-			replaceMap.put("@@min_sdk@@", Build.MIN_SDK_VR);
-		}
+		replaceMap.put("@@min_sdk@@", Integer.toString(appComp.getMinSdk()));
 		replaceMap.put("@@target_sdk@@", Integer.toString(getDefaultTargetSdk()));
 		
-		Build.createFileFromTemplate(MANIFEST_TEMPLATE[appComp], xmlFile, replaceMap, build.editor);
+		Build.createFileFromTemplate(appComp.getManifestTemplate(), xmlFile, replaceMap, build.editor);
 	}
 	
 	private int getDefaultTargetSdk() {
@@ -228,7 +213,7 @@ public class Manifest {
 	 * Save a new version of the manifest info to the build location.
 	 * Also fill in any missing attributes that aren't yet set properly.
 	 */
-	protected void writeCopy(File file, String className, int appComp) throws IOException {
+	protected void writeCopy(File file, String className, ComponentTarget appComp) throws IOException {
 		// write a copy to the build location
 		save(file);
 		
@@ -252,7 +237,7 @@ public class Manifest {
 			app.setString("android:debuggable", "true");
 			
 			// Services need the label also in the service section
-			if (appComp == Build.WALLPAPER || appComp == Build.WATCHFACE) {
+			if (appComp == ComponentTarget.WALLPAPER || appComp == ComponentTarget.WATCHFACE) {
 				XML serv = app.getChild("service");
 				label = serv.getString("android:label");
 				if (label.length() == 0) {
@@ -262,7 +247,7 @@ public class Manifest {
 			
 			// Make sure that the required permissions for watch faces and VR apps are
 			// included.
-			if (appComp == Build.WATCHFACE || appComp == Build.VR) {
+			if (appComp == ComponentTarget.WATCHFACE || appComp == ComponentTarget.VR) {
 				fixPermissions(mf, appComp);
 			}
 			
@@ -275,32 +260,32 @@ public class Manifest {
 		}
 	}
 	
-	private void fixPermissions(XML mf, int appComp) {
+	private void fixPermissions(XML mf, ComponentTarget appComp) {
 		boolean hasWakeLock = false;
 		boolean hasVibrate = false;
 		boolean hasReadExtStorage = false;
 		for (XML kid : mf.getChildren("uses-permission")) {
 			String name = kid.getString("android:name");
-			if (appComp == Build.WATCHFACE && name.equals(PERMISSION_PREFIX + "WAKE_LOCK")) {
+			if (appComp == ComponentTarget.WATCHFACE && name.equals(PERMISSION_PREFIX + "WAKE_LOCK")) {
 				hasWakeLock = true;
 				continue;
 			}
-			if (appComp == Build.VR && name.equals(PERMISSION_PREFIX + "VIBRATE")) {
+			if (appComp == ComponentTarget.VR && name.equals(PERMISSION_PREFIX + "VIBRATE")) {
 				hasVibrate = true;
 				continue;
 			}
-			if (appComp == Build.VR && name.equals(PERMISSION_PREFIX + "READ_EXTERNAL_STORAGE")) {
+			if (appComp == ComponentTarget.VR && name.equals(PERMISSION_PREFIX + "READ_EXTERNAL_STORAGE")) {
 				hasReadExtStorage = true;
 				continue;
 			}
 		}
-		if (appComp == Build.WATCHFACE && !hasWakeLock) {
+		if (appComp == ComponentTarget.WATCHFACE && !hasWakeLock) {
 			mf.addChild("uses-permission").setString("android:name", PERMISSION_PREFIX + "WAKE_LOCK");
 		}
-		if (appComp == Build.VR && !hasVibrate) {
+		if (appComp == ComponentTarget.VR && !hasVibrate) {
 			mf.addChild("uses-permission").setString("android:name", PERMISSION_PREFIX + "VIBRATE");
 		}
-		if (appComp == Build.VR && !hasReadExtStorage) {
+		if (appComp == ComponentTarget.VR && !hasReadExtStorage) {
 			mf.addChild("uses-permission").setString("android:name", PERMISSION_PREFIX + "READ_EXTERNAL_STORAGE");
 		}
 	}
@@ -414,7 +399,7 @@ public class Manifest {
 		return xml.getChild("application").getChild("activity").getString("android:screenOrientation", context.getResources().getString(R.string.prop_orientation_default));
 	}
 	
-	public void load(boolean forceNew, int appComp) {
+	public void load(boolean forceNew, ComponentTarget appComp) {
 		File manifestFile = getManifestFile();
 		if (manifestFile.exists()) {
 			try {
@@ -453,7 +438,7 @@ public class Manifest {
 			xml = null;
 			
 			// If this sketch is out of date, give it the latest and greatest
-			if (targetSdk < build.getMinSdk()) {
+			if (targetSdk < appComp.getMinSdk()) {
 				targetSdk = getDefaultTargetSdk();
 			}
 		}

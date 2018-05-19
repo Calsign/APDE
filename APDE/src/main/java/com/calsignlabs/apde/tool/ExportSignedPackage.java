@@ -28,6 +28,7 @@ import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.build.Build;
+import com.calsignlabs.apde.build.ComponentTarget;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import org.spongycastle.asn1.x509.X509Name;
@@ -1267,7 +1268,7 @@ public class ExportSignedPackage implements Tool {
 			public void run() {
 				exporting = true;
 				// TODO allow user to select app component
-				builder.build("release", Build.APP);
+				builder.build("release", ComponentTarget.APP);
 				exporting = false;
 			}
 		}).start();

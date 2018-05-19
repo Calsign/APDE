@@ -92,12 +92,6 @@ public class Build {
 	
 	protected boolean foundMain;
 	
-	// Main activity or service
-	static private final String APP_ACTIVITY_TEMPLATE = "AppActivity.java.tmpl";
-	static private final String WALLPAPER_SERVICE_TEMPLATE = "WallpaperService.java.tmpl";
-	static private final String WATCHFACE_SERVICE_TEMPLATE = "WatchFaceService.java.tmpl";
-	static private final String VR_ACTIVITY_TEMPLATE = "VRActivity.java.tmpl";
-	
 	// Additional resources
 	static private final String LAYOUT_ACTIVITY_TEMPLATE = "LayoutActivity.xml.tmpl";
 	static private final String STYLES_FRAGMENT_TEMPLATE = "StylesFragment.xml.tmpl";
@@ -130,17 +124,7 @@ public class Build {
 	
 	private static boolean verbose;
 	
-	private int appComponent;
-	
-	public static final int APP = 0;
-	public static final int WALLPAPER = 1;
-	public static final int WATCHFACE = 2;
-	public static final int VR = 3;
-	
-	static public final String MIN_SDK_APP = "17"; // Android 4.2
-	static public final String MIN_SDK_WALLPAPER = "17"; // Android 4.2
-	static public final String MIN_SDK_VR = "19"; // Android 4.4
-	static public final String MIN_SDK_WATCHFACE = "25"; // Android 7.1.1
+	private ComponentTarget appComponent;
 	
 	public Build(APDE global) {
 		this.editor = global.getEditor();
@@ -154,19 +138,8 @@ public class Build {
 		verbose = PreferenceManager.getDefaultSharedPreferences(global).getBoolean("build_output_verbose", false);
 	}
 	
-	public int getAppComponent() {
+	public ComponentTarget getAppComponent() {
 		return appComponent;
-	}
-	
-	public int getMinSdk() {
-		String minSdk;
-		switch (getAppComponent()) {
-			case WALLPAPER: minSdk =  MIN_SDK_WALLPAPER;
-			case VR: minSdk = MIN_SDK_VR;
-			case WATCHFACE: minSdk = MIN_SDK_WATCHFACE;
-			case APP: default: minSdk = MIN_SDK_APP;
-		}
-		return Integer.parseInt(minSdk);
 	}
 	
 	public void setKey(String keystore, char[] keystorePassword, String keyAlias, char[] keyAliasPassword) {
@@ -274,7 +247,7 @@ public class Build {
 	 */
 	@SuppressLint("WorldReadableFiles")
 	@SuppressWarnings("deprecation")
-	public void build(String target, int comp) {
+	public void build(String target, ComponentTarget comp) {
 		boolean debug = target.equals("debug");
 		appComponent = comp;
 		
@@ -1035,11 +1008,11 @@ public class Build {
 			Uri apkUri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", apkFile);
 			promptInstall = new Intent(Intent.ACTION_INSTALL_PACKAGE).setData(apkUri).setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 			
-			if (getAppComponent() == APP || getAppComponent() == VR) {
+			if (getAppComponent() == ComponentTarget.APP || getAppComponent() == ComponentTarget.VR) {
 				// Launch in adjacent window when in multiple-window mode
 				promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
 			}
-			if (getAppComponent() == WALLPAPER) {
+			if (getAppComponent() == ComponentTarget.WALLPAPER) {
 				promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
 			}
 		} else {
@@ -1060,7 +1033,7 @@ public class Build {
 		imm.hideSoftInputFromWindow(editor.findViewById(R.id.content).getWindowToken(), 0);
 		
 		//Get a result so that we can delete the APK file
-		editor.startActivityForResult(promptInstall, getAppComponent() == WALLPAPER ? EditorActivity.FLAG_SET_WALLPAPER : EditorActivity.FLAG_DELETE_APK);
+		editor.startActivityForResult(promptInstall, getAppComponent() == ComponentTarget.WALLPAPER ? EditorActivity.FLAG_SET_WALLPAPER : EditorActivity.FLAG_DELETE_APK);
 		
 		cleanUp();
 	}
@@ -1505,13 +1478,13 @@ public class Build {
 		File layoutFolder = mkdirs(resFolder, "layout", editor);
 		writeResLayoutMainActivity(layoutFolder, className);
 		
-		int comp = getAppComponent();
-		if (comp == APP) {
+		ComponentTarget comp = getAppComponent();
+		if (comp == ComponentTarget.APP) {
 			File valuesFolder = mkdirs(resFolder, "values", editor);
 			writeResStylesFragment(valuesFolder);
 		}
 		
-		if (comp == WALLPAPER) {
+		if (comp == ComponentTarget.WALLPAPER) {
 			File xmlFolder = mkdirs(resFolder, "xml", editor);
 			writeResXMLWallpaper(xmlFolder);
 			
@@ -1519,7 +1492,7 @@ public class Build {
 			writeResStringsWallpaper(valuesFolder, className);
 		}
 		
-		if (comp == VR) {
+		if (comp == ComponentTarget.VR) {
 			File valuesFolder = mkdirs(resFolder, "values", editor);
 			writeResStylesVR(valuesFolder);
 		}
@@ -1633,7 +1606,7 @@ public class Build {
 			}
 		}
 		
-		if (getAppComponent() == VR) {
+		if (getAppComponent() == ComponentTarget.VR) {
 			File localIconCircle = new File(sketchFolder, WATCHFACE_ICON_CIRCULAR);
 			File localIconRect = new File(sketchFolder, WATCHFACE_ICON_RECTANGULAR);
 			
@@ -1672,18 +1645,18 @@ public class Build {
 	}
 	
 	private void writeMainClass(final File srcDirectory, String[] permissions, String renderer, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
-		int comp = getAppComponent();
-		if (comp == APP) {
+		ComponentTarget comp = getAppComponent();
+		if (comp == ComponentTarget.APP) {
 			writeFragmentActivity(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
-		} else if (comp == WALLPAPER) {
+		} else if (comp == ComponentTarget.WALLPAPER) {
 			writeWallpaperService(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
-		} else if (comp == WATCHFACE) {
+		} else if (comp == ComponentTarget.WATCHFACE) {
 			if (isOpenGL(renderer)) {
 				writeWatchFaceGLESService(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
 			} else {
 				writeWatchFaceCanvasService(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
 			}
-		} else if (comp == VR) {
+		} else if (comp == ComponentTarget.VR) {
 			writeVRActivity(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
 		}
 	}
@@ -1720,7 +1693,7 @@ public class Build {
 		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
 		replaceMap.put("@@log_broadcaster@@", injectLogBroadcaster ? getLogBroadcasterInsert() : "");
 		
-		createFileFromTemplate(APP_ACTIVITY_TEMPLATE, javaFile, replaceMap, editor);
+		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
 	
 	private void writeWallpaperService(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
@@ -1732,7 +1705,7 @@ public class Build {
 		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
 		replaceMap.put("@@log_broadcaster@@", injectLogBroadcaster ? getLogBroadcasterInsert() : "");
 		
-		createFileFromTemplate(WALLPAPER_SERVICE_TEMPLATE, javaFile, replaceMap, editor);
+		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
 	
 	private void writeWatchFaceGLESService(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
@@ -1745,7 +1718,7 @@ public class Build {
 		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
 		// TODO inject log broadcaster
 		
-		createFileFromTemplate(WATCHFACE_SERVICE_TEMPLATE, javaFile, replaceMap, editor);
+		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
 	
 	private void writeWatchFaceCanvasService(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
@@ -1758,7 +1731,7 @@ public class Build {
 		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
 		// TODO inject log broadcaster
 		
-		createFileFromTemplate(WATCHFACE_SERVICE_TEMPLATE, javaFile, replaceMap, editor);
+		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
 	
 	private void writeVRActivity(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
@@ -1770,7 +1743,7 @@ public class Build {
 		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
 		// TODO inject log broadcaster
 		
-		createFileFromTemplate(VR_ACTIVITY_TEMPLATE, javaFile, replaceMap, editor);
+		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
 	
 	private void writeResLayoutMainActivity(final File layoutFolder, String sketchClassName) {

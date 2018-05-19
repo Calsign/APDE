@@ -51,7 +51,7 @@ public class Preproc extends PdePreprocessor {
 		this.packageName = packageName;
 	}
 	
-	public SurfaceInfo initSketchSize(String code, Context context, int comp) throws SketchException {
+	public SurfaceInfo initSketchSize(String code, Context context, ComponentTarget comp) throws SketchException {
 		SurfaceInfo surfaceInfo = parseSketchSizeCustom(code, true, context, comp);
 		if (surfaceInfo == null) {
 			System.err.println(context.getResources().getString(R.string.preproc_bad_size_command_more_info));
@@ -91,7 +91,7 @@ public class Preproc extends PdePreprocessor {
 	 * @param fussy true if it should show an error message if bad size()
 	 * @return null if there was an error, otherwise an array (might contain some/all nulls)
 	 */
-	static public SurfaceInfo parseSketchSizeCustom(String code, boolean fussy, Context context, int comp) throws SketchException {
+	static public SurfaceInfo parseSketchSizeCustom(String code, boolean fussy, Context context, ComponentTarget comp) throws SketchException {
 		// This matches against any uses of the size() function, whether numbers
 		// or variables or whatever. This way, no warning is shown if size() isn't
 		// actually used in the applet, which is the case especially for anyone
@@ -194,13 +194,13 @@ public class Preproc extends PdePreprocessor {
 			String rendererArg = (args.size() >= 3) ? args.get(2).trim() : null;
 			
 			switch (comp) {
-				case Build.APP:
-				case Build.WATCHFACE:
-				case Build.VR:
+				case APP:
+				case WATCHFACE:
+				case VR:
 					// Use size like normal
 					info.addStatement(sizeContents[0]);
 					break;
-				case Build.WALLPAPER:
+				case WALLPAPER:
 					// Replace size with fullScreen - for some reason size breaks things
 					// This is hacky but it will let old examples work
 					info.addStatement("fullScreen(" + (rendererArg != null ? rendererArg : "") + ");");

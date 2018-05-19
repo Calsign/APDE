@@ -30,6 +30,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
+import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.support.AndroidPlatform;
@@ -1372,8 +1373,9 @@ public class APDE extends Application {
 	 * @return the manifest associated with the current sketch
 	 */
 	public Manifest getManifest() {
-		Manifest mf = new Manifest(new com.calsignlabs.apde.build.Build(this), com.calsignlabs.apde.build.Build.APP, false);
-		mf.load(false, com.calsignlabs.apde.build.Build.APP);
+		// The component target doesn't actually make a difference here
+		Manifest mf = new Manifest(new com.calsignlabs.apde.build.Build(this), ComponentTarget.APP, false);
+		mf.load(false, ComponentTarget.APP);
 		
 		return mf;
 	}

@@ -64,6 +64,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.calsignlabs.apde.build.Build;
+import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.support.ResizeAnimation;
@@ -186,6 +187,8 @@ public class EditorActivity extends AppCompatActivity {
 			});
 		}
 	};
+	
+	protected ComponentTarget componentTarget;
 	
     @SuppressLint("NewApi")
 	@Override
@@ -732,6 +735,9 @@ public class EditorActivity extends AppCompatActivity {
 		codePagerAdapter.notifyDataSetChanged();
 		codeTabStrip.setupWithViewPager(codePager);
 		
+		// Fallback component target
+		setComponentTarget(ComponentTarget.APP);
+		
 		try {
 			// Try to load the auto-save sketch, otherwise set the editor up as a new sketch
 			if (!loadSketchStart()) {
@@ -778,6 +784,15 @@ public class EditorActivity extends AppCompatActivity {
 			}
 			break;
 		}
+	}
+	
+	public ComponentTarget getComponentTarget() {
+		return componentTarget;
+	}
+	
+	public void setComponentTarget(ComponentTarget componentTarget) {
+		this.componentTarget = componentTarget;
+		invalidateOptionsMenu();
 	}
 	
 	public int getSelectedCodeIndex() {
@@ -1547,6 +1562,8 @@ public class EditorActivity extends AppCompatActivity {
 		sketchData.append(';');
 		sketchData.append(getSelectedCodeIndex());
 		sketchData.append(';');
+		sketchData.append(getComponentTarget().serialize());
+		sketchData.append(';');
 		
 		JSONObject undoRedoHistories = new JSONObject();
 		
@@ -1600,7 +1617,7 @@ public class EditorActivity extends AppCompatActivity {
 			String[] data = sketchData.split(";");
 			String jsonData = readTempFile("sketchUndoRedoHistory.json");
 			
-			if (data.length < 3 || jsonData.length() == 0) {
+			if (data.length < 4 || jsonData.length() == 0) {
 				// On clean installs and after updating
 				return false;
 			}
@@ -1614,15 +1631,17 @@ public class EditorActivity extends AppCompatActivity {
 			
 			selectCode(Integer.parseInt(data[2]));
 			
-			if (success && tabs.size() == data.length - 3) {
-				for (int i = 3; i < data.length; i ++) {
+			setComponentTarget(ComponentTarget.deserialize(Integer.parseInt(data[3])));
+			
+			if (success && tabs.size() == data.length - 4) {
+				for (int i = 4; i < data.length; i ++) {
 					String[] sketchFileData = data[i].split(",");
 					
 					if (sketchFileData.length > 0) {
-						tabs.get(i - 3).selectionStart = Integer.parseInt(sketchFileData[0]);
-						tabs.get(i - 3).selectionEnd = Integer.parseInt(sketchFileData[1]);
-						tabs.get(i - 3).scrollX = Integer.parseInt(sketchFileData[2]);
-						tabs.get(i - 3).scrollY = Integer.parseInt(sketchFileData[3]);
+						tabs.get(i - 4).selectionStart = Integer.parseInt(sketchFileData[0]);
+						tabs.get(i - 4).selectionEnd = Integer.parseInt(sketchFileData[1]);
+						tabs.get(i - 4).scrollX = Integer.parseInt(sketchFileData[2]);
+						tabs.get(i - 4).scrollY = Integer.parseInt(sketchFileData[3]);
 					}
 				}
 			}
@@ -2344,22 +2363,12 @@ public class EditorActivity extends AppCompatActivity {
 	}
 	
 	public void prepareOptionsMenu(Menu menu) {
-		View runMenuButtonView = menu.findItem(R.id.menu_run).getActionView();
-		if (runMenuButtonView != null) {
-			runMenuButtonView.setOnLongClickListener(new View.OnLongClickListener() {
-				@Override
-				public boolean onLongClick(View view) {
-					System.out.println("long pressed");
-					return false;
-				}
-			});
-		}
-        
         if(drawerOpen) {
         	// If the drawer is visible
         	
         	// Make sure to hide all of the sketch-specific action items
         	menu.findItem(R.id.menu_run).setVisible(false);
+        	menu.findItem(R.id.menu_comp_select).setVisible(false);
         	menu.findItem(R.id.menu_stop).setVisible(false);
         	menu.findItem(R.id.menu_undo).setVisible(false);
         	menu.findItem(R.id.menu_redo).setVisible(false);
@@ -2384,6 +2393,7 @@ public class EditorActivity extends AppCompatActivity {
         		
         		// Make sure to make the tab actions visible
             	menu.findItem(R.id.menu_run).setVisible(true);
+				menu.findItem(R.id.menu_run).setVisible(true);
             	menu.findItem(R.id.menu_stop).setVisible(true);
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
             	menu.findItem(R.id.menu_tab_rename).setVisible(true);
@@ -2407,6 +2417,7 @@ public class EditorActivity extends AppCompatActivity {
             	
             	// Make sure to make the tab actions invisible
             	menu.findItem(R.id.menu_run).setVisible(false);
+				menu.findItem(R.id.menu_comp_select).setVisible(false);
     	    	menu.findItem(R.id.menu_stop).setVisible(false);
     	    	menu.findItem(R.id.menu_undo).setVisible(false);
             	menu.findItem(R.id.menu_redo).setVisible(false);
@@ -2477,6 +2488,18 @@ public class EditorActivity extends AppCompatActivity {
     	if (getCodeCount() <= 0 && !getGlobalState().isExample()) {
 			menu.findItem(R.id.menu_tab_new).setVisible(true);
 		}
+		
+		menu.findItem(R.id.menu_comp_select).setIcon(getComponentTarget().getIconId());
+    	menu.findItem(R.id.menu_comp_select).setTitle(getComponentTarget().getNameId());
+    	
+    	int alphaSelected = getResources().getInteger(R.integer.prop_menu_comp_select_alpha_selected);
+		int alphaUnelected = getResources().getInteger(R.integer.prop_menu_comp_select_alpha_unselected);
+    	
+    	// Dim the comps that aren't selected
+    	menu.findItem(R.id.menu_comp_select_app).getIcon().setAlpha(getComponentTarget() == ComponentTarget.APP ? alphaSelected : alphaUnelected);
+		menu.findItem(R.id.menu_comp_select_wallpaper).getIcon().setAlpha(getComponentTarget() == ComponentTarget.WALLPAPER ? alphaSelected : alphaUnelected);
+		menu.findItem(R.id.menu_comp_select_watchface).getIcon().setAlpha(getComponentTarget() == ComponentTarget.WATCHFACE ? alphaSelected : alphaUnelected);
+		menu.findItem(R.id.menu_comp_select_vr).getIcon().setAlpha(getComponentTarget() == ComponentTarget.VR ? alphaSelected : alphaUnelected);
     }
     
     @Override
@@ -2524,6 +2547,18 @@ public class EditorActivity extends AppCompatActivity {
             case R.id.menu_run:
             	runApplication();
             	return true;
+			case R.id.menu_comp_select_app:
+				setComponentTarget(ComponentTarget.APP);
+				return true;
+			case R.id.menu_comp_select_wallpaper:
+				setComponentTarget(ComponentTarget.WALLPAPER);
+				return true;
+			case R.id.menu_comp_select_watchface:
+				setComponentTarget(ComponentTarget.WATCHFACE);
+				return true;
+			case R.id.menu_comp_select_vr:
+				setComponentTarget(ComponentTarget.VR);
+				return true;
             case R.id.menu_stop:
             	stopApplication();
             	return true;
@@ -2788,8 +2823,7 @@ public class EditorActivity extends AppCompatActivity {
     		@Override
     		public void run() {
     			building = true;
-				// TODO allow user to select app component
-    			builder.build("debug", Build.WALLPAPER);
+    			builder.build("debug", getComponentTarget());
     			building = false;
     	}});
     	buildThread.start();
@@ -4100,6 +4134,27 @@ public class EditorActivity extends AppCompatActivity {
 			@Override
 			public void run() {
 				getGlobalState().getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new CopyAndroidJarTask());
+			}
+		});
+		
+		// Upgrade sketchData file to include component target
+		// TODO test this in a real device context
+		upgradeChanges.add(new UpgradeChange(21) {
+			@Override
+			public void run() {
+				String oldSketchDataStr = readTempFile("sketchData.txt");
+				String[] oldSketchData = oldSketchDataStr.split(";");
+				StringBuilder newSketchData = new StringBuilder();
+				for (int i = 0; i < 3; i ++) {
+					newSketchData.append(oldSketchData[i]);
+					newSketchData.append(';');
+				}
+				newSketchData.append("0;");
+				for (int i = 3; i < oldSketchData.length; i ++) {
+					newSketchData.append(oldSketchData[i]);
+					newSketchData.append(';');
+				}
+				writeTempFile("sketchData.txt", newSketchData.toString());
 			}
 		});
 		
