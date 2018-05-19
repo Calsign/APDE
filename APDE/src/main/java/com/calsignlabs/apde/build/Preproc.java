@@ -80,6 +80,10 @@ public class Preproc extends PdePreprocessor {
 		return info;
 	}
 	
+	public Mode getMode() {
+		return mode;
+	}
+	
 	/**
 	 * Parse a chunk of code and extract the size() command and its contents.
 	 * Also goes after fullScreen(), smooth(), and noSmooth().
@@ -199,7 +203,7 @@ public class Preproc extends PdePreprocessor {
 				case Build.WALLPAPER:
 					// Replace size with fullScreen - for some reason size breaks things
 					// This is hacky but it will let old examples work
-					info.addStatement("fullScreen(" + rendererArg + ");");
+					info.addStatement("fullScreen(" + (rendererArg != null ? rendererArg : "") + ");");
 					break;
 				default:
 					throw new IllegalStateException("Illegal app comp: " + comp);

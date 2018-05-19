@@ -54,6 +54,7 @@ import java.util.Hashtable;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -1038,6 +1039,9 @@ public class Build {
 				// Launch in adjacent window when in multiple-window mode
 				promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
 			}
+			if (getAppComponent() == WALLPAPER) {
+				promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
+			}
 		} else {
 			// The package manager doesn't seem to like FileProvider...
 			promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
@@ -1131,6 +1135,19 @@ public class Build {
 		}
 	}
 	
+	protected String removeSize(String code) {
+		final String left = "(?:^|\\s|;)";
+		final String right = "\\s*\\(([^\\)]*)\\)\\s*;";
+		String regexp = left + "size" + right;
+		Pattern p = Pattern.compile(regexp, Pattern.MULTILINE | Pattern.DOTALL);
+		Matcher m = p.matcher(code);
+		if (m.find()) {
+			return code.substring(0, m.start()) + code.substring(m.end());
+		} else {
+			return code;
+		}
+	}
+	
 	public String preprocess(File srcFolder, String packageName, PdePreprocessor preprocessor, boolean sizeWarning) throws SketchException {
 		if(getSketchFolder().exists());
 		
@@ -1167,6 +1184,8 @@ public class Build {
 			}
 		}
 		
+		String combinedCode = removeSize(bigCode.toString());
+		
 		PreprocessorResult result;
 		try {
 			File outputFolder = (packageName == null) ? srcFolder : new File(srcFolder, packageName.replace('.', '/'));
@@ -1174,7 +1193,7 @@ public class Build {
 			final File java = new File(outputFolder, sketchName + ".java");
 			final PrintWriter stream = new PrintWriter(new FileWriter(java));
 			try {
-				result = preprocessor.write(stream, bigCode.toString(), codeFolderPackages == null ? null : new StringList(codeFolderPackages));
+				result = preprocessor.write(stream, combinedCode, codeFolderPackages == null ? null : new StringList(codeFolderPackages));
 			} finally {
 				stream.close();
 			}

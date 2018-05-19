@@ -967,7 +967,11 @@ public class EditorActivity extends AppCompatActivity {
     	if (requestCode == FLAG_DELETE_APK) {
     		Build.cleanUpPostLaunch(this);
     	} else if (requestCode == FLAG_SET_WALLPAPER) {
-    		Build.setWallpaperPostLaunch(this);
+    		// Note: we only get the result code if we pass it as an extra
+    		if (resultCode == RESULT_OK) {
+    			// The user installed the wallpaper, so launch wallpaper selector
+				Build.setWallpaperPostLaunch(this);
+			}
 			Build.cleanUpPostLaunch(this);
 		}
     	
@@ -2285,7 +2289,12 @@ public class EditorActivity extends AppCompatActivity {
         final FileNavigatorAdapter fileAdapter = new FileNavigatorAdapter(this, items, selected);
         
         // Load the list of sketches into the drawer
-        drawerList.setAdapter(fileAdapter);
+		try {
+			drawerList.setAdapter(fileAdapter);
+		} catch (SecurityException e) {
+			// Nada
+			// For some reason we get security exceptions sometimes
+		}
         drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
         
         // Let the adapter handle long click events
@@ -2322,8 +2331,29 @@ public class EditorActivity extends AppCompatActivity {
     }
     
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.activity_editor, menu);
+	public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.activity_editor, menu);
+		prepareOptionsMenu(menu);
+		return true;
+	}
+	
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+    	prepareOptionsMenu(menu);
+    	return true;
+	}
+	
+	public void prepareOptionsMenu(Menu menu) {
+		View runMenuButtonView = menu.findItem(R.id.menu_run).getActionView();
+		if (runMenuButtonView != null) {
+			runMenuButtonView.setOnLongClickListener(new View.OnLongClickListener() {
+				@Override
+				public boolean onLongClick(View view) {
+					System.out.println("long pressed");
+					return false;
+				}
+			});
+		}
         
         if(drawerOpen) {
         	// If the drawer is visible
@@ -2447,8 +2477,6 @@ public class EditorActivity extends AppCompatActivity {
     	if (getCodeCount() <= 0 && !getGlobalState().isExample()) {
 			menu.findItem(R.id.menu_tab_new).setVisible(true);
 		}
-    	
-        return true;
     }
     
     @Override
