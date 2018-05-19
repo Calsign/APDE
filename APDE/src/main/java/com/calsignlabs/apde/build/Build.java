@@ -411,6 +411,17 @@ public class Build {
 				resFolder.mkdir();
 				createFolderFromZippedAssets(editor.getAssets(), "support-res.zip", supportResFolder);
 				
+				// We want to make this directory whether or not we're actually building a watchface
+				// If we don't make the directory then AAPT yells at us
+				File wearableResFolder = new File(buildFolder, "support-wearable-res");
+				wearableResFolder.mkdir();
+				
+				if (getAppComponent() == ComponentTarget.WATCHFACE) {
+					// Copy support-wearable res files
+					
+					createFolderFromZippedAssets(editor.getAssets(), "support-wearable-res.zip", wearableResFolder);
+				}
+				
 				// Copy android.jar if it hasn't been done yet
 				if (!androidJarLoc.exists()) {
 					if (verbose) {
@@ -426,12 +437,18 @@ public class Build {
 					System.out.println(editor.getResources().getString(R.string.build_copying_processing_libraries));
 				}
 				
-				String[] libsToCopy = {"processing-core", "support-core-utils", "support-compat", "appcompat", "support-fragment"};//, "support-vector-drawable"};
+				String[] libsToCopy = {
+						"processing-core", "support-core-utils", "support-compat",
+						"appcompat", "support-fragment",
+						getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable" : "",
+						getAppComponent() == ComponentTarget.WATCHFACE ? "percent" : ""
+				};//, "support-vector-drawable"};
 				String prefix = "libs/";
 				String suffix = ".jar";
 				
 				//Copy for the compiler
 				for(String lib : libsToCopy) {
+					if (lib.equals("")) continue; // pass through, lets us use ternary if in the array
 					InputStream inputStream = am.open(prefix + lib + suffix);
 					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
 					inputStream.close();
@@ -455,7 +472,10 @@ public class Build {
 					System.out.println(editor.getResources().getString(R.string.build_copying_dexed_processing_libraries));
 				}
 				
-				String[] dexLibsToCopy = {"all-lib-dex"}; // {"processing-core-dex", "android-support-v4-dex", "annotations-dex"};//, "jogl-all", "gluegen-rt", "jogl-all-natives", "gluegen-rt-natives"};
+				String[] dexLibsToCopy = {
+						"all-lib-dex",
+						getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable-dex" : ""
+				};
 				String dexPrefix = "libs-dex/";
 				String dexSuffix = ".jar";
 				
@@ -464,6 +484,7 @@ public class Build {
 				
 				//Copy for the dexer
 				for(String lib : dexLibsToCopy) {
+					if (lib.equals("")) continue; // pass through, lets us use ternary if in the array
 					InputStream inputStream = am.open(dexPrefix + lib + dexSuffix);
 					createFileFromInputStream(inputStream, new File(dexedLibsFolder, lib + dexSuffix));
 					inputStream.close();
@@ -690,6 +711,7 @@ public class Build {
 				"package", "-v", "-f", "-m", "--auto-add-overlay",
 				"-S", buildFolder.getAbsolutePath() + "/res/", // The location of the /res folder
 				"-S", buildFolder.getAbsolutePath() + "/support-res/", // The location of the support lib res folder
+				"-S", buildFolder.getAbsolutePath() + "/support-wearable-res/",
 				"--extra-packages", "android.support.v7.appcompat", // Make AAPT generate R.java for AppCompat
 				"-J", genFolder.getAbsolutePath(), // The location of the /gen folder
 				"-A", assetsFolder.getAbsolutePath(), // The location of the /assets folder
@@ -1492,6 +1514,11 @@ public class Build {
 			writeResStringsWallpaper(valuesFolder, className);
 		}
 		
+		if (comp == ComponentTarget.WATCHFACE) {
+			File xmlFolder = mkdirs(resFolder, "xml", editor);
+			writeResXMLWatchFace(xmlFolder);
+		}
+		
 		if (comp == ComponentTarget.VR) {
 			File valuesFolder = mkdirs(resFolder, "values", editor);
 			writeResStylesVR(valuesFolder);
@@ -1606,7 +1633,7 @@ public class Build {
 			}
 		}
 		
-		if (getAppComponent() == ComponentTarget.VR) {
+		if (getAppComponent() == ComponentTarget.WATCHFACE) {
 			File localIconCircle = new File(sketchFolder, WATCHFACE_ICON_CIRCULAR);
 			File localIconRect = new File(sketchFolder, WATCHFACE_ICON_RECTANGULAR);
 			
