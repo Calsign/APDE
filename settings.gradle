@@ -1,2 +1,2 @@
-include ':aFileChooser'
+include ':aFileChooser', ':wear-companion'
 include ':APDE'

@@ -26,6 +26,13 @@ import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.contrib.Library;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.wearable.Asset;
+import com.google.android.gms.wearable.DataItem;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.Wearable;
 
 import org.eclipse.jdt.internal.compiler.batch.Main;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
@@ -1021,27 +1028,6 @@ public class Build {
 			}
 		}
 		
-		// Prompt the user to install the APK file
-		
-		Intent promptInstall;
-		
-		if (android.os.Build.VERSION.SDK_INT >= 24) {
-			// Need to use FileProvider
-			Uri apkUri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", apkFile);
-			promptInstall = new Intent(Intent.ACTION_INSTALL_PACKAGE).setData(apkUri).setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-			
-			if (getAppComponent() == ComponentTarget.APP || getAppComponent() == ComponentTarget.VR) {
-				// Launch in adjacent window when in multiple-window mode
-				promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
-			}
-			if (getAppComponent() == ComponentTarget.WALLPAPER) {
-				promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
-			}
-		} else {
-			// The package manager doesn't seem to like FileProvider...
-			promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
-		}
-		
 		if (injectLogBroadcaster) {
 			//Make some space in the console
 			for (int i = 0; i < 10; i ++) {
@@ -1054,8 +1040,35 @@ public class Build {
 		InputMethodManager imm = (InputMethodManager) editor.getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(editor.findViewById(R.id.content).getWindowToken(), 0);
 		
-		//Get a result so that we can delete the APK file
-		editor.startActivityForResult(promptInstall, getAppComponent() == ComponentTarget.WALLPAPER ? EditorActivity.FLAG_SET_WALLPAPER : EditorActivity.FLAG_DELETE_APK);
+		if (getAppComponent() == ComponentTarget.WATCHFACE) {
+			// Send the watchface to the watch
+			
+			sendApkToWatch(apkFile);
+		} else {
+			// Prompt the user to install the APK file
+			
+			Intent promptInstall;
+			
+			if (android.os.Build.VERSION.SDK_INT >= 24) {
+				// Need to use FileProvider
+				Uri apkUri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", apkFile);
+				promptInstall = new Intent(Intent.ACTION_INSTALL_PACKAGE).setData(apkUri).setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+				
+				if (getAppComponent() == ComponentTarget.APP || getAppComponent() == ComponentTarget.VR) {
+					// Launch in adjacent window when in multiple-window mode
+					promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+				}
+				if (getAppComponent() == ComponentTarget.WALLPAPER) {
+					promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
+				}
+			} else {
+				// The package manager doesn't seem to like FileProvider...
+				promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+			}
+			
+			//Get a result so that we can delete the APK file
+			editor.startActivityForResult(promptInstall, getAppComponent() == ComponentTarget.WALLPAPER ? EditorActivity.FLAG_SET_WALLPAPER : EditorActivity.FLAG_DELETE_APK);
+		}
 		
 		cleanUp();
 	}
@@ -1094,6 +1107,25 @@ public class Build {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	protected void sendApkToWatch(File apkFile) {
+		Uri apkUri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", apkFile);
+		Asset asset = Asset.createFromUri(apkUri);
+		PutDataMapRequest dataMap = PutDataMapRequest.create("/apk");
+		dataMap.getDataMap().putAsset("apk", asset);
+		dataMap.getDataMap().putLong("timestamp", System.currentTimeMillis());
+		PutDataRequest request = dataMap.asPutDataRequest();
+		request.setUrgent();
+		
+		Task<DataItem> putTask = Wearable.getDataClient(editor).putDataItem(request);
+		putTask.addOnSuccessListener(new OnSuccessListener<DataItem>() {
+			@Override
+			public void onSuccess(DataItem dataItem) {
+				// Succeeded
+				// Don't really need to do anything
+			}
+		});
 	}
 	
 	/**
@@ -1993,8 +2025,9 @@ public class Build {
 			byte buffer[] = new byte[1024];
 			int length = 0;
 			
-			while((length = inputStream.read(buffer)) > 0)
+			while((length = inputStream.read(buffer)) > 0) {
 				outputStream.write(buffer, 0, length);
+			}
 			
 			outputStream.close();
 			if (close) {

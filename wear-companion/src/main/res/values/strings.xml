@@ -1,0 +1,10 @@
+<resources>
+	<string name="app_name">APDE Wear Companion</string>
+	<string name="title_activity_companion">APDE Wear Companion</string>
+	<string name="message_default">APDE Wear Companion</string>
+	<string name="button_watchface_loader_stop">Stop Watchface Loader</string>
+	<string name="message_watchface_loader_started">Watchface Loader Started</string>
+	<string name="message_watchface_loader_stopped">Watchface Loader Stopped</string>
+	<string name="message_watchface_loader_receiving_apk">APDE: Receiving APK</string>
+	<string name="message_watchface_loader_installing_apk">APDE: Installing APK</string>
+</resources>

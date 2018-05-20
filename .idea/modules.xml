@@ -5,6 +5,7 @@
       <module fileurl="file://$PROJECT_DIR$/APDE.iml" filepath="$PROJECT_DIR$/APDE.iml" />
       <module fileurl="file://$PROJECT_DIR$/APDE/APDE-APDE.iml" filepath="$PROJECT_DIR$/APDE/APDE-APDE.iml" />
       <module fileurl="file://$PROJECT_DIR$/aFileChooser/aFileChooser.iml" filepath="$PROJECT_DIR$/aFileChooser/aFileChooser.iml" />
+      <module fileurl="file://$PROJECT_DIR$/wear-companion/wear-companion.iml" filepath="$PROJECT_DIR$/wear-companion/wear-companion.iml" />
     </modules>
   </component>
 </project>

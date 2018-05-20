@@ -11,6 +11,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/APDE" />
             <option value="$PROJECT_DIR$/aFileChooser" />
+            <option value="$PROJECT_DIR$/wear-companion" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />
