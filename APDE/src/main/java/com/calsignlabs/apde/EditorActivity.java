@@ -727,6 +727,12 @@ public class EditorActivity extends AppCompatActivity {
 			getGlobalState().initExamplesRepo();
 		}
 		
+		// Disable SSL3
+		// Only needed on Android 4.4 and below
+		// And only affects Git actions at present
+		// But might as well stick it here
+		getGlobalState().disableSsl3();
+		
 		codePagerAdapter.notifyDataSetChanged();
 		codeTabStrip.setupWithViewPager(codePager);
 		

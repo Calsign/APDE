@@ -50,6 +50,9 @@ import com.calsignlabs.apde.tool.OpenReference;
 import com.calsignlabs.apde.tool.Tool;
 import com.calsignlabs.apde.tool.UninstallSketch;
 import com.calsignlabs.apde.vcs.GitRepository;
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.common.GooglePlayServicesRepairableException;
+import com.google.android.gms.security.ProviderInstaller;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
@@ -851,11 +854,28 @@ public class APDE extends Application {
 		return examplesRepo.list().length > 0 ? examplesRepo : getStarterExamplesFolder();
 	}
 	
+	/**
+	 * Disable SSL3 to force TLS. Fix for Android 4.4 and below.
+	 *
+	 * https://stackoverflow.com/questions/29916962/javax-net-ssl-sslhandshakeexception-javax-net-ssl-sslprotocolexception-ssl-han
+	 */
+	public void disableSsl3() {
+		try {
+			ProviderInstaller.installIfNeeded(this);
+		} catch (GooglePlayServicesNotAvailableException | GooglePlayServicesRepairableException e) {
+			// Too bad
+			System.err.println("Failed to disable SSL3");
+		}
+	}
+	
 	public void initExamplesRepo() {
 		// Don't bother checking if the user doesn't want to
 		if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("update_examples", true)) {
 			return;
 		}
+		
+		// Make sure to force TLS
+		disableSsl3();
 		
 		// Initialize the examples repository when the app is first opened
 		
