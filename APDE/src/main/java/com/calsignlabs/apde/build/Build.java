@@ -99,6 +99,7 @@ public class Build {
 	static private final String XML_WALLPAPER_TEMPLATE = "XMLWallpaper.xml.tmpl";
 	static private final String STRINGS_WALLPAPER_TEMPLATE = "StringsWallpaper.xml.tmpl";
 	static private final String XML_WATCHFACE_TEMPLATE = "XMLWatchFace.xml.tmpl";
+	static private final String XML_WATCH_WRAPPER_TEMPLATE = "XMLWatchWrapperAppDesc.xml.tmpl";
 	
 	// Icons
 	private static final String ICON_192 = "icon-192.png";
@@ -396,7 +397,7 @@ public class Build {
 				}
 				
 				final File resFolder = new File(buildFolder, "res");
-				writeRes(resFolder, sketchClassName);
+				writeRes(resFolder, sketchClassName, manifest, debug);
 				
 				writeMainClass(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
 				
@@ -961,8 +962,55 @@ public class Build {
 		if (debug) {
 			System.out.println(editor.getResources().getString(R.string.build_zipsigner));
 			
-			//Sign the APK using ZipSigner
-			signApk();
+			if (getAppComponent() == ComponentTarget.WATCHFACE) {
+				// We have to do some funky stuff
+				
+				try {
+					File keystoreFile = new File(binFolder, "wear_debug_keystore");
+					
+					InputStream inputStream = editor.getAssets().open("wear-debug-keystore");
+					createFileFromInputStream(inputStream, keystoreFile);
+					
+					String alias = "debug";
+					String password = "password";
+					
+					String unsignedApkPath = sketchName + ".apk.unsigned";
+					File unsignedApk = new File(binFolder.getAbsolutePath() + "/" + unsignedApkPath);
+					File rawFolder = new File(binFolder + "/res/raw/");
+					rawFolder.mkdirs();
+					String signedEmbeddedApkPath = "res/raw/wearable_app.apk";
+					File signedEmbeddedApk = new File(binFolder.getAbsolutePath() + "/" + signedEmbeddedApkPath);
+					
+					signApkWatchface(unsignedApk, signedEmbeddedApk, keystoreFile, alias, password);
+					
+					ProcessBuilder pb = new ProcessBuilder(
+							aaptLoc.getAbsolutePath(),
+							"add",
+							unsignedApkPath,
+							signedEmbeddedApkPath
+					);
+					pb.directory(binFolder);
+					Process p = pb.start();
+					
+					copyStream(p.getInputStream(), verbose ? System.out : new NullOutputStream());
+					copyStream(p.getErrorStream(), verbose ? System.err : new NullOutputStream());
+					
+					int exitCode = p.waitFor();
+					
+					if (exitCode != 0) {
+						System.err.println("AAPT error code: " + exitCode);
+					}
+					
+					File signedContainerApk = new File(binFolder.getAbsolutePath() + "/" + sketchName + ".apk");
+					
+					signApkWatchface(unsignedApk, signedContainerApk, keystoreFile, alias, password);
+				} catch (IOException | InterruptedException e) {
+					e.printStackTrace();
+				}
+			} else {
+				// Sign the APK using ZipSigner
+				signApk();
+			}
 		} else {
 			System.out.println(editor.getResources().getString(R.string.build_signing_private_key));
 			
@@ -978,10 +1026,6 @@ public class Build {
 			cleanUp();
 			return;
 		}
-		
-		//TODO this writes AAPT error logs, is it necessary?
-//		System.out.println("AAPT logs:");
-//		copyStream(aaptProc.getErrorStream(), System.err);
 		
 		if(!running.get()) { //CHECK
 			cleanUpError();
@@ -1091,6 +1135,20 @@ public class Build {
 //			signer.signZip(new URL("file://" + keystore), "bks", keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outFilename);
 			//Let's take advantage of ZipSigner's ability to load JKS keystores as well
 			CustomKeySigner.signZip(signer, keystore, keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outputFilename);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void signApkWatchface(File inApk, File outApk, File keystore, String alias, String password) {
+		Security.addProvider(new BouncyCastleProvider());
+		ZipSigner signer;
+		
+		char[] pw = password.toCharArray();
+		
+		try {
+			signer = new ZipSigner();
+			CustomKeySigner.signZip(signer, keystore.getAbsolutePath(), pw, alias, pw, "SHA1WITHRSA", inApk.getAbsolutePath(), outApk.getAbsolutePath());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -1496,7 +1554,7 @@ public class Build {
 		return 0; // i give up
 	}
 	
-	private void writeRes(File resFolder, String className) throws SketchException {
+	private void writeRes(File resFolder, String className, Manifest manifest, boolean debug) throws SketchException {
 		File layoutFolder = mkdirs(resFolder, "layout", editor);
 		writeResLayoutMainActivity(layoutFolder, className);
 		
@@ -1517,6 +1575,9 @@ public class Build {
 		if (comp == ComponentTarget.WATCHFACE) {
 			File xmlFolder = mkdirs(resFolder, "xml", editor);
 			writeResXMLWatchFace(xmlFolder);
+			if (debug) {
+				writeWatchWrapperAppDesc(xmlFolder, manifest.getPackageName(), manifest.getVersionCode(editor), manifest.getPrettyVersion(editor));
+			}
 		}
 		
 		if (comp == ComponentTarget.VR) {
@@ -1809,6 +1870,17 @@ public class Build {
 	private void writeResXMLWatchFace(final File xmlFolder) {
 		File xmlFile = new File(xmlFolder, "watch_face.xml");
 		createFileFromTemplate(XML_WATCHFACE_TEMPLATE, xmlFile, null, editor);
+	}
+	
+	private void writeWatchWrapperAppDesc(final File xmlFolder, String packageName, int versionCode, String versionName) {
+		File xmlFile = new File(xmlFolder, "wearable_app_desc.xml");
+		
+		HashMap<String, String> replaceMap = new HashMap<String, String>();
+		replaceMap.put("@@package@@", packageName);
+		replaceMap.put("@@versionCode@@", Integer.toString(versionCode));
+		replaceMap.put("@@versionName@@", versionName);
+		
+		createFileFromTemplate(XML_WATCH_WRAPPER_TEMPLATE, xmlFile, replaceMap, editor);
 	}
 	
 	private String generatePermissionsString(final String[] permissions) {
