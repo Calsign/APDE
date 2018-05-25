@@ -1,4 +1,5 @@
-v0.4.1-pre2 Alpha:
+v0.4.1 Alpha
+
  - Fix most code deletion bugs
  - Android multi-window support on 7.0+ (Nougat)
  - Timer-based autosave
