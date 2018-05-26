@@ -2,8 +2,8 @@
 <manifest
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	package="com.calsignlabs.apde"
-	android:versionCode="21"
-	android:versionName="0.4.1"
+	android:versionCode="22"
+	android:versionName="0.5.0-pre1"
 	android:installLocation="auto">
 	
 	<uses-sdk

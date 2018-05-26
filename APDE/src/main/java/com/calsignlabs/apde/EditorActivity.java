@@ -2506,6 +2506,10 @@ public class EditorActivity extends AppCompatActivity {
 		menu.findItem(R.id.menu_comp_select_wallpaper).getIcon().setAlpha(getComponentTarget() == ComponentTarget.WALLPAPER ? alphaSelected : alphaUnelected);
 		menu.findItem(R.id.menu_comp_select_watchface).getIcon().setAlpha(getComponentTarget() == ComponentTarget.WATCHFACE ? alphaSelected : alphaUnelected);
 		menu.findItem(R.id.menu_comp_select_vr).getIcon().setAlpha(getComponentTarget() == ComponentTarget.VR ? alphaSelected : alphaUnelected);
+		
+		// TODO watchface and VR are temporarily disabled
+		menu.findItem(R.id.menu_comp_select_watchface).setVisible(false);
+		menu.findItem(R.id.menu_comp_select_vr).setVisible(false);
     }
     
     @Override
@@ -4132,11 +4136,10 @@ public class EditorActivity extends AppCompatActivity {
 			}
 		});
 		
-		// branch android-mode-4, projected inclusion v0.5.0
-		// TODO change version code to correct one
+		// v0.5.0-pre1 (branch android-mode-4)
 		
 		// Upgrade android.jar to latest version (API level 27)
-		upgradeChanges.add(new UpgradeChange(21) {
+		upgradeChanges.add(new UpgradeChange(22) {
 			@Override
 			public void run() {
 				getGlobalState().getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new CopyAndroidJarTask());
@@ -4145,7 +4148,7 @@ public class EditorActivity extends AppCompatActivity {
 		
 		// Upgrade sketchData file to include component target
 		// TODO test this in a real device context
-		upgradeChanges.add(new UpgradeChange(21) {
+		upgradeChanges.add(new UpgradeChange(22) {
 			@Override
 			public void run() {
 				String oldSketchDataStr = readTempFile("sketchData.txt");
