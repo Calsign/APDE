@@ -117,6 +117,9 @@ public class ExportSignedPackage implements Tool {
 	private TextView keystoreMessage;
 	private TextView keyMessage;
 	
+	private Spinner componentTarget;
+	private ArrayAdapter<String> componentTargetAdapter;
+	
 	@Override
 	public void init(APDE context) {
 		ExportSignedPackage.context = context;
@@ -168,6 +171,8 @@ public class ExportSignedPackage implements Tool {
 		aliasPassword = (EditText) layout.findViewById(R.id.alias_password);
 		aliasCertificateInfo = (ImageButton) layout.findViewById(R.id.alias_certificate_info);
 		aliasNew = (ImageButton) layout.findViewById(R.id.alias_new);
+		
+		componentTarget = (Spinner) layout.findViewById(R.id.component_target);
 		
 		exportMessage = (TextView) layout.findViewById(R.id.export_signed_package_message);
 		
@@ -251,9 +256,24 @@ public class ExportSignedPackage implements Tool {
 		aliasList.add(context.getResources().getString(R.string.export_signed_package_no_aliases));
 		
 		//The alias spinner is empty until the user selects a keystore
-		aliasAdapter = new ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, aliasList);
+		aliasAdapter = new ArrayAdapter<String>(context, R.layout.spinner_item, aliasList);
 		aliasAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		alias.setAdapter(aliasAdapter);
+		
+		String[] componentTargetList = {
+				context.getResources().getString(ComponentTarget.APP.getNameId()),
+				context.getResources().getString(ComponentTarget.WALLPAPER.getNameId()),
+				context.getResources().getString(ComponentTarget.WATCHFACE.getNameId()),
+				context.getResources().getString(ComponentTarget.VR.getNameId())
+		};
+		
+		componentTargetAdapter = new ArrayAdapter<String>(context, R.layout.spinner_item, componentTargetList);
+		componentTargetAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+		componentTarget.setAdapter(componentTargetAdapter);
+		
+		int selectedTarget = context.getEditor().getComponentTarget().serialize();
+		// Sanity check
+		componentTarget.setSelection(Math.min(Math.max(selectedTarget, 0), 3), false);
 		
 		keystoreFileSelect.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -1267,8 +1287,7 @@ public class ExportSignedPackage implements Tool {
 		new Thread(new Runnable() {
 			public void run() {
 				exporting = true;
-				// TODO allow user to select app component
-				builder.build("release", ComponentTarget.APP);
+				builder.build("release", ComponentTarget.deserialize(componentTarget.getSelectedItemPosition()));
 				exporting = false;
 			}
 		}).start();
