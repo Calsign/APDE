@@ -113,6 +113,20 @@ public class Preproc extends PdePreprocessor {
 		// if static mode sketch, all we need is regex
 		// easy proxy for static in this case is whether [^\s]void\s is present
 		
+		if (comp == ComponentTarget.VR) {
+			// Need to use STEREO renderer for VR
+			// Only one option - stereo and fullscreen - so don't try anything else
+			
+			SurfaceInfo info = new SurfaceInfo();
+			
+			info.addStatement("fullScreen(STEREO);");
+			setPrivateSurfaceInfoField(info, "renderer", "STEREO");
+			setPrivateSurfaceInfoField(info, "width", "displayWidth");
+			setPrivateSurfaceInfoField(info, "height", "displayHeight");
+			
+			return info;
+		}
+		
 		String uncommented = scrubComments(code);
 		
 		Mode mode = parseMode(uncommented);
@@ -196,9 +210,11 @@ public class Preproc extends PdePreprocessor {
 			switch (comp) {
 				case APP:
 				case WATCHFACE:
-				case VR:
 					// Use size like normal
 					info.addStatement(sizeContents[0]);
+					break;
+				case VR:
+					// We take care of this above
 					break;
 				case WALLPAPER:
 					// Replace size with fullScreen - for some reason size breaks things
@@ -286,7 +302,7 @@ public class Preproc extends PdePreprocessor {
 			return info;
 		}
 		
-		// Lint is telling me that this statement is never true... but I beg to differ
+		// Lint is telling me that this statement is always true... but I beg to differ
 		if (sizeContents == null && fullContents == null) {
 			/*
 			 * Default to fullscreen

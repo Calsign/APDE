@@ -441,6 +441,11 @@ public class Manifest {
 			if (targetSdk < appComp.getMinSdk()) {
 				targetSdk = getDefaultTargetSdk();
 			}
+			
+			// Don't use orientation for VR sketches - does not work
+			if (appComp == ComponentTarget.VR) {
+				orientation = null;
+			}
 		}
 		
 		if (xml == null) {

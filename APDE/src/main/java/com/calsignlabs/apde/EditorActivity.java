@@ -2506,10 +2506,6 @@ public class EditorActivity extends AppCompatActivity {
 		menu.findItem(R.id.menu_comp_select_wallpaper).getIcon().setAlpha(getComponentTarget() == ComponentTarget.WALLPAPER ? alphaSelected : alphaUnelected);
 		menu.findItem(R.id.menu_comp_select_watchface).getIcon().setAlpha(getComponentTarget() == ComponentTarget.WATCHFACE ? alphaSelected : alphaUnelected);
 		menu.findItem(R.id.menu_comp_select_vr).getIcon().setAlpha(getComponentTarget() == ComponentTarget.VR ? alphaSelected : alphaUnelected);
-		
-		// TODO watchface and VR are temporarily disabled
-		menu.findItem(R.id.menu_comp_select_watchface).setVisible(false);
-		menu.findItem(R.id.menu_comp_select_vr).setVisible(false);
     }
     
     @Override

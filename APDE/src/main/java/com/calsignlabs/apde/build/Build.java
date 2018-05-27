@@ -411,15 +411,24 @@ public class Build {
 				resFolder.mkdir();
 				createFolderFromZippedAssets(editor.getAssets(), "support-res.zip", supportResFolder);
 				
-				// We want to make this directory whether or not we're actually building a watchface
+				// We want to make these directories whether or not we're actually building for that target
 				// If we don't make the directory then AAPT yells at us
 				File wearableResFolder = new File(buildFolder, "support-wearable-res");
 				wearableResFolder.mkdir();
+				File vrResFolder = new File(buildFolder, "vr-res");
+				vrResFolder.mkdir();
 				
 				if (getAppComponent() == ComponentTarget.WATCHFACE) {
 					// Copy support-wearable res files
-					
 					createFolderFromZippedAssets(editor.getAssets(), "support-wearable-res.zip", wearableResFolder);
+				} else if (getAppComponent() == ComponentTarget.VR) {
+					// Copy GVR res files
+					createFolderFromZippedAssets(editor.getAssets(), "vr-res.zip", vrResFolder);
+					
+					// Copy GVR binaries
+					File gvrBinaryZip = new File(buildFolder, "vr-lib.zip");
+					InputStream inputStream = am.open("vr-lib.zip");
+					createFileFromInputStream(inputStream, gvrBinaryZip);
 				}
 				
 				// Copy android.jar if it hasn't been done yet
@@ -441,7 +450,9 @@ public class Build {
 						"processing-core", "support-core-utils", "support-compat",
 						"appcompat", "support-fragment",
 						getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable" : "",
-						getAppComponent() == ComponentTarget.WATCHFACE ? "percent" : ""
+						getAppComponent() == ComponentTarget.WATCHFACE ? "percent" : "",
+						getAppComponent() == ComponentTarget.VR ? "gvr" : "",
+						getAppComponent() == ComponentTarget.VR ? "vr" : ""
 				};//, "support-vector-drawable"};
 				String prefix = "libs/";
 				String suffix = ".jar";
@@ -474,7 +485,8 @@ public class Build {
 				
 				String[] dexLibsToCopy = {
 						"all-lib-dex",
-						getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable-dex" : ""
+						getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable-dex" : "",
+						getAppComponent() == ComponentTarget.VR ? "vr-dex" : ""
 				};
 				String dexPrefix = "libs-dex/";
 				String dexSuffix = ".jar";
@@ -712,6 +724,7 @@ public class Build {
 				"-S", buildFolder.getAbsolutePath() + "/res/", // The location of the /res folder
 				"-S", buildFolder.getAbsolutePath() + "/support-res/", // The location of the support lib res folder
 				"-S", buildFolder.getAbsolutePath() + "/support-wearable-res/",
+				"-S", buildFolder.getAbsolutePath() + "/vr-res/",
 				"--extra-packages", "android.support.v7.appcompat", // Make AAPT generate R.java for AppCompat
 				"-J", genFolder.getAbsolutePath(), // The location of the /gen folder
 				"-A", assetsFolder.getAbsolutePath(), // The location of the /assets folder
@@ -911,6 +924,11 @@ public class Build {
 			//Add everything else
 			builder.addZipFile(glslFolder); //Location of GLSL files
 			builder.addSourceFolder(srcFolder); //The location of the source folder
+			
+			if (getAppComponent() == ComponentTarget.VR) {
+				// Add GVR binary libs
+				builder.addZipFile(new File(buildFolder, "vr-lib.zip"));
+			}
 			
 			//Seal the APK
 			builder.sealApk();
@@ -1768,7 +1786,7 @@ public class Build {
 		replaceMap.put("@@package_name@@", packageName);
 		replaceMap.put("@@sketch_class_name@@", sketchClassName);
 		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
-		// TODO inject log broadcaster
+		replaceMap.put("@@log_broadcaster@@", injectLogBroadcaster ? getLogBroadcasterInsert() : "");
 		
 		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
