@@ -341,6 +341,10 @@ public class Preproc extends PdePreprocessor {
 		return new SurfaceInfo();
 	}
 	
+	public static String getRenderer(SurfaceInfo info) {
+		return getPrivateSurfaceInfoField(info, "renderer", String.class);
+	}
+	
 	private static <T> void setPrivateSurfaceInfoField(SurfaceInfo surfaceInfo, String fieldName, T value) {
 		try {
 			Field field = SurfaceInfo.class.getDeclaredField(fieldName);

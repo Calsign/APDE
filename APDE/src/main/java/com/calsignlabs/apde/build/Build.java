@@ -67,6 +67,7 @@ import processing.core.PApplet;
 import processing.data.StringList;
 import processing.mode.java.preproc.PdePreprocessor;
 import processing.mode.java.preproc.PreprocessorResult;
+import processing.mode.java.preproc.SurfaceInfo;
 
 public class Build {
 	public static final String PACKAGE_REGEX ="(?:^|\\s|;)package\\s+(\\S+)\\;";
@@ -354,7 +355,7 @@ public class Build {
 			String combinedText = "";
 			for(SketchFile tab : tabs)
 				combinedText += tab.getText();
-			preproc.initSketchSize(combinedText, editor, getAppComponent());
+			SurfaceInfo surfaceInfo = preproc.initSketchSize(combinedText, editor, getAppComponent());
 			preproc.initSketchSmooth(combinedText, editor);
 			sketchClassName = preprocess(srcFolder, packageName, preproc, false);
 			
@@ -398,7 +399,7 @@ public class Build {
 				final File resFolder = new File(buildFolder, "res");
 				writeRes(resFolder, sketchClassName);
 				
-				writeMainClass(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
+				writeMainClass(srcFolder, manifest.getPermissions(), Preproc.getRenderer(surfaceInfo), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
 				
 				final File libsFolder = mkdirs(buildFolder, "libs", editor);
 				final File assetsFolder = mkdirs(buildFolder, "assets", editor);
@@ -1686,7 +1687,7 @@ public class Build {
 	}
 	
 	private static boolean isOpenGL(String renderer) {
-		return renderer != null && (renderer.equals("P2D") || renderer.equals("P3D"));
+		return renderer != null && (renderer.equals("P2D") || renderer.equals("P3D") || renderer.equals("OPENGL"));
 	}
 	
 	private void writeMainClass(final File srcDirectory, String[] permissions, String renderer, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
