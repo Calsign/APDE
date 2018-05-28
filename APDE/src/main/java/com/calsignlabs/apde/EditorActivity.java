@@ -4143,23 +4143,29 @@ public class EditorActivity extends AppCompatActivity {
 		});
 		
 		// Upgrade sketchData file to include component target
-		// TODO test this in a real device context
 		upgradeChanges.add(new UpgradeChange(22) {
 			@Override
 			public void run() {
-				String oldSketchDataStr = readTempFile("sketchData.txt");
-				String[] oldSketchData = oldSketchDataStr.split(";");
-				StringBuilder newSketchData = new StringBuilder();
-				for (int i = 0; i < 3; i ++) {
-					newSketchData.append(oldSketchData[i]);
-					newSketchData.append(';');
+				try {
+					String oldSketchDataStr = readTempFile("sketchData.txt");
+					String[] oldSketchData = oldSketchDataStr.split(";");
+					if (oldSketchData.length >= 3) {
+						StringBuilder newSketchData = new StringBuilder();
+						for (int i = 0; i < 3; i++) {
+							newSketchData.append(oldSketchData[i]);
+							newSketchData.append(';');
+						}
+						newSketchData.append("0;");
+						for (int i = 3; i < oldSketchData.length; i++) {
+							newSketchData.append(oldSketchData[i]);
+							newSketchData.append(';');
+						}
+						writeTempFile("sketchData.txt", newSketchData.toString());
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+					System.err.println(getResources().getString(R.string.apde_0_5_upgrade_error));
 				}
-				newSketchData.append("0;");
-				for (int i = 3; i < oldSketchData.length; i ++) {
-					newSketchData.append(oldSketchData[i]);
-					newSketchData.append(';');
-				}
-				writeTempFile("sketchData.txt", newSketchData.toString());
 			}
 		});
 		
