@@ -422,7 +422,9 @@ public class Build {
 				if (getAppComponent() == ComponentTarget.WATCHFACE) {
 					// Copy support-wearable res files
 					createFolderFromZippedAssets(editor.getAssets(), "support-wearable-res.zip", wearableResFolder);
-				} else if (getAppComponent() == ComponentTarget.VR) {
+				}
+				
+				if (getAppComponent() == ComponentTarget.VR) {
 					// Copy GVR res files
 					createFolderFromZippedAssets(editor.getAssets(), "vr-res.zip", vrResFolder);
 					
@@ -486,7 +488,20 @@ public class Build {
 				
 				String[] dexLibsToCopy = {
 						"all-lib-dex",
-						getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable-dex" : "",
+						/*
+						 * Part of bugfix for #43. 2018-06-03.
+						 *
+						 * Android mode classes reference the wearable support library. This means
+						 * that we get a VerifyError on 4.4 (API level 19) because that platform
+						 * does not have the wearable library classes, even though these classes are
+						 * never touched. So we add the dexed support library on 4.4 and below so
+						 * that Android can see the classes and stop complaining.
+						 *
+						 * API level 20 is 4.4W (W for Wear) - uncertain whether or not these
+						 * classes are present. It doesn't hurt too much to include them, so that's
+						 * what we're doing.
+						 */
+						getAppComponent() == ComponentTarget.WATCHFACE || android.os.Build.VERSION.SDK_INT <= 20 ? "support-wearable-dex" : "",
 						getAppComponent() == ComponentTarget.VR ? "vr-dex" : ""
 				};
 				String dexPrefix = "libs-dex/";
@@ -722,6 +737,7 @@ public class Build {
 			String[] args = {
 				aaptLoc.getAbsolutePath(), // The location of AAPT
 				"package", "-v", "-f", "-m", "--auto-add-overlay",
+				"--no-version-vectors", // Fix crash on 4.4 due to some support library vector voodoo
 				"-S", buildFolder.getAbsolutePath() + "/res/", // The location of the /res folder
 				"-S", buildFolder.getAbsolutePath() + "/support-res/", // The location of the support lib res folder
 				"-S", buildFolder.getAbsolutePath() + "/support-wearable-res/",
@@ -1051,14 +1067,17 @@ public class Build {
 			
 			if (getAppComponent() == ComponentTarget.APP || getAppComponent() == ComponentTarget.VR) {
 				// Launch in adjacent window when in multiple-window mode
+				// This is only supported on Android 7.0+
 				promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
-			}
-			if (getAppComponent() == ComponentTarget.WALLPAPER) {
-				promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
 			}
 		} else {
 			// The package manager doesn't seem to like FileProvider...
 			promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+		}
+		
+		// Get result from installation so that we can launch the wallpaper chooser afterward
+		if (getAppComponent() == ComponentTarget.WALLPAPER) {
+			promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
 		}
 		
 		if (injectLogBroadcaster) {
