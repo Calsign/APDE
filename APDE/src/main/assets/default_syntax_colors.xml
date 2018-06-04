@@ -35,10 +35,38 @@
         <keyword style="keyword_processing_function_bold" function="true">keyTyped</keyword>
         
 		<!-- Android Mode functions -->
-		<keyword style="keyword_processing_function" function="true" reference="processing_android" reference_hint="no_underscore">orientation</keyword>
-		<keyword style="keyword_processing_function" function="true" reference="processing_android" reference_hint="no_underscore">checkPermission</keyword>
-		<keyword style="keyword_processing_function" function="true" reference="processing_android" reference_hint="no_underscore">onPermissionGranted</keyword>
-		
+		<keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="environment/orientation">orientation</keyword>
+		<keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="permissions/query">hasPermission</keyword>
+		<keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="permissions/request">requestPermission</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="environment/activity">getActivity</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="environment/activity">getContext</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="keyboard/virtual">openKeyboard</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="keyboard/virtual">closeKeyboard</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="multitouch/events">touchStarted</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="multitouch/events">touchMoved</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="multitouch/events">touchEnded</keyword>
+        
+        <!-- Wallpapers -->
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="wallpapers/offset">wallpaperOffset</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="wallpapers/offset">wallpaperHomeCount</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="wallpapers/preview">wallpaperPreview</keyword>
+        
+        <!-- Watchfaces -->
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="wear/mode">wearInteractive</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="wear/mode">wearAmbient</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="wear/special">wearLowBit</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="wear/special">wearBurnIn</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="wear/shape">wearRound</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="wear/shape">wearSquare</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="wear/insets">wearInsets</keyword>
+        
+        <!-- VR -->
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="vr/calculate">calculate</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="vr/camera">cameraUp</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="vr/eye">eye</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="vr/eye">getEyeMatrix</keyword>
+        <keyword style="keyword_processing_function" function="true" reference="processing_android" reference_target="vr/object">getObjectMatrix</keyword>
+        
         <!-- Processing functions -->
         <keyword style="keyword_processing_function" function="true">size</keyword>
 		<keyword style="keyword_processing_function" function="true">fullScreen</keyword>
@@ -307,10 +335,6 @@
 		<keyword style="keyword_processing_function" function="true">unhex</keyword>
         
         <!-- Constructors -->
-        <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">String</keyword>
-        <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">Object</keyword>
-        <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">ArrayList</keyword>
-        <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">HashMap</keyword>
         
         <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">Table</keyword>
         <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">TableRow</keyword>
@@ -331,10 +355,25 @@
         <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">IntDict</keyword>
         <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">FloatDict</keyword>
         <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">StringDict</keyword>
-        
+    
+        <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">String</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">Object</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">ArrayList</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">HashMap</keyword>
         <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">BufferedReader</keyword>
         <keyword style="keyword_processing_function" function="true" reference_hint="no_underscore">PrintWriter</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_target="">StringBuffer</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_target="">StringBuilder</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_target="">Thread</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_target="">Class</keyword>
     
+        <keyword style="keyword_processing_function" function="true" reference_target="">Boolean</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_target="">Byte</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_target="">Character</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_target="">Double</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_target="">Float</keyword>
+        <keyword style="keyword_processing_function" function="true" reference_target="">Integer</keyword>
+        
         <keyword style="keyword_processing_function" function="true">save</keyword>
         <keyword style="keyword_processing_function" function="true">saveFrame</keyword>
         <keyword style="keyword_processing_function" function="true">filter</keyword>
@@ -343,6 +382,10 @@
     
         <keyword style="keyword_processing_function" function="true">sketchFile</keyword>
         <keyword style="keyword_processing_function" function="true">sketchPath</keyword>
+        <keyword style="keyword_processing_function" function="true">dataFile</keyword>
+        <keyword style="keyword_processing_function" function="true">dataPath</keyword>
+    
+        <keyword style="keyword_processing_function" function="true">thread</keyword>
         
         <!-- Processing class (PXxx) functions -->
         <keyword style="keyword_processing_function" function="true" class="XML">toString</keyword>
@@ -405,6 +448,70 @@
         <keyword style="keyword_processing_function" function="true" class="PShape">rotateZ</keyword>
         <keyword style="keyword_processing_function" function="true" class="PShape">rotate</keyword>
         <keyword style="keyword_processing_function" function="true" class="PShape">resetMatrix</keyword>
+    
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">getBoolean</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">getFloat</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">getInt</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">getJSONArray</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">getJSONObject</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">getString</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">isNull</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">setBoolean</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">setFloat</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">setInt</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">setJSONArray</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">setJSONObject</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONObject">setString</keyword>
+    
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">append</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">getBoolean</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">getFloat</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">getInt</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">getIntArray</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">getJSONArray</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">getJSONObject</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">getString</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">getStringArray</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">isNull</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">remove</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">setBoolean</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">setFloat</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">setInt</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">setJSONArray</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">setJSONObject</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">setString</keyword>
+        <keyword style="keyword_processing_function" function="true" class="JSONArray">size</keyword>
+    
+        <keyword style="keyword_processing_function" function="true" class="Table">addColumn</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">addRow</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">clearRows</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">findRows</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">getColumnCount</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">getFloat</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">getInt</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">getRow</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">getRowCount</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">getString</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">getStringColumn</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">matchRow</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">matchRows</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">removeColumn</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">removeRow</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">removeTokens</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">rows</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">setFloat</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">setInt</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">setString</keyword>
+        <keyword style="keyword_processing_function" function="true" class="Table">trim</keyword>
+    
+        <keyword style="keyword_processing_function" function="true" class="TableRow">getColumnCount</keyword>
+        <keyword style="keyword_processing_function" function="true" class="TableRow">getColumnTitle</keyword>
+        <keyword style="keyword_processing_function" function="true" class="TableRow">getFloat</keyword>
+        <keyword style="keyword_processing_function" function="true" class="TableRow">getInt</keyword>
+        <keyword style="keyword_processing_function" function="true" class="TableRow">getString</keyword>
+        <keyword style="keyword_processing_function" function="true" class="TableRow">setFloat</keyword>
+        <keyword style="keyword_processing_function" function="true" class="TableRow">setInt</keyword>
+        <keyword style="keyword_processing_function" function="true" class="TableRow">setString</keyword>
         
         <!-- Java class (String, ArrayList, etc.) functions -->
         <keyword style="keyword_processing_function" function="true" class="ArrayList">size</keyword>
@@ -417,6 +524,13 @@
         <keyword style="keyword_processing_function" function="true" class="String">substring</keyword>
         <keyword style="keyword_processing_function" function="true" class="String">toLowerCase</keyword>
         <keyword style="keyword_processing_function" function="true" class="String">toUpperCase</keyword>
+    
+        <keyword style="keyword_processing_function" function="BufferedReader" class="String" reference_target="BufferedReader">readLine</keyword>
+        <keyword style="keyword_processing_function" function="BufferedReader" class="String" reference_target="BufferedReader">ready</keyword>
+        <keyword style="keyword_processing_function" function="BufferedReader" class="String" reference_target="BufferedReader">close</keyword>
+        
+        <keyword style="keyword_processing_function" function="PrintWriter" class="String" reference_target="PrintWriter">close</keyword>
+        <keyword style="keyword_processing_function" function="PrintWriter" class="String" reference_target="PrintWriter">flush</keyword>
         
         <!-- types -->
         <keyword style="keyword_type">true</keyword>
@@ -430,11 +544,6 @@
         <keyword style="keyword_type">char</keyword>
         <keyword style="keyword_type">byte</keyword>
         <keyword style="keyword_type">color</keyword>
-        
-        <keyword style="keyword_type">String</keyword>
-        <keyword style="keyword_type">Object</keyword>
-        <keyword style="keyword_type">ArrayList</keyword>
-        <keyword style="keyword_type">HashMap</keyword>
         
         <keyword style="keyword_type">Table</keyword>
         <keyword style="keyword_type">TableRow</keyword>
@@ -456,8 +565,23 @@
         <keyword style="keyword_type">FloatDict</keyword>
         <keyword style="keyword_type">StringDict</keyword>
         
+        <keyword style="keyword_type">String</keyword>
+        <keyword style="keyword_type">Object</keyword>
+        <keyword style="keyword_type">ArrayList</keyword>
+        <keyword style="keyword_type">HashMap</keyword>
         <keyword style="keyword_type">BufferedReader</keyword>
         <keyword style="keyword_type">PrintWriter</keyword>
+        <keyword style="keyword_type" reference_target="">StringBuffer</keyword>
+        <keyword style="keyword_type" reference_target="">StringBuilder</keyword>
+        <keyword style="keyword_type" reference_target="">Thread</keyword>
+        <keyword style="keyword_type" reference_target="">Class</keyword>
+        
+        <keyword style="keyword_type" reference_target="">Boolean</keyword>
+        <keyword style="keyword_type" reference_target="">Byte</keyword>
+        <keyword style="keyword_type" reference_target="">Character</keyword>
+        <keyword style="keyword_type" reference_target="">Double</keyword>
+        <keyword style="keyword_type" reference_target="">Float</keyword>
+        <keyword style="keyword_type" reference_target="">Integer</keyword>
         
         <!-- structural elements -->
         <keyword style="keyword_structure">null</keyword>
@@ -651,7 +775,9 @@
 		<keyword style="keyword_processing_constant" reference_target="key">RETURN</keyword>
 		<keyword style="keyword_processing_constant" reference_target="key">ESC</keyword>
 		<keyword style="keyword_processing_constant" reference_target="key">DELETE</keyword>
-	    
+        <keyword style="keyword_processing_constant" reference_target="key">CONTROL</keyword>
+        <keyword style="keyword_processing_constant" reference_target="key">SHIFT</keyword>
+        
 		<keyword style="keyword_processing_constant" reference_target="keyCode">CODED</keyword>\
 	    
 		<keyword style="keyword_processing_constant" reference_target="keyCode">UP</keyword>
@@ -695,6 +821,8 @@
         <keyword style="keyword_processing_constant" reference_target="size_">OPENGL</keyword>
         <keyword style="keyword_processing_constant" reference_target="size_">P2D</keyword>
         <keyword style="keyword_processing_constant" reference_target="size_">P3D</keyword>
+        <keyword style="keyword_processing_constant" reference="processing_android" reference_target="vr/renderers">STEREO</keyword>
+        <keyword style="keyword_processing_constant" reference="processing_android" reference_target="vr/renderers">MONO</keyword>
         
         <!-- Processing class (PXxx) fields -->
         <keyword style="keyword_processing_variable" class="PImage">pixels</keyword>
@@ -703,5 +831,9 @@
         
         <keyword style="keyword_processing_variable" class="PShape">width</keyword>
         <keyword style="keyword_processing_variable" class="PShape">height</keyword>
+        
+        <!-- Android mode fields -->
+        <keyword style="keyword_processing_variable" reference="processing_android" reference_target="multitouch/touches">touches</keyword>
+        <keyword style="keyword_processing_variable" reference="processing_android" reference_target="environment/display">displayDensity</keyword>
     </keywords>
 </syntax>
