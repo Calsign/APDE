@@ -120,4 +120,5 @@
 	<string name="build_write_res_xxhdpi_failed">Could not create \"drawable-xxhdpi\" folder.</string>
 	<string name="build_write_res_xxxhdpi_failed">Could not create \"drawable-xxxhdpi\" folder.</string>
 	<string name="build_write_res_icon_copy_failed">Failed to copy icons.</string>
+	<string name="build_launch_sketch_activity_failure">Failed to start sketch activity</string>
 </resources>

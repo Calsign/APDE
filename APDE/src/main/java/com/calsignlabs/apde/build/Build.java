@@ -10,6 +10,7 @@ package com.calsignlabs.apde.build;
 
 import android.annotation.SuppressLint;
 import android.app.WallpaperManager;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -194,6 +195,29 @@ public class Build {
 			} else if (verbose) {
 				System.out.println(editor.getResources().getString(R.string.build_delete_old_apk_success));
 			}
+		}
+	}
+	
+	public static void launchSketchPostLaunch(EditorActivity editor) {
+		String packageName = editor.getGlobalState().getManifest().getPackageName();
+		Intent intent = editor.getPackageManager().getLaunchIntentForPackage(packageName);
+		
+		if (intent == null) {
+			System.err.println(editor.getResources().getString(R.string.build_launch_sketch_activity_failure));
+			return;
+		}
+		
+		if (android.os.Build.VERSION.SDK_INT >= 24) {
+			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+		} else {
+			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		}
+		
+		try {
+			editor.startActivity(intent);
+		} catch (ActivityNotFoundException e) {
+			e.printStackTrace();
+			System.err.println(editor.getResources().getString(R.string.build_launch_sketch_activity_failure));
 		}
 	}
 	
@@ -1064,21 +1088,13 @@ public class Build {
 			// Need to use FileProvider
 			Uri apkUri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", apkFile);
 			promptInstall = new Intent(Intent.ACTION_INSTALL_PACKAGE).setData(apkUri).setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-			
-			if (getAppComponent() == ComponentTarget.APP || getAppComponent() == ComponentTarget.VR) {
-				// Launch in adjacent window when in multiple-window mode
-				// This is only supported on Android 7.0+
-				promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
-			}
 		} else {
 			// The package manager doesn't seem to like FileProvider...
 			promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
 		}
 		
-		// Get result from installation so that we can launch the wallpaper chooser afterward
-		if (getAppComponent() == ComponentTarget.WALLPAPER) {
-			promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
-		}
+		// Get result from installation so that we can launch the sketch afterward
+		promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
 		
 		if (injectLogBroadcaster) {
 			//Make some space in the console
@@ -1093,7 +1109,7 @@ public class Build {
 		imm.hideSoftInputFromWindow(editor.findViewById(R.id.content).getWindowToken(), 0);
 		
 		//Get a result so that we can delete the APK file
-		editor.startActivityForResult(promptInstall, getAppComponent() == ComponentTarget.WALLPAPER ? EditorActivity.FLAG_SET_WALLPAPER : EditorActivity.FLAG_DELETE_APK);
+		editor.startActivityForResult(promptInstall, getAppComponent() == ComponentTarget.WALLPAPER ? EditorActivity.FLAG_SET_WALLPAPER : EditorActivity.FLAG_LAUNCH_SKETCH);
 		
 		cleanUp();
 	}

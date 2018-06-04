@@ -169,8 +169,10 @@ public class EditorActivity extends AppCompatActivity {
 	
 	// Intent flag to delete the old just-installed APK file
 	public static final int FLAG_DELETE_APK = 5;
+	// Intent flag to launch the just-installed sketch
+	public static final int FLAG_LAUNCH_SKETCH = 6;
 	// Intent flag to set the just-installed wallpaper
-	public static final int FLAG_SET_WALLPAPER = 6;
+	public static final int FLAG_SET_WALLPAPER = 7;
 	
 	public ScheduledThreadPoolExecutor autoSaveTimer;
 	public ScheduledFuture<?> autoSaveTimerTask;
@@ -984,8 +986,13 @@ public class EditorActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		getGlobalState().writeCodeDeletionDebugStatus("onActivityResult()");
 		
-    	// This is the code to delete the old APK file
-    	if (requestCode == FLAG_DELETE_APK) {
+    	// We want to see the sketch right away
+    	if (requestCode == FLAG_LAUNCH_SKETCH) {
+			// Note: we only get the result code if we pass it as an extra
+			if (resultCode == RESULT_OK) {
+				// The user installed the sketch, so launch the sketch
+				Build.launchSketchPostLaunch(this);
+			}
     		Build.cleanUpPostLaunch(this);
     	} else if (requestCode == FLAG_SET_WALLPAPER) {
     		// Note: we only get the result code if we pass it as an extra
