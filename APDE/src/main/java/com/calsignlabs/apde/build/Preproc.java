@@ -20,6 +20,7 @@ Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package com.calsignlabs.apde.build;
 
 import android.content.Context;
+import android.preference.PreferenceManager;
 
 import com.calsignlabs.apde.R;
 
@@ -113,20 +114,6 @@ public class Preproc extends PdePreprocessor {
 		// if static mode sketch, all we need is regex
 		// easy proxy for static in this case is whether [^\s]void\s is present
 		
-		if (comp == ComponentTarget.VR) {
-			// Need to use STEREO renderer for VR
-			// Only one option - stereo and fullscreen - so don't try anything else
-			
-			SurfaceInfo info = new SurfaceInfo();
-			
-			info.addStatement("fullScreen(STEREO);");
-			setPrivateSurfaceInfoField(info, "renderer", "STEREO");
-			setPrivateSurfaceInfoField(info, "width", "displayWidth");
-			setPrivateSurfaceInfoField(info, "height", "displayHeight");
-			
-			return info;
-		}
-		
 		String uncommented = scrubComments(code);
 		
 		Mode mode = parseMode(uncommented);
@@ -206,6 +193,8 @@ public class Preproc extends PdePreprocessor {
 			SurfaceInfo info = new SurfaceInfo();
 //      info.statement = sizeContents[0];
 			String rendererArg = (args.size() >= 3) ? args.get(2).trim() : null;
+			String widthArg = (args.size() >= 1) ? args.get(0).trim() : null;
+			String heightArg = (args.size() >= 2) ? args.get(1).trim() : null;
 			
 			switch (comp) {
 				case APP:
@@ -214,9 +203,17 @@ public class Preproc extends PdePreprocessor {
 					info.addStatement(sizeContents[0]);
 					break;
 				case VR:
-					// We take care of this above
+					rendererArg = fixVrRenderer(rendererArg, context);
+					widthArg = "displayWidth";
+					heightArg = "displayHeight";
+					
+					// VR sketches must be full screen
+					info.addStatement("fullScreen(" + rendererArg + ");");
 					break;
 				case WALLPAPER:
+					widthArg = "displayWidth";
+					heightArg = "displayHeight";
+					
 					// Replace size with fullScreen - for some reason size breaks things
 					// This is hacky but it will let old examples work
 					info.addStatement("fullScreen(" + (rendererArg != null ? rendererArg : "") + ");");
@@ -225,8 +222,8 @@ public class Preproc extends PdePreprocessor {
 					throw new IllegalStateException("Illegal app comp: " + comp);
 			}
 			
-			setPrivateSurfaceInfoField(info, "width", (args.size() >= 1) ? args.get(0).trim() : null);
-			setPrivateSurfaceInfoField(info, "height", (args.size() >= 2) ? args.get(1).trim() : null);
+			setPrivateSurfaceInfoField(info, "width", widthArg);
+			setPrivateSurfaceInfoField(info, "height", heightArg);
 			setPrivateSurfaceInfoField(info, "renderer", rendererArg);
 			setPrivateSurfaceInfoField(info, "path", (args.size() >= 4) ? args.get(3).trim() : null);
 			
@@ -265,7 +262,6 @@ public class Preproc extends PdePreprocessor {
 		if (fullContents != null) {
 			SurfaceInfo info = new SurfaceInfo();
 //      info.statement = fullContents[0];
-			info.addStatement(fullContents[0]);
 			StringList args = breakCommas(fullContents[1]);
 			if (args.size() > 0) {  // might have no args
 				String args0 = args.get(0).trim();
@@ -275,17 +271,41 @@ public class Preproc extends PdePreprocessor {
 						// it's the display parameter, not the renderer
 //						info.display = args0;
 						setPrivateSurfaceInfoField(info, "display", args0);
+						info.addStatement(fullContents[0]);
 					} else {
 //						info.renderer = args0;
-						setPrivateSurfaceInfoField(info, "renderer", args0);
+						if (comp == ComponentTarget.VR) {
+							setPrivateSurfaceInfoField(info, "renderer", fixVrRenderer(args0, context));
+							info.addStatement("fullScreen(" + fixVrRenderer(args0, context) + ");");
+						} else {
+							setPrivateSurfaceInfoField(info, "renderer", args0);
+							info.addStatement(fullContents[0]);
+						}
 					}
 				} else if (args.size() == 2) {
 //					info.renderer = args0;
 //					info.display = args.get(1).trim();
-					setPrivateSurfaceInfoField(info, "renderer", args0);
-					setPrivateSurfaceInfoField(info, "display", args.get(1).trim());
+					String displayArgument = args.get(1).trim();
+					if (comp == ComponentTarget.VR) {
+						setPrivateSurfaceInfoField(info, "renderer", fixVrRenderer(args0, context));
+						info.addStatement("fullScreen(" + fixVrRenderer(args0, context) + ", " + displayArgument + ");");
+					} else {
+						setPrivateSurfaceInfoField(info, "renderer", args0);
+						info.addStatement(fullContents[0]);
+					}
+					setPrivateSurfaceInfoField(info, "display", displayArgument);
 				} else {
 					throw new SketchException(context.getResources().getString(R.string.preproc_bad_fullscreen));
+				}
+			} else {
+				if (comp == ComponentTarget.VR) {
+					String renderer = getDefaultVrRenderer(context);
+					
+					// Default to fullscreen in the user's preferred default renderer
+					info.addStatement("fullScreen(" + renderer + ");");
+					setPrivateSurfaceInfoField(info, "renderer", renderer);
+				} else {
+					info.addStatement(fullContents[0]);
 				}
 			}
 //			info.width = "displayWidth";
@@ -316,7 +336,15 @@ public class Preproc extends PdePreprocessor {
 			
 			SurfaceInfo info = new SurfaceInfo();
 			
-			info.addStatement("fullScreen();");
+			if (comp == ComponentTarget.VR) {
+				String renderer = getDefaultVrRenderer(context);
+				
+				// Default to fullscreen in the user's preferred default renderer
+				info.addStatement("fullScreen(" + renderer + ");");
+				setPrivateSurfaceInfoField(info, "renderer", renderer);
+			} else {
+				info.addStatement("fullScreen();");
+			}
 			
 			setPrivateSurfaceInfoField(info, "width", "displayWidth");
 			setPrivateSurfaceInfoField(info, "height", "displayHeight");
@@ -339,6 +367,16 @@ public class Preproc extends PdePreprocessor {
 		// not an error, just no size() specified
 		//return new String[] { null, null, null, null, null };
 		return new SurfaceInfo();
+	}
+	
+	private static String fixVrRenderer(String renderer, Context context) {
+		// Use default renderer unless user has specified a different one
+		// We want to let users run random sketches that aren't preconfigured for VR
+		return renderer != null && (renderer.equals("STEREO") || renderer.equals("MONO")) ? renderer : getDefaultVrRenderer(context);
+	}
+	
+	private static String getDefaultVrRenderer(Context context) {
+		return PreferenceManager.getDefaultSharedPreferences(context).getString("pref_vr_default_renderer", context.getResources().getString(R.string.pref_vr_default_renderer_default_value));
 	}
 	
 	public static String getRenderer(SurfaceInfo info) {
