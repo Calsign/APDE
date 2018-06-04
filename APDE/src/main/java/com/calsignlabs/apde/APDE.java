@@ -96,7 +96,7 @@ public class APDE extends Application {
 	
 	public static final String EXAMPLES_REPO = "https://github.com/Calsign/APDE-Examples-Repo.git";
 	// We use a new branch every time we break backwards-compatibility by updating the examples
-	public static final String EXAMPLES_REPO_BRANCH = "v0.4.0";
+	public static final String EXAMPLES_REPO_BRANCH = "v0.5.0";
 	
 	private TaskManager taskManager;
 	
