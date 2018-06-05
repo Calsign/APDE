@@ -10,6 +10,7 @@ package com.calsignlabs.apde.build;
 
 import android.annotation.SuppressLint;
 import android.app.WallpaperManager;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -74,6 +75,7 @@ import processing.core.PApplet;
 import processing.data.StringList;
 import processing.mode.java.preproc.PdePreprocessor;
 import processing.mode.java.preproc.PreprocessorResult;
+import processing.mode.java.preproc.SurfaceInfo;
 
 public class Build {
 	public static final String PACKAGE_REGEX ="(?:^|\\s|;)package\\s+(\\S+)\\;";
@@ -200,6 +202,29 @@ public class Build {
 			} else if (verbose) {
 				System.out.println(editor.getResources().getString(R.string.build_delete_old_apk_success));
 			}
+		}
+	}
+	
+	public static void launchSketchPostLaunch(EditorActivity editor) {
+		String packageName = editor.getGlobalState().getManifest().getPackageName();
+		Intent intent = editor.getPackageManager().getLaunchIntentForPackage(packageName);
+		
+		if (intent == null) {
+			System.err.println(editor.getResources().getString(R.string.build_launch_sketch_activity_failure));
+			return;
+		}
+		
+		if (android.os.Build.VERSION.SDK_INT >= 24) {
+			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+		} else {
+			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		}
+		
+		try {
+			editor.startActivity(intent);
+		} catch (ActivityNotFoundException e) {
+			e.printStackTrace();
+			System.err.println(editor.getResources().getString(R.string.build_launch_sketch_activity_failure));
 		}
 	}
 	
@@ -361,7 +386,7 @@ public class Build {
 			String combinedText = "";
 			for(SketchFile tab : tabs)
 				combinedText += tab.getText();
-			preproc.initSketchSize(combinedText, editor, getAppComponent());
+			SurfaceInfo surfaceInfo = preproc.initSketchSize(combinedText, editor, getAppComponent());
 			preproc.initSketchSmooth(combinedText, editor);
 			sketchClassName = preprocess(srcFolder, packageName, preproc, false);
 			
@@ -405,7 +430,7 @@ public class Build {
 				final File resFolder = new File(buildFolder, "res");
 				writeRes(resFolder, sketchClassName);
 				
-				writeMainClass(srcFolder, manifest.getPermissions(), manifest.getPackageName(), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
+				writeMainClass(srcFolder, manifest.getPermissions(), Preproc.getRenderer(surfaceInfo), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
 				
 				final File libsFolder = mkdirs(buildFolder, "libs", editor);
 				final File assetsFolder = mkdirs(buildFolder, "assets", editor);
@@ -418,15 +443,26 @@ public class Build {
 				resFolder.mkdir();
 				createFolderFromZippedAssets(editor.getAssets(), "support-res.zip", supportResFolder);
 				
-				// We want to make this directory whether or not we're actually building a watchface
+				// We want to make these directories whether or not we're actually building for that target
 				// If we don't make the directory then AAPT yells at us
 				File wearableResFolder = new File(buildFolder, "support-wearable-res");
 				wearableResFolder.mkdir();
+				File vrResFolder = new File(buildFolder, "vr-res");
+				vrResFolder.mkdir();
 				
 				if (getAppComponent() == ComponentTarget.WATCHFACE) {
 					// Copy support-wearable res files
-					
 					createFolderFromZippedAssets(editor.getAssets(), "support-wearable-res.zip", wearableResFolder);
+				}
+				
+				if (getAppComponent() == ComponentTarget.VR) {
+					// Copy GVR res files
+					createFolderFromZippedAssets(editor.getAssets(), "vr-res.zip", vrResFolder);
+					
+					// Copy GVR binaries
+					File gvrBinaryZip = new File(buildFolder, "vr-lib.zip");
+					InputStream inputStream = am.open("vr-lib.zip");
+					createFileFromInputStream(inputStream, gvrBinaryZip);
 				}
 				
 				// Copy android.jar if it hasn't been done yet
@@ -448,7 +484,9 @@ public class Build {
 						"processing-core", "support-core-utils", "support-compat",
 						"appcompat", "support-fragment",
 						getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable" : "",
-						getAppComponent() == ComponentTarget.WATCHFACE ? "percent" : ""
+						getAppComponent() == ComponentTarget.WATCHFACE ? "percent" : "",
+						getAppComponent() == ComponentTarget.VR ? "gvr" : "",
+						getAppComponent() == ComponentTarget.VR ? "vr" : ""
 				};//, "support-vector-drawable"};
 				String prefix = "libs/";
 				String suffix = ".jar";
@@ -481,7 +519,21 @@ public class Build {
 				
 				String[] dexLibsToCopy = {
 						"all-lib-dex",
-						getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable-dex" : ""
+						/*
+						 * Part of bugfix for #43. 2018-06-03.
+						 *
+						 * Android mode classes reference the wearable support library. This means
+						 * that we get a VerifyError on 4.4 (API level 19) because that platform
+						 * does not have the wearable library classes, even though these classes are
+						 * never touched. So we add the dexed support library on 4.4 and below so
+						 * that Android can see the classes and stop complaining.
+						 *
+						 * API level 20 is 4.4W (W for Wear) - uncertain whether or not these
+						 * classes are present. It doesn't hurt too much to include them, so that's
+						 * what we're doing.
+						 */
+						getAppComponent() == ComponentTarget.WATCHFACE || android.os.Build.VERSION.SDK_INT <= 20 ? "support-wearable-dex" : "",
+						getAppComponent() == ComponentTarget.VR ? "vr-dex" : ""
 				};
 				String dexPrefix = "libs-dex/";
 				String dexSuffix = ".jar";
@@ -716,9 +768,11 @@ public class Build {
 			String[] args = {
 				aaptLoc.getAbsolutePath(), // The location of AAPT
 				"package", "-v", "-f", "-m", "--auto-add-overlay",
+				"--no-version-vectors", // Fix crash on 4.4 due to some support library vector voodoo
 				"-S", buildFolder.getAbsolutePath() + "/res/", // The location of the /res folder
 				"-S", buildFolder.getAbsolutePath() + "/support-res/", // The location of the support lib res folder
 				"-S", buildFolder.getAbsolutePath() + "/support-wearable-res/",
+				"-S", buildFolder.getAbsolutePath() + "/vr-res/",
 				"--extra-packages", "android.support.v7.appcompat", // Make AAPT generate R.java for AppCompat
 				"-J", genFolder.getAbsolutePath(), // The location of the /gen folder
 				"-A", assetsFolder.getAbsolutePath(), // The location of the /assets folder
@@ -919,6 +973,11 @@ public class Build {
 			builder.addZipFile(glslFolder); //Location of GLSL files
 			builder.addSourceFolder(srcFolder); //The location of the source folder
 			
+			if (getAppComponent() == ComponentTarget.VR) {
+				// Add GVR binary libs
+				builder.addZipFile(new File(buildFolder, "vr-lib.zip"));
+			}
+			
 			//Seal the APK
 			builder.sealApk();
 		} catch(Exception e) {
@@ -1028,46 +1087,39 @@ public class Build {
 			}
 		}
 		
-		if (injectLogBroadcaster) {
-			//Make some space in the console
-			for (int i = 0; i < 10; i ++) {
-				System.out.println("");
-			}
-		}
-		
-		// Hide the keyboard just before opening the installer dialog so that it doesn't
-		// obscure the "Install" button
-		InputMethodManager imm = (InputMethodManager) editor.getSystemService(Context.INPUT_METHOD_SERVICE);
-		imm.hideSoftInputFromWindow(editor.findViewById(R.id.content).getWindowToken(), 0);
-		
 		if (getAppComponent() == ComponentTarget.WATCHFACE) {
 			// Send the watchface to the watch
-			
 			sendApkToWatch(apkFile);
 		} else {
 			// Prompt the user to install the APK file
-			
 			Intent promptInstall;
 			
 			if (android.os.Build.VERSION.SDK_INT >= 24) {
 				// Need to use FileProvider
 				Uri apkUri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", apkFile);
 				promptInstall = new Intent(Intent.ACTION_INSTALL_PACKAGE).setData(apkUri).setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-				
-				if (getAppComponent() == ComponentTarget.APP || getAppComponent() == ComponentTarget.VR) {
-					// Launch in adjacent window when in multiple-window mode
-					promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
-				}
-				if (getAppComponent() == ComponentTarget.WALLPAPER) {
-					promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
-				}
 			} else {
 				// The package manager doesn't seem to like FileProvider...
 				promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
 			}
 			
+			// Get result from installation so that we can launch the sketch afterward
+			promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
+			
+			if (injectLogBroadcaster) {
+				//Make some space in the console
+				for (int i = 0; i < 10; i++) {
+					System.out.println("");
+				}
+			}
+			
+			// Hide the keyboard just before opening the installer dialog so that it doesn't
+			// obscure the "Install" button
+			InputMethodManager imm = (InputMethodManager) editor.getSystemService(Context.INPUT_METHOD_SERVICE);
+			imm.hideSoftInputFromWindow(editor.findViewById(R.id.content).getWindowToken(), 0);
+			
 			//Get a result so that we can delete the APK file
-			editor.startActivityForResult(promptInstall, getAppComponent() == ComponentTarget.WALLPAPER ? EditorActivity.FLAG_SET_WALLPAPER : EditorActivity.FLAG_DELETE_APK);
+			editor.startActivityForResult(promptInstall, getAppComponent() == ComponentTarget.WALLPAPER ? EditorActivity.FLAG_SET_WALLPAPER : EditorActivity.FLAG_LAUNCH_SKETCH);
 		}
 		
 		cleanUp();
@@ -1700,7 +1752,7 @@ public class Build {
 	}
 	
 	private static boolean isOpenGL(String renderer) {
-		return renderer != null && (renderer.equals("P2D") || renderer.equals("P3D"));
+		return renderer != null && (renderer.equals("P2D") || renderer.equals("P3D") || renderer.equals("OPENGL"));
 	}
 	
 	private void writeMainClass(final File srcDirectory, String[] permissions, String renderer, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
@@ -1800,7 +1852,7 @@ public class Build {
 		replaceMap.put("@@package_name@@", packageName);
 		replaceMap.put("@@sketch_class_name@@", sketchClassName);
 		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
-		// TODO inject log broadcaster
+		replaceMap.put("@@log_broadcaster@@", injectLogBroadcaster ? getLogBroadcasterInsert() : "");
 		
 		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}

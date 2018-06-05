@@ -112,15 +112,19 @@
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/symbols" />
       <excludeFolder url="file://$MODULE_DIR$/build/intermediates/transforms" />
       <excludeFolder url="file://$MODULE_DIR$/build/outputs" />
+      <excludeFolder url="file://$MODULE_DIR$/build/reports" />
       <excludeFolder url="file://$MODULE_DIR$/build/tmp" />
     </content>
     <orderEntry type="jdk" jdkName="Android API 27 Platform" jdkType="Android SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Gradle: __local_aars__:D.\willi\StudioProjects\APDE\APDE\libs\prov-1.51.0.0.jar:unspecified@jar" level="project" />
     <orderEntry type="library" name="Gradle: com.android.support:transition-27.0.1" level="project" />
+    <orderEntry type="library" name="Gradle: com.google.android.gms:play-services-auth-api-phone-15.0.1" level="project" />
     <orderEntry type="library" name="Gradle: com.google.android.gms:play-services-basement-15.0.1" level="project" />
+    <orderEntry type="library" name="Gradle: com.google.android.gms:play-services-auth-base-15.0.1" level="project" />
     <orderEntry type="library" name="Gradle: __local_aars__:D.\willi\StudioProjects\APDE\APDE\libs\pde.jar:unspecified@jar" level="project" />
     <orderEntry type="library" name="Gradle: __local_aars__:D.\willi\StudioProjects\APDE\APDE\libs\zipsigner-lib-optional-1.17.jar:unspecified@jar" level="project" />
+    <orderEntry type="library" name="Gradle: com.google.android.gms:play-services-auth-15.0.1" level="project" />
     <orderEntry type="library" name="Gradle: com.android.support:animated-vector-drawable-27.0.1" level="project" />
     <orderEntry type="library" name="Gradle: __local_aars__:D.\willi\StudioProjects\APDE\APDE\libs\core-1.51.0.0.jar:unspecified@jar" level="project" />
     <orderEntry type="library" name="Gradle: __local_aars__:D.\willi\StudioProjects\APDE\APDE\libs\dx.jar:unspecified@jar" level="project" />
@@ -137,7 +141,6 @@
     <orderEntry type="library" name="Gradle: __local_aars__:D.\willi\StudioProjects\APDE\APDE\libs\JavaMode.jar:unspecified@jar" level="project" />
     <orderEntry type="library" name="Gradle: __local_aars__:D.\willi\StudioProjects\APDE\APDE\libs\antlr.jar:unspecified@jar" level="project" />
     <orderEntry type="library" name="Gradle: __local_aars__:D.\willi\StudioProjects\APDE\APDE\libs\sdklib.jar:unspecified@jar" level="project" />
-    <orderEntry type="library" name="Gradle: com.google.android.gms:play-services-wearable-15.0.1" level="project" />
     <orderEntry type="library" name="Gradle: __local_aars__:D.\willi\StudioProjects\APDE\APDE\libs\zipio-lib-1.8.jar:unspecified@jar" level="project" />
     <orderEntry type="library" name="Gradle: com.android.support:support-fragment-27.0.1" level="project" />
     <orderEntry type="library" name="Gradle: com.takisoft.fix:preference-v7-27.0.1.0" level="project" />

@@ -17,6 +17,18 @@
             android:summary="@string/pref_inject_log_broadcaster_desc" />
     </android.support.v7.preference.PreferenceCategory>
     
+	<android.support.v7.preference.PreferenceCategory
+		android:key="pref_vr"
+		android:title="@string/pref_vr" >
+		
+		<android.support.v7.preference.ListPreference
+			android:key="pref_vr_default_renderer"
+			android:title="@string/pref_vr_default_renderer"
+			android:entries="@array/pref_vr_default_renderer_entries"
+			android:entryValues="@array/pref_vr_default_renderer_entry_values"
+			android:defaultValue="@string/pref_vr_default_renderer_default_value" />
+	</android.support.v7.preference.PreferenceCategory>
+	
     <android.support.v7.preference.PreferenceCategory
         android:key="pref_build_debug"
         android:title="@string/pref_debug" >

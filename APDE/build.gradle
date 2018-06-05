@@ -56,5 +56,6 @@ dependencies {
     compile 'com.android.support:appcompat-v7:27.0.1'
     compile 'com.android.support:design:27.0.1'
     compile 'com.takisoft.fix:preference-v7:27.0.1.0'
-    implementation 'com.google.android.gms:play-services-wearable:15.0.1'
+    compile 'com.google.android.gms:play-services-auth:15.0.1'
+    implementation 'com.google.android.gms:play-services-wearable
 }

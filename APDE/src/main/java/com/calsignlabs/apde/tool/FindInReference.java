@@ -70,7 +70,7 @@ public class FindInReference implements Tool {
 		
 		String urlBase = "";
 		if (foundKeyword.getReferenceType().equals("processing")) urlBase = "http://processing.org/reference/";
-		if (foundKeyword.getReferenceType().equals("processing_android")) urlBase = "http://android.processing.org/reference/environment/";
+		if (foundKeyword.getReferenceType().equals("processing_android")) urlBase = "http://android.processing.org/reference/";
 		
 		final String uri = urlBase + foundKeyword.getReferenceTarget() + ".html";
 		

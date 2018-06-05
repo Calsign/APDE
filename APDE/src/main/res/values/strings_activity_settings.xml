@@ -105,6 +105,18 @@
 	<string name="pref_inject_log_broadcaster">Inject Log Broadcaster</string>
 	<string name="pref_inject_log_broadcaster_desc">Allows console to display sketch output</string>
 	
+	<string name="pref_vr">VR</string>
+	<string name="pref_vr_default_renderer">Default VR Renderer</string>
+	<string-array name="pref_vr_default_renderer_entries">
+		<item >Stereo (headset)</item>
+		<item >Mono (magic window)</item>
+	</string-array>
+	<string-array name="pref_vr_default_renderer_entry_values">
+		<item >STEREO</item>
+		<item >MONO</item>
+	</string-array>
+	<string name="pref_vr_default_renderer_default_value">STEREO</string>
+	
 	<string name="pref_build_output_verbose">Verbose Output</string>
 	<string name="pref_build_folder_keep">Keep Build Folder</string>
 	<string name="pref_build_aapt_binary">Use pre-v0.3.3 AAPT Binary</string>

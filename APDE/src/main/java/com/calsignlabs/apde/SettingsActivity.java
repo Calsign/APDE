@@ -348,6 +348,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		bindPreferenceSummaryToValue(frag.findPreference("pref_sketchbook_location"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_key_autosave_timeout"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_key_undo_redo_keep"));
+		bindPreferenceSummaryToValue(frag.findPreference("pref_vr_default_renderer"));
 	}
 	
 	protected void updateSketchbookDrivePref(ListPreference sketchbookDrive, Preference sketchbookLocation, ArrayList<APDE.StorageDrive> drives) {

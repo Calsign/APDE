@@ -1,4 +1,37 @@
-v0.4.1-pre2 Alpha:
+v0.5.0-pre2 Alpha
+
+ - VR sketches!
+ - Fix startup crash
+ - Export signed package for all targets
+
+Note: Processing's VR target supports the Google VR platform, which
+includes Daydream and Cardboard.
+
+Check out the v0.5.0-pre1 release notes if you have not done so already.
+
+------------------------------------------------------------------------
+
+v0.5.0-pre1 Alpha
+
+ - Live wallpapers!
+ - Update to Android mode 4.0
+ - Support for recent Java APIs
+
+To build a live wallpaper, press the new button to the right of the run
+button. This lets you switch targets (currently app and wallpaper).
+Watchface and VR targets are planned, just like in desktop Android mode.
+
+These new features are driven by Google Summer of Code 2018. A big
+shout-out to Google and the Processing Foundation for sponsoring APDE
+this summer. Many more cool things are coming soon, so stay tuned!
+
+Note: This preview release is very much a preview. Preview releases are
+going to be much more bleeding-edge this summer than they were before.
+
+------------------------------------------------------------------------
+
+v0.4.1 Alpha
+
  - Fix most code deletion bugs
  - Android multi-window support on 7.0+ (Nougat)
  - Timer-based autosave
@@ -18,9 +51,9 @@ v0.4.0 Alpha
  - Updated default sketch icons
  - Lots of bug fixes and smaller improvements
 
-Note: This release drops support for Android 2.3.3 Gingerbread (API level 10),
-which the desktop version has also done. The new minimum Android version
-is Android 4.0.3 Ice Cream Sandwich (API level 15).
+Note: This release drops support for Android 2.3.3 Gingerbread (API
+level 10), which the desktop version has also done. The new minimum
+Android version is Android 4.0.3 Ice Cream Sandwich (API level 15).
 
 ------------------------------------------------------------------------
 

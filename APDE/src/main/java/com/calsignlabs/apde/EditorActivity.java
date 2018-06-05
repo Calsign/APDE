@@ -169,8 +169,10 @@ public class EditorActivity extends AppCompatActivity {
 	
 	// Intent flag to delete the old just-installed APK file
 	public static final int FLAG_DELETE_APK = 5;
+	// Intent flag to launch the just-installed sketch
+	public static final int FLAG_LAUNCH_SKETCH = 6;
 	// Intent flag to set the just-installed wallpaper
-	public static final int FLAG_SET_WALLPAPER = 6;
+	public static final int FLAG_SET_WALLPAPER = 7;
 	
 	public ScheduledThreadPoolExecutor autoSaveTimer;
 	public ScheduledFuture<?> autoSaveTimerTask;
@@ -732,6 +734,12 @@ public class EditorActivity extends AppCompatActivity {
 			getGlobalState().initExamplesRepo();
 		}
 		
+		// Disable SSL3
+		// Only needed on Android 4.4 and below
+		// And only affects Git actions at present
+		// But might as well stick it here
+		getGlobalState().disableSsl3();
+		
 		codePagerAdapter.notifyDataSetChanged();
 		codeTabStrip.setupWithViewPager(codePager);
 		
@@ -978,8 +986,13 @@ public class EditorActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		getGlobalState().writeCodeDeletionDebugStatus("onActivityResult()");
 		
-    	// This is the code to delete the old APK file
-    	if (requestCode == FLAG_DELETE_APK) {
+    	// We want to see the sketch right away
+    	if (requestCode == FLAG_LAUNCH_SKETCH) {
+			// Note: we only get the result code if we pass it as an extra
+			if (resultCode == RESULT_OK) {
+				// The user installed the sketch, so launch the sketch
+				Build.launchSketchPostLaunch(this);
+			}
     		Build.cleanUpPostLaunch(this);
     	} else if (requestCode == FLAG_SET_WALLPAPER) {
     		// Note: we only get the result code if we pass it as an extra
@@ -2500,6 +2513,9 @@ public class EditorActivity extends AppCompatActivity {
 		menu.findItem(R.id.menu_comp_select_wallpaper).getIcon().setAlpha(getComponentTarget() == ComponentTarget.WALLPAPER ? alphaSelected : alphaUnelected);
 		menu.findItem(R.id.menu_comp_select_watchface).getIcon().setAlpha(getComponentTarget() == ComponentTarget.WATCHFACE ? alphaSelected : alphaUnelected);
 		menu.findItem(R.id.menu_comp_select_vr).getIcon().setAlpha(getComponentTarget() == ComponentTarget.VR ? alphaSelected : alphaUnelected);
+		
+		// Not yet implemented
+		menu.findItem(R.id.menu_comp_select_watchface).setVisible(false);
     }
     
     @Override
@@ -4126,11 +4142,10 @@ public class EditorActivity extends AppCompatActivity {
 			}
 		});
 		
-		// branch android-mode-4, projected inclusion v0.5.0
-		// TODO change version code to correct one
+		// v0.5.0-pre1 (branch android-mode-4)
 		
 		// Upgrade android.jar to latest version (API level 27)
-		upgradeChanges.add(new UpgradeChange(21) {
+		upgradeChanges.add(new UpgradeChange(22) {
 			@Override
 			public void run() {
 				getGlobalState().getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new CopyAndroidJarTask());
@@ -4138,23 +4153,29 @@ public class EditorActivity extends AppCompatActivity {
 		});
 		
 		// Upgrade sketchData file to include component target
-		// TODO test this in a real device context
-		upgradeChanges.add(new UpgradeChange(21) {
+		upgradeChanges.add(new UpgradeChange(22) {
 			@Override
 			public void run() {
-				String oldSketchDataStr = readTempFile("sketchData.txt");
-				String[] oldSketchData = oldSketchDataStr.split(";");
-				StringBuilder newSketchData = new StringBuilder();
-				for (int i = 0; i < 3; i ++) {
-					newSketchData.append(oldSketchData[i]);
-					newSketchData.append(';');
+				try {
+					String oldSketchDataStr = readTempFile("sketchData.txt");
+					String[] oldSketchData = oldSketchDataStr.split(";");
+					if (oldSketchData.length >= 3) {
+						StringBuilder newSketchData = new StringBuilder();
+						for (int i = 0; i < 3; i++) {
+							newSketchData.append(oldSketchData[i]);
+							newSketchData.append(';');
+						}
+						newSketchData.append("0;");
+						for (int i = 3; i < oldSketchData.length; i++) {
+							newSketchData.append(oldSketchData[i]);
+							newSketchData.append(';');
+						}
+						writeTempFile("sketchData.txt", newSketchData.toString());
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+					System.err.println(getResources().getString(R.string.apde_0_5_upgrade_error));
 				}
-				newSketchData.append("0;");
-				for (int i = 3; i < oldSketchData.length; i ++) {
-					newSketchData.append(oldSketchData[i]);
-					newSketchData.append(';');
-				}
-				writeTempFile("sketchData.txt", newSketchData.toString());
 			}
 		});
 		

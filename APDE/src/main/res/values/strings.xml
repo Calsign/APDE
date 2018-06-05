@@ -386,4 +386,6 @@
 	<!-- Re-copy android.jar button in settings. -->
 	<string name="task_copy_android_jar_file_running">Copying android.jar file…</string>
 	<string name="task_copy_android_jar_file_completed">Copied android.jar file</string>
+	
+	<string name="apde_0_5_upgrade_error">\n\nError upgrading last opened sketch info to v0.5.0.\nPlease report stack trace above to developer.\n\nYour last opened sketch has been copied to a temporary sketch.\nThe original sketch is still there.\n\nYou should not see this message again.</string>
 </resources>
