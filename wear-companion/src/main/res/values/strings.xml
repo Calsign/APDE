@@ -6,7 +6,6 @@
 	<string name="button_watchface_loader_start">Start Watchface Loader Service</string>
 	<string name="message_watchface_loader_started">Watchface Loader Started</string>
 	<string name="message_watchface_loader_stopped">Watchface Loader Stopped</string>
-	<string name="message_watchface_loader_receiving_apk">APDE: Receiving APK</string>
 	<!-- We have the option to display different labels for debugging purposes, but we make them all
 	     the same so that it looks prettier. -->
 	<string name="watchface_label_canvas_a">APDE</string>

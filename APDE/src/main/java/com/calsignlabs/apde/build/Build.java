@@ -731,25 +731,29 @@ public class Build {
 		
 		editor.messageExt(editor.getResources().getString(R.string.build_message_run_aapt));
 		
-		// Copy GLSL shader files
+		File glslFolder = null;
 		
-		// GLSL files need to be placed in the root of the APK file
-		File glslFolder = new File(binFolder, "glsl-processing.zip");
-		
-		try {
-			if (verbose) {
-				System.out.println(editor.getResources().getString(R.string.build_copying_glsl));
+		if (!isBuildForClassLoader(debug)) {
+			// Copy GLSL shader files
+			
+			// GLSL files need to be placed in the root of the APK file
+			glslFolder = new File(binFolder, "glsl-processing.zip");
+			
+			try {
+				if (verbose) {
+					System.out.println(editor.getResources().getString(R.string.build_copying_glsl));
+				}
+				
+				//Copy the zip archive
+				InputStream inputStream = editor.getAssets().open("glsl-processing.zip");
+				createFileFromInputStream(inputStream, glslFolder);
+			} catch (IOException e) { //Uh-oh...
+				System.out.println(editor.getResources().getString(R.string.build_copy_glsl_failed));
+				e.printStackTrace();
+				
+				cleanUpError();
+				return;
 			}
-			
-			//Copy the zip archive
-			InputStream inputStream = editor.getAssets().open("glsl-processing.zip");
-			createFileFromInputStream(inputStream, glslFolder);
-		} catch(IOException e) { //Uh-oh...
-			System.out.println(editor.getResources().getString(R.string.build_copy_glsl_failed));
-			e.printStackTrace();
-			
-			cleanUpError();
-			return;
 		}
 		
 		if(!running.get()) { //CHECK
@@ -963,23 +967,27 @@ public class Build {
 //			
 //			com.android.sdklib.build.ApkBuilderMain.main(args);
 			
-			//Create the builder with the basic files
+			// Create the builder with the basic files
 			ApkBuilder builder = new ApkBuilder(new File(binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned"), //The location of the output APK file (unsigned)
 					new File(binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res"), //The location of the .apk.res file
 					new File(binFolder.getAbsolutePath() + "/classes.dex"), //The location of the DEX class file
 					null, (verbose ? System.out : null) //Only specify an output stream if we want verbose output
 			);
 			
-			//Add everything else
-			builder.addZipFile(glslFolder); //Location of GLSL files
-			builder.addSourceFolder(srcFolder); //The location of the source folder
+			// Add everything else
+			
+			// Leave them out if we are class loading
+			if (!isBuildForClassLoader(debug) && glslFolder != null) {
+				builder.addZipFile(glslFolder); // Location of GLSL files
+			}
+			builder.addSourceFolder(srcFolder); // The location of the source folder
 			
 			if (getAppComponent() == ComponentTarget.VR) {
 				// Add GVR binary libs
 				builder.addZipFile(new File(buildFolder, "vr-lib.zip"));
 			}
 			
-			//Seal the APK
+			// Seal the APK
 			builder.sealApk();
 		} catch(Exception e) {
 			System.out.println(editor.getResources().getString(R.string.build_building_apkbuilder_failed));
@@ -1021,7 +1029,7 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_run_zipsigner));
+		editor.messageExt(editor.getResources().getString(debug ? R.string.build_message_run_zipsigner_debug : R.string.build_message_run_zipsigner_export));
 		
 		System.out.println(); //Separator
 		
@@ -1129,6 +1137,10 @@ public class Build {
 		}
 		
 		cleanUp();
+	}
+	
+	private boolean isBuildForClassLoader(boolean debug) {
+		return getAppComponent() == ComponentTarget.WATCHFACE && debug;
 	}
 	
 	private void signApk() {
@@ -2083,7 +2095,7 @@ public class Build {
 			byte buffer[] = new byte[1024];
 			int length = 0;
 			
-			while((length = inputStream.read(buffer)) > 0) {
+			while ((length = inputStream.read(buffer)) > 0) {
 				outputStream.write(buffer, 0, length);
 			}
 			

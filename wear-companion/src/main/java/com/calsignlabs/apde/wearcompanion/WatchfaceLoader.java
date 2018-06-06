@@ -4,7 +4,8 @@ import android.app.WallpaperManager;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.widget.Toast;
+import android.preference.PreferenceManager;
+import android.util.Log;
 
 import com.calsignlabs.apde.wearcompanion.watchface.CanvasWatchFaceService;
 import com.calsignlabs.apde.wearcompanion.watchface.GLESWatchFaceService;
@@ -17,13 +18,20 @@ import com.google.android.gms.wearable.Wearable;
 import com.google.android.gms.wearable.WearableListenerService;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.ExecutionException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * Service to install watchfaces on the watch. Receives APKs over the Bluetooth transport.
+ *
+ * Important note: We cannot use System.out or System.err anywhere in the wear companion because
+ * it will get picked up by the log broadcaster which will try to send a message to APDE. But the
+ * context might be dead, which causes the whole wear companion to crash. Use Log.d instead.
  */
 public class WatchfaceLoader extends WearableListenerService {
 	public WatchfaceLoader() {}
@@ -43,12 +51,15 @@ public class WatchfaceLoader extends WearableListenerService {
 			}
 		}
 		
-		Toast.makeText(this, R.string.message_watchface_loader_receiving_apk, Toast.LENGTH_SHORT).show();
+		// We tried displaying a toast, but it causes problems
 		
 		// Make apk file in internal storage
 		File apkFile = WatchFaceUtil.getSketchApk(this);
 		
 		if (asset != null && makeFileFromAsset(asset, apkFile)) {
+			clearAssets();
+			unpackAssets(apkFile);
+			clearSharedPrefs();
 			updateServiceType();
 			updateWatchFaceVisibility();
 			launchWatchFaceChooser();
@@ -59,7 +70,7 @@ public class WatchfaceLoader extends WearableListenerService {
 		try {
 			InputStream inputStream = Tasks.await(Wearable.getDataClient(this).getFdForAsset(asset)).getInputStream();
 			if (inputStream != null) {
-				createFileFromInputStream(inputStream, destFile);
+				createFileFromInputStream(inputStream, destFile, true);
 				return true;
 			}
 		} catch (ExecutionException | InterruptedException | IOException e) {
@@ -140,8 +151,73 @@ public class WatchfaceLoader extends WearableListenerService {
 //		startActivity(intent);
 	}
 	
+	/**
+	 * Clear the assets of the last sketch.
+	 */
+	protected void clearAssets() {
+		File[] files = getFilesDir().listFiles();
+		File apkFile = WatchFaceUtil.getSketchApk(this);
+		for (File file : files) {
+			// Don't delete the sketch's APK!
+			if (!file.equals(apkFile)) {
+				// These log messages don't hurt anybody
+				if (!file.delete()) {
+					Log.d("apde", "failed to delete " + file.getAbsolutePath());
+				} else {
+					Log.d("apde", "deleted " + file.getAbsolutePath());
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Get all of the assets and stick them into the internal storage so that the sketch can use
+	 * them.
+	 *
+	 * @param apkFile
+	 */
+	protected void unpackAssets(File apkFile) {
+		try {
+			String assetsPrefix = "assets/";
+			File destFolder = getFilesDir();
+			
+			ZipInputStream inputStream = new ZipInputStream(new FileInputStream(apkFile));
+			
+			ZipEntry zipEntry = null;
+			while ((zipEntry = inputStream.getNextEntry()) != null) {
+				String name = zipEntry.getName();
+				
+				if (name.startsWith(assetsPrefix)) {
+					File file = new File(destFolder.getAbsolutePath(), name.substring(assetsPrefix.length()));
+					
+					if (zipEntry.isDirectory()) {
+						file.mkdirs();
+					} else {
+						createFileFromInputStream(inputStream, file, false);
+						inputStream.closeEntry();
+					}
+				}
+			}
+			
+			inputStream.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Clear any shared preferences that the app has set.
+	 *
+	 * This also clears the our shared preferences, but we re-write these anyway so that's OK.
+	 */
+	protected void clearSharedPrefs() {
+		// The sketch might have created other shared preferences files, but we will pretend that
+		// they don't exist for now. If this becomes a problem then we can change this.
+		PreferenceManager.getDefaultSharedPreferences(this).edit().clear().commit();
+	}
+	
 	// http://stackoverflow.com/questions/11820142/how-to-pass-a-file-path-which-is-in-assets-folder-to-filestring-path
-	private static void createFileFromInputStream(InputStream inputStream, File destFile)  throws IOException {
+	private static File createFileFromInputStream(InputStream inputStream, File destFile, boolean close) throws IOException {
 		// Make sure that the parent folder exists
 		destFile.getParentFile().mkdirs();
 		
@@ -149,11 +225,15 @@ public class WatchfaceLoader extends WearableListenerService {
 		byte buffer[] = new byte[1024];
 		int length = 0;
 		
-		while((length = inputStream.read(buffer)) > 0) {
+		while ((length = inputStream.read(buffer)) > 0) {
 			outputStream.write(buffer, 0, length);
 		}
 		
 		outputStream.close();
-		inputStream.close();
+		if (close) {
+			inputStream.close();
+		}
+		
+		return destFile;
 	}
 }
