@@ -16,6 +16,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
@@ -70,6 +71,9 @@ import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
+import com.google.android.gms.wearable.MessageClient;
+import com.google.android.gms.wearable.MessageEvent;
+import com.google.android.gms.wearable.Wearable;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import org.json.JSONException;
@@ -154,6 +158,7 @@ public class EditorActivity extends AppCompatActivity {
 	
 	//Recieve log / console output from sketches
 	private BroadcastReceiver consoleBroadcastReceiver;
+	private MessageClient.OnMessageReceivedListener wearConsoleReceiver;
 	
 	//Whether or not we are currently building a sketch
 	private boolean building;
@@ -214,26 +219,43 @@ public class EditorActivity extends AppCompatActivity {
 		consoleBroadcastReceiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
+				char severity = intent.getCharExtra("com.calsignlabs.apde.LogSeverity", 'o');
 				String message = intent.getStringExtra("com.calsignlabs.apde.LogMessage");
 				String exception = intent.getStringExtra("com.calsignlabs.apde.LogException");
 				
-				// We can show different colors for different severities if we want to... later...
-				switch (intent.getCharExtra("com.calsignlabs.apde.LogSeverity", 'o')) {
-				case 'o':
-					postConsole(message);
-					break;
-				case 'e':
-					postConsole(message);
-					break;
-				case 'x':
-					errorExt(message != null ? exception.concat(": ").concat(message) : exception);
-					break;
-				}
+				handleSketchConsoleLog(severity, message, exception);
 			}
 		};
 		
 		// Register receiver for sketch logs / console output
 		registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
+	
+		wearConsoleReceiver = new MessageClient.OnMessageReceivedListener() {
+			@Override
+			public void onMessageReceived(@NonNull MessageEvent messageEvent) {
+				if (messageEvent.getPath().equals("/apde_receive_logs")) {
+					try {
+						JSONObject json = new JSONObject(new String(messageEvent.getData()));
+						String severityStr = json.getString("severity");
+						
+						if (severityStr.length() != 1) {
+							System.err.println("Wear console receiver - invalid severity: \"" + severityStr + "\"");
+							return;
+						}
+						
+						char severity = severityStr.charAt(0);
+						String message = json.getString("message");
+						String exception = json.getString("exception");
+						
+						handleSketchConsoleLog(severity, message, exception);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		};
+	
+		Wearable.getMessageClient(this).addListener(wearConsoleReceiver);
 		
 		getGlobalState().initTaskManager();
 		
@@ -778,6 +800,21 @@ public class EditorActivity extends AppCompatActivity {
 				// TODO Explain why to the user?
 				ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
 			}
+		}
+	}
+	
+	protected void handleSketchConsoleLog(char severity, String message, String exception) {
+		// We can show different colors for different severities if we want to... later...
+		switch (severity) {
+			case 'o':
+				postConsole(message);
+				break;
+			case 'e':
+				postConsole(message);
+				break;
+			case 'x':
+				errorExt(message != null ? exception.concat(": ").concat(message) : exception);
+				break;
 		}
 	}
 	

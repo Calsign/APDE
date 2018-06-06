@@ -1,0 +1,5 @@
+<resources>
+	<string-array name="android_wear_capabilities">
+		<item>apde_receive_logs</item>
+	</string-array>
+</resources>

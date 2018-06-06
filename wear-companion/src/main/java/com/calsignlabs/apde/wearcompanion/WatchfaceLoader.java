@@ -1,12 +1,13 @@
 package com.calsignlabs.apde.wearcompanion;
 
-import android.annotation.SuppressLint;
+import android.app.WallpaperManager;
+import android.content.ComponentName;
 import android.content.Intent;
-import android.net.Uri;
-import android.support.v4.content.FileProvider;
-import android.util.Log;
+import android.content.pm.PackageManager;
 import android.widget.Toast;
 
+import com.calsignlabs.apde.wearcompanion.watchface.CanvasWatchFaceService;
+import com.calsignlabs.apde.wearcompanion.watchface.GLESWatchFaceService;
 import com.google.android.gms.tasks.Tasks;
 import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataEvent;
@@ -42,17 +43,15 @@ public class WatchfaceLoader extends WearableListenerService {
 			}
 		}
 		
-		Toast.makeText(this, R.string.message_watchface_loader_receiving_apk, Toast.LENGTH_LONG).show();
-		Log.d("apde", "receiving apk");
+		Toast.makeText(this, R.string.message_watchface_loader_receiving_apk, Toast.LENGTH_SHORT).show();
 		
 		// Make apk file in internal storage
-		File apkFile = new File(getFilesDir(), "sketch.apk");
+		File apkFile = WatchFaceUtil.getSketchApk(this);
 		
 		if (asset != null && makeFileFromAsset(asset, apkFile)) {
-			Toast.makeText(this, R.string.message_watchface_loader_installing_apk, Toast.LENGTH_SHORT).show();
-			Log.d("apde", "installing apk");
-			
-			installApk(apkFile);
+			updateServiceType();
+			updateWatchFaceVisibility();
+			launchWatchFaceChooser();
 		}
 	}
 	
@@ -70,29 +69,75 @@ public class WatchfaceLoader extends WearableListenerService {
 		return false;
 	}
 	
-	@SuppressLint("SetWorldReadable")
-	protected void installApk(File apkFile) {
-		Intent promptInstall;
+	/**
+	 * Set a SharedPreference telling the watchfaces whether this is canvas or GLES.
+	 * We check this once when we load the watchface APK to improve watchface startup performace.
+	 */
+	protected void updateServiceType() {
+		WatchFaceUtil.updateServiceType(this);
+	}
+	
+	/**
+	 * Show one watchface and hide the other. This way the user doesn't get confused.
+	 */
+	protected void updateWatchFaceVisibility() {
+		/*
+		 * We have two renderers - Canvas and GLES - and thus two types of services. We need one of
+		 * each and we hotswap between them depending on the type of sketch.
+		 *
+		 * We also need two services of each type of renderer. This is so that we can kill the
+		 * running sketch and switch to the new one. All attempts to stop the services correctly
+		 * have failed. So instead we just have two services and switch between them. This comes up
+		 * when we run sketches with the same renderer several times in a row. This certainly
+		 * doesn't look pretty, but it gets the job done.
+		 */
 		
-		if (android.os.Build.VERSION.SDK_INT >= 24) {
-			// Need to use FileProvider
-			Uri apkUri = FileProvider.getUriForFile(this, "com.calsignlabs.apde.wearcompanion.fileprovider", apkFile);
-			promptInstall = new Intent(Intent.ACTION_INSTALL_PACKAGE).setData(apkUri).setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		ComponentName enableA, enableB, disableA, disableB;
+		
+		if (WatchFaceUtil.isSketchCanvas(this)) {
+			// Canvas
+			enableA = new ComponentName(this, CanvasWatchFaceService.A.class);
+			enableB = new ComponentName(this, CanvasWatchFaceService.B.class);
+			disableA = new ComponentName(this, GLESWatchFaceService.A.class);
+			disableB = new ComponentName(this, GLESWatchFaceService.B.class);
 		} else {
-			// The package manager doesn't seem to like FileProvider...
-			promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
-			
-			// Make world-readable
-			// I know this is bad but it didn't work any other way on phones
-			// and I don't have a watch with API < 24 to test on
-			if (!apkFile.setReadable(true, false)) {
-				System.out.println("Failed to make APK readable");
-			}
+			// GLES
+			enableA = new ComponentName(this, GLESWatchFaceService.A.class);
+			enableB = new ComponentName(this, GLESWatchFaceService.B.class);
+			disableA = new ComponentName(this, CanvasWatchFaceService.A.class);
+			disableB = new ComponentName(this, CanvasWatchFaceService.B.class);
 		}
 		
-		promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		// We need DONT_KILL_APP - without it, WatchfaceLoader gets killed as well, and that
+		// means the watchface doesn't get loaded, which is bad
 		
-		startActivity(promptInstall);
+		if (getPackageManager().getComponentEnabledSetting(enableA) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+			// Switch to B
+			getPackageManager().setComponentEnabledSetting(enableB, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
+			getPackageManager().setComponentEnabledSetting(enableA, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+			getPackageManager().setComponentEnabledSetting(disableA, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+			getPackageManager().setComponentEnabledSetting(disableB, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+		} else {
+			// Switch to A
+			getPackageManager().setComponentEnabledSetting(enableA, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
+			getPackageManager().setComponentEnabledSetting(enableB, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+			getPackageManager().setComponentEnabledSetting(disableA, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+			getPackageManager().setComponentEnabledSetting(disableB, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+		}
+	}
+	
+	protected void launchWatchFaceChooser() {
+		Intent intent = new Intent();
+		intent.setAction(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER);
+		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		startActivity(intent);
+		
+		// This wasn't working for my watch
+//		Intent intent = new Intent();
+//		intent.setAction(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER);
+//		intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, new ComponentName(this, CanvasWatchFaceService.class));
+//		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//		startActivity(intent);
 	}
 	
 	// http://stackoverflow.com/questions/11820142/how-to-pass-a-file-path-which-is-in-assets-folder-to-filestring-path

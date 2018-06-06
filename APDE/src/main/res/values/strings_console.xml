@@ -103,6 +103,7 @@
 	<string name="build_signing_private_key">Signing with private key…</string>
 	<string name="build_exported_to">Exported to: <xliff:g id="exportPath" example="/path/to/bin/mySketch.apk">%1$s</xliff:g></string>
 	<string name="build_installing_apk">Installing APK file…</string>
+	<string name="build_sending_apk_to_watch">Sending APK file to watch. Check watch for prompt to select watch face.</string>
 	<string name="build_delete_old_apk_success">Deleted old APK file</string>
 	<string name="build_delete_old_apk_failed">Failed to delete old APK file</string>
 	<string name="build_export_library_file_missing"><xliff:g id="missingFileName" example="example.txt">%1$s</xliff:g> is mentioned in export.txt,\nbut it\'sa big fat lie and does not exist.</string>

@@ -587,7 +587,8 @@ public class Build {
 					return;
 				}
 				
-				if (debug && injectLogBroadcaster) {
+				// Watchfaces send logs differently
+				if (debug && injectLogBroadcaster && getAppComponent() != ComponentTarget.WATCHFACE) {
 					// Add "LogBroadcasterInsert.java" and "APDEInternalLogBroadcasterUtil.java" to the code
 					// The insert goes directly in the code
 					// The util file contains the classes that are used by the insert
@@ -1054,9 +1055,14 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_run_sketch));
+		if (getAppComponent() == ComponentTarget.WATCHFACE) {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_send_to_watch));
+			System.out.println(editor.getResources().getString(R.string.build_sending_apk_to_watch));
+		} else {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_run_sketch));
+			System.out.println(editor.getResources().getString(R.string.build_installing_apk));
+		}
 		
-		System.out.println(editor.getResources().getString(R.string.build_installing_apk));
 		
 		//Copy the APK file to a new (and hopefully readable) location
 		
@@ -1827,7 +1833,7 @@ public class Build {
 		replaceMap.put("@@package_name@@", packageName);
 		replaceMap.put("@@sketch_class_name@@", sketchClassName);
 		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
-		// TODO inject log broadcaster
+		// Watchfaces send console output differently
 		
 		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
@@ -1840,7 +1846,7 @@ public class Build {
 		replaceMap.put("@@package_name@@", packageName);
 		replaceMap.put("@@sketch_class_name@@", sketchClassName);
 		replaceMap.put("@@external@@", external ? "sketch.setExternal(true);" : "");
-		// TODO inject log broadcaster
+		// Watchfaces send console output differently
 		
 		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}

@@ -4,7 +4,14 @@
 	
 	<uses-feature android:name="android.hardware.type.watch"/>
 	
-	<uses-permission-sdk-23 android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+	<uses-permission android:name="android.permission.WAKE_LOCK" />
+	
+	<uses-permission android:name="android.permission.VIBRATE" />
+	<uses-permission android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.RECORD_AUDIO" />
 	
 	<application
 		android:allowBackup="false"
@@ -52,5 +59,82 @@
 				<category android:name="android.intent.category.LAUNCHER"/>
 			</intent-filter>
 		</activity>
+		
+		<!-- Four services - two each of Canvas and GLES. Both start disabled and the correct one is
+		     enabled when sketch is run. -->
+		
+		<service
+			android:name=".watchface.CanvasWatchFaceService$A"
+			android:label="@string/watchface_label_canvas_a"
+			android:permission="android.permission.BIND_WALLPAPER"
+			android:enabled="false">
+			
+			<meta-data android:name="android.service.wallpaper"
+				android:resource="@xml/watch_face" />
+			<meta-data android:name="com.google.android.wearable.watchface.preview"
+				android:resource="@drawable/preview_rectangular" />
+			<meta-data android:name="com.google.android.wearable.watchface.preview_circular"
+				android:resource="@drawable/preview_circular" />
+			
+			<intent-filter>
+				<action android:name="android.service.wallpaper.WallpaperService" />
+				<category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+			</intent-filter>
+		</service>
+		<service
+			android:name=".watchface.CanvasWatchFaceService$B"
+			android:label="@string/watchface_label_canvas_b"
+			android:permission="android.permission.BIND_WALLPAPER"
+			android:enabled="false">
+			
+			<meta-data android:name="android.service.wallpaper"
+					   android:resource="@xml/watch_face" />
+			<meta-data android:name="com.google.android.wearable.watchface.preview"
+					   android:resource="@drawable/preview_rectangular" />
+			<meta-data android:name="com.google.android.wearable.watchface.preview_circular"
+					   android:resource="@drawable/preview_circular" />
+			
+			<intent-filter>
+				<action android:name="android.service.wallpaper.WallpaperService" />
+				<category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+			</intent-filter>
+		</service>
+		
+		<service
+			android:name=".watchface.GLESWatchFaceService$A"
+			android:label="@string/watchface_label_gles_a"
+			android:permission="android.permission.BIND_WALLPAPER"
+			android:enabled="false">
+			
+			<meta-data android:name="android.service.wallpaper"
+					   android:resource="@xml/watch_face" />
+			<meta-data android:name="com.google.android.wearable.watchface.preview"
+					   android:resource="@drawable/preview_rectangular" />
+			<meta-data android:name="com.google.android.wearable.watchface.preview_circular"
+					   android:resource="@drawable/preview_circular" />
+			
+			<intent-filter>
+				<action android:name="android.service.wallpaper.WallpaperService" />
+				<category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+			</intent-filter>
+		</service>
+		<service
+			android:name=".watchface.GLESWatchFaceService$B"
+			android:label="@string/watchface_label_gles_b"
+			android:permission="android.permission.BIND_WALLPAPER"
+			android:enabled="false">
+			
+			<meta-data android:name="android.service.wallpaper"
+					   android:resource="@xml/watch_face" />
+			<meta-data android:name="com.google.android.wearable.watchface.preview"
+					   android:resource="@drawable/preview_rectangular" />
+			<meta-data android:name="com.google.android.wearable.watchface.preview_circular"
+					   android:resource="@drawable/preview_circular" />
+			
+			<intent-filter>
+				<action android:name="android.service.wallpaper.WallpaperService" />
+				<category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+			</intent-filter>
+		</service>
 	</application>
 </manifest>

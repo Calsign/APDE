@@ -118,6 +118,7 @@
 	<string name="build_message_run_apkbuilder">Building APK file…</string>
 	<string name="build_message_run_zipsigner">Signing APK with a debug certificate…</string>
 	<string name="build_message_run_sketch">Running the sketch…</string>
+	<string name="build_message_send_to_watch">Sending sketch to watch…</string>
 	<string name="build_message_failed">Build failed, check the console for more information.</string>
 	<string name="build_message_stopped_early">Build stopped before sketch was launched.</string>
 	
