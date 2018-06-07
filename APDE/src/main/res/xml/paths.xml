@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
 	<files-path name="apks_internal" path="apks/" />
+	<files-path name="apks_internal_watchface" path="." />
 	<external-path name="apks_external" path="build/bin/" />
 	<external-path name="sketchbook_external" path="." />
 </paths>
