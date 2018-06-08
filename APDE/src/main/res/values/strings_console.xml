@@ -61,6 +61,12 @@
 	<string name="manifest_read_failed">Could not read <xliff:g id="manifestFile" example="/path/to/AndroidManifest.xml">%1$s</xliff:g></string>
 	<string name="manifest_read_failed_corrupted">Could not read <xliff:g id="manifestFile" example="/path/to/AndroidManifest.xml">%1$s</xliff:g>\nThis might be because your AndroidManifest.xml file is corrupted</string>
 	
+	<!-- Watchface loading messages. -->
+	<string name="watchface_push_success">Sketch pushed to watch successsfully.</string>
+	<string name="watchface_push_failure">Failed to push sketch to watch.</string>
+	<string name="watchface_check_available_success">Found a watch to push to.</string>
+	<string name="watchface_check_available_failure">No watches found! Check connection to watch and\nmake sure that the APDE Wear Companion app is running.</string>
+	
 	<!-- Various build error messages. -->
 	<string name="build_duplicate_libraries">Duplicate libraries found for <xliff:g id="packageName" example="ketai.camera">%1$s</xliff:g>.</string>
 	<string name="build_duplicate_libraries_message">Duplicate library problem\n\nMore than one library is competing for this sketch.\nThe import <xliff:g id="packageName" example="ketai.camera">%1$s</xliff:g> points to multiple libraries:\n<xliff:g id="libraryList" example="Ketai (/path/to/Ketai/)">%2$s</xliff:g>\nExtra libraries need to be removed before this sketch can be used.</string>
@@ -103,7 +109,7 @@
 	<string name="build_signing_private_key">Signing with private key…</string>
 	<string name="build_exported_to">Exported to: <xliff:g id="exportPath" example="/path/to/bin/mySketch.apk">%1$s</xliff:g></string>
 	<string name="build_installing_apk">Installing APK file…</string>
-	<string name="build_sending_apk_to_watch">Sending APK file to watch. Check watch for prompt to select watch face.</string>
+	<string name="build_sending_apk_to_watch">Sending APK file to watch.\nCheck watch for prompt to select watch face.</string>
 	<string name="build_delete_old_apk_success">Deleted old APK file</string>
 	<string name="build_delete_old_apk_failed">Failed to delete old APK file</string>
 	<string name="build_export_library_file_missing"><xliff:g id="missingFileName" example="example.txt">%1$s</xliff:g> is mentioned in export.txt,\nbut it\'sa big fat lie and does not exist.</string>

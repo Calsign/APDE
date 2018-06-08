@@ -2884,12 +2884,13 @@ public class EditorActivity extends AppCompatActivity {
      * This CAN be called multiple times without breaking anything
      */
     private void stopApplication() {
-    	//This will stop the current build process
-    	//I don't think we can stop a running app...
-    	//...that's what the BACK button is for
+    	// This will stop the current build process
+    	// I don't think we can stop a running app...
+    	// ...that's what the BACK button is for
     	
-    	if(building)
-    		Build.halt();
+    	if (building) {
+			Build.halt();
+		}
     }
 	
 	/**

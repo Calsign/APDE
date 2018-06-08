@@ -9,10 +9,12 @@
 package com.calsignlabs.apde.build;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.WallpaperManager;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.net.Uri;
@@ -27,13 +29,6 @@ import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.contrib.Library;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
-import com.google.android.gms.wearable.Asset;
-import com.google.android.gms.wearable.DataItem;
-import com.google.android.gms.wearable.PutDataMapRequest;
-import com.google.android.gms.wearable.PutDataRequest;
-import com.google.android.gms.wearable.Wearable;
 
 import org.eclipse.jdt.internal.compiler.batch.Main;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
@@ -292,6 +287,48 @@ public class Build {
 		
 		if (verbose) {
 			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_target_release_debug), target));
+		}
+		
+		if (debug && getAppComponent() == ComponentTarget.WATCHFACE) {
+			// We want to test to make sure that a watch is available
+			// If it is, then all good
+			// If not, then stop the build and tell the user that something is wrong
+			// Note: We are testing specifically for the presence of the APDE Wear Companion
+			
+			WearableUtil.checkWatchAvailable(editor, new WearableUtil.ResultCallback() {
+				@Override
+				public void success() {
+					if (verbose) {
+						System.out.println(editor.getResources().getString(R.string.watchface_check_available_success));
+					}
+				}
+				
+				@Override
+				public void failure() {
+					halt();
+					
+					editor.runOnUiThread(new Runnable() {
+						@Override
+						public void run() {
+							AlertDialog.Builder builder = new AlertDialog.Builder(editor);
+							
+							builder.setTitle(R.string.watchface_watch_disconnected_dialog_title);
+							builder.setMessage(R.string.watchface_watch_disconnected_dialog_message);
+							
+							builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+								@Override
+								public void onClick(DialogInterface dialogInterface, int i) {}
+							});
+							
+							builder.show();
+							
+							System.err.println();
+							System.err.println(editor.getResources().getString(R.string.watchface_check_available_failure));
+							System.err.println();
+						}
+					});
+				}
+			});
 		}
 		
 		if(!running.get()) { //CHECK
@@ -1103,7 +1140,24 @@ public class Build {
 		
 		if (getAppComponent() == ComponentTarget.WATCHFACE) {
 			// Send the watchface to the watch
-			sendApkToWatch(apkFile);
+			WearableUtil.sendApkToWatch(editor, apkFile, new WearableUtil.ResultCallback() {
+				@Override
+				public void success() {
+					if (verbose) {
+						System.out.println(editor.getResources().getString(R.string.watchface_push_success));
+					}
+					
+					// Make some space in the console
+					for (int i = 0; i < 10; i++) {
+						System.out.println("");
+					}
+				}
+				
+				@Override
+				public void failure() {
+					System.err.println(editor.getResources().getString(R.string.watchface_push_failure));
+				}
+			});
 		} else {
 			// Prompt the user to install the APK file
 			Intent promptInstall;
@@ -1121,7 +1175,7 @@ public class Build {
 			promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
 			
 			if (injectLogBroadcaster) {
-				//Make some space in the console
+				// Make some space in the console
 				for (int i = 0; i < 10; i++) {
 					System.out.println("");
 				}
@@ -1177,25 +1231,6 @@ public class Build {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
-	
-	protected void sendApkToWatch(File apkFile) {
-		Uri apkUri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", apkFile);
-		Asset asset = Asset.createFromUri(apkUri);
-		PutDataMapRequest dataMap = PutDataMapRequest.create("/apk");
-		dataMap.getDataMap().putAsset("apk", asset);
-		dataMap.getDataMap().putLong("timestamp", System.currentTimeMillis());
-		PutDataRequest request = dataMap.asPutDataRequest();
-		request.setUrgent();
-		
-		Task<DataItem> putTask = Wearable.getDataClient(editor).putDataItem(request);
-		putTask.addOnSuccessListener(new OnSuccessListener<DataItem>() {
-			@Override
-			public void onSuccess(DataItem dataItem) {
-				// Succeeded
-				// Don't really need to do anything
-			}
-		});
 	}
 	
 	/**

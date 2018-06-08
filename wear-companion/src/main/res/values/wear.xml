@@ -1,0 +1,5 @@
+<resources>
+	<string-array name="android_wear_capabilities">
+		<item>apde_run_watch_sketches</item>
+	</string-array>
+</resources>

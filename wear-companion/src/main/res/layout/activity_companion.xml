@@ -1,28 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <android.support.wear.widget.BoxInsetLayout
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-	android:background="@color/dark_grey"
+	android:background="@color/activity_companion_background"
 	android:padding="@dimen/box_inset_layout_padding"
 	tools:context="com.calsignlabs.apde.wearcompanion.CompanionActivity"
 	tools:deviceIds="wear">
 	
-	<FrameLayout
+	<ScrollView
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
-		android:padding="@dimen/inner_frame_layout_padding"
-		app:boxedEdges="all">
+		app:boxedEdges="left|right"
+		android:padding="5dp"
+		android:scrollbars="none">
 		
-		<Button
-			android:id="@+id/button_watchface_loader_stop"
-			android:layout_width="wrap_content"
+		<LinearLayout
+			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:text="@string/button_watchface_loader_stop"
-			android:padding="10dp" />
-	</FrameLayout>
+			android:paddingTop="24dp"
+			android:paddingBottom="24dp"
+			android:orientation="vertical">
+			
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/message_default_part1"
+				android:fontFamily="sans-serif-medium"
+				android:textSize="16sp"
+				android:paddingTop="5dp"
+				android:paddingLeft="5dp"
+				android:paddingRight="5dp"
+				android:paddingBottom="0dp"/>
+			
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/message_default_part2"
+				android:fontFamily="sans-serif-medium"
+				android:textSize="16sp"
+				android:padding="5dp" />
+			
+			<TextView
+				android:text="@string/app_name"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:fontFamily="sans-serif-medium"
+				android:textSize="16sp"
+				android:padding="5dp"
+				android:textColor="@color/holo_select_light" />
+			
+			<TextView
+				android:id="@+id/wear_compnanion_activity_version"
+				android:text="@string/app_name"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:fontFamily="sans-serif-medium"
+				android:textSize="16sp"
+				android:padding="5dp" />
+		</LinearLayout>
+	</ScrollView>
 </android.support.wear.widget.BoxInsetLayout>
-

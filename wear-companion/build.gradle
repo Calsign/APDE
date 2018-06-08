@@ -3,7 +3,6 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 27
 
-
     defaultConfig {
         applicationId "com.calsignlabs.apde"
         minSdkVersion 23
