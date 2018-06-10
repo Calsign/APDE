@@ -815,7 +815,7 @@ public class Build {
 				"-S", buildFolder.getAbsolutePath() + "/support-res/", // The location of the support lib res folder
 				"-S", buildFolder.getAbsolutePath() + "/support-wearable-res/",
 				"-S", buildFolder.getAbsolutePath() + "/vr-res/",
-				"--extra-packages", "android.support.v7.appcompat", // Make AAPT generate R.java for AppCompat
+				"--extra-packages", (getAppComponent() == ComponentTarget.VR ? "com.google.vr.cardboard" : "android.support.v7.appcompat"), // Make AAPT generate R.java for AppCompat/GVR
 				"-J", genFolder.getAbsolutePath(), // The location of the /gen folder
 				"-A", assetsFolder.getAbsolutePath(), // The location of the /assets folder
 				"-M", buildFolder.getAbsolutePath() + "/AndroidManifest.xml", // The location of the AndroidManifest.xml file
@@ -1463,7 +1463,7 @@ public class Build {
 						}
 					}
 				}
-				if(ignorableImport(item)) {
+				if(ignorableImport(item, getAppComponent())) {
 					found = true;
 				}
 				if(!found) {
@@ -1574,7 +1574,7 @@ public class Build {
 		return count;
 	}
 	
-	protected boolean ignorableImport(String pkg) {
+	protected boolean ignorableImport(String pkg, ComponentTarget comp) {
 		if (pkg.startsWith("android.")) return true;
 		if (pkg.startsWith("java.")) return true;
 		if (pkg.startsWith("javax.")) return true;
@@ -1582,12 +1582,15 @@ public class Build {
 		if (pkg.startsWith("org.json.")) return true;
 		if (pkg.startsWith("org.w3c.dom.")) return true;
 		if (pkg.startsWith("org.xml.sax.")) return true;
-
+		
 		if (pkg.startsWith("processing.core.")) return true;
 		if (pkg.startsWith("processing.data.")) return true;
 		if (pkg.startsWith("processing.event.")) return true;
 		if (pkg.startsWith("processing.opengl.")) return true;
-
+		
+		// We import the VR library by default when using the VR target
+		if (pkg.startsWith("processing.vr.") && comp == ComponentTarget.VR) return true;
+		
 		return false;
 	}
 	
