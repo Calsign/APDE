@@ -13,6 +13,7 @@
     <string name="prop_target_sdk_default">26</string>
 	
 	<string name="prop_pretty_name">Sketch Display Name</string>
+    <string name="prop_package_name">Package Name</string>
 	<string name="prop_version_code">Version Code</string>
 	<string name="prop_version_code_default">1</string>
 	<string name="prop_pretty_version">Version Name</string>

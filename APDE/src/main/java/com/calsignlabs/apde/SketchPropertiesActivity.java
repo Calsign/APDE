@@ -20,7 +20,6 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
-import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
@@ -41,7 +40,7 @@ import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.build.SketchProperties;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import java.io.File;
@@ -94,7 +93,7 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		
 		toolbar.setTitle(getGlobalState().getSketchName());
 		
-		getGlobalState().setProperties(this);
+		getGlobalState().setPropertiesActivity(this);
         
         getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
 	}
@@ -161,15 +160,17 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 	}
 	
 	public static void updatePrefs(APDE global) {
-		Manifest mf = global.getManifest();
+		SketchProperties properties = global.getProperties();
 		
 		SharedPreferences.Editor edit = global.getSharedPreferences(global.getSketchName(), 0).edit();
-		edit.putString("prop_pretty_name", mf.getPrettyName());
-		edit.putString("permissions", mf.getCustomPermissions());
-		edit.putString("prop_target_sdk", Integer.toString(mf.getTargetSdk(global)));
-		edit.putString("prop_orientation", mf.getOrientation(global));
-		edit.putString("prop_version_code", Integer.toString(mf.getVersionCode(global)));
-		edit.putString("prop_pretty_version", mf.getPrettyVersion(global));
+		edit.putString("prop_pretty_name", properties.getDisplayName(global.getSketchName()));
+		edit.putString("prop_package_name", properties.getPackageName(global.getSketchName()));
+		edit.putString("permissions", properties.getPermissionsString());
+		edit.putString("prop_target_sdk", Integer.toString(properties.getTargetSdk()));
+		edit.putString("prop_min_sdk", Integer.toString(properties.getMinSdk()));
+		edit.putString("prop_orientation", properties.getOrientation());
+		edit.putString("prop_version_code", Integer.toString(properties.getVersionCode()));
+		edit.putString("prop_pretty_version", properties.getVersionName());
 		edit.commit();
 	}
 	
@@ -193,24 +194,21 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		// their values. When their values change, their summaries are updated
 		// to reflect the new value, per the Android Design guidelines.
 		bindPreferenceSummaryToValue(findPreference("prop_pretty_name"));
+		bindPreferenceSummaryToValue(findPreference("prop_package_name"));
 		bindPreferenceSummaryToValue(findPreference("prop_version_code"));
 		bindPreferenceSummaryToValue(findPreference("prop_pretty_version"));
-//		bindPreferenceSummaryToValue(findPreference("prop_min_sdk"));
+		bindPreferenceSummaryToValue(findPreference("prop_min_sdk"));
 		bindPreferenceSummaryToValue(findPreference("prop_target_sdk"));
 		bindPreferenceSummaryToValue(findPreference("prop_orientation"));
 		
 		//Hacky way of setting up the summaries initially
-		String prettyName = ((EditTextPreference) findPreference("prop_pretty_name")).getText(); //We check this to initialize the default value with the name of the sketch
-		findPreference("prop_pretty_name").setSummary(prettyName.equals(".") ? getGlobalState().getSketchName() : prettyName); //The "." default is because we can't reference this value from XML
+		findPreference("prop_pretty_name").setSummary(((EditTextPreference) findPreference("prop_pretty_name")).getText());
+		findPreference("prop_package_name").setSummary(((EditTextPreference) findPreference("prop_package_name")).getText());
 		findPreference("prop_version_code").setSummary(((EditTextPreference) findPreference("prop_version_code")).getText());
 		findPreference("prop_pretty_version").setSummary(((EditTextPreference) findPreference("prop_pretty_version")).getText());
-//		findPreference("prop_min_sdk").setSummary(((EditTextPreference) findPreference("prop_min_sdk")).getText());
+		findPreference("prop_min_sdk").setSummary(((EditTextPreference) findPreference("prop_min_sdk")).getText());
 		findPreference("prop_target_sdk").setSummary(((EditTextPreference) findPreference("prop_target_sdk")).getText());
 		findPreference("prop_orientation").setSummary(((ListPreference) findPreference("prop_orientation")).getEntry());
-		
-		//Get rid of the default "." (hopefully no one decides to name their sketch "."...)
-		if(prettyName.equals("."))
-			((EditTextPreference) findPreference("prop_pretty_name")).setText(getGlobalState().getSketchName());
 		
 		Preference launchPermissions = (Preference) findPreference("prop_permissions");
 		launchPermissions.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
@@ -269,22 +267,26 @@ public class SketchPropertiesActivity extends PreferenceActivity implements Tool
 		prefListener = new OnSharedPreferenceChangeListener() {
 			@Override
 			public void onSharedPreferenceChanged(SharedPreferences pref, String key) {
-				Manifest mf = getGlobalState().getManifest();
+				SketchProperties properties = getGlobalState().getProperties();
 				
 				if(key.equals("prop_pretty_name"))
-					mf.setPrettyName(pref.getString(key, "."));
+					properties.setDisplayName(pref.getString(key, ""));
+				if(key.equals("prop_package_name"))
+					properties.setPackageName(pref.getString(key, ""));
 				if(key.equals("prop_version_code"))
-					mf.setVersionCode(Integer.parseInt(pref.getString(key, getResources().getString(R.string.prop_version_code_default))));
+					properties.setVersionCode(Integer.parseInt(pref.getString(key, getResources().getString(R.string.prop_version_code_default))));
 				if(key.equals("prop_pretty_version"))
-					mf.setPrettyVersion(pref.getString(key, getResources().getString(R.string.prop_pretty_version_default)));
+					properties.setVersionName(pref.getString(key, getResources().getString(R.string.prop_pretty_version_default)));
 				if(key.equals("permissions"))
-					mf.setCustomPermissions(pref.getString(key, "").split(","));
+					properties.setPermissionsString(pref.getString(key, ""));
 				if(key.equals("prop_target_sdk"))
-					mf.setTargetSdk(Integer.parseInt(pref.getString("prop_target_sdk", getResources().getString(R.string.prop_target_sdk_default))));
+					properties.setTargetSdk(Integer.parseInt(pref.getString("prop_target_sdk", getResources().getString(R.string.prop_target_sdk_default))));
+				if(key.equals("prop_min_sdk"))
+					properties.setMinSdk(Integer.parseInt(pref.getString("prop_min_sdk", getResources().getString(R.string.prop_min_sdk_default))));
 				if(key.equals("prop_orientation"))
-					mf.setOrientation(pref.getString("prop_orientation", getResources().getString(R.string.prop_orientation_default)));
+					properties.setOrientation(pref.getString("prop_orientation", getResources().getString(R.string.prop_orientation_default)));
 				
-				mf.save();
+				properties.save(getGlobalState().getSketchPropertiesFile());
 			}
 		};
 		

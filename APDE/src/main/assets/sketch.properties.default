@@ -1,0 +1,8 @@
+manifest.package=
+manifest.label=
+manifest.version.code=1
+manifest.version.name=1.0
+manifest.sdk.min=17
+manifest.sdk.target=26
+manifest.orientation=unspecified
+manifest.permissions=

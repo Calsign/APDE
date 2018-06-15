@@ -3,14 +3,20 @@
         android:title="@string/prop_manifest"
         android:key="prop_manifest" >
         
-        <!-- Default value "." is read by the code and changed to the name of the sketch -->
         <EditTextPreference android:key="prop_pretty_name"
             android:title="@string/prop_pretty_name"
-            android:defaultValue="."
+            android:defaultValue=""
             android:maxLines="1"
 	        android:selectAllOnFocus="true"
 	        android:singleLine="true"
 	        android:inputType="text" />
+		
+		<EditTextPreference android:key="prop_package_name"
+			android:title="@string/prop_package_name"
+			android:maxLines="1"
+			android:selectAllOnFocus="true"
+			android:singleLine="true"
+			android:inputType="text" />
         
         <EditTextPreference android:key="prop_version_code"
             android:title="@string/prop_version_code"
@@ -33,16 +39,6 @@
         	android:summary="@string/prop_permissions_desc"        
         	android:title="@string/prop_permissions" />
         
-        <!-- This is disabled... for now -->
-        <!-- <EditTextPreference android:key="prop_min_sdk"
-            android:title="@string/prop_min_sdk"
-            android:defaultValue="@string/prop_min_sdk_default"
-            android:maxLines="1"
-	        android:selectAllOnFocus="true"
-	        android:singleLine="true"
-	        android:maxLength="2"
-	        android:inputType="number" /> -->
-        
         <EditTextPreference android:key="prop_target_sdk"
             android:title="@string/prop_target_sdk"
             android:defaultValue="@string/prop_target_sdk_default"
@@ -51,6 +47,15 @@
 	        android:singleLine="true"
 	        android:maxLength="2"
 	        android:inputType="number" />
+		
+		<EditTextPreference android:key="prop_min_sdk"
+			android:title="@string/prop_min_sdk"
+			android:defaultValue="@string/prop_min_sdk_default"
+			android:maxLines="1"
+			android:selectAllOnFocus="true"
+			android:singleLine="true"
+			android:maxLength="2"
+			android:inputType="number" />
         
         <ListPreference android:key="prop_orientation"
 	        android:title="@string/prop_orientation"

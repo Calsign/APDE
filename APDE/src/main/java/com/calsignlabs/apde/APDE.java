@@ -32,6 +32,7 @@ import android.widget.TextView;
 import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
 import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.build.SketchProperties;
 import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.support.AndroidPlatform;
 import com.calsignlabs.apde.task.TaskManager;
@@ -79,6 +80,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Properties;
 
 import processing.app.Platform;
 
@@ -103,7 +105,7 @@ public class APDE extends Application {
 	private String sketchName;
 	
 	private EditorActivity editor;
-	private SketchPropertiesActivity properties;
+	private SketchPropertiesActivity propertiesActivity;
 	
 	private HashMap<String, ArrayList<Library>> importToLibraryTable;
 	private ArrayList<Library> contributedLibraries;
@@ -611,12 +613,12 @@ public class APDE extends Application {
 	/**
 	 * @return a reference to the current SketchProperties activity
 	 */
-	public SketchPropertiesActivity getProperties() {
-		return properties;
+	public SketchPropertiesActivity getPropertiesActivity() {
+		return propertiesActivity;
 	}
 	
-	public void setProperties(SketchPropertiesActivity properties) {
-		this.properties = properties;
+	public void setPropertiesActivity(SketchPropertiesActivity propertiesActivity) {
+		this.propertiesActivity = propertiesActivity;
 	}
 	
 	/**
@@ -1387,17 +1389,84 @@ public class APDE extends Application {
 	}
 	
 	/**
-	 * Note: This function loads the manifest as well. For efficiency, call this
-	 * function once and store a reference to it.
-	 * 
-	 * @return the manifest associated with the current sketch
+	 * @return the sketch properties of the current sketch
 	 */
-	public Manifest getManifest() {
-		// The component target doesn't actually make a difference here
-		Manifest mf = new Manifest(new com.calsignlabs.apde.build.Build(this), ComponentTarget.APP, false);
-		mf.load(false, ComponentTarget.APP);
+	public SketchProperties getProperties() {
+		// TODO maybe load once and store reference?
+		if (needsPropertiesUpgrade()) {
+			// Sketch still has an AndroidManifest.xml, upgrade to sketch.properties
+			return upgradeManifestToProperties();
+		} else {
+			// Load sketch.properties
+			SketchProperties properties = new SketchProperties(this, getSketchPropertiesFile());
+			if (!isExample()) {
+				properties.save(getSketchPropertiesFile());
+			}
+			return properties;
+		}
+	}
+	
+	public String getSketchPackageName() {
+		return getProperties().getPackageName(getSketchName());
+	}
+	
+	public File getSketchPropertiesFile() {
+		return new File(getSketchLocation(), "sketch.properties");
+	}
+	
+	protected boolean needsPropertiesUpgrade() {
+		// Determine whether or not we need to upgrade to sketch.properties
 		
-		return mf;
+		
+		// We can't upgrade if we don't have a manifest
+		if (!(new File(getSketchLocation(), Manifest.MANIFEST_XML)).exists()) {
+			return false;
+		}
+		
+		// First, see if file exists - if not we need to upgrade
+		if (getSketchPropertiesFile().exists()) {
+			try {
+				// Load the properties file
+				Properties properties = new Properties();
+				SketchProperties.loadProperties(properties, new FileInputStream(getSketchPropertiesFile()));
+				// If it has our keys then it should be good to go, otherwise we need to upgrade
+				if (properties.containsKey(SketchProperties.KEY_PACKAGE_NAME)) {
+					return false;
+				} else {
+					return true;
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				return false;
+			}
+		} else {
+			return true;
+		}
+	}
+	
+	protected SketchProperties upgradeManifestToProperties() {
+		// The old AndroidManifest.xml
+		File manifestFile = new File(getSketchLocation(), Manifest.MANIFEST_XML);
+		Manifest manifest = new Manifest(new com.calsignlabs.apde.build.Build(this));
+		manifest.load(manifestFile, ComponentTarget.APP);
+		
+		// Upgrade to Android mode 3.0 (activity -> fragment) if needed
+		if (manifest.needsProcessing3Update()) {
+			manifest.updateProcessing3();
+		}
+		
+		// Make sketch properties from the manifest
+		SketchProperties properties = manifest.copyToProperties();
+		
+		// Don't change files of examples
+		if (!editor.getGlobalState().isExample()) {
+			// Make sketch.properties
+			properties.save(editor.getGlobalState().getSketchPropertiesFile());
+			
+			// Note: the manifest is still there, so it will still work on the desktop
+		}
+		
+		return properties;
 	}
 	
 	public void rebuildLibraryList() {

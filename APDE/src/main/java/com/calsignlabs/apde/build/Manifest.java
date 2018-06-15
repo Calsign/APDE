@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -41,9 +42,8 @@ public class Manifest {
 	/** the manifest data read from the file */
 	private XML xml;
 	
-	public Manifest(Build build, ComponentTarget appComp, boolean forceNew) {
+	public Manifest(Build build) {
 		this.build = build;
-		load(forceNew, appComp);
 	}
 	
 	public static void loadPermissions(Context context) {
@@ -136,22 +136,12 @@ public class Manifest {
 		Collections.reverse(permissions);
 	}
 	
-	private String defaultPackageName() {
-		return "processing.test." + build.sketchName.toLowerCase(Locale.US);
-	}
-	
-	// called by other classes who want an actual package name
-	// internally, we'll figure this out ourselves whether it's filled or not
 	public String getPackageName() {
-		String pkg = xml.getString("package");
-		return pkg.length() == 0 ? defaultPackageName() : pkg;
+		return xml.getString("package");
 	}
 	
 	public void setPackageName(String packageName) {
-		// this.packageName = packageName;
-		// this is the package attribute in the root <manifest> object
 		xml.setString("package", packageName);
-		save();
 	}
 	
 	public static final String PERMISSION_PREFIX = "android.permission.";
@@ -161,40 +151,34 @@ public class Manifest {
 		int count = elements.length;
 		String[] names = new String[count];
 		for (int i = 0; i < count; i ++) {
-			names[i] = elements[i].getString("android:name").substring(PERMISSION_PREFIX.length());
+			names[i] = elements[i].getString("android:name");
 		}
 		return names;
 	}
 	
 	public void setPermissions(String[] names) {
-		// just remove all the old ones
-		for (XML kid : xml.getChildren("uses-permission")) {
-			xml.removeChild(kid);
+		// Check permissions from the template
+		// e.g. watch face already has WAKE_LOCK
+		// And don't add them if they're already there
+		
+		XML[] existingPermissionsXml = xml.getChildren("uses-permission");
+		List<String> existingPermissions = new ArrayList<>(existingPermissionsXml.length);
+		for (XML perm : existingPermissionsXml) {
+			existingPermissions.add(perm.getString("android:name"));
 		}
-		// ...and add the new kids back
+		
 		for (String name : names) {
-			// PNode newbie = new PNodeXML("uses-permission");
-			// newbie.setString("android:name", PERMISSION_PREFIX + name);
-			// xml.addChild(newbie);
-			XML newbie = xml.addChild("uses-permission");
-			newbie.setString("android:name", PERMISSION_PREFIX + name);
+			if (!existingPermissions.contains(name)) {
+				XML newbie = xml.addChild("uses-permission");
+				newbie.setString("android:name", name);
+			}
 		}
-		save();
 	}
 	
-	public void setClassName(String className) {
-		XML[] kids = xml.getChildren("application/activity");
-		if (kids.length != 1) {
-//			Base.showWarning("Don't touch that", MULTIPLE_ACTIVITIES, null);
-			System.err.println(build.editor.getResources().getString(R.string.manifest_multiple_activities));
-		}
-		XML activity = kids[0];
-		String currentName = activity.getString("android:name");
-		// only update if there are changes
-		if (currentName == null || !currentName.equals(className)) {
-			activity.setString("android:name", "." + className);
-			save();
-		}
+	public void initBlank() {
+		File buildManifest = new File(build.getBuildFolder(), MANIFEST_XML);
+		writeBlankManifest(buildManifest, build.getAppComponent());
+		load(buildManifest, build.getAppComponent());
 	}
 	
 	private void writeBlankManifest(final File xmlFile, final ComponentTarget appComp) {
@@ -218,14 +202,13 @@ public class Manifest {
 		save(file);
 		
 		// load the copy from the build location and start messing with it
-		XML mf = null;
 		try {
-			mf = new XML(file);
+			XML mf = new XML(file);
 			
 			// package name, or default
 			String p = mf.getString("package").trim();
 			if (p.length() == 0) {
-				mf.setString("package", defaultPackageName());
+				mf.setString("package", SketchProperties.defaultPackageName(build.sketchName));
 			}
 			
 			// app name and label, or the class name
@@ -245,102 +228,27 @@ public class Manifest {
 				}
 			}
 			
-			// Make sure that the required permissions for watch faces and VR apps are
-			// included.
-			if (appComp == ComponentTarget.WATCHFACE || appComp == ComponentTarget.VR) {
-				fixPermissions(mf, appComp);
-			}
-			
-			PrintWriter writer = PApplet.createWriter(file);
-			writer.print(mf.format(4));
-			writer.flush();
-			writer.close();
+			save(file);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
-	
-	private void fixPermissions(XML mf, ComponentTarget appComp) {
-		boolean hasWakeLock = false;
-		boolean hasVibrate = false;
-		boolean hasReadExtStorage = false;
-		for (XML kid : mf.getChildren("uses-permission")) {
-			String name = kid.getString("android:name");
-			if (appComp == ComponentTarget.WATCHFACE && name.equals(PERMISSION_PREFIX + "WAKE_LOCK")) {
-				hasWakeLock = true;
-				continue;
-			}
-			if (appComp == ComponentTarget.VR && name.equals(PERMISSION_PREFIX + "VIBRATE")) {
-				hasVibrate = true;
-				continue;
-			}
-			if (appComp == ComponentTarget.VR && name.equals(PERMISSION_PREFIX + "READ_EXTERNAL_STORAGE")) {
-				hasReadExtStorage = true;
-				continue;
-			}
-		}
-		if (appComp == ComponentTarget.WATCHFACE && !hasWakeLock) {
-			mf.addChild("uses-permission").setString("android:name", PERMISSION_PREFIX + "WAKE_LOCK");
-		}
-		if (appComp == ComponentTarget.VR && !hasVibrate) {
-			mf.addChild("uses-permission").setString("android:name", PERMISSION_PREFIX + "VIBRATE");
-		}
-		if (appComp == ComponentTarget.VR && !hasReadExtStorage) {
-			mf.addChild("uses-permission").setString("android:name", PERMISSION_PREFIX + "READ_EXTERNAL_STORAGE");
-		}
-	}
-	
-	//get/setCustomPermissions() - these names are misleading
-	//They refer to the permissions for this Manifest instance
-	
-	/**
-	 * @param perms
-	 */
-	public void setCustomPermissions(String[] perms) {
-		//Remove the old permissions
-		for(XML perm : xml.getChildren("uses-permission"))
-			xml.removeChild(perm);
-		
-		//Add the permissions
-		for(String perm : perms) {
-			//For some reason, this crashes on 2.3.3
-//			XML permXML = new XML("uses-permission");
-//			permXML.setString("android:name", perm);
-//			xml.addChild(permXML);
-			
-			if (!perm.equals("")) {
-				//Add a new permission
-				xml.addChild("uses-permission");
-				//Select the last permission (the newly added one) and change the value
-				XML[] permNodes = xml.getChildren("uses-permission");
-				permNodes[permNodes.length - 1].setString("android:name", perm);
-			}
-		}
-	}
-	
-	public String getCustomPermissions() {
-		String perms = "";
-		
-		XML[] children = xml.getChildren("uses-permission");
-		for(XML child : children)
-			perms += child.getString("android:name", "") + ",";
-		
-		return perms;
 	}
 	
 	/**
 	 * @param prettyName
 	 */
 	public void setPrettyName(String prettyName) {
-		if(!prettyName.equals(".")) //Don't want the default "." sketch!
-			xml.getChild("application").setString("android:label", prettyName);
+		xml.getChild("application").setString("android:label", prettyName);
+		if (build.getAppComponent() == ComponentTarget.WALLPAPER) {
+			xml.getChild("application").getChild("service").setString("android:label", prettyName);
+		}
 	}
 	
 	/**
 	 * @return
 	 */
 	public String getPrettyName() {
-		return xml.getChild("application").getString("android:label", ".");
+		return xml.getChild("application").getString("android:label", "");
 	}
 	
 	/**
@@ -380,12 +288,20 @@ public class Manifest {
 		xml.getChild("uses-sdk").setInt("android:targetSdkVersion", targetSdk);
 	}
 	
+	public void setMinSdk(int minSdk) {
+		xml.getChild("uses-sdk").setInt("android:minSdkVersion", minSdk);
+	}
+	
 	/**
 	 * @param context
 	 * @return
 	 */
 	public int getTargetSdk(Context context) {
 		return xml.getChild("uses-sdk").getInt("android:targetSdkVersion", context.getResources().getInteger(R.integer.prop_target_sdk_default));
+	}
+	
+	public int getMinSdk(Context context) {
+		return xml.getChild("uses-sdk").getInt("android:minSdkVersion", context.getResources().getInteger(R.integer.prop_min_sdk_default));
 	}
 	
 	/**
@@ -399,61 +315,28 @@ public class Manifest {
 		return xml.getChild("application").getChild("activity").getString("android:screenOrientation", context.getResources().getString(R.string.prop_orientation_default));
 	}
 	
-	public void load(boolean forceNew, ComponentTarget appComp) {
-		File manifestFile = getManifestFile();
+	public void load(File manifestFile, ComponentTarget appComp) {
 		if (manifestFile.exists()) {
 			try {
 				xml = new XML(manifestFile);
 			} catch (Exception e) {
 				e.printStackTrace();
-				System.err.println(build.editor.getResources().getString(R.string.manifest_problem_reading_creating_new));
-				
-				// remove the old manifest file, rename it with date stamp
-				long lastModified = manifestFile.lastModified();
-				String stamp = getDateStamp(lastModified);
-				File dest = new File(build.getSketchFolder(), MANIFEST_XML + "." + stamp);
-				boolean moved = manifestFile.renameTo(dest);
-				if (!moved) {
-					System.err.println(String.format(Locale.US, build.editor.getResources().getString(R.string.manifest_move_rename_failed), manifestFile.getAbsolutePath()));
-					return;
-				}
 			}
 		}
 		
-		String[] permissionNames = null;
+		String[] permissions = null;
 		String pkgName = null;
 		int versionCode = -1;
 		String versionName = null;
 		int targetSdk = -1;
 		String orientation = null;
 		String prettyName = null;
-		if (xml != null && forceNew) {
-			permissionNames = getPermissions();
-			pkgName = getPackageName();
-			versionCode = getVersionCode(build.editor);
-			versionName = getPrettyVersion(build.editor);
-			targetSdk = getTargetSdk(build.editor);
-			orientation = getOrientation(build.editor);
-			prettyName = getPrettyName();
-			xml = null;
-			
-			// If this sketch is out of date, give it the latest and greatest
-			if (targetSdk < appComp.getMinSdk()) {
-				targetSdk = getDefaultTargetSdk();
-			}
-			
-			// Don't use orientation for VR sketches - does not work
-			if (appComp == ComponentTarget.VR) {
-				orientation = null;
-			}
-		}
 		
 		if (xml == null) {
-			writeBlankManifest(manifestFile, appComp);
 			try {
 				xml = new XML(manifestFile);
-				if (permissionNames != null) {
-					setPermissions(permissionNames);
+				if (permissions != null) {
+					setPermissions(permissions);
 				}
 				if (pkgName != null) {
 					xml.setString("package", pkgName);
@@ -470,8 +353,7 @@ public class Manifest {
 				if (orientation != null) {
 					xml.getChild("application").getChild("activity").setString("android:screenOrientation", orientation);
 				}
-				if (prettyName != null && !prettyName.equals(".")) {
-					//Don't want the default "." sketch!
+				if (prettyName != null) {
 					xml.getChild("application").setString("android:label", prettyName);
 				}
 			} catch (FileNotFoundException e) {
@@ -496,10 +378,6 @@ public class Manifest {
 		}
 	}
 	
-	public void save() {
-		save(getManifestFile());
-	}
-	
 	/**
 	 * Save to the sketch folder, so that it can be copied in later.
 	 */
@@ -512,14 +390,6 @@ public class Manifest {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
-	}
-	
-	public File getManifestFile() {
-		return new File(build.getSketchFolder(), MANIFEST_XML);
-	}
-	
-	static public String getDateStamp() {
-		return dateFormat.format(new Date());
 	}
 	
 	static public String getDateStamp(long stamp) {
@@ -542,12 +412,34 @@ public class Manifest {
 		if (xml.getChild("uses-sdk").getInt("android:targetSdkVersion") < 17) {
 			xml.getChild("uses-sdk").setInt("android:targetSdkVersion", 17);
 		}
-		
-		// Don't overwrite examples... they should be updated through the repository
-		// But this will allow them to be built properly because it still stores the changes in
-		// memory for when the manifest file is copied to the build folder
-		if (!build.editor.getGlobalState().isExample()) {
-			save();
+	}
+	
+	public void loadProperties(SketchProperties properties, String sketchName) {
+		setPackageName(properties.getPackageName(sketchName));
+		setPrettyName(properties.getDisplayName(sketchName));
+		setVersionCode(properties.getVersionCode());
+		setPrettyVersion(properties.getVersionName());
+		// Make sure min and target sdks are appropriate
+		setMinSdk(Math.max(properties.getMinSdk(), build.getAppComponent().getMinSdk()));
+		setTargetSdk(Math.max(properties.getTargetSdk(), getMinSdk(build.editor)));
+		setOrientation(properties.getOrientation());
+		setPermissions(properties.getPermissions());
+	}
+	
+	public SketchProperties copyToProperties() {
+		SketchProperties properties = new SketchProperties(build.editor, null);
+		properties.setPackageName(getPackageName());
+		properties.setDisplayName(getPrettyName());
+		properties.setVersionCode(getVersionCode(build.editor));
+		properties.setVersionName(getPrettyVersion(build.editor));
+		properties.setMinSdk(getMinSdk(build.editor));
+		properties.setTargetSdk(getTargetSdk(build.editor));
+		properties.setOrientation(getOrientation(build.editor));
+		try {
+			properties.addPermissions(getPermissions());
+		} catch (SketchProperties.BadPermissionNameException e) {
+			e.printStackTrace();
 		}
+		return properties;
 	}
 }

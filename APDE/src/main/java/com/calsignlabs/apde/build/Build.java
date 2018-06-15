@@ -201,7 +201,7 @@ public class Build {
 	}
 	
 	public static void launchSketchPostLaunch(EditorActivity editor) {
-		String packageName = editor.getGlobalState().getManifest().getPackageName();
+		String packageName = editor.getGlobalState().getSketchPackageName();
 		Intent intent = editor.getPackageManager().getLaunchIntentForPackage(packageName);
 		
 		if (intent == null) {
@@ -228,7 +228,7 @@ public class Build {
 		
 		if (android.os.Build.VERSION.SDK_INT >= 16) {
 			intent.setAction(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER);
-			String packageName = editor.getGlobalState().getManifest().getPackageName();
+			String packageName = editor.getGlobalState().getSketchPackageName();
 			String canonicalName = packageName + "." + "MainService";
 			intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, new ComponentName(packageName, canonicalName));
 		} else {
@@ -389,13 +389,10 @@ public class Build {
 		File androidJarLoc = getAndroidJarLoc(editor);
 		
 		try {
-			// Force a new manifest to update older versions to the current version of Android mode
-			manifest = new Manifest(this, getAppComponent(), true);
-			
-			if (manifest.needsProcessing3Update()) {
-				System.out.println(editor.getResources().getString(R.string.build_manifest_android_mode_3_upgrade));
-				manifest.updateProcessing3();
-			}
+			// Generate a new manifest and populate it with sketch properties
+			manifest = new Manifest(this);
+			manifest.initBlank();
+			manifest.loadProperties(editor.getGlobalState().getProperties(), sketchName); // unsure whether to use sketchName or sketchClassName here
 			
 			String packageName = manifest.getPackageName();
 			
@@ -467,7 +464,7 @@ public class Build {
 				final File resFolder = new File(buildFolder, "res");
 				writeRes(resFolder, sketchClassName);
 				
-				writeMainClass(srcFolder, manifest.getPermissions(), Preproc.getRenderer(surfaceInfo), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
+				writeMainClass(srcFolder, Preproc.getRenderer(surfaceInfo), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
 				
 				final File libsFolder = mkdirs(buildFolder, "libs", editor);
 				final File assetsFolder = mkdirs(buildFolder, "assets", editor);
@@ -1811,20 +1808,20 @@ public class Build {
 		return renderer != null && (renderer.equals("P2D") || renderer.equals("P3D") || renderer.equals("OPENGL"));
 	}
 	
-	private void writeMainClass(final File srcDirectory, String[] permissions, String renderer, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+	private void writeMainClass(final File srcDirectory, String renderer, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
 		ComponentTarget comp = getAppComponent();
 		if (comp == ComponentTarget.APP) {
-			writeFragmentActivity(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
+			writeFragmentActivity(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 		} else if (comp == ComponentTarget.WALLPAPER) {
-			writeWallpaperService(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
+			writeWallpaperService(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 		} else if (comp == ComponentTarget.WATCHFACE) {
 			if (isOpenGL(renderer)) {
-				writeWatchFaceGLESService(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
+				writeWatchFaceGLESService(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 			} else {
-				writeWatchFaceCanvasService(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
+				writeWatchFaceCanvasService(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 			}
 		} else if (comp == ComponentTarget.VR) {
-			writeVRActivity(srcDirectory, permissions, sketchClassName, packageName, external, injectLogBroadcaster);
+			writeVRActivity(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 		}
 	}
 	
@@ -1851,7 +1848,7 @@ public class Build {
 		}
 	}
 	
-	private void writeFragmentActivity(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+	private void writeFragmentActivity(final File srcDirectory, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
 		File javaFile = new File(new File(srcDirectory, packageName.replace(".", "/")), "MainActivity.java");
 		
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
@@ -1863,7 +1860,7 @@ public class Build {
 		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
 	
-	private void writeWallpaperService(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+	private void writeWallpaperService(final File srcDirectory, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
 		File javaFile = new File(new File(srcDirectory, packageName.replace(".", "/")), "MainService.java");
 		
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
@@ -1875,7 +1872,7 @@ public class Build {
 		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
 	
-	private void writeWatchFaceGLESService(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+	private void writeWatchFaceGLESService(final File srcDirectory, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
 		File javaFile = new File(new File(srcDirectory, packageName.replace(".", "/")), "MainService.java");
 		
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
@@ -1888,7 +1885,7 @@ public class Build {
 		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
 	
-	private void writeWatchFaceCanvasService(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+	private void writeWatchFaceCanvasService(final File srcDirectory, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
 		File javaFile = new File(new File(srcDirectory, packageName.replace(".", "/")), "MainService.java");
 		
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
@@ -1901,7 +1898,7 @@ public class Build {
 		createFileFromTemplate(getAppComponent().getMainClassTemplate(), javaFile, replaceMap, editor);
 	}
 	
-	private void writeVRActivity(final File srcDirectory, String[] permissions, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+	private void writeVRActivity(final File srcDirectory, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
 		File javaFile = new File(new File(srcDirectory, packageName.replace(".", "/")), "MainActivity.java");
 		
 		HashMap<String, String> replaceMap = new HashMap<String, String>();
