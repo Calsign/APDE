@@ -272,6 +272,10 @@ public class ExportSignedPackage implements Tool {
 		componentTarget.setAdapter(componentTargetAdapter);
 		
 		int selectedTarget = context.getEditor().getComponentTarget().serialize();
+		if (selectedTarget == ComponentTarget.PREVIEW.serialize()) {
+			// Preview -> App
+			selectedTarget = ComponentTarget.APP.serialize();
+		}
 		// Sanity check
 		componentTarget.setSelection(Math.min(Math.max(selectedTarget, 0), 3), false);
 		

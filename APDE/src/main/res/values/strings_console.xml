@@ -110,6 +110,7 @@
 	<string name="build_exported_to">Exported to: <xliff:g id="exportPath" example="/path/to/bin/mySketch.apk">%1$s</xliff:g></string>
 	<string name="build_installing_apk">Installing APK file…</string>
 	<string name="build_sending_apk_to_watch">Sending APK file to watch.\nCheck watch for prompt to select watch face.</string>
+	<string name="build_preview_launch">Launching sketch preview…</string>
 	<string name="build_delete_old_apk_success">Deleted old APK file</string>
 	<string name="build_delete_old_apk_failed">Failed to delete old APK file</string>
 	<string name="build_export_library_file_missing"><xliff:g id="missingFileName" example="example.txt">%1$s</xliff:g> is mentioned in export.txt,\nbut it\'sa big fat lie and does not exist.</string>
@@ -128,4 +129,16 @@
 	<string name="build_write_res_xxxhdpi_failed">Could not create \"drawable-xxxhdpi\" folder.</string>
 	<string name="build_write_res_icon_copy_failed">Failed to copy icons.</string>
 	<string name="build_launch_sketch_activity_failure">Failed to start sketch activity</string>
+	<string name="build_preview_data_compress_failed">Failed to compress data folder</string>
+	<string name="build_preview_dexed_lib_copy_failed">Failed to copy dexed libs</string>
+	
+	<!-- Sketch previewer build -->
+	<string name="preview_build_copying_preview_build_directory">Copying preview build directory…</string>
+	<string name="preview_build_copying_android_jar">Copying android.jar…</string>
+	<string name="preview_build_setting_manifest_permissions">Setting manifest permissions…</string>
+	<string name="preview_build_setting_up_aapt">Setting up AAPT…</string>
+	<string name="preview_build_running_aapt">Running AAPT…</string>
+	<string name="preview_build_signing_apk">Signing APK…</string>
+	<string name="preview_build_installing_apk">Installing APK…</string>
+	<string name="preview_build_failure">Failed to build sketch previewer</string>
 </resources>

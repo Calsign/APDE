@@ -178,6 +178,8 @@ public class EditorActivity extends AppCompatActivity {
 	public static final int FLAG_LAUNCH_SKETCH = 6;
 	// Intent flag to set the just-installed wallpaper
 	public static final int FLAG_SET_WALLPAPER = 7;
+	// Intent flag to start the preview after installing the sketch previewer APK
+	public static final int FLAG_RUN_PREVIEW = 8;
 	
 	public ScheduledThreadPoolExecutor autoSaveTimer;
 	public ScheduledFuture<?> autoSaveTimerTask;
@@ -1038,6 +1040,14 @@ public class EditorActivity extends AppCompatActivity {
 				Build.setWallpaperPostLaunch(this);
 			}
 			Build.cleanUpPostLaunch(this);
+		} else if (requestCode == FLAG_RUN_PREVIEW) {
+    		// We just installed the sketch previewer, so now run the sketch again
+			// This makes the whole experience as seamless as possible for the user
+    		if (resultCode == RESULT_OK) {
+    			if (getComponentTarget() == ComponentTarget.PREVIEW) {
+					runApplication();
+				}
+			}
 		}
     	
     	ActivityResultCallback action = activityResultCodes.get(requestCode);
@@ -2550,6 +2560,7 @@ public class EditorActivity extends AppCompatActivity {
 		menu.findItem(R.id.menu_comp_select_wallpaper).getIcon().setAlpha(getComponentTarget() == ComponentTarget.WALLPAPER ? alphaSelected : alphaUnelected);
 		menu.findItem(R.id.menu_comp_select_watchface).getIcon().setAlpha(getComponentTarget() == ComponentTarget.WATCHFACE ? alphaSelected : alphaUnelected);
 		menu.findItem(R.id.menu_comp_select_vr).getIcon().setAlpha(getComponentTarget() == ComponentTarget.VR ? alphaSelected : alphaUnelected);
+		menu.findItem(R.id.menu_comp_select_preview).getIcon().setAlpha(getComponentTarget() == ComponentTarget.PREVIEW ? alphaSelected : alphaUnelected);
     }
     
     @Override
@@ -2608,6 +2619,9 @@ public class EditorActivity extends AppCompatActivity {
 				return true;
 			case R.id.menu_comp_select_vr:
 				setComponentTarget(ComponentTarget.VR);
+				return true;
+			case R.id.menu_comp_select_preview:
+				setComponentTarget(ComponentTarget.PREVIEW);
 				return true;
             case R.id.menu_stop:
             	stopApplication();

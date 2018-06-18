@@ -1172,15 +1172,17 @@ public class APDE extends Application {
 	 * @throws IOException
 	 */
     public static void deleteFile(File file) throws IOException {
-    	if (file.isDirectory()) {
-    		for (File content : file.listFiles()) {
-    			deleteFile(content);
-    		}
-    	}
-    	
-    	if (!file.delete()) { //Uh-oh...
-    		throw new FileNotFoundException("Failed to delete file: " + file);
-    	}
+    	if (file.exists()) {
+			if (file.isDirectory()) {
+				for (File content : file.listFiles()) {
+					deleteFile(content);
+				}
+			}
+		
+			if (!file.delete()) { //Uh-oh...
+				throw new FileNotFoundException("Failed to delete file: " + file);
+			}
+		}
     }
 	
 	/**

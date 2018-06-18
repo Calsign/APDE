@@ -10,7 +10,8 @@ public enum ComponentTarget {
 	APP(R.drawable.ic_comp_app, R.string.editor_menu_comp_select_app, 17, "AppActivity.java.tmpl", "AppManifest.xml.tmpl"),
 	WALLPAPER(R.drawable.ic_comp_wallpaper, R.string.editor_menu_comp_select_wallpaper, 17, "WallpaperService.java.tmpl", "WallpaperManifest.xml.tmpl"),
 	WATCHFACE(R.drawable.ic_comp_watchface, R.string.editor_menu_comp_select_watchface, 19, "WatchFaceService.java.tmpl", "WatchFaceManifest.xml.tmpl"),
-	VR(R.drawable.ic_comp_vr, R.string.editor_menu_comp_select_vr, 25, "VRActivity.java.tmpl", "VRManifest.xml.tmpl");
+	VR(R.drawable.ic_comp_vr, R.string.editor_menu_comp_select_vr, 25, "VRActivity.java.tmpl", "VRManifest.xml.tmpl"),
+	PREVIEW(R.drawable.ic_comp_preview, R.string.editor_menu_comp_select_preview, 17, "AppActivity.java.tmpl", "AppManifest.xml.tmpl");
 	
 	private int iconId;
 	private int nameId;
@@ -54,6 +55,7 @@ public enum ComponentTarget {
 			case WALLPAPER: return 1;
 			case WATCHFACE: return 2;
 			case VR: return 3;
+			case PREVIEW: return 4;
 		}
 		
 		return -1;
@@ -65,6 +67,7 @@ public enum ComponentTarget {
 			case 1: return WALLPAPER;
 			case 2: return WATCHFACE;
 			case 3: return VR;
+			case 4: return PREVIEW;
 		}
 		
 		return null;

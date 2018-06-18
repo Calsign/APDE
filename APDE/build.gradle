@@ -29,11 +29,12 @@ android {
     dexOptions {
         javaMaxHeapSize "4g"
     }
-    
+
     sourceSets { main { res.srcDirs = ['src/main/res'] } }
 }
 
 dependencies {
+    implementation 'com.android.support.constraint:constraint-layout:1.1.2'
     compile project(':aFileChooser')
     compile files('libs/android-core.jar')
     compile files('libs/antlr.jar')

@@ -198,6 +198,7 @@ public class Preproc extends PdePreprocessor {
 			
 			switch (comp) {
 				case APP:
+				case PREVIEW:
 				case WATCHFACE:
 					// Use size like normal
 					info.addStatement(sizeContents[0]);

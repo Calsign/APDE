@@ -67,6 +67,7 @@ public class ExportGradleProject implements Tool {
 			public void run() {
 				exporting = true;
 				// TODO
+				System.out.println("not yet implemented");
 				exporting = false;
 			}
 		}).start();

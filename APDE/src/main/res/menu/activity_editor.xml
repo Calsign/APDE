@@ -15,6 +15,10 @@
 		
 		<menu>
 			<item
+				android:id="@+id/menu_comp_select_preview"
+				android:title="@string/editor_menu_comp_select_preview"
+				android:icon="@drawable/ic_comp_preview" />
+			<item
 				android:id="@+id/menu_comp_select_app"
 				android:title="@string/editor_menu_comp_select_app"
 				android:icon="@drawable/ic_comp_app" />

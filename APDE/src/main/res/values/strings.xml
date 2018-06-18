@@ -13,6 +13,7 @@
 	<string name="editor_menu_comp_select_wallpaper">Wallpaper</string>
 	<string name="editor_menu_comp_select_watchface">Watchface</string>
 	<string name="editor_menu_comp_select_vr">VR</string>
+	<string name="editor_menu_comp_select_preview">Preview</string>
 	<string name="editor_menu_undo">Undo</string>
 	<string name="editor_menu_redo">Redo</string>
 	<string name="editor_menu_tools">Tools</string>
@@ -106,8 +107,8 @@
 	<string name="drawer_list_icon_accessibility_text">Icon</string>
 	
 	<!-- Delete sketch confirmation dialog. -->
-	<string name="delete_sketch_dialog_title">Delete \&quot;<xliff:g id="sketchName" example="testSketch">%1$s</xliff:g>\&quot;?</string>
-	<string name="delete_sketch_dialog_message">Are you sure you want to delete \&quot;<xliff:g id="sketchName" example="testSketch">%1$s</xliff:g>\&quot;?</string>
+	<string name="delete_sketch_dialog_title">Delete \&quot;<xliff:g example="testSketch" id="sketchName">%1$s</xliff:g>\&quot;?</string>
+	<string name="delete_sketch_dialog_message">Are you sure you want to delete \&quot;<xliff:g example="testSketch" id="sketchName">%1$s</xliff:g>\&quot;?</string>
 	
 	<!-- Build messages. -->
 	<string name="build_message_begin">Building sketch…</string>
@@ -122,6 +123,7 @@
 	<string name="build_message_send_to_watch">Sending sketch to watch…</string>
 	<string name="build_message_failed">Build failed, check the console for more information.</string>
 	<string name="build_message_stopped_early">Build stopped before sketch was launched.</string>
+	<string name="build_message_preview_launch">Launching sketch preview…</string>
 	
 	<!-- Title of the file chooser activity. -->
 	<string name="file_chooser_title">Select File</string>
@@ -187,8 +189,8 @@
 	<string name="drawer_new_folder">New Folder</string>
 	<string name="drawer_edit_folder">Rename Folder</string>
 	<string name="drawer_delete_folder">Delete Folder</string>
-	<string name="drawer_delete_folder_dialog_title">Delete \&quot;<xliff:g id="sketchName" example="testSketch">%1$s</xliff:g>\&quot;?</string>
-	<string name="drawer_delete_folder_dialog_message">Are you sure you want to delete folder \&quot;<xliff:g id="folderName" example="testFolder">%1$s</xliff:g>\&quot;?</string>
+	<string name="drawer_delete_folder_dialog_title">Delete \&quot;<xliff:g example="testSketch" id="sketchName">%1$s</xliff:g>\&quot;?</string>
+	<string name="drawer_delete_folder_dialog_message">Are you sure you want to delete folder \&quot;<xliff:g example="testFolder" id="folderName">%1$s</xliff:g>\&quot;?</string>
 	<string name="drawer_move_to_new_folder_title">Move to New Folder</string>
 	<string name="drawer_move_to_new_folder_message">Enter the name for the new folder:</string>
 	<!-- Used in the drawer and elsewhere. -->
@@ -196,14 +198,14 @@
 	<string name="rename_sketch_failure_message">Another file of the same name exists in the destination folder.</string>
 	<string name="rename_move_folder_failure_title">Cannot Move Folder</string>
 	<string name="rename_move_folder_failure_message">Another file of the same name exists in the destination folder.</string>
-	<string name="rename_sketch_title">Rename \&quot;<xliff:g id="sketchName" example="testSketch">%1$s</xliff:g>\&quot;</string>
+	<string name="rename_sketch_title">Rename \&quot;<xliff:g example="testSketch" id="sketchName">%1$s</xliff:g>\&quot;</string>
 	<string name="rename_sketch_message">Enter the new name for the sketch:</string>
 	<string name="rename_sketch_button">Rename</string>
-	<string name="rename_folder_title">Rename Folder \&quot;<xliff:g id="folderName" example="testFolder">%1$s</xliff:g>\&quot;</string>
+	<string name="rename_folder_title">Rename Folder \&quot;<xliff:g example="testFolder" id="folderName">%1$s</xliff:g>\&quot;</string>
 	<string name="rename_folder_message">Enter the new name for the folder:</string>
 	<string name="rename_folder_button">Rename</string>
 	<string name="move_temp_to_sketchbook_title">Move to Sketchbook</string>
-	<string name="move_temp_to_sketchbook_message">Move \&quot;<xliff:g id="sketchName" example="sketch_20171221a">%1$s</xliff:g>\&quot; from temporary storage to the Sketchbook?</string>
+	<string name="move_temp_to_sketchbook_message">Move \&quot;<xliff:g example="sketch_20171221a" id="sketchName">%1$s</xliff:g>\&quot; from temporary storage to the Sketchbook?</string>
 	<string name="move_temp_to_sketchbook_button">Move</string>
 	
 	<!-- Export eclipse project tool. -->
@@ -243,9 +245,9 @@
 	<string name="export_signed_package_info_create_key">Press the \&quot;+\&quot; button to create a new key</string>
 	<!-- Note that the formattedDate field in the following strings are populated by a date
 	     formatted using the format specified by export_signed_package_date_format. -->
-	<string name="export_signed_package_info_export_ready">Ready to export sketch \&quot;<xliff:g id="sketchName" example="testSketch">%1$s</xliff:g>\&quot;\n\nCertificate expires <xliff:g id="formattedDate" example="Thursday, December 21, 2017">%2$s</xliff:g></string>
-	<string name="export_signed_package_error_certificate_expired">Certificate expired on <xliff:g id="formattedDate" example="Thursday, December 21, 2017">%1$s</xliff:g></string>
-	<string name="export_signed_package_error_certificate_not_yet_valid">Certificate not valid until <xliff:g id="formattedDate" example="Thursday, December 21, 2017">%1$s</xliff:g></string>
+	<string name="export_signed_package_info_export_ready">Ready to export sketch \&quot;<xliff:g example="testSketch" id="sketchName">%1$s</xliff:g>\&quot;\n\nCertificate expires <xliff:g example="Thursday, December 21, 2017" id="formattedDate">%2$s</xliff:g></string>
+	<string name="export_signed_package_error_certificate_expired">Certificate expired on <xliff:g example="Thursday, December 21, 2017" id="formattedDate">%1$s</xliff:g></string>
+	<string name="export_signed_package_error_certificate_not_yet_valid">Certificate not valid until <xliff:g example="Thursday, December 21, 2017" id="formattedDate">%1$s</xliff:g></string>
 	<!-- This is a date formatted using Java's SimpleDateFormat. See the following link for more
 	     information: https://developer.android.com/reference/java/text/SimpleDateFormat.html -->
 	<string name="export_signed_package_date_format">EEEE, d MMMM, yyyy</string>
@@ -253,7 +255,7 @@
 	<string name="export_signed_package_warning_keystore_exists">Will overwrite existing file</string>
 	<string name="export_signed_package_warning_short_password">Consider using a longer password</string>
 	<!-- Keystore type is one of keystore_type_jks or keystore_type_bks. -->
-	<string name="export_signed_package_info_create_keystore_ready">Ready to create <xliff:g id="keystoreType" example="JKS">%1$s</xliff:g> keystore</string>
+	<string name="export_signed_package_info_create_keystore_ready">Ready to create <xliff:g example="JKS" id="keystoreType">%1$s</xliff:g> keystore</string>
 	<string name="export_signed_package_info_enter_alias">Enter key alias</string>
 	<string name="export_signed_package_info_enter_alias_password">Enter key password</string>
 	<string name="export_signed_package_info_enter_certificate_validity">Enter certificate validity</string>
@@ -365,7 +367,7 @@
 	<string name="tool_find_in_reference">Find In Reference</string>
 	<!-- Note that the token will be one that cannot be found in the refernece. The example, PImage,
 	     can be found in the reference. -->
-	<string name="tool_find_in_reference_failure_not_found">Could not find \"<xliff:g id="token" example="PImage">%1$s</xliff:g>\" in reference</string>
+	<string name="tool_find_in_reference_failure_not_found">Could not find \"<xliff:g example="PImage" id="token">%1$s</xliff:g>\" in reference</string>
 	<!-- Open reference tool. -->
 	<string name="tool_open_reference">Open Reference</string>
 	<!-- The reference activity. -->
@@ -383,7 +385,7 @@
 	
 	<!-- Used in the library manager to indicate the author of the libary. The library author is
 	     provided by the library's properties file and includes the name and a URL. -->
-	<string name="library_manager_library_author_by">by <xliff:g id="author" example="William Smith (calsignlabs.com)">%1$s</xliff:g></string>
+	<string name="library_manager_library_author_by">by <xliff:g example="William Smith (calsignlabs.com)" id="author">%1$s</xliff:g></string>
 	
 	<!-- Re-copy android.jar button in settings. -->
 	<string name="task_copy_android_jar_file_running">Copying android.jar file…</string>
@@ -394,4 +396,9 @@
 	<!-- Watchfaces -->
 	<string name="watchface_watch_disconnected_dialog_title">Watch Unavailable</string>
 	<string name="watchface_watch_disconnected_dialog_message">Could not connect to wear companion. Make sure that the watch is connected to the phone and that the APDE Wear Companion app is installed on the watch.</string>
+	
+	<!-- Preview -->
+	<string name="preview_sketch_previewer_install_dialog_title">Install Sketch Previewer</string>
+	<string name="preview_sketch_previewer_install_dialog_message">Install sketch previewer APK once to preview sketches without installing forever.\n\nNote: Must re-install to grant previewer new permissions.</string>
+	<string name="preview_sketch_previewer_install_dialog_install_button">Install</string>
 </resources>

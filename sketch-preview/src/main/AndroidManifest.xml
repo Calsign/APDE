@@ -1,0 +1,29 @@
+<manifest
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	package="com.calsignlabs.apde.sketchpreview"
+	android:versionCode="1"
+	android:versionName="1.0">
+	
+	<uses-sdk android:minSdkVersion="17" android:targetSdkVersion="26" />
+	
+	<!-- These ones are innocuous -->
+	<uses-permission android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	<uses-permission android:name="android.permission.VIBRATE" />
+	
+	<application
+		android:allowBackup="true"
+		android:icon="@drawable/ic_launcher"
+		android:label="@string/title">
+		
+		<activity
+			android:name=".PreviewActivity"
+			android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+			
+			<intent-filter>
+				<action android:name="com.calsignlabs.apde.RUN_SKETCH_PREVIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+			</intent-filter>
+		</activity>
+	</application>
+</manifest>

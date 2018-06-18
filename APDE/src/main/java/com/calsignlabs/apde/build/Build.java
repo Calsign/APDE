@@ -21,6 +21,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.content.FileProvider;
+import android.util.Log;
 import android.view.inputmethod.InputMethodManager;
 
 import com.android.sdklib.build.ApkBuilder;
@@ -29,6 +30,7 @@ import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.contrib.Library;
+import com.jcraft.jsch.IO;
 
 import org.eclipse.jdt.internal.compiler.batch.Main;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
@@ -54,14 +56,17 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import kellinwood.security.zipsigner.ZipSigner;
 import kellinwood.security.zipsigner.optional.CustomKeySigner;
@@ -269,6 +274,48 @@ public class Build {
 		is.close();
 	}
 	
+	public static String getAaptName(Context context, boolean print) {
+		String arch = android.os.Build.CPU_ABI.substring(0, 3).toLowerCase(Locale.US);
+		String aaptName;
+		
+		// Position Independent Executables (PIE) were first supported in Jelly Bean 4.1 (API level 16)
+		// In Android 5.0, they are required
+		// Android versions before 4.1 still need the old binary...
+		boolean usePie = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN;
+		
+		// Get the correct AAPT binary for this processor architecture
+		switch (arch) {
+			case "x86":
+				if (usePie) {
+					aaptName = "aapt-binaries/aapt-x86-pie";
+					
+					if (print) {
+						System.out.println(context.getResources().getString(R.string.build_using_pie_aapt_binary));
+					}
+				} else {
+					aaptName = "aapt-binaries/aapt-x86";
+				}
+				break;
+			case "arm":
+			default:
+				// Default to ARM, just in case
+				
+				if (usePie) {
+					// Disabled above pref because old aapt contains vulnerable version of libpng
+					aaptName = "aapt-binaries/aapt-arm-pie";
+					
+					if (print) {
+						System.out.println(context.getResources().getString(R.string.build_using_pie_aapt_binary));
+					}
+				} else {
+					aaptName = "aapt-binaries/aapt-arm";
+				}
+				break;
+		}
+		
+		return aaptName;
+	}
+	
 	/**
 	 * @param target either "release" or "debug"
 	 */
@@ -393,6 +440,65 @@ public class Build {
 			manifest = new Manifest(this);
 			manifest.initBlank();
 			manifest.loadProperties(editor.getGlobalState().getProperties(), sketchName); // unsure whether to use sketchName or sketchClassName here
+			
+			// We need to do this after we load the manifest because it depends on permissions
+			if (getAppComponent() == ComponentTarget.PREVIEW) {
+				// Make sure that the sketch previewer is installed
+				
+				Intent intent = new Intent("com.calsignlabs.apde.RUN_SKETCH_PREVIEW");
+				intent.setPackage("com.calsignlabs.apde.sketchpreview");
+				
+				final String[] sketchPermissions = manifest.getPermissions();
+				
+				// These are the permissions that
+				final List<String> additionalPermissions = getAdditionalRequiredPermissions(sketchPermissions);
+				
+				if (intent.resolveActivity(editor.getPackageManager()) == null || additionalPermissions.size() > 0) {
+					// Need to install or add permissions
+					
+					editor.runOnUiThread(new Runnable() {
+						@Override
+						public void run() {
+							AlertDialog.Builder builder = new AlertDialog.Builder(editor);
+							
+							StringBuilder message = new StringBuilder(editor.getResources().getString(R.string.preview_sketch_previewer_install_dialog_message));
+							if (additionalPermissions.size() > 0) {
+								// Tell the user which new permissions are being installed
+								message.append("\n\n");
+								for (String permission : additionalPermissions) {
+									message.append(permission);
+									message.append("\n");
+								}
+							}
+							
+							builder.setTitle(R.string.preview_sketch_previewer_install_dialog_title);
+							builder.setMessage(message.toString());
+							
+							builder.setPositiveButton(R.string.preview_sketch_previewer_install_dialog_install_button, new DialogInterface.OnClickListener() {
+								@Override
+								public void onClick(DialogInterface dialogInterface, int i) {
+									(new Thread(new Runnable() {
+										@Override
+										public void run() {
+											// Make the sketch previewer APK and install it
+											(new SketchPreviewerBuilder(editor, sketchPermissions)).build();
+										}
+									})).start();
+								}
+							});
+							builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+								@Override
+								public void onClick(DialogInterface dialogInterface, int i) {}
+							});
+							
+							builder.show();
+						}
+					});
+					
+					cleanUpHalt();
+					return;
+				}
+			}
 			
 			String packageName = manifest.getPackageName();
 			
@@ -674,48 +780,10 @@ public class Build {
 		
 		System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_detected_architecture), android.os.Build.CPU_ABI));
 		
-		String arch = android.os.Build.CPU_ABI.substring(0, 3).toLowerCase(Locale.US);
-		String aaptName;
-		
 		int numCores = getNumCores();
 		
 		if (verbose) {
 			System.out.println(String.format(editor.getResources().getString(R.string.build_available_cores), numCores));
-		}
-		
-		// Position Independent Executables (PIE) were first supported in Jelly Bean 4.1 (API level 16)
-		// In Android 5.0, they are required
-		// Android versions before 4.1 still need the old binary...
-		boolean usePie = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN;
-		
-		// Get the correct AAPT binary for this processor architecture
-		switch (arch) {
-		case "x86":
-			if (usePie) {
-				aaptName = "aapt-binaries/aapt-x86-pie";
-				
-				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_using_pie_aapt_binary));
-				}
-			} else {
-				aaptName = "aapt-binaries/aapt-x86";
-			}
-			break;
-		case "arm":
-		default:
-			// Default to ARM, just in case
-			
-			if (usePie) {
-				// Disabled above pref because old aapt contains vulnerable version of libpng
-				aaptName = "aapt-binaries/aapt-arm-pie";
-				
-				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_using_pie_aapt_binary));
-				}
-			} else {
-				aaptName = "aapt-binaries/aapt-arm";
-			}
-			break;
 		}
 		
 		// TODO: Only re-copy AAPT if we need to
@@ -731,7 +799,7 @@ public class Build {
 			
 			AssetManager am = editor.getAssets();
 			
-			InputStream inputStream = am.open(aaptName);
+			InputStream inputStream = am.open(getAaptName(editor, verbose));
 			createFileFromInputStream(inputStream, aaptLoc);
 			inputStream.close();
 			
@@ -950,16 +1018,27 @@ public class Build {
 			return;
 		}
 		
+		File[] dexedLibs = dexedLibsFolder.listFiles(new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String filename) {
+				return filename.endsWith("-dex.jar");
+			}
+		});
+		
+		// PREVIEW STOPS HERE
+		
+		if (getAppComponent() == ComponentTarget.PREVIEW) {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_preview_launch));
+			System.out.println(editor.getResources().getString(R.string.build_preview_launch));
+			
+			launchPreview(manifest, new File(binFolder, "sketch-classes.dex"), dexedLibs);
+			cleanUp();
+			return;
+		}
+		
 		//Run DX Merger
 		try {
 			System.out.println(editor.getResources().getString(R.string.build_dx_merger));
-			
-			File[] dexedLibs = dexedLibsFolder.listFiles(new FilenameFilter() {
-				@Override
-				public boolean accept(File dir, String filename) {
-					return filename.endsWith("-dex.jar");
-				}
-			});
 			
 			String[] args = new String[dexedLibs.length + 2];
 			args[0] = binFolder.getAbsolutePath() + "/classes.dex"; //The location of the output DEX class file
@@ -1088,10 +1167,6 @@ public class Build {
 			return;
 		}
 		
-		//TODO this writes AAPT error logs, is it necessary?
-//		System.out.println("AAPT logs:");
-//		copyStream(aaptProc.getErrorStream(), System.err);
-		
 		if(!running.get()) { //CHECK
 			cleanUpError();
 			return;
@@ -1190,8 +1265,156 @@ public class Build {
 		cleanUp();
 	}
 	
+	/**
+	 * Check to see which permissions are required by the sketch but aren't included in the
+	 * installed sketch previewer app.
+	 *
+	 * @param sketchPermissions
+	 * @return
+	 */
+	private List<String> getAdditionalRequiredPermissions(String[] sketchPermissions) {
+		String[] installedPermissions = SketchPreviewerBuilder.getInstalledPermissions(editor);
+		List<String> additional = new ArrayList<String>();
+		
+		for (String sketchPermission : sketchPermissions) {
+			if (!arrayContains(installedPermissions, sketchPermission)) {
+				additional.add(sketchPermission);
+			}
+		}
+		
+		return additional;
+	}
+	
+	private boolean arrayContains(String[] array, String test) {
+		for (String s : array) {
+			if (s.equals(test)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * Run the sketch in the sketch previewer.
+	 *
+	 * @param manifest
+	 * @param classesDex
+	 * @param dexedLibs
+	 */
+	private void launchPreview(Manifest manifest, File classesDex, File[] dexedLibs) {
+		// Stop the old sketch
+		editor.sendBroadcast(new Intent("com.calsignlabs.apde.STOP_SKETCH_PREVIEW"));
+		
+		File dexFile = new File(editor.getFilesDir(), "sketch.dex");
+		Uri dexUri;
+		
+		try {
+			copyFile(classesDex, dexFile);
+		} catch (IOException e) {
+			e.printStackTrace();
+			cleanUpError();
+			return;
+		}
+		
+		Uri dataUri;
+		
+		// Zip up the assets
+		// We need this if the sketch is on the internal storage because this is protected
+		// But just do it for all sketches because it's easier
+		
+		File dataZip = new File(editor.getFilesDir().getAbsolutePath() + "/preview_sketch_data.zip");
+		File copyFrom = new File(getSketchFolder(), "data");
+		
+		// Only make the zip if the data folder has files in it
+		if (copyFrom.isDirectory() && copyFrom.list().length > 0) {
+			try {
+				makeCompressedFile(copyFrom, dataZip);
+				dataUri = makeFileAvailableToPreview(dataZip);
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.println(editor.getResources().getString(R.string.build_preview_data_compress_failed));
+				cleanUpError();
+				return;
+			}
+		} else {
+			dataUri = null;
+		}
+		
+		dexUri = makeFileAvailableToPreview(dexFile);
+		
+		// We need to copy the dexed libs to the sketch previewer
+		File dexedLibDestDir = new File(editor.getFilesDir(), "dexed_lib");
+		dexedLibDestDir.mkdirs();
+		String[] libUris = new String[dexedLibs.length];
+		for (int i = 0; i < dexedLibs.length; i ++) {
+			// Don't copy the dexed Processing core lib, already included in sketch previewer
+			if (!dexedLibs[i].getName().equals("all-lib-dex.jar")) {
+				try {
+					File dest = new File(dexedLibDestDir, dexedLibs[i].getName());
+					copyFile(dexedLibs[i], dest);
+					libUris[i] = makeFileAvailableToPreview(dest).toString();
+				} catch (IOException e) {
+					System.err.println(editor.getResources().getString(R.string.build_preview_dexed_lib_copy_failed));
+					cleanUpError();
+					return;
+				}
+			}
+		}
+		
+		// Build intent specifically for sketch previewer
+		Intent intent = new Intent("com.calsignlabs.apde.RUN_SKETCH_PREVIEW");
+		intent.setPackage("com.calsignlabs.apde.sketchpreview");
+		intent.putExtra("SKETCH_DEX", dexUri.toString());
+		intent.putExtra("SKETCH_DATA_FOLDER", dataUri == null ? "" : dataUri.toString());
+		intent.putExtra("SKETCH_DEXED_LIBS", libUris);
+		intent.putExtra("SKETCH_ORIENTATION", manifest.getOrientation(editor));
+		intent.putExtra("SKETCH_PACKAGE_NAME", manifest.getPackageName());
+		intent.putExtra("SKETCH_CLASS_NAME", sketchName);
+		
+		// Launch in multi-window mode if available
+		if (android.os.Build.VERSION.SDK_INT >= 24) {
+			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+		} else {
+			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		}
+		if (intent.resolveActivity(editor.getPackageManager()) != null) {
+			editor.startActivity(intent);
+		}
+		
+		// Make some space in the console
+		for (int i = 0; i < 10; i++) {
+			System.out.println("");
+		}
+	}
+	
+	/**
+	 * Use FileProvider to share the given file with the sketch previewer.
+	 *
+	 * @param file
+	 * @return
+	 */
+	protected Uri makeFileAvailableToPreview(File file) {
+		Uri uri;
+		if (android.os.Build.VERSION.SDK_INT >= 24) {
+			uri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", file);
+			editor.grantUriPermission("com.calsignlabs.apde.sketchpreview", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		} else {
+			file.setReadable(true, true);
+			uri = Uri.fromFile(file);
+		}
+		return uri;
+	}
+	
+	/**
+	 * Are we building the sketch to be loaded with classloader? (preview and watch face)
+	 * Some things aren't necessary or are handled differnetly.
+	 *
+	 * @param debug
+	 * @return
+	 */
 	private boolean isBuildForClassLoader(boolean debug) {
-		return getAppComponent() == ComponentTarget.WATCHFACE && debug;
+		return debug && (getAppComponent() == ComponentTarget.WATCHFACE
+				|| getAppComponent() == ComponentTarget.PREVIEW);
 	}
 	
 	private void signApk() {
@@ -1638,7 +1861,7 @@ public class Build {
 		writeResLayoutMainActivity(layoutFolder, className);
 		
 		ComponentTarget comp = getAppComponent();
-		if (comp == ComponentTarget.APP) {
+		if (comp == ComponentTarget.APP || comp == ComponentTarget.PREVIEW) {
 			File valuesFolder = mkdirs(resFolder, "values", editor);
 			writeResStylesFragment(valuesFolder);
 		}
@@ -1810,7 +2033,7 @@ public class Build {
 	
 	private void writeMainClass(final File srcDirectory, String renderer, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
 		ComponentTarget comp = getAppComponent();
-		if (comp == ComponentTarget.APP) {
+		if (comp == ComponentTarget.APP || comp == ComponentTarget.PREVIEW) {
 			writeFragmentActivity(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 		} else if (comp == ComponentTarget.WALLPAPER) {
 			writeWallpaperService(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
@@ -2116,12 +2339,12 @@ public class Build {
 		return null;
 	}
 	
-	private static File createFileFromInputStream(InputStream inputStream, File destFile) {
+	protected static File createFileFromInputStream(InputStream inputStream, File destFile) {
 		return createFileFromInputStream(inputStream, destFile, true);
 	}
 	
 	// http://stackoverflow.com/questions/11820142/how-to-pass-a-file-path-which-is-in-assets-folder-to-filestring-path
-	private static File createFileFromInputStream(InputStream inputStream, File destFile, boolean close) {
+	protected static File createFileFromInputStream(InputStream inputStream, File destFile, boolean close) {
 		try {
 			// Make sure that the parent folder exists
 			destFile.getParentFile().mkdirs();
@@ -2428,10 +2651,51 @@ public class Build {
 		}
 	}
 	
+	protected static void makeCompressedFile(File folder, File compressedFile) throws IOException {
+		List<File> files = new ArrayList<>();
+		buildFileList(files, folder);
+		
+		int bufferSize = 4096;
+		byte[] buffer = new byte[bufferSize];
+		
+		String absPath = folder.getAbsolutePath();
+		int folderLength = absPath.endsWith("/") ? absPath.length() : absPath.length() + 1;
+		int count;
+		
+		ZipOutputStream outputStream = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(compressedFile)));
+		
+		for (File file : files) {
+			BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(file), bufferSize);
+			ZipEntry entry = new ZipEntry(file.getAbsolutePath().substring(folderLength));
+			outputStream.putNextEntry(entry);
+			
+			while ((count = inputStream.read(buffer, 0, bufferSize)) != -1) {
+				outputStream.write(buffer, 0, count);
+			}
+			inputStream.close();
+			
+			outputStream.closeEntry();
+		}
+		
+		outputStream.close();
+	}
+	
+	protected static void buildFileList(List<File> ret, File dir) {
+		if (dir != null && dir.exists()) {
+			if (dir.isDirectory()) {
+				for (File file : dir.listFiles()) {
+					buildFileList(ret, file);
+				}
+			} else if (dir.isFile()) {
+				ret.add(dir);
+			}
+		}
+	}
+	
 	/**
 	 * Takes output and does nothing with it.
 	 */
-	protected class NullOutputStream extends OutputStream {
+	protected static class NullOutputStream extends OutputStream {
 		public NullOutputStream() {}
 		
 		@Override
