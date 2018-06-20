@@ -299,7 +299,9 @@ public class SketchPreviewerBuilder {
 			Uri uri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", finalApk);
 			promptInstall = new Intent(Intent.ACTION_INSTALL_PACKAGE).setData(uri).setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 		} else {
-			finalApk.setReadable(true, true);
+			if (!finalApk.setReadable(true, false)) {
+				System.err.println("failed to make apk readable");
+			}
 			promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.fromFile(finalApk), "application/vnd.android.package-archive");
 		}
 		

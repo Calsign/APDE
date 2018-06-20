@@ -1348,7 +1348,9 @@ public class Build {
 		String[] libUris = new String[dexedLibs.length];
 		for (int i = 0; i < dexedLibs.length; i ++) {
 			// Don't copy the dexed Processing core lib, already included in sketch previewer
-			if (!dexedLibs[i].getName().equals("all-lib-dex.jar")) {
+			// Also don't copy support-wearable, required for all apps (really dumb, I know)
+			// on API 20 and below
+			if (!(dexedLibs[i].getName().equals("all-lib-dex.jar") || dexedLibs[i].getName().equals("support-wearable-dex.jar"))) {
 				try {
 					File dest = new File(dexedLibDestDir, dexedLibs[i].getName());
 					copyFile(dexedLibs[i], dest);
@@ -1399,7 +1401,9 @@ public class Build {
 			uri = FileProvider.getUriForFile(editor, "com.calsignlabs.apde.fileprovider", file);
 			editor.grantUriPermission("com.calsignlabs.apde.sketchpreview", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
 		} else {
-			file.setReadable(true, true);
+			if (!file.setReadable(true, false)) {
+				System.err.println("failed to make file readable: " + file.getAbsolutePath());
+			}
 			uri = Uri.fromFile(file);
 		}
 		return uri;
