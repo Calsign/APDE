@@ -2,10 +2,22 @@ package com.calsignlabs.apde.task;
 
 import com.calsignlabs.apde.APDE;
 
-public abstract class Task {
-	private boolean running;
-	private TaskStatusRelay statusRelay;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+public abstract class Task {
+	private AtomicBoolean running = new AtomicBoolean(false);
+	private TaskStatusRelay statusRelay;
+	
+	private APDE context;
+	
+	protected void setContext(APDE context) {
+		this.context = context;
+	}
+	
+	public APDE getContext() {
+		return context;
+	}
+	
 	/**
 	 * Called when the task is first registered. Used to obtain an instance of the application.
 	 * 
@@ -21,7 +33,7 @@ public abstract class Task {
 	public void setStatusRelay(TaskStatusRelay statusRelay) {
 		this.statusRelay = statusRelay;
 	}
-
+	
 	/**
 	 * 
 	 * @return
@@ -29,7 +41,7 @@ public abstract class Task {
 	public TaskStatusRelay getStatusRelay() {
 		return statusRelay;
 	}
-
+	
 	/**
 	 * For use by the task.
 	 * Send a status update to the status relay.
@@ -39,21 +51,31 @@ public abstract class Task {
 	public void postStatus(CharSequence status) {
 		statusRelay.postStatus(status);
 	}
-
+	
+	/**
+	 * For use by the task.
+	 * Sends a status update to the status relay.
+	 *
+	 * @param resId resource ID of string to set as status
+	 */
+	public void postStatus(int resId) {
+		statusRelay.postStatus(context.getString(resId));
+	}
+	
 	/**
 	 * Called when the task starts. Perform any resource allocation here.
 	 * If overriding, make sure to call super.start().
 	 */
 	public void start() {
-		running = true;
+		running.set(true);
 	}
-
+	
 	/**
 	 * Called when the task is being run.
 	 * Overriding this method is required.
 	 */
-	public abstract void run();
-
+	public abstract void run() throws InterruptedException;
+	
 	/**
 	 * For use by the task. The running state is managed by the superclass.
 	 * Determine whether or not the task is currently running.
@@ -61,9 +83,9 @@ public abstract class Task {
 	 * @return whether or not the task is running
 	 */
 	public boolean isRunning() {
-		return running;
+		return running.get();
 	}
-
+	
 	/**
 	 * Called when the task stops. Perform any resource de-allocation here.
 	 * This method will always be called, even if the task is killed prematurely.
@@ -71,9 +93,9 @@ public abstract class Task {
 	 */
 	public void stop() {
 		statusRelay.close();
-		running = false;
+		running.set(false);
 	}
-
+	
 	/**
 	 * Called only when the task is canceled.
 	 * Use this to undo any progress if applicable.
@@ -81,7 +103,7 @@ public abstract class Task {
 	public void cancel() {
 		
 	}
-
+	
 	/**
 	 * Get the task's human-readable title.
 	 * Overriding this method is required.
@@ -89,7 +111,7 @@ public abstract class Task {
 	 * @return the task's title
 	 */
 	public abstract CharSequence getTitle();
-
+	
 	/**
 	 * Get the task's human-readable message description.
 	 * By default, returns no message (null).
@@ -99,7 +121,7 @@ public abstract class Task {
 	public CharSequence getMessage() {
 		return null;
 	}
-
+	
 	/**
 	 * Called to determine whether or not the task can be moved to the background.
 	 * 

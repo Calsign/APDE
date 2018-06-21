@@ -26,11 +26,18 @@ import android.widget.TextView;
 
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.build.Permission;
+import com.calsignlabs.apde.build.SketchPreviewerBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PermissionsActivity extends AppCompatActivity {
 	private boolean[] checked;
 	
 	private PermissionAdapter adapter;
+	
+	private boolean isPreviewSetttings;
+	private String startData;
 	
 	protected class PermissionAdapter extends BaseAdapter {
 		@Override
@@ -106,6 +113,12 @@ public class PermissionsActivity extends AppCompatActivity {
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 		
 		getWindow().getDecorView().setBackgroundColor(getResources().getColor(R.color.activity_background));
+		
+		isPreviewSetttings = getIntent().getBooleanExtra("previewSettings", false);
+		
+		if (isPreviewSetttings) {
+			getSupportActionBar().setTitle(R.string.pref_build_preview_permissions);
+		}
 	}
 	
 	@Override
@@ -121,31 +134,15 @@ public class PermissionsActivity extends AppCompatActivity {
 		for (int i = 0; i < checked.length; i ++) {
 			checked[i] = false;
 		}
-		loadData();
+		
+		if (isPreviewSetttings) {
+			loadDataPreviewSettings();
+		} else {
+			loadData();
+		}
 		
 		adapter = new PermissionAdapter();
 		permsList.setAdapter(adapter);
-		
-//		permsList.setOnItemClickListener(new android.widget.ListView.OnItemClickListener() {
-//			@Override
-//			public void onItemClick(AdapterView<?> adapt, View view, int pos, long id) {
-//				RelativeLayout item = (RelativeLayout) view;
-//				CheckBox check = (CheckBox) item.findViewById(R.id.permissions_list_item_checkbox);
-//				
-//				boolean ck = !checked[pos];
-//				
-//				checked[pos] = ck;
-//				
-//				check.setChecked(true);
-//			}
-//		});
-//		
-//		permsList.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
-//			public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-//				showPermissionDescDialog(position);
-//				return true;
-//			}
-//		});
 	}
 	
 	//Displays a permission description dialog
@@ -180,14 +177,14 @@ public class PermissionsActivity extends AppCompatActivity {
 					builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
 						@Override
 						public void onClick(DialogInterface dialogInterface, int which) {
-							saveData();
+							String data = getData();
 							
 							Manifest.removeCustomPermission(perm, getApplicationContext());
 							adapter.notifyDataSetChanged();
 							
 							dialog.dismiss();
 							
-							loadData();
+							setData(data);
 						}
 					});
 					
@@ -205,23 +202,78 @@ public class PermissionsActivity extends AppCompatActivity {
 	
 	@Override
 	public void onPause() {
-		saveData();
+		if (!isPreviewSetttings) {
+			saveData();
+		}
 		
 		super.onPause();
 	}
 	
+	@Override
+	public void onBackPressed() {
+		if (isPreviewSetttings) {
+			promptSaveDataPreviewSettings();
+		} else {
+			super.onBackPressed();
+		}
+	}
+	
+	private SharedPreferences getSharedPreferences() {
+		return getSharedPreferences(((APDE) getApplicationContext()).getSketchName(), MODE_PRIVATE);
+	}
+	
 	public void saveData() {
-		SharedPreferences prefs = getSharedPreferences(((APDE) getApplicationContext()).getSketchName(), MODE_PRIVATE);
-		SharedPreferences.Editor editor = prefs.edit();
-		
-		editor.putString("permissions", getData());
-		
-		editor.commit();
+		getSharedPreferences().edit().putString("permissions", getData()).apply();
 	}
 	
 	public void loadData() {
-		SharedPreferences prefs = getSharedPreferences(((APDE) getApplicationContext()).getSketchName(), MODE_PRIVATE);
-		setData(prefs.getString("permissions", ""));
+		setData(getSharedPreferences().getString("permissions", ""));
+	}
+	
+	public void loadDataPreviewSettings() {
+		setData(SketchPreviewerBuilder.getInstalledPermissions(this));
+		startData = getData();
+	}
+	
+	public void promptSaveDataPreviewSettings() {
+		if (startData.equals(getData())) {
+			// If the permissions haven't changed, then don't worry about it
+			finish();
+			return;
+		}
+		
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		
+		builder.setTitle(R.string.pref_build_preview_permissions_reinstall_dialog_title);
+		builder.setMessage(R.string.pref_build_preview_permissions_reinstall_dialog_message);
+		
+		builder.setPositiveButton(R.string.pref_build_preview_permissions_reinstall_dialog_button_install, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialogInterface, int i) {
+				previewReinstall();
+			}
+		});
+		
+		builder.setNegativeButton(R.string.pref_build_preview_permissions_reinstall_dialog_button_exit, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialogInterface, int i) {
+				finish();
+			}
+		});
+		
+		builder.setNeutralButton(R.string.cancel, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialogInterface, int i) {}
+		});
+		
+		builder.show();
+	}
+	
+	protected void previewReinstall() {
+		Intent result = new Intent();
+		result.putExtra("permissions", getDataArray());
+		setResult(RESULT_OK, result);
+		finish();
 	}
 	
 	@Override
@@ -234,7 +286,11 @@ public class PermissionsActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch(item.getItemId()) {
             case android.R.id.home:
-            	finish();
+            	if (isPreviewSetttings) {
+            		promptSaveDataPreviewSettings();
+				} else {
+					finish();
+				}
                 return true;
             case R.id.menu_new_permission:
             	newPermission();
@@ -264,13 +320,13 @@ public class PermissionsActivity extends AppCompatActivity {
 		build.setPositiveButton(R.string.create, new android.content.DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) { //TODO let the user customize the prefix and the description
-				saveData();
+				String data = getData();
 				
 				Manifest.addCustomPermission(input.getText().toString(), getResources().getString(R.string.permissions_custom_perm), getApplicationContext());
 				Manifest.sortPermissions();
 				adapter.notifyDataSetChanged();
 				
-				loadData();
+				setData(data);
 		}});
 		build.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
 			public void onClick(DialogInterface dialog, int whichButton) {
@@ -278,7 +334,8 @@ public class PermissionsActivity extends AppCompatActivity {
 		});
 		
 		AlertDialog alert = build.create();
-		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)
+				&& alert.getWindow() != null) {
 			alert.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
 		}
 		alert.show();
@@ -291,10 +348,13 @@ public class PermissionsActivity extends AppCompatActivity {
 			return;
 		}
 		
-		String[] tokens = data.split(",");
-		for (String token : tokens) {
-			int index = token.lastIndexOf(".");
-			checkItem(token.substring(index != -1 ? index + 1 : 0), true);
+		setData(data.split(","));
+	}
+	
+	public void setData(String[] data) {
+		for (String permission : data) {
+			int index = permission.lastIndexOf(".");
+			checkItem(permission.substring(index != -1 ? index + 1 : 0), true);
 		}
 	}
 	
@@ -303,13 +363,28 @@ public class PermissionsActivity extends AppCompatActivity {
 	 */
 	public String getData() {
 		// Combine all values
-		String out = "";
+		StringBuilder out = new StringBuilder();
 		for (int i = 0; i < checked.length; i ++) {
 			if (checked[i]) {
-				out += (Manifest.permissions.get(i)).consumableValue() + ",";
+				out.append((Manifest.permissions.get(i)).consumableValue());
+				out.append(",");
 			}
 		}
 		
+		return out.toString();
+	}
+	
+	public String[] getDataArray() {
+		List<String> permissions = new ArrayList<>();
+		for (int i = 0; i < checked.length; i ++) {
+			if (checked[i]) {
+				permissions.add((Manifest.permissions.get(i)).consumableValue());
+			}
+		}
+		String[] out = new String[permissions.size()];
+		for (int i = 0; i < out.length; i ++) {
+			out[i] = permissions.get(i);
+		}
 		return out;
 	}
 	

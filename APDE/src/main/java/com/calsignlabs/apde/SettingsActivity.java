@@ -39,6 +39,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
+import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.support.CustomListPreference;
 import com.calsignlabs.apde.support.StockPreferenceFragment;
 import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompat;
@@ -166,6 +167,36 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 						((APDE) getApplicationContext()).getEditor().clearUndoRedoHistory();
 					}
 					
+					return true;
+				}
+			});
+		}
+		
+		Preference previewReinstall = frag.findPreference("pref_build_preview_reinstall");
+		Preference previewPermissions = frag.findPreference("pref_build_preview_permissions");
+		Preference previewUninstall = frag.findPreference("pref_build_preview_uninstall");
+		
+		if (previewReinstall != null && previewPermissions != null && previewUninstall != null) {
+			previewReinstall.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					previewReinstall(new String[] {}, false, false);
+					return true;
+				}
+			});
+			
+			previewPermissions.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					launchPreviewPermissions();
+					return true;
+				}
+			});
+			
+			previewUninstall.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					previewUninstall();
 					return true;
 				}
 			});
@@ -363,6 +394,34 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		
 		sketchbookLocation.setEnabled(!(selected.type.equals(APDE.StorageDrive.StorageDriveType.INTERNAL) || selected.type.equals(APDE.StorageDrive.StorageDriveType.SECONDARY_EXTERNAL)));
 		sketchbookDrive.setSummary(selected.space + " " + selected.type.title);
+	}
+	
+	private int PREVIEW_PERMISSIONS = 16;
+	
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		if (requestCode == PREVIEW_PERMISSIONS && resultCode == RESULT_OK && data != null) {
+			String[] permissions = data.getStringArrayExtra("permissions");
+			if (permissions != null) {
+				previewReinstall(permissions, true, true);
+			}
+		}
+	}
+	
+	protected void previewReinstall(String[] permissions, boolean replaceExisting, boolean forceSetPermissions) {
+		APDE global = (APDE) getApplication();
+		global.getTaskManager().launchTask("sketchPreviewBuild", true,this, replaceExisting, new SketchPreviewerBuilder(global.getEditor(), permissions, false, forceSetPermissions));
+	}
+	
+	protected void launchPreviewPermissions() {
+		Intent intent = new Intent(this, PermissionsActivity.class);
+		intent.putExtra("previewSettings", true);
+		startActivityForResult(intent, PREVIEW_PERMISSIONS);
+	}
+	
+	protected void previewUninstall() {
+		Intent uninstallIntent = new Intent(Intent.ACTION_DELETE, Uri.parse("package:com.calsignlabs.apde.sketchpreview"));
+		startActivity(uninstallIntent);
 	}
 	
 	protected void launchLicenses() {

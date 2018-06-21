@@ -477,13 +477,7 @@ public class Build {
 							builder.setPositiveButton(R.string.preview_sketch_previewer_install_dialog_install_button, new DialogInterface.OnClickListener() {
 								@Override
 								public void onClick(DialogInterface dialogInterface, int i) {
-									(new Thread(new Runnable() {
-										@Override
-										public void run() {
-											// Make the sketch previewer APK and install it
-											(new SketchPreviewerBuilder(editor, sketchPermissions)).build();
-										}
-									})).start();
+									editor.getGlobalState().getTaskManager().launchTask("sketchPreviewBuild", false,null, false, new SketchPreviewerBuilder(editor, sketchPermissions, true, false));
 								}
 							});
 							builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {

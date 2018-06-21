@@ -105,6 +105,15 @@
 	<string name="pref_inject_log_broadcaster">Inject Log Broadcaster</string>
 	<string name="pref_inject_log_broadcaster_desc">Allows console to display sketch output</string>
 	
+	<string name="pref_build_preview">Preview Mode</string>
+	<string name="pref_build_preview_permissions">Change Previewer Permissions</string>
+	<string name="pref_build_preview_permissions_reinstall_dialog_title">Reinstall Sketch Previewer</string>
+	<string name="pref_build_preview_permissions_reinstall_dialog_message">Reinstall sketch previewer app to update its permissions. Exiting will discard changes.</string>
+	<string name="pref_build_preview_permissions_reinstall_dialog_button_install">Install</string>
+	<string name="pref_build_preview_permissions_reinstall_dialog_button_exit">Exit</string>
+	<string name="pref_build_preview_reinstall">Reinstall Sketch Previewer</string>
+	<string name="pref_build_preview_uninstall">Uninstall Sketch Previewer</string>
+	
 	<string name="pref_vr">VR</string>
 	<string name="pref_vr_default_renderer">Default VR Renderer</string>
 	<string-array name="pref_vr_default_renderer_entries">

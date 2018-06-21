@@ -401,4 +401,5 @@
 	<string name="preview_sketch_previewer_install_dialog_title">Install Sketch Previewer</string>
 	<string name="preview_sketch_previewer_install_dialog_message">Install sketch previewer APK once to preview sketches without installing forever.\n\nNote: Must re-install to grant previewer new permissions.</string>
 	<string name="preview_sketch_previewer_install_dialog_install_button">Install</string>
+	<string name="task_install_sketch_previewer">Install Sketch Previewer</string>
 </resources>

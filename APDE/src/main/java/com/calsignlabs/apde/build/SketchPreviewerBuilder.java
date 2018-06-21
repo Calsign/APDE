@@ -12,6 +12,7 @@ import android.view.inputmethod.InputMethodManager;
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.task.Task;
 
 import org.xml.sax.SAXException;
 
@@ -32,16 +33,21 @@ import processing.data.XML;
  * Utility for building the sketch preview APK and installing it. Very similar to Build.java, but
  * much more streamlined (and better-implemented IMO).
  */
-public class SketchPreviewerBuilder {
+public class SketchPreviewerBuilder extends Task {
 	protected EditorActivity editor;
 	protected String[] permissions;
 	
-	public SketchPreviewerBuilder(EditorActivity editor, String[] permissions) {
+	private boolean launchSketch;
+	private boolean forceSetPermissions;
+	
+	public SketchPreviewerBuilder(EditorActivity editor, String[] permissions, boolean launchSketch, boolean forceSetPermissions) {
 		this.editor = editor;
 		this.permissions = permissions;
+		this.launchSketch = launchSketch;
+		this.forceSetPermissions = forceSetPermissions;
 	}
 	
-	protected static String[] getInstalledPermissions(Context context) {
+	public static String[] getInstalledPermissions(Context context) {
 		String[] permissions = null;
 		try {
 			permissions = context.getPackageManager().getPackageInfo("com.calsignlabs.apde.sketchpreview", PackageManager.GET_PERMISSIONS).requestedPermissions;
@@ -117,25 +123,27 @@ public class SketchPreviewerBuilder {
 		inputStream.close();
 	}
 	
-	public void build() {
+	@Override
+	public void run() throws InterruptedException {
 		// Below is the entire build/install sequence
 		try {
-			System.out.println(editor.getResources().getString(R.string.preview_build_copying_preview_build_directory));
+			postStatus(R.string.preview_build_copying_preview_build_directory);
 			copyPreviewBuild();
-			System.out.println(editor.getResources().getString(R.string.preview_build_copying_android_jar));
+			postStatus(R.string.preview_build_copying_android_jar);
 			copyAndroidJar();
-			System.out.println(editor.getResources().getString(R.string.preview_build_setting_manifest_permissions));
+			postStatus(R.string.preview_build_setting_manifest_permissions);
 			setManifestPermissions();
-			System.out.println(editor.getResources().getString(R.string.preview_build_setting_up_aapt));
+			postStatus(R.string.preview_build_setting_up_aapt);
 			setupAapt();
-			System.out.println(editor.getResources().getString(R.string.preview_build_running_aapt));
+			postStatus(R.string.preview_build_running_aapt);
 			buildApk();
 			addClassesDex();
-			System.out.println(editor.getResources().getString(R.string.preview_build_signing_apk));
+			postStatus(R.string.preview_build_signing_apk);
 			signApk();
-			System.out.println(editor.getResources().getString(R.string.preview_build_installing_apk));
+			postStatus(R.string.preview_build_installing_apk);
 			installApk();
 		} catch (BuildFailedException e) {
+			postStatus(R.string.preview_build_failure);
 			System.err.println(editor.getResources().getString(R.string.preview_build_failure));
 		}
 	}
@@ -172,12 +180,15 @@ public class SketchPreviewerBuilder {
 				existingPermissions.add(perm.getString("android:name"));
 			}
 			
-			// Load permissions that were installed previously
-			for (String name : getInstalledPermissions(editor)) {
-				if (!existingPermissions.contains(name)) {
-					XML newbie = xml.addChild("uses-permission");
-					newbie.setString("android:name", name);
-					existingPermissions.add(name);
+			// Force set means potentially wiping the ones that were there previously
+			if (!forceSetPermissions) {
+				// Load permissions that were installed previously
+				for (String name : getInstalledPermissions(editor)) {
+					if (!existingPermissions.contains(name)) {
+						XML newbie = xml.addChild("uses-permission");
+						newbie.setString("android:name", name);
+						existingPermissions.add(name);
+					}
 				}
 			}
 			
@@ -215,7 +226,7 @@ public class SketchPreviewerBuilder {
 		}
 	}
 	
-	protected void buildApk() throws BuildFailedException {
+	protected void buildApk() throws BuildFailedException, InterruptedException {
 		// Not sure if the appcompat stuff is necessary, but it doesn't hurt
 		String[] args = {
 				getAaptFile().getAbsolutePath(),
@@ -232,7 +243,7 @@ public class SketchPreviewerBuilder {
 		runAapt(args);
 	}
 	
-	protected void addClassesDex() throws BuildFailedException {
+	protected void addClassesDex() throws BuildFailedException, InterruptedException {
 		// -k is needed to ignore the path of classes.dex, otherwise the entire file structure
 		// gets replicated within the apk and that is bad news for everyone
 		String[] args = {
@@ -245,7 +256,7 @@ public class SketchPreviewerBuilder {
 		runAapt(args);
 	}
 	
-	protected void runAapt(String[] args) throws BuildFailedException {
+	protected void runAapt(String[] args) throws BuildFailedException, InterruptedException {
 		// Runs AAPT with the provided set of arguments - we use this twice
 		
 		boolean verbose = PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_debug_global_verbose_output", false);
@@ -268,7 +279,7 @@ public class SketchPreviewerBuilder {
 			if (code != 0) {
 				throw new BuildFailedException();
 			}
-		} catch (IOException | InterruptedException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 			throw new BuildFailedException();
 		}
@@ -313,11 +324,20 @@ public class SketchPreviewerBuilder {
 		InputMethodManager imm = (InputMethodManager) editor.getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(editor.findViewById(R.id.content).getWindowToken(), 0);
 		
-		editor.startActivityForResult(promptInstall, EditorActivity.FLAG_RUN_PREVIEW);
+		if (launchSketch) {
+			editor.startActivityForResult(promptInstall, EditorActivity.FLAG_RUN_PREVIEW);
+		} else {
+			editor.startActivity(promptInstall);
+		}
 	}
 	
 	/**
 	 * An exception indicating that the build has failed.
 	 */
 	protected static class BuildFailedException extends Exception {}
+	
+	@Override
+	public CharSequence getTitle() {
+		return editor.getString(R.string.task_install_sketch_previewer);
+	}
 }

@@ -35,7 +35,7 @@ public class TaskManager {
 	 * @param task the task
 	 */
 	public void launchTask(String tag, boolean foreground, Activity activityContext, boolean replaceExisting, Task task) {
-		if (containsTask(tag)) {
+		if (containsTask(tag) && getTask(tag).isRunning()) {
 			if (replaceExisting) {
 				unregisterTask(tag);
 			} else {
@@ -60,7 +60,7 @@ public class TaskManager {
 	}
 	
 	public void registerTask(String tag, Task task) {
-		if (tasks.containsKey(tag)) {
+		if (containsTask(tag) && getTask(tag).isRunning()) {
 			//That's a no-no
 			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.task_register_fail_duplicate_tag), tag));
 			return;
@@ -123,6 +123,8 @@ public class TaskManager {
 			return;
 		}
 		
+		task.setContext(context);
+		
 		Thread taskThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -130,9 +132,11 @@ public class TaskManager {
 					task.start();
 					task.run();
 					task.stop();
+				} catch (InterruptedException e) {
+					// Do nothing
 				} catch (Exception e) {
 					e.printStackTrace();
-					
+				} finally {
 					//Try to close resources...
 					try {
 						task.stop();
