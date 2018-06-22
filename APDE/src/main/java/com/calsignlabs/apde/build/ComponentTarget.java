@@ -70,6 +70,8 @@ public enum ComponentTarget {
 			case 4: return PREVIEW;
 		}
 		
-		return null;
+		// Default to app
+		// Maybe not the best thing, but fixes crashes when downgrading
+		return APP;
 	}
 }
