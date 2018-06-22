@@ -67,6 +67,8 @@ public enum ComponentTarget {
 			case 3: return VR;
 		}
 		
-		return null;
+		// Default to app
+		// Maybe not the best thing, but fixes crashes when downgrading
+		return APP;
 	}
 }
