@@ -119,6 +119,22 @@ public class PreviewActivity extends AppCompatActivity {
 		}
 	}
 	
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		if (sketch != null) {
+			sketch.onActivityResult(requestCode, resultCode, data);
+		}
+	}
+	
+	@Override
+	public void onBackPressed() {
+		if (sketch != null) {
+			sketch.onBackPressed();
+			if (sketch.handledBackPressed) return;
+		}
+		super.onBackPressed();
+	}
+	
 	private void setOrientation(String orientation) {
 		// Set correct orientation
 		int orientationConst;

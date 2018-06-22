@@ -201,7 +201,7 @@ public class SketchPreviewerBuilder extends Task {
 				}
 			}
 			
-			xml.save(getManifestFile());
+			xml.save(getManifestFile(), "");
 		} catch (IOException | ParserConfigurationException | SAXException e) {
 			e.printStackTrace();
 			throw new BuildFailedException();
