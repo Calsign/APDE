@@ -1,3 +1,18 @@
+v0.5.0-pre3 Alpha
+
+ - Watch face sketches!
+ - Improved VR support: mono (magic window) mode and Daydream headsets
+ - Updated examples
+ - Many bugs fixed
+
+Note: To run watch faces, you must install the APDE Wear Companion app
+from the Play Store on the watch.
+
+As before, check out the previous release notes if you have not yet
+done so.
+
+------------------------------------------------------------------------
+
 v0.5.0-pre2 Alpha
 
  - VR sketches!

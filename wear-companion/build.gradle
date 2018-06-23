@@ -7,7 +7,7 @@ android {
         applicationId "com.calsignlabs.apde"
         minSdkVersion 23
         targetSdkVersion 27
-        versionCode 1
+        versionCode 25
         versionName "1.0"
     }
     buildTypes {

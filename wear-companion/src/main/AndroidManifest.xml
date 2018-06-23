@@ -4,6 +4,7 @@
 	package="com.calsignlabs.apde.wearcompanion">
 	
 	<uses-feature android:name="android.hardware.type.watch"/>
+	<uses-feature android:name="android.hardware.microphone" android:required="false"/>
 	
 	<uses-permission android:name="android.permission.WAKE_LOCK" />
 	

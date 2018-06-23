@@ -1,5 +1,7 @@
 aFileChooser/build/**
 APDE/build/**
+wear-companion/build/**
+sketch-preview/build/**
 build/**
 .gradle/
 .idea
@@ -11,5 +13,5 @@ gradle/
 *.log
 local.properties
 *.iml
-gradlew.bat
 gradlew
+gradlew.bat
