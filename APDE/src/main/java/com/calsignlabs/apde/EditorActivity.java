@@ -65,6 +65,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.calsignlabs.apde.build.Build;
+import com.calsignlabs.apde.build.CompilerProblem;
 import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.Manifest;
@@ -163,8 +164,37 @@ public class EditorActivity extends AppCompatActivity {
 	//Whether or not we are currently building a sketch
 	private boolean building;
 	
+	/**
+	 * Type of message displayed in the message bar - message, error, or warning.
+	 */
+	protected enum MessageType {
+		MESSAGE, ERROR, WARNING;
+		
+		public String serialize() {
+			return toString();
+		}
+		
+		public static MessageType deserialize(String serialized) {
+			switch (serialized) {
+				case "MESSAGE":
+					return MESSAGE;
+				case "ERROR":
+					return ERROR;
+				case "WARNING":
+					return WARNING;
+				// Compatibility - fixes problems when upgrading from older versions of APDE
+				case "true":
+					return ERROR;
+				case "false":
+					return MESSAGE;
+				default:
+					return MESSAGE;
+			}
+		}
+	}
+	
 	//Whether or not the message area is currently displaying an error message
-	private boolean errorMessage = false;
+	private MessageType messageType = MessageType.MESSAGE;
 	
 	//Whether or not the special character inserts tray is currently visible
 	private boolean charInserts = false;
@@ -300,7 +330,13 @@ public class EditorActivity extends AppCompatActivity {
 		codeTabStrip.setSelectedTabIndicatorHeight((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, getResources().getDisplayMetrics()));
 		codeTabStrip.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
 			@Override
-			public void onTabSelected(TabLayout.Tab tab) {}
+			public void onTabSelected(TabLayout.Tab tab) {
+				// If there are problems displayed, then we might want to switch the one visible in
+				// the message area when we switch tabs
+				if (getSelectedCodeArea() != null) {
+					getSelectedCodeArea().updateCursorCompilerProblem();
+				}
+			}
 			
 			@Override
 			public void onTabUnselected(TabLayout.Tab tab) {}
@@ -579,15 +615,23 @@ public class EditorActivity extends AppCompatActivity {
 							console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
 						}
 						
-						//Remove the focus from the Message slider if it has it and maintain styling
-						if (errorMessage) {
-							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
-							buffer.setBackgroundColor(getResources().getColor(R.color.error_back));
-							messageArea.setTextColor(getResources().getColor(R.color.error_text));
-						} else {
-							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
-							buffer.setBackgroundColor(getResources().getColor(R.color.message_back));
-							messageArea.setTextColor(getResources().getColor(R.color.message_text));
+						// Remove the focus from the Message slider if it has it and maintain styling
+						switch (messageType) {
+							case MESSAGE:
+								buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
+								buffer.setBackgroundColor(getResources().getColor(R.color.message_back));
+								messageArea.setTextColor(getResources().getColor(R.color.message_text));
+								break;
+							case ERROR:
+								buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
+								buffer.setBackgroundColor(getResources().getColor(R.color.error_back));
+								messageArea.setTextColor(getResources().getColor(R.color.error_text));
+								break;
+							case WARNING:
+								buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_warning));
+								buffer.setBackgroundColor(getResources().getColor(R.color.warning_back));
+								messageArea.setTextColor(getResources().getColor(R.color.warning_text));
+								break;
 						}
 						
 						CodeEditText codeArea = getSelectedCodeArea();
@@ -956,7 +1000,7 @@ public class EditorActivity extends AppCompatActivity {
 			outState.putInt("consoleScrollPos", consoleScroller.getScrollY());
 			outState.putInt("consoleScrollPosX", consoleScrollerX.getScrollX());
 			outState.putString("messageText", messageArea.getText().toString());
-			outState.putBoolean("messageIsError", errorMessage);
+			outState.putString("messageIsError", messageType.serialize());
 		} catch (Exception e) {
 			// Just to be safe
 			e.printStackTrace();
@@ -983,7 +1027,7 @@ public class EditorActivity extends AppCompatActivity {
 				final int consoleScrollPos = savedInstanceState.getInt("consoleScrollPos");
 				final int consoleScrollPosX = savedInstanceState.getInt("consoleScrollPosX");
 				String messageText = savedInstanceState.getString("messageText");
-				boolean messageIsError = savedInstanceState.getBoolean("messageIsError");
+				MessageType msgType = MessageType.deserialize(savedInstanceState.getString("messageIsError"));
 				
 				TextView console = (TextView) findViewById(R.id.console);
 				final ScrollView consoleScroller = (ScrollView) findViewById(R.id.console_scroller);
@@ -996,10 +1040,16 @@ public class EditorActivity extends AppCompatActivity {
 					
 					// This doesn't actually work in practice because the text is always
 					// replaced with "The sketch has been saved"...
-					if (messageIsError) {
-						error(messageText);
-					} else {
-						message(messageText);
+					switch (msgType) {
+						case MESSAGE:
+							message(messageText);
+							break;
+						case ERROR:
+							error(messageText);
+							break;
+						case WARNING:
+							warning(messageText);
+							break;
 					}
 					
 					console.post(new Runnable() {
@@ -2704,7 +2754,7 @@ public class EditorActivity extends AppCompatActivity {
 		
 		View sep = findViewById(R.id.toggle_char_inserts_separator);
 		
-		toggleCharInserts.setImageResource(errorMessage ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_right_black);
+		toggleCharInserts.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_right_black);
 //		((TextView) findViewById(R.id.message)).setVisibility(View.GONE);
 //		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.VISIBLE);
 		
@@ -2735,7 +2785,7 @@ public class EditorActivity extends AppCompatActivity {
 		
 		View sep = findViewById(R.id.toggle_char_inserts_separator);
 	
-		toggleCharInserts.setImageResource(errorMessage ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
+		toggleCharInserts.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
 		
 		int total = buffer.getWidth() - sep.getWidth() - toggleCharInserts.getWidth();
 		
@@ -2755,7 +2805,7 @@ public class EditorActivity extends AppCompatActivity {
 		TextView messageView = (TextView) findViewById(R.id.message);
 		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
 		
-		toggleCharInserts.setImageResource(errorMessage ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
+		toggleCharInserts.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
 		messageView.setVisibility(View.VISIBLE);
 		charInsertTray.setVisibility(View.GONE);
 		
@@ -2794,7 +2844,7 @@ public class EditorActivity extends AppCompatActivity {
     	for(final String c : chars) {
     		Button button = (Button) LayoutInflater.from(this).inflate(R.layout.char_insert_button, null);
     		button.setText(c);
-    		button.setTextColor(getResources().getColor(errorMessage ? R.color.char_insert_button_light : R.color.char_insert_button));
+    		button.setTextColor(getResources().getColor(messageType != MessageType.MESSAGE ? R.color.char_insert_button_light : R.color.char_insert_button));
     		button.setLayoutParams(new LinearLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 25, getResources().getDisplayMetrics()), message));
     		button.setPadding(0, 0, 0, 0);
     		
@@ -2972,16 +3022,12 @@ public class EditorActivity extends AppCompatActivity {
      * @param msg
      */
     public void message(String msg) {
-    	//Write the message
+    	// Write the message
     	((TextView) findViewById(R.id.message)).setText(msg);
-    	
     	colorMessageAreaMessage();
-    	
-    	errorMessage = false;
-    	
-    	//Update message area height
+    	messageType = MessageType.MESSAGE;
+    	// Update message area height
     	correctMessageAreaHeight();
-    	
     	hideCharInsertsNoAnimation();
     }
     
@@ -2994,17 +3040,7 @@ public class EditorActivity extends AppCompatActivity {
     public void messageExt(final String msg) {
     	runOnUiThread(new Runnable() {
 			public void run() {
-				//Write the message
-				((TextView) findViewById(R.id.message)).setText(msg);
-
-				colorMessageAreaMessage();
-
-				errorMessage = false;
-
-				//Update message area height
-				correctMessageAreaHeight();
-
-				hideCharInsertsNoAnimation();
+				message(msg);
 			}
 		});
     }
@@ -3025,16 +3061,12 @@ public class EditorActivity extends AppCompatActivity {
      * @param msg
      */
     public void error(String msg) {
-    	//Write the error message
+    	// Write the error message
     	((TextView) findViewById(R.id.message)).setText(msg);
-    	
     	colorMessageAreaError();
-    	
-    	errorMessage = true;
-    	
-    	//Update message area height
+    	messageType = MessageType.ERROR;
+    	// Update message area height
     	correctMessageAreaHeight();
-    	
     	hideCharInsertsNoAnimation();
     }
     
@@ -3047,17 +3079,7 @@ public class EditorActivity extends AppCompatActivity {
     public void errorExt(final String msg) {
     	runOnUiThread(new Runnable() {
 			public void run() {
-				//Write the error message
-				((TextView) findViewById(R.id.message)).setText(msg);
-
-				colorMessageAreaError();
-
-				errorMessage = true;
-
-				//Update message area height
-				correctMessageAreaHeight();
-
-				hideCharInsertsNoAnimation();
+				error(msg);
 			}
 		});
     }
@@ -3071,6 +3093,25 @@ public class EditorActivity extends AppCompatActivity {
     public void error(CharSequence msg) {
     	error(msg.toString());
     }
+    
+    public void warning(String msg) {
+		// Write the warning message
+		((TextView) findViewById(R.id.message)).setText(msg);
+		colorMessageAreaWarning();
+		messageType = MessageType.WARNING;
+		// Update message area height
+		correctMessageAreaHeight();
+		hideCharInsertsNoAnimation();
+	}
+	
+	public void warningExt(final String msg) {
+    	runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				warning(msg);
+			}
+		});
+	}
     
     //Utility function for switching to message-style message area
 	protected void colorMessageAreaMessage() {
@@ -3109,6 +3150,25 @@ public class EditorActivity extends AppCompatActivity {
     		((Button) charInsertTrayList.getChildAt(i)).setTextColor(getResources().getColor(R.color.char_insert_button_light));
     	}
     }
+	
+	//Utility function for switching to warning-style message area
+	protected void colorMessageAreaWarning() {
+		//Change the message area style
+		((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.warning_back));
+		((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.warning_text));
+		
+		//Update the toggle button
+		toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_left_white);
+		
+		//Update the separator line
+		findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator_light));
+		
+		//Update the buttons in the character insert tray
+		LinearLayout charInsertTrayList = (LinearLayout) findViewById(R.id.char_insert_tray_list);
+		for(int i = 0; i < charInsertTrayList.getChildCount(); i ++) {
+			((Button) charInsertTrayList.getChildAt(i)).setTextColor(getResources().getColor(R.color.char_insert_button_light));
+		}
+	}
     
     // Called internally to correct issues with 2-line messages vs 1-line messages (and maybe some other issues)
     protected void correctMessageAreaHeight() {
@@ -3252,6 +3312,45 @@ public class EditorActivity extends AppCompatActivity {
 			}
 		});
     }
+	
+	/**
+	 * Update the list of compiler problems displayed for the current sketch. Called by build upon
+	 * the completion of ECJ.
+	 *
+	 * @param problems
+	 */
+	public void showProblems(CompilerProblem[] problems) {
+    	// Don't show error in message bar for examples
+    	if (!getGlobalState().isExample()) {
+			// We want to show errors before warnings
+			// If there is an error, then show it, otherwise just show the first warning
+
+			CompilerProblem firstError = null;
+			int problemIndex = 0;
+			while (firstError == null && problemIndex < problems.length) {
+				if (problems[problemIndex].isError()) {
+					firstError = problems[problemIndex];
+				}
+				problemIndex++;
+			}
+
+			if (firstError != null) {
+				// We have an error
+				errorExt(firstError.getMessage());
+			} else if (problems.length > 0) {
+				// We have at least one warning
+				warningExt(problems[0].getMessage());
+			}
+		}
+		
+		for (SketchFile sketchFile : getSketchFiles()) {
+    		// Each SketchFile figures out which problems it needs, so just give them every problem
+    		sketchFile.setCompilerProblems(problems);
+    		if (sketchFile.getFragment() != null && sketchFile.getFragment().getCodeEditText() != null) {
+    			sketchFile.getFragment().getCodeEditText().invalidate();
+			}
+		}
+	}
 	
 	protected void addTabWithoutPagerUpdate(SketchFile sketchFile) {
 		tabs.add(sketchFile);
@@ -4037,13 +4136,19 @@ public class EditorActivity extends AppCompatActivity {
 					LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
 					TextView messageArea = (TextView) findViewById(R.id.message);
 					
-					// Change the message area drawable and maintain styling
-					if(errorMessage) {
-						buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
-						messageArea.setTextColor(getResources().getColor(R.color.error_text));
-					} else {
-						buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
-						messageArea.setTextColor(getResources().getColor(R.color.message_text));
+					switch (messageType) {
+						case MESSAGE:
+							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
+							messageArea.setTextColor(getResources().getColor(R.color.message_text));
+							break;
+						case ERROR:
+							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
+							messageArea.setTextColor(getResources().getColor(R.color.error_text));
+							break;
+						case WARNING:
+							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_warning));
+							messageArea.setTextColor(getResources().getColor(R.color.warning_text));
+							break;
 					}
 					
 					return true;
@@ -4066,12 +4171,19 @@ public class EditorActivity extends AppCompatActivity {
 			TextView messageArea = (TextView) findViewById(R.id.message);
 			
 			// Change the message area drawable and maintain styling
-			if(errorMessage) {
-				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error_selected));
-				messageArea.setTextColor(getResources().getColor(R.color.error_text));
-			} else {
-				buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_selected));
-				messageArea.setTextColor(getResources().getColor(R.color.message_text));
+			switch (messageType) {
+				case MESSAGE:
+					buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_selected));
+					messageArea.setTextColor(getResources().getColor(R.color.message_text));
+					break;
+				case ERROR:
+					buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error_selected));
+					messageArea.setTextColor(getResources().getColor(R.color.error_text));
+					break;
+				case WARNING:
+					buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_warning_selected));
+					messageArea.setTextColor(getResources().getColor(R.color.warning_text));
+					break;
 			}
 			
 			// Provide haptic feedback (if the user has vibrations enabled)

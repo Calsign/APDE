@@ -30,9 +30,8 @@ import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.contrib.Library;
-import com.jcraft.jsch.IO;
 
-import org.eclipse.jdt.internal.compiler.batch.Main;
+import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.BufferedInputStream;
@@ -43,6 +42,7 @@ import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -53,6 +53,8 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.security.Security;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -522,7 +524,7 @@ public class Build {
 				combinedText += tab.getText();
 			SurfaceInfo surfaceInfo = preproc.initSketchSize(combinedText, editor, getAppComponent());
 			preproc.initSketchSmooth(combinedText, editor);
-			sketchClassName = preprocess(srcFolder, packageName, preproc, false);
+			sketchClassName = preprocess(srcFolder, packageName, preproc);
 			
 			//Detect if the renderer is one of the OpenGL renderers
 			//XTODO support custom renderers that require OpenGL or... other problems that may arise
@@ -927,7 +929,11 @@ public class Build {
 		{
 			System.out.println(editor.getResources().getString(R.string.build_compiling_ecj));
 			
-			Main main = new Main(new PrintWriter(System.out), new PrintWriter(System.err), false, null, null);
+			// TODO make setting for this
+			boolean customProblems = true;
+			
+			Compiler compiler = new Compiler(customProblems);
+			
 			String[] args = {
 				(verbose ? "-verbose"
 						: "-warn:-unusedImport"), // Disable warning for unused imports (the preprocessor gives us a lot of them, so this is just a lot of noise)
@@ -948,14 +954,26 @@ public class Build {
 				System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_compiling_file), srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java"));
 			}
 			
-			if(main.compile(args)) {
+			boolean success = compiler.compile(args);
+			
+			if (customProblems) {
+				CompilerProblem[] compilerProblems = loadProblemArgsFromJavaFile(compiler.getProblems(), manifest.getPackageName());
+				editor.showProblems(compilerProblems);
+			}
+			
+			if (success) {
 				System.out.println();
 			} else {
 				//We have some compilation errors
 				System.out.println();
 				System.out.println(editor.getResources().getString(R.string.build_ecj_failed));
 				
-				cleanUpError();
+				if (customProblems) {
+					// Don't show the "build failed" message, show the ECJ error message
+					cleanUp();
+				} else {
+					cleanUpError();
+				}
 				return;
 			}
 		}
@@ -1492,13 +1510,119 @@ public class Build {
 		Pattern p = Pattern.compile(regexp, Pattern.MULTILINE | Pattern.DOTALL);
 		Matcher m = p.matcher(code);
 		if (m.find()) {
-			return code.substring(0, m.start()) + code.substring(m.end());
+			// Remove size and replace it with a multiline comment /*   */
+			// This is so that the javaOffset flag doesn't get messed up
+			
+			StringBuilder outputCode = new StringBuilder();
+			outputCode.append(code.substring(0, m.start()));
+			outputCode.append("/*");
+			// OK to assume at least 4 (which is required for /**/) because size is 4 characters long
+			for (int i = 0; i < m.group().length() - 4; i ++) {
+				outputCode.append(' ');
+			}
+			outputCode.append("*/");
+			outputCode.append(code.substring(m.end()));
+			return outputCode.toString();
 		} else {
 			return code;
 		}
 	}
 	
-	public String preprocess(File srcFolder, String packageName, PdePreprocessor preprocessor, boolean sizeWarning) throws SketchException {
+	/**
+	 * Given a list of ECJ CategorizedProblems, check the compiled JAVA file to find the highlighted
+	 * text and extract that text so that we can highlight it in APDE. We need to do this because
+	 * the positions do not align due the proprocessor. It adds things like "public" to functions
+	 * and "f" to floats, which just mess everything up.
+	 *
+	 * @param problems
+	 */
+	protected CompilerProblem[] loadProblemArgsFromJavaFile(List<CategorizedProblem> problems, String packageName) {
+		CompilerProblem[] compilerProblems = new CompilerProblem[problems.size()];
+		
+		File outputFolder = (packageName == null) ? srcFolder : new File(srcFolder, packageName.replace('.', '/'));
+		File javaFile = new File(outputFolder, sketchName + ".java");
+		
+		BufferedReader reader = null;
+		
+		// Sort by start position. This may not be necessary, but just for sanity
+		Collections.sort(problems, new Comparator<CategorizedProblem>() {
+			@Override
+			public int compare(CategorizedProblem a, CategorizedProblem b) {
+				return a.getSourceStart() - b.getSourceStart();
+			}
+		});
+		
+		try {
+			reader = new BufferedReader(new FileReader(javaFile));
+			
+			int problem = 0, charCount = 0, start, end;
+			String line;
+			while ((line = reader.readLine()) != null && problem < problems.size()) {
+				// Could be multiple problems in one line
+				while (problem < problems.size()) {
+					// Have we reached the line with the problem yet?
+					if (charCount + line.length() + 1 > problems.get(problem).getSourceStart()) {
+						// Get the value from the line
+						start = Math.max(problems.get(problem).getSourceStart() - charCount, 0);
+						end = Math.min(problems.get(problem).getSourceEnd() + 1 - charCount, line.length());
+						// Sanity
+						if (start >= 0 && start <= line.length() && end >= 0 && end <= line.length()) {
+							String arg = line.substring(start, end);
+							compilerProblems[problem] = new CompilerProblem(
+									problems.get(problem).getSourceLineNumber(),
+									findPosInLine(line, arg, start),
+									arg,
+									problems.get(problem).isError(),
+									problems.get(problem).getMessage());
+						}
+						problem++;
+					} else {
+						break;
+					}
+				}
+				charCount += line.length() + 1; // extra 1 is for newline character
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (reader != null) {
+				try {
+					reader.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		return compilerProblems;
+	}
+	
+	/**
+	 * Find the position of the text in the line. If there is only one occurence of text in line,
+	 * then the position is 0. If there are more than one, then the position is the relative
+	 * position of the instance of text at start, such that the second is 1, the third is 2, etc.
+	 *
+	 * TODO fix this problem:
+	 * This will break if the token to search for is "public" and the line is a function definition
+	 * because the preprocessor adds "public" in this case. There are probably other examples.
+	 * Hopefully this won't be a big issue, but it is still something to be aware of. Currently,
+	 * this case results in the SketchFile being unable to find the token in the line and resorting
+	 * to highlighting the entire line - not a terrible failure but still non-ideal.
+	 *
+	 * @param line
+	 * @param text
+	 * @param start
+	 * @return
+	 */
+	private int findPosInLine(String line, String text, int start) {
+		int posInLine = -1, index = -1;
+		while (index < start && (index = line.indexOf(text, index + 1)) != -1) {
+			posInLine ++;
+		}
+		return posInLine;
+	}
+	
+	public String preprocess(File srcFolder, String packageName, PdePreprocessor preprocessor) throws SketchException {
 		if(getSketchFolder().exists());
 		
 		classPath = binFolder.getAbsolutePath();
@@ -1524,13 +1648,16 @@ public class Build {
 		// store line number for starting point of each code bit
 		
 		StringBuilder bigCode = new StringBuilder();
-		int bigCount = 0;
+		int totalLines = 0;
 		for(SketchFile meta : tabs) {
 			if(meta.getSuffix().equals(".pde")) {
-				meta.setPreprocOffset(bigCount);
-				bigCode.append(meta.getText());
+				meta.setPreprocOffset(totalLines);
+				// This replace \r\n -> \n seems to magically fix a bunch of problems with the
+				// ECJ error highlighter. I haven't found any unintended side-effects yet.
+				// TODO should be do this earlier on when we load the file?
+				bigCode.append(meta.getText().replace("\r\n", "\n"));
 				bigCode.append("\n");
-				bigCount += numLines(meta.getText());
+				totalLines += numLines(meta.getText());
 			}
 		}
 		
@@ -1546,6 +1673,12 @@ public class Build {
 				result = preprocessor.write(stream, combinedCode, codeFolderPackages == null ? null : new StringList(codeFolderPackages));
 			} finally {
 				stream.close();
+			}
+			
+			// Account for the heading offset
+			for (SketchFile sketchFile : tabs) {
+				// + 1 because there is an extra newline in there at the top
+				sketchFile.setJavaOffset(sketchFile.getPreprocOffset() + result.headerOffset + 1);
 			}
 		} catch (FileNotFoundException fnfe) {
 			fnfe.printStackTrace();
@@ -1785,8 +1918,8 @@ public class Build {
 	private int numLines(String input) {
 		int count = 1;
 		
-		for(int i = 0; i < input.length(); i ++)
-			if(input.charAt(i) == '\n')
+		for (int i = 0; i < input.length(); i ++)
+			if (input.charAt(i) == '\n')
 				count ++;
 		
 		return count;

@@ -166,6 +166,8 @@ public class CodeAreaFragment extends Fragment {
 		codeScroller = (ScrollView) getView().findViewById(R.id.code_scroller);
 		codeScrollerX = (HorizontalScrollView) getView().findViewById(R.id.code_scroller_x);
 		
+		code.setSketchFile(sketchFile);
+		
 		getGlobalState().writeCodeDeletionDebugStatus("fragment onActivityCreated()");
 	}
 	
