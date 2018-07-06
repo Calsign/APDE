@@ -4,7 +4,7 @@
     
     <item
         android:id="@+id/menu_run"
-        android:icon="@drawable/ic_run_white"
+        app:actionLayout="@layout/action_run_stop"
         app:showAsAction="ifRoom"
         android:title="@string/editor_menu_run_sketch" />
 	<item
