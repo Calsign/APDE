@@ -1539,7 +1539,7 @@ public class APDE extends Application {
 				AutoFormat.PACKAGE_NAME, ImportLibrary.PACKAGE_NAME,
 				ManageLibraries.PACKAGE_NAME, ColorSelector.PACKAGE_NAME,
 				CommentUncomment.PACKAGE_NAME, IncreaseIndent.PACKAGE_NAME, DecreaseIndent.PACKAGE_NAME,
-				ExportGradleProject.PACKAGE_NAME, ExportSignedPackage.PACKAGE_NAME,
+				/*ExportGradleProject.PACKAGE_NAME,*/ ExportSignedPackage.PACKAGE_NAME,
 				FindInReference.PACKAGE_NAME, OpenReference.PACKAGE_NAME,
 				GitManager.PACKAGE_NAME, FindReplace.PACKAGE_NAME,
 				UninstallSketch.PACKAGE_NAME, ManageWallpapers.PACKAGE_NAME
