@@ -1,47 +1,19 @@
-v0.5.0-pre3 Alpha
+v0.5.0 Alpha
 
- - Watch face sketches!
- - Improved VR support: mono (magic window) mode and Daydream headsets
- - Updated examples
- - Many bugs fixed
-
-Note: To run watch faces, you must install the APDE Wear Companion app
-from the Play Store on the watch.
-
-As before, check out the previous release notes if you have not yet
-done so.
-
-------------------------------------------------------------------------
-
-v0.5.0-pre2 Alpha
-
- - VR sketches!
- - Fix startup crash
- - Export signed package for all targets
-
-Note: Processing's VR target supports the Google VR platform, which
-includes Daydream and Cardboard.
-
-Check out the v0.5.0-pre1 release notes if you have not done so already.
-
-------------------------------------------------------------------------
-
-v0.5.0-pre1 Alpha
-
- - Live wallpapers!
+ - Run sketches targeting wallpapers, watch faces, and VR!
+   - Change targets by pressing the new button next to the run button
  - Update to Android mode 4.0
- - Support for recent Java APIs
+ - Lots of bug fixes
 
-To build a live wallpaper, press the new button to the right of the run
-button. This lets you switch targets (currently app and wallpaper).
-Watchface and VR targets are planned, just like in desktop Android mode.
+Notes:
 
-These new features are driven by Google Summer of Code 2018. A big
-shout-out to Google and the Processing Foundation for sponsoring APDE
-this summer. Many more cool things are coming soon, so stay tuned!
+To run watch faces, you must install APDE from the Play Store on your
+Wear OS watch.
 
-Note: This preview release is very much a preview. Preview releases are
-going to be much more bleeding-edge this summer than they were before.
+VR supports Google Cardboard and Daydream headsets.
+
+These changes are driven by GSoC '18. Special thanks to Sara Di
+Bartolomeo, Andres Colubri, and the Processing Foundation!
 
 ------------------------------------------------------------------------
 
