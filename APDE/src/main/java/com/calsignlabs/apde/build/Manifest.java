@@ -308,7 +308,12 @@ public class Manifest {
 	 * @param orientation
 	 */
 	public void setOrientation(String orientation) {
-		xml.getChild("application").getChild("activity").setString("android:screenOrientation", orientation);
+		// VR sketches seem to break when specifying "unspecified" as the orientation
+		// Because stereo VR needs to be landscape
+		// Luckily, this is the same as leaving the orientation blank
+		if (!orientation.equals("unspecified")) {
+			xml.getChild("application").getChild("activity").setString("android:screenOrientation", orientation);
+		}
 	}
 	
 	public String getOrientation(Context context) {
