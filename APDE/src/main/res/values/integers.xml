@@ -6,4 +6,6 @@
     
     <item name="prop_menu_comp_select_alpha_selected" type="integer">255</item>
 	<item name="prop_menu_comp_select_alpha_unselected" type="integer">102</item>
+	
+	<item name="run_stop_animation_duration" format="integer" type="integer">200</item>
 </resources>

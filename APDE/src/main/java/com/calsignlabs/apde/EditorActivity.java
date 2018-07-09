@@ -12,6 +12,7 @@ import android.content.res.AssetManager;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.graphics.drawable.AnimatedVectorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -63,6 +64,7 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.CompilerProblem;
@@ -2458,6 +2460,9 @@ public class EditorActivity extends AppCompatActivity {
     public APDE getGlobalState() {
     	return (APDE) getApplication();
     }
+	
+	protected ImageButton runStopMenuButton = null;
+	protected boolean runStopMenuButtonAnimating = false;
     
     @Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -2473,13 +2478,48 @@ public class EditorActivity extends AppCompatActivity {
 	}
 	
 	public void prepareOptionsMenu(Menu menu) {
+		// We're using an action view because apparently this is the only way to animate the icon
+		runStopMenuButton = (ImageButton) menu.findItem(R.id.menu_run).getActionView();
+		
+		runStopMenuButton.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				if (runStopMenuButtonAnimating) {
+					return;
+				}
+				
+				// Run turns into stop when building
+				if (!building) {
+					runApplication();
+				} else {
+					stopApplication();
+				}
+			}
+		});
+		
+		runStopMenuButton.setOnLongClickListener(new ImageButton.OnLongClickListener() {
+			@Override
+			public boolean onLongClick(View v) {
+				Toast toast = Toast.makeText(EditorActivity.this, building ? R.string.editor_menu_stop_sketch : R.string.editor_menu_run_sketch, Toast.LENGTH_SHORT);
+				FindReplace.positionToast(toast, runStopMenuButton, getWindow(), 0, 0);
+				toast.show();
+				
+				return true;
+			}
+		});
+		
+		if (android.os.Build.VERSION.SDK_INT >= 21) {
+			runStopMenuButton.setImageDrawable(getResources().getDrawable(building & !runStopMenuButtonAnimating ? R.drawable.ic_stop_vector : R.drawable.ic_run_vector));
+		} else {
+			runStopMenuButton.setImageDrawable(getResources().getDrawable(building ? R.drawable.ic_stop_white : R.drawable.ic_run_white));
+		}
+    	
         if(drawerOpen) {
         	// If the drawer is visible
         	
         	// Make sure to hide all of the sketch-specific action items
         	menu.findItem(R.id.menu_run).setVisible(false);
         	menu.findItem(R.id.menu_comp_select).setVisible(false);
-        	menu.findItem(R.id.menu_stop).setVisible(false);
         	menu.findItem(R.id.menu_undo).setVisible(false);
         	menu.findItem(R.id.menu_redo).setVisible(false);
         	menu.findItem(R.id.menu_tab_delete).setVisible(false);
@@ -2503,8 +2543,6 @@ public class EditorActivity extends AppCompatActivity {
         		
         		// Make sure to make the tab actions visible
             	menu.findItem(R.id.menu_run).setVisible(true);
-				menu.findItem(R.id.menu_run).setVisible(true);
-            	menu.findItem(R.id.menu_stop).setVisible(true);
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
             	menu.findItem(R.id.menu_tab_rename).setVisible(true);
             	
@@ -2528,7 +2566,6 @@ public class EditorActivity extends AppCompatActivity {
             	// Make sure to make the tab actions invisible
             	menu.findItem(R.id.menu_run).setVisible(false);
 				menu.findItem(R.id.menu_comp_select).setVisible(false);
-    	    	menu.findItem(R.id.menu_stop).setVisible(false);
     	    	menu.findItem(R.id.menu_undo).setVisible(false);
             	menu.findItem(R.id.menu_redo).setVisible(false);
     	    	menu.findItem(R.id.menu_tab_delete).setVisible(false);
@@ -2599,6 +2636,9 @@ public class EditorActivity extends AppCompatActivity {
 			menu.findItem(R.id.menu_tab_new).setVisible(true);
 		}
 		
+		// We are now using the combined run-stop button
+		menu.findItem(R.id.menu_stop).setVisible(false);
+		
 		menu.findItem(R.id.menu_comp_select).setIcon(getComponentTarget().getIconId());
     	menu.findItem(R.id.menu_comp_select).setTitle(getComponentTarget().getNameId());
     	
@@ -2655,9 +2695,6 @@ public class EditorActivity extends AppCompatActivity {
                     supportInvalidateOptionsMenu();
                 }
         		return true;
-            case R.id.menu_run:
-            	runApplication();
-            	return true;
 			case R.id.menu_comp_select_app:
 				setComponentTarget(ComponentTarget.APP);
 				return true;
@@ -2673,9 +2710,6 @@ public class EditorActivity extends AppCompatActivity {
 			case R.id.menu_comp_select_preview:
 				setComponentTarget(ComponentTarget.PREVIEW);
 				return true;
-            case R.id.menu_stop:
-            	stopApplication();
-            	return true;
             case R.id.menu_undo:
         		tabs.get(getSelectedCodeIndex()).undo(this);
             	return true;
@@ -2937,10 +2971,16 @@ public class EditorActivity extends AppCompatActivity {
     		@Override
     		public void run() {
     			building = true;
+    			changeRunStopIcon(true);
     			builder.build("debug", getComponentTarget());
+    			changeRunStopIcon(false);
     			building = false;
     	}});
     	buildThread.start();
+		
+    	if (android.os.Build.VERSION.SDK_INT >= 21) {
+			runStopMenuButtonAnimating = true;
+		}
     }
     
     /**
@@ -2956,6 +2996,30 @@ public class EditorActivity extends AppCompatActivity {
 			Build.halt();
 		}
     }
+	
+	public void changeRunStopIcon(final boolean run) {
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				if (android.os.Build.VERSION.SDK_INT >= 21) {
+					AnimatedVectorDrawable anim = (AnimatedVectorDrawable) getResources().getDrawable(run ? R.drawable.run_to_stop : R.drawable.stop_to_run);
+					runStopMenuButton.setImageDrawable(anim);
+					anim.start();
+					runStopMenuButtonAnimating = true;
+					
+					runStopMenuButton.postDelayed(new Runnable() {
+						@Override
+						public void run() {
+							supportInvalidateOptionsMenu();
+							runStopMenuButtonAnimating = false;
+						}
+					}, getResources().getInteger(R.integer.run_stop_animation_duration));
+				} else {
+					supportInvalidateOptionsMenu();
+				}
+			}
+		});
+	}
 	
 	/**
 	 * Set to the most recent value of MotionEvent.FLAG_WINDOW_IS_OBSCURED
