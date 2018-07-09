@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<!-- https://github.com/wnafee/vector-compat
+	 licensed under the Apache License 2.0 -->
+	<string name="path_run">M 5, 18.06 L 12,18.06 L 12,5.94 L 12,5.94 L 5,18.06 z M 12,18.06 L 19,18.06 L 12,5.94 L 12,5.94 L 12,18.06 z</string>
+	<string name="path_stop">M 6,18 L 12,18 L 12,6 L 6,6 L 6,18 z M 12,18 L 18,18 L 18,6 L 12,6 L 12,18z</string>
+</resources>
