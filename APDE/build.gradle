@@ -8,8 +8,8 @@ android {
         applicationId "com.calsignlabs.apde"
         minSdkVersion 17
         targetSdkVersion 27
-        versionCode 26
-        versionName "0.5.0"
+        versionCode 27
+        versionName "0.5.1-pre1"
     }
 
     buildTypes {

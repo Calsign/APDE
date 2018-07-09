@@ -1,3 +1,15 @@
+v0.5.1-pre1 Alpha
+
+ - Preview mode runs sketches without installing them
+   - You must install the APDE Sketch Previewer once, but then you can
+     run sketches without installation indefinitely
+   - Preview mdoe is available as another target, along with wallpapers,
+     watch faces, and VR
+
+These changes are driven by GSoC '18.
+
+------------------------------------------------------------------------
+
 v0.5.0 Alpha
 
  - Run sketches targeting wallpapers, watch faces, and VR!
