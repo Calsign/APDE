@@ -1157,6 +1157,13 @@ public class CodeEditText extends AppCompatEditText {
 		canvas.drawLine(xStart, y, xEnd, y, problem.error ? compilerErrorPaint : compilerWarningPaint);
 	}
 	
+	public int getYOffsetForLine(int line) {
+		float lineHeight = getLineHeight();
+		float lineOffset = -getLayout().getLineDescent(0);
+		
+		return (int) (lineOffset + lineHeight * line);
+	}
+	
 	public void refreshTextSize() {
 		textSize = Integer.parseInt(PreferenceManager.getDefaultSharedPreferences(context).getString("textsize", "14"));
 		float scaledTextSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, textSize, getResources().getDisplayMetrics());

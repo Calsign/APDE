@@ -1,7 +1,11 @@
 package com.calsignlabs.apde;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -9,6 +13,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -23,13 +28,18 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.ImageViewCompat;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.PopupMenu;
 import android.support.v7.widget.Toolbar;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
 import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
@@ -48,7 +58,9 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
 import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
+import android.view.animation.DecelerateInterpolator;
 import android.view.animation.RotateAnimation;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
@@ -59,6 +71,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
@@ -95,6 +108,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -142,6 +156,12 @@ public class EditorActivity extends AppCompatActivity {
 	private boolean firstResize = true; //this is a makeshift arrangement (hopefully)
 	private int oldCodeHeight = -1;
 	private boolean consoleWasHidden = false;
+	
+	private ViewPager consoleWrapperPager;
+	
+	public ArrayList<CompilerProblem> compilerProblems;
+	private ListView problemOverviewList;
+	private ProblemOverviewListAdapter problemOverviewListAdapter;
 	
 	private View extraHeaderView;
 	
@@ -195,14 +215,14 @@ public class EditorActivity extends AppCompatActivity {
 		}
 	}
 	
-	//Whether or not the message area is currently displaying an error message
+	// Whether or not the message area is currently displaying an error message
 	private MessageType messageType = MessageType.MESSAGE;
 	
-	//Whether or not the special character inserts tray is currently visible
+	// Whether or not the special character inserts tray is currently visible
 	private boolean charInserts = false;
-	//A reference to the toggle char inserts button... and why do we need this?
-	//It's because adding views to the char insert tray is somehow breaking the retrieval of this view by ID...
+	private boolean problemOverview = false;
 	private ImageButton toggleCharInserts;
+	private ImageButton toggleProblemOverview;
 	
 	// Intent flag to delete the old just-installed APK file
 	public static final int FLAG_DELETE_APK = 5;
@@ -590,16 +610,16 @@ public class EditorActivity extends AppCompatActivity {
 					if (!keyboardVisible) {
 						keyboardVisible = true;
 						
-						if (message == -1) {
-							message = findViewById(R.id.buffer).getHeight();
-						}
-						
 						// Configure the layout for the keyboard
 
-						LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
-						TextView messageArea = (TextView) findViewById(R.id.message);
-						View console = findViewById(R.id.console_scroller);
+						View buffer = findViewById(R.id.buffer);
+						TextView messageArea = findViewById(R.id.message);
+						View console = findViewById(R.id.console_wrapper);
 						View content = findViewById(R.id.content);
+						
+						if (message == -1) {
+							message = buffer.getHeight();
+						}
 						
 						if (firstResize) {
 							firstResize = false;
@@ -645,8 +665,7 @@ public class EditorActivity extends AppCompatActivity {
 						// Don't do anything if the user has disabled the character insert tray
 						if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true)) {
 							//Update the character insert tray
-							toggleCharInserts.setVisibility(View.VISIBLE);
-							findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.VISIBLE);
+							toggleCharInsertsProblemOverviewButton(false, true);
 							
 							if (charInserts) {
 								findViewById(R.id.message).setVisibility(View.GONE);
@@ -656,10 +675,10 @@ public class EditorActivity extends AppCompatActivity {
 					}
 				} else {
 					if (keyboardVisible) {
-						//Configure the layout for the absence of the keyboard
+						// Configure the layout for the absence of the keyboard
 						
 						View codeArea = getSelectedCodeAreaScroller();
-						View consoleArea = findViewById(R.id.console_scroller);
+						View consoleArea = findViewById(R.id.console_wrapper);
 						
 						ViewGroup content = (ViewGroup) findViewById(R.id.content);
 						
@@ -679,8 +698,9 @@ public class EditorActivity extends AppCompatActivity {
 						getSelectedCodeArea().matchingBracket = -1;
 						
 						// Update the character insert tray
-						toggleCharInserts.setVisibility(View.GONE);
-						findViewById(R.id.toggle_char_inserts_separator).setVisibility(View.GONE);
+						toggleCharInsertsProblemOverviewButton(true, true);
+						
+						final View messageView = findViewById(R.id.message);
 						
 						findViewById(R.id.message).setVisibility(View.VISIBLE);
 						findViewById(R.id.char_insert_tray).setVisibility(View.GONE);
@@ -695,6 +715,13 @@ public class EditorActivity extends AppCompatActivity {
 			@Override
 			public void onClick(View view) {
 				toggleCharInserts();
+			}
+		});
+		toggleProblemOverview = findViewById(R.id.toggle_problem_overview);
+		toggleProblemOverview.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				toggleProblemOverview();
 			}
 		});
         
@@ -713,9 +740,6 @@ public class EditorActivity extends AppCompatActivity {
 		} catch (SAXException e) {
 			e.printStackTrace();
 		}
-        
-        // Initialize the reference to the toggle char inserts button
-        toggleCharInserts = (ImageButton) findViewById(R.id.toggle_char_inserts);
 		
 		// Show "What's New" screen if this is an update
 		
@@ -813,6 +837,81 @@ public class EditorActivity extends AppCompatActivity {
 		codePagerAdapter.notifyDataSetChanged();
 		codeTabStrip.setupWithViewPager(codePager);
 		
+		compilerProblems = new ArrayList<>();
+		problemOverviewList = findViewById(R.id.problem_overview_list);
+		problemOverviewListAdapter = new ProblemOverviewListAdapter(this, R.layout.problem_overview_list_item, compilerProblems);
+		
+		// Don't steal click events from the problem overview list
+		getConsoleWrapper().setClickable(false);
+		
+		problemOverviewList.setAdapter(problemOverviewListAdapter);
+		
+		problemOverviewList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+			@Override
+			public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+				CompilerProblem problem = problemOverviewListAdapter.getItem(i);
+				highlightTextExt(getSketchFileIndex(problem.sketchFile), problem.line, problem.start, problem.length);
+				if (problem.isError()) {
+					errorExt(problem.getMessage());
+				} else {
+					warningExt(problem.getMessage());
+				}
+			}
+		});
+		
+		// Copy the problem description to the clipboard when the user long-presses
+		problemOverviewList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+			@Override
+			public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+				ClipboardManager clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+				if (clipboardManager != null) {
+					CompilerProblem problem = problemOverviewListAdapter.getItem(i);
+					String text = getProblemOverviewDescription(EditorActivity.this, problem).toString();
+					ClipData clipData = ClipData.newPlainText(getResources().getString(R.string.problem_overview_list_copy_description), text);
+					clipboardManager.setPrimaryClip(clipData);
+					
+					Toast.makeText(EditorActivity.this, R.string.problem_overview_list_copy_toast_message, Toast.LENGTH_SHORT).show();
+					
+					return true;
+				} else {
+					return false;
+				}
+			}
+		});
+		
+		// We have both pages defined in layout, but ViewPager needs this to do things correctly
+		// We don't actually instantiate either page, we just pass references to the existing ones
+		consoleWrapperPager = findViewById(R.id.console_wrapper_pager);
+		consoleWrapperPager.setAdapter(new PagerAdapter() {
+			@Override
+			public int getCount() {
+				return 2;
+			}
+			
+			@Override
+			public boolean isViewFromObject(@NonNull View view, @NonNull Object object) {
+				return view == object;
+			}
+			
+			@Override
+			public Object instantiateItem(ViewGroup container, int position) {
+				switch (position) {
+					case 0:
+						return findViewById(R.id.console_scroller);
+					case 1:
+						return findViewById(R.id.problem_overview_wrapper);
+					default:
+						// Complains about null...
+						return new Object();
+				}
+			}
+			
+			@Override
+			public void destroyItem(ViewGroup container, int position, Object object) {
+				// Do nothing
+			}
+		});
+		
 		// Fallback component target
 		setComponentTarget(ComponentTarget.APP);
 		
@@ -896,6 +995,10 @@ public class EditorActivity extends AppCompatActivity {
 		codePager.setCurrentItem(index);
 	}
 	
+	public int getSketchFileIndex(SketchFile sketchFile) {
+		return tabs.indexOf(sketchFile);
+	}
+	
 	public int getCodeCount() {
 		return tabs.size();
 	}
@@ -976,8 +1079,8 @@ public class EditorActivity extends AppCompatActivity {
 		return codePager;
 	}
 	
-	public ScrollView getConsoleScroller() {
-		return (ScrollView) findViewById(R.id.console_scroller);
+	public View getConsoleWrapper() {
+		return findViewById(R.id.console_wrapper);
 	}
 	
 	public void setExtraHeaderView(View headerView) {
@@ -1143,24 +1246,12 @@ public class EditorActivity extends AppCompatActivity {
 		} else {
 			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
 		}
+		
+		// Correct dimensions of various things
+		initCodeAreaAndConsoleDimensions();
+		correctMessageAreaHeight();
         
-        //Update the syntax highlighter
-//		getSelectedCodeArea().updateTokens();
-        
-		//Make the character insert toggle button square
-        final View charInsertToggle = findViewById(R.id.toggle_char_inserts);
-        charInsertToggle.setPadding(0, 0, 0, 0);
-        charInsertToggle.requestLayout();
-        charInsertToggle.post(new Runnable() {
-        	public void run() {
-        		charInsertToggle.setLayoutParams(new LinearLayout.LayoutParams(charInsertToggle.getHeight(), charInsertToggle.getHeight()));
-        		
-        		//Hide the button (default, keyboard not visible...)
-                charInsertToggle.setVisibility(View.GONE);
-        	}
-        });
-        
-        //Correctly size the code and console areas
+        // Correctly size the code and console areas
         
         int minWidth;
 		int maxWidth;
@@ -2773,34 +2864,84 @@ public class EditorActivity extends AppCompatActivity {
     	if (charInserts) {
 			hideCharInserts();
     	} else {
-			//Build the character inserts tray
+			// Build the character inserts tray
 			reloadCharInserts();
-		
+			
 			showCharInserts();
     	}
     }
     
+    public void toggleProblemOverview() {
+    	if (keyboardVisible) {
+    		return;
+		}
+		
+		if (problemOverview) {
+			consoleWrapperPager.setCurrentItem(0);
+			problemOverview = false;
+		} else {
+			consoleWrapperPager.setCurrentItem(1);
+			problemOverview = true;
+		}
+	}
+    
     protected void showCharInserts() {
-		TextView messageView = (TextView) findViewById(R.id.message);
-		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
+		final TextView messageView = findViewById(R.id.message);
+		final HorizontalScrollView charInsertTray = findViewById(R.id.char_insert_tray);
 		
 		View buffer = findViewById(R.id.buffer);
-		
 		View sep = findViewById(R.id.toggle_char_inserts_separator);
+		View wrapper = findViewById(R.id.toggle_wrapper);
 		
 		toggleCharInserts.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_right_black);
-//		((TextView) findViewById(R.id.message)).setVisibility(View.GONE);
-//		((HorizontalScrollView) findViewById(R.id.char_insert_tray)).setVisibility(View.VISIBLE);
+		toggleProblemOverview.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.problem_overview_white_unfilled : R.drawable.problem_overview_black_unfilled);
 		
-		int total = buffer.getWidth() - sep.getWidth() - toggleCharInserts.getWidth();
+		int total = buffer.getWidth() - sep.getWidth() - wrapper.getWidth();
 		
 		RotateAnimation rotate = new RotateAnimation(180f, 360f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
 		rotate.setInterpolator(new AccelerateDecelerateInterpolator());
 		rotate.setRepeatCount(0);
 		rotate.setDuration(200);
 		
-		messageView.startAnimation(new ResizeAnimation<LinearLayout>(messageView, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0, ResizeAnimation.DEFAULT));
-		charInsertTray.startAnimation(new ResizeAnimation<LinearLayout>(charInsertTray, 0, buffer.getHeight(), total, buffer.getHeight()));
+		ResizeAnimation messageAnimation = new ResizeAnimation<LinearLayout>(messageView, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0, ResizeAnimation.DEFAULT, true, false);
+		ResizeAnimation<LinearLayout> charInsertAnimation = new ResizeAnimation<>(charInsertTray, 0, buffer.getHeight(), total, buffer.getHeight());
+		
+		Animation.AnimationListener listener = new Animation.AnimationListener() {
+			@Override
+			public void onAnimationStart(Animation animation) {}
+			
+			@Override
+			public void onAnimationEnd(Animation animation) {
+				if (!keyboardVisible) {
+					// If the keyboard has closed since starting the animation, hide the char inserts tray
+					// TODO still some problems
+					// The delay is really hacky and probably won't work on slower devices
+					// I am still able to reproduce this on occasion
+					//
+					// For most users this should not be an issue
+//					messageView.postDelayed(new Runnable() {
+//						@Override
+//						public void run() {
+//							messageView.setVisibility(View.VISIBLE);
+//							charInsertTray.setVisibility(View.GONE);
+//
+//							messageView.getLayoutParams().width = findViewById(R.id.message_char_insert_wrapper).getWidth();
+//							charInsertTray.getLayoutParams().width = 0;
+//						}
+//					}, 100);
+				}
+			}
+			
+			@Override
+			public void onAnimationRepeat(Animation animation) {}
+		};
+		
+		messageAnimation.setAnimationListener(listener);
+		charInsertAnimation.setAnimationListener(listener);
+		
+		messageView.startAnimation(messageAnimation);
+		charInsertTray.startAnimation(charInsertAnimation);
+		
 		toggleCharInserts.startAnimation(rotate);
 		
 		charInserts = true;
@@ -2812,16 +2953,17 @@ public class EditorActivity extends AppCompatActivity {
 			return;
 		}
 		
-		TextView messageView = (TextView) findViewById(R.id.message);
-		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
+		TextView messageView = findViewById(R.id.message);
+		HorizontalScrollView charInsertTray = findViewById(R.id.char_insert_tray);
 		
 		View buffer = findViewById(R.id.buffer);
-		
 		View sep = findViewById(R.id.toggle_char_inserts_separator);
-	
-		toggleCharInserts.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
+		View wrapper = findViewById(R.id.toggle_wrapper);
 		
-		int total = buffer.getWidth() - sep.getWidth() - toggleCharInserts.getWidth();
+		toggleCharInserts.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
+		toggleProblemOverview.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.problem_overview_white_unfilled : R.drawable.problem_overview_black_unfilled);
+		
+		int total = buffer.getWidth() - sep.getWidth() - wrapper.getWidth();
 		
 		RotateAnimation rotate = new RotateAnimation(180f, 360f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
 		rotate.setInterpolator(new AccelerateDecelerateInterpolator());
@@ -2836,12 +2978,16 @@ public class EditorActivity extends AppCompatActivity {
     }
 	
 	public void hideCharInsertsNoAnimation() {
-		TextView messageView = (TextView) findViewById(R.id.message);
-		HorizontalScrollView charInsertTray = (HorizontalScrollView) findViewById(R.id.char_insert_tray);
+		final View messageView = findViewById(R.id.message);
+		final View charInsertTray = findViewById(R.id.char_insert_tray);
 		
 		toggleCharInserts.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.ic_caret_left_white : R.drawable.ic_caret_left_black);
+		toggleProblemOverview.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.problem_overview_white_unfilled : R.drawable.problem_overview_black_unfilled);
 		messageView.setVisibility(View.VISIBLE);
 		charInsertTray.setVisibility(View.GONE);
+		
+		messageView.getLayoutParams().width = -1;
+		messageView.requestLayout();
 		
 		charInserts = false;
 	}
@@ -2850,8 +2996,9 @@ public class EditorActivity extends AppCompatActivity {
      * Set up the character inserts tray.
      */
 	public void reloadCharInserts() {
-		if (!keyboardVisible)
+		if (!keyboardVisible) {
 			return;
+		}
 		
     	if (message == -1) {
 			message = findViewById(R.id.buffer).getHeight();
@@ -2928,6 +3075,61 @@ public class EditorActivity extends AppCompatActivity {
     		});
     	}
     }
+	
+	public class ProblemOverviewListAdapter extends ArrayAdapter<CompilerProblem> {
+		public ProblemOverviewListAdapter(@NonNull Context context, int resource, List<CompilerProblem> items) {
+			super(context, resource, items);
+		}
+		
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			View view = convertView;
+			
+			if (view == null) {
+				view = LayoutInflater.from(getContext()).inflate(R.layout.problem_overview_list_item, null);
+			}
+			
+			final CompilerProblem problem = getItem(position);
+			
+			if (view != null && view instanceof LinearLayout && problem != null) {
+				LinearLayout container = (LinearLayout) view;
+				TextView problemText = container.findViewById(R.id.problem_overview_list_item_problem_text);
+				ImageView problemIcon = container.findViewById(R.id.problem_overview_list_item_problem_icon);
+				
+				problemText.setText(getProblemOverviewDescription(getContext(), problem));
+				
+				// Color the problem icon red (error) or yellow (warning)
+				ImageViewCompat.setImageTintList(problemIcon, ColorStateList.valueOf(ContextCompat.getColor(getContext(), problem.isError() ? R.color.error_back : R.color.warning_back)));
+			}
+			
+			return view;
+		}
+	}
+	
+	/**
+	 * Build the problem overview description from a compiler problem. This is used in the problem
+	 * overview and in the message area when the problem is shown there.
+	 *
+	 * @param context
+	 * @param problem
+	 * @return
+	 */
+	protected static SpannableStringBuilder getProblemOverviewDescription(Context context, CompilerProblem problem) {
+		SpannableStringBuilder text = new SpannableStringBuilder();
+		
+		// This might be null for bad imports in the sketch, for example, because the corresponding line is off-screen
+		if (problem.sketchFile != null) {
+			text.append(problem.sketchFile.getTitle());
+			text.append(" [");
+			text.append(Integer.toString(problem.line + 1)); // add one because lines are zero-indexed
+			text.append("]: ");
+			text.setSpan(new ForegroundColorSpan(ContextCompat.getColor(context, android.R.color.darker_gray)), 0, text.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+		}
+		
+		text.append(problem.message);
+		
+		return text;
+	}
     
     /**
      * Builds and launches the current sketch
@@ -3180,11 +3382,12 @@ public class EditorActivity extends AppCompatActivity {
     //Utility function for switching to message-style message area
 	protected void colorMessageAreaMessage() {
     	//Change the message area style
-    	((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.message_back));
+    	findViewById(R.id.buffer).setBackgroundColor(getResources().getColor(R.color.message_back));
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.message_text));
     	
     	//Update the toggle button
     	toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_black : R.drawable.ic_caret_left_black);
+    	toggleProblemOverview.setImageResource(charInserts ? R.drawable.problem_overview_black_unfilled : R.drawable.problem_overview_white_unfilled);
     	
     	//Update the separator line
     	findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator));
@@ -3199,11 +3402,12 @@ public class EditorActivity extends AppCompatActivity {
     //Utility function for switching to error-style message area
 	protected void colorMessageAreaError() {
     	//Change the message area style
-    	((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.error_back));
+    	findViewById(R.id.buffer).setBackgroundColor(getResources().getColor(R.color.error_back));
     	((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.error_text));
     	
     	//Update the toggle button
     	toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_left_white);
+		toggleProblemOverview.setImageResource(charInserts ? R.drawable.problem_overview_white_unfilled : R.drawable.problem_overview_black_unfilled);
     	
     	//Update the separator line
     	findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator_light));
@@ -3218,11 +3422,12 @@ public class EditorActivity extends AppCompatActivity {
 	//Utility function for switching to warning-style message area
 	protected void colorMessageAreaWarning() {
 		//Change the message area style
-		((LinearLayout) findViewById(R.id.buffer)).setBackgroundColor(getResources().getColor(R.color.warning_back));
+		findViewById(R.id.buffer).setBackgroundColor(getResources().getColor(R.color.warning_back));
 		((TextView) findViewById(R.id.message)).setTextColor(getResources().getColor(R.color.warning_text));
 		
 		//Update the toggle button
 		toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_left_white);
+		toggleProblemOverview.setImageResource(charInserts ? R.drawable.problem_overview_black_unfilled : R.drawable.problem_overview_white_unfilled);
 		
 		//Update the separator line
 		findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator_light));
@@ -3236,47 +3441,74 @@ public class EditorActivity extends AppCompatActivity {
     
     // Called internally to correct issues with 2-line messages vs 1-line messages (and maybe some other issues)
     protected void correctMessageAreaHeight() {
-    	final TextView messageArea = (TextView) findViewById(R.id.message);
+    	final TextView messageArea = findViewById(R.id.message);
+    	
+    	final View buffer = findViewById(R.id.buffer);
     	
     	// Update the message area's height
     	messageArea.requestLayout();
     	
     	// Check back in later when the height has updated...
     	messageArea.post(new Runnable() {
-    		public void run() {
+    		@SuppressWarnings("SuspiciousNameCombination")
+			public void run() {
     			// ...and update the console's height...
+				
+				int totalWidth = findViewById(R.id.message_char_insert_wrapper).getWidth();
     			
     			// We need to use this in case the message area is partially off the screen
     			// This is the DESIRED height, not the ACTUAL height
-    			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
+    			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
     			
-				((LinearLayout) findViewById(R.id.buffer)).getLayoutParams().height = message;
+    			// The height the text view would be if it were just one line
+    			int singleLineHeight = getTextViewHeight(getApplicationContext(), "", messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
 				
     			// Obtain some references
-    			View console = findViewById(R.id.console_scroller);
+    			View console = getConsoleWrapper();
     			View content = findViewById(R.id.content);
 				
 				if (isSelectedCodeAreaInitialized()) {
+					int consoleCodeHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+					int consoleHeight = consoleCodeHeight - codePager.getHeight();
+					
 					// We can't shrink the console if it's hidden (like when the keyboard is visible)...
 					// ...so shrink the code area instead
-					if (console.getHeight() <= 0) {
-						codePager.setLayoutParams(new LinearLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-								content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+					if (consoleHeight < 0 || keyboardVisible) {
+						codePager.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, consoleCodeHeight));
+						console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0));
 					} else {
-						console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-								content.getHeight() - codePager.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+						console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, consoleHeight));
 					}
+					
+					// Note: For some reason modifying the LayoutParams directly is not working.
+					// That's why we're re-setting the LayoutParams every time. Perhaps worth
+					// looking into later.
 				}
+				
+				buffer.getLayoutParams().height = message;
+				messageArea.getLayoutParams().height = message;
+				
+				setViewLayoutParams(toggleCharInserts, singleLineHeight, message);
+				setViewLayoutParams(toggleProblemOverview, singleLineHeight, message);
+				setViewLayoutParams(findViewById(R.id.toggle_wrapper), singleLineHeight, message);
+			
+				buffer.requestLayout();
     		}
     	});
     }
+    
+    private void setViewLayoutParams(View view, int width, int height) {
+    	view.getLayoutParams().width = width;
+    	view.getLayoutParams().height = height;
+    	view.requestLayout();
+	}
 	
 	public void initCodeAreaAndConsoleDimensions() {
-		ScrollView console = getConsoleScroller();
-		
 		// Initialize in case we have the layout weights instead of actual values
 		codePager.getLayoutParams().height = codePager.getHeight();
-		console.getLayoutParams().height = console.getHeight();
+		getConsoleWrapper().getLayoutParams().height = getConsoleWrapper().getHeight();
+		codePager.requestLayout();
+		getConsoleWrapper().requestLayout();
 	}
 	
 	/**
@@ -3285,7 +3517,7 @@ public class EditorActivity extends AppCompatActivity {
 	public void refreshMessageAreaLocation() {
 		//Obtain some references
 		final View content = findViewById(R.id.content);
-		final View console = findViewById(R.id.console_scroller);
+		final View console = findViewById(R.id.console_wrapper);
 		final View code = getSelectedCodeAreaScroller();
 		final TextView messageArea = (TextView) findViewById(R.id.message);
 		
@@ -3303,7 +3535,7 @@ public class EditorActivity extends AppCompatActivity {
 			public void run() {
 				//We need to use this in case the message area is partially off the screen
 				//This is the DESIRED height, not the ACTUAL height
-				message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
+				message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), findViewById(R.id.message_char_insert_wrapper).getWidth(), messageArea.getPaddingTop());
 
 				int consoleSize = content.getHeight() - code.getHeight() - codeTabStrip.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
 
@@ -3347,73 +3579,134 @@ public class EditorActivity extends AppCompatActivity {
      * @param line
      */
     public void highlightLineExt(final int tab, final int line) {
+		highlightTextExt(tab, line, 0, -1);
+	}
+	
+	public void highlightTextExt(final int tab, final int line, final int pos, final int length) {
     	runOnUiThread(new Runnable() {
 			public void run() {
-				//Switch to the tab with the error if we have one to switch to
+				// Switch to the tab with the error if we have one to switch to
 				if (tab != -1 && tab < tabs.size()) {
-//					tabBar.selectTab(tab);
 					selectCode(tab);
 				}
-
-				//Get a reference to the code area
-				CodeEditText code = getSelectedCodeArea();
-
-				//Calculate the beginning and ending of the line
-				int start = code.offsetForLine(line);
-				int stop = code.offsetForLineEnd(line);
-
-				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
-					//Check to see if the user wants to use the hardware keyboard
-
-					//Hacky way of focusing the code area - dispatches a touch event
-					MotionEvent me = MotionEvent.obtain(100, 0, 0, 0, 0, 0);
-					code.dispatchTouchEvent(me);
-					me.recycle();
-				}
-
-				//Select the text in the code area
-				code.setSelection(start, stop);
+				
+				// Get a reference to the code area
+				final CodeEditText code = getSelectedCodeArea();
+				
+				// Calculate the beginning and ending of the line
+				int lineStart = code.offsetForLine(line);
+				int lineStop = code.offsetForLineEnd(line);
+				
+				final int start = Math.max(lineStart + pos, lineStart);
+				final int stop = length == -1 ? lineStop : Math.min(start + length, lineStop);
+				
+				code.requestFocus();
+				
+				// This selects the code area, but this is not the behavior that we want anymore
+				// because we want to be able to build in real-time and not steal focus from the
+				// code area because the user might be typing
+//				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+//					//Check to see if the user wants to use the hardware keyboard
+//
+//					//Hacky way of focusing the code area - dispatches a touch event
+//					MotionEvent me = MotionEvent.obtain(100, 0, 0, 0, 0, 0);
+//					code.dispatchTouchEvent(me);
+//					me.recycle();
+//				}
+				
+				code.post(new Runnable() {
+					@Override
+					public void run() {
+						// Select the text in the code area
+						code.setSelection(start, stop);
+					}
+				});
 			}
 		});
     }
+    
+    protected void toggleCharInsertsProblemOverviewButton(boolean problemOverview, boolean animate) {
+    	final View fadeIn = problemOverview ? toggleProblemOverview : toggleCharInserts;
+    	final View fadeOut = problemOverview ? toggleCharInserts : toggleProblemOverview;
+    	
+    	// We are not using this animation for now
+    	animate = false;
+    	
+    	// This is a rotate/crossfade animation. It works, but it isn't super-aesthetically
+		// pleasing. Might want a better animation (using vector drawables) in the future.
+    	if (animate) {
+			int animTime = getResources().getInteger(android.R.integer.config_shortAnimTime);
+			int theta = 90;
+			
+			fadeIn.setAlpha(0.0f);
+			fadeIn.setVisibility(View.VISIBLE);
+			
+			fadeIn.setRotation(-theta);
+			
+			fadeIn.animate().alpha(1.0f).rotationBy(theta).setDuration(animTime)
+					.setInterpolator(new DecelerateInterpolator()).setListener(null);
+			fadeOut.animate().alpha(0.0f).rotationBy(theta).setDuration(animTime)
+					.setInterpolator(new AccelerateInterpolator()).setListener(new AnimatorListenerAdapter() {
+				@Override
+				public void onAnimationEnd(Animator animator) {
+					fadeOut.setVisibility(View.GONE);
+					fadeOut.setRotation(0);
+				}
+			});
+		} else {
+    		fadeOut.setVisibility(View.GONE);
+			fadeIn.setVisibility(View.VISIBLE);
+		}
+	}
 	
 	/**
 	 * Update the list of compiler problems displayed for the current sketch. Called by build upon
 	 * the completion of ECJ.
-	 *
-	 * @param problems
 	 */
-	public void showProblems(CompilerProblem[] problems) {
-    	// Don't show error in message bar for examples
-    	if (!getGlobalState().isExample()) {
-			// We want to show errors before warnings
-			// If there is an error, then show it, otherwise just show the first warning
-
-			CompilerProblem firstError = null;
-			int problemIndex = 0;
-			while (firstError == null && problemIndex < problems.length) {
-				if (problems[problemIndex].isError()) {
-					firstError = problems[problemIndex];
-				}
-				problemIndex++;
-			}
-
-			if (firstError != null) {
-				// We have an error
-				errorExt(firstError.getMessage());
-			} else if (problems.length > 0) {
-				// We have at least one warning
-				warningExt(problems[0].getMessage());
-			}
-		}
-		
-		for (SketchFile sketchFile : getSketchFiles()) {
+	public void showProblems() {
+		// Give the problems to all of the sketch files
+    	for (SketchFile sketchFile : getSketchFiles()) {
     		// Each SketchFile figures out which problems it needs, so just give them every problem
-    		sketchFile.setCompilerProblems(problems);
+    		sketchFile.setCompilerProblems(compilerProblems);
     		if (sketchFile.getFragment() != null && sketchFile.getFragment().getCodeEditText() != null) {
     			sketchFile.getFragment().getCodeEditText().invalidate();
 			}
 		}
+		
+		// Put problems before warnings
+		Collections.sort(compilerProblems, new Comparator<CompilerProblem>() {
+			@Override
+			public int compare(CompilerProblem a, CompilerProblem b) {
+				if (a.isError() == b.isError()) {
+					return 0;
+				} else {
+					return a.isError() ? -1 : 1;
+				}
+			}
+		});
+    	
+    	// Show the first problem or warning in the message bar
+    	if (compilerProblems.size() > 0 && !getGlobalState().isExample()) {
+    		if (compilerProblems.get(0).isError()) {
+				// We have an error
+				errorExt(compilerProblems.get(0).getMessage());
+			} else {
+				// We have at least one warning
+				warningExt(compilerProblems.get(0).getMessage());
+			}
+		}
+		
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				problemOverviewListAdapter.notifyDataSetChanged();
+				
+				// If there are no problems, leave the user a nice message
+				boolean hasItems = compilerProblems.size() > 0;
+				problemOverviewList.setVisibility(hasItems ? View.VISIBLE : View.GONE);
+				findViewById(R.id.problem_overview_list_empty_message).setVisibility(hasItems ? View.GONE : View.VISIBLE);
+			}
+		});
 	}
 	
 	protected void addTabWithoutPagerUpdate(SketchFile sketchFile) {
@@ -4139,7 +4432,7 @@ public class EditorActivity extends AppCompatActivity {
 			pressed = false;
 			
 			// Store necessary views globally
-			console = findViewById(R.id.console_scroller);
+			console = findViewById(R.id.console_wrapper);
 			content = findViewById(R.id.content);
 		}
 		
@@ -4171,14 +4464,8 @@ public class EditorActivity extends AppCompatActivity {
 					// Find relative movement for this event
 					int y = (int) event.getY() - touchOff;
 					
-					//Calculate the new dimensions of the console
-					int consoleDim = console.getHeight() - y;
-					if (consoleDim < 0) {
-						consoleDim = 0;
-					}
-					if (consoleDim > maxCode) {
-						consoleDim = maxCode;
-					}
+					// Calculate the new dimensions of the console
+					int consoleDim = Math.max(Math.min(console.getHeight() - y, maxCode), 0);
 					
 					// Calculate the new dimensions of the code view
 					int codeDim = maxCode - consoleDim;
@@ -4197,7 +4484,7 @@ public class EditorActivity extends AppCompatActivity {
 				case MotionEvent.ACTION_UP:
 					pressed = false;
 					
-					LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
+					View buffer = findViewById(R.id.buffer);
 					TextView messageArea = (TextView) findViewById(R.id.message);
 					
 					switch (messageType) {
@@ -4231,7 +4518,7 @@ public class EditorActivity extends AppCompatActivity {
 			
 			pressed = true;
 			
-			LinearLayout buffer = (LinearLayout) findViewById(R.id.buffer);
+			View buffer = findViewById(R.id.buffer);
 			TextView messageArea = (TextView) findViewById(R.id.message);
 			
 			// Change the message area drawable and maintain styling

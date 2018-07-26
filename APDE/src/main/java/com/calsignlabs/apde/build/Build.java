@@ -957,8 +957,8 @@ public class Build {
 			boolean success = compiler.compile(args);
 			
 			if (customProblems) {
-				CompilerProblem[] compilerProblems = loadProblemArgsFromJavaFile(compiler.getProblems(), manifest.getPackageName());
-				editor.showProblems(compilerProblems);
+				loadProblemArgsFromJavaFile(compiler.getProblems(), editor.compilerProblems, manifest.getPackageName());
+				editor.showProblems();
 			}
 			
 			if (success) {
@@ -1536,9 +1536,7 @@ public class Build {
 	 *
 	 * @param problems
 	 */
-	protected CompilerProblem[] loadProblemArgsFromJavaFile(List<CategorizedProblem> problems, String packageName) {
-		CompilerProblem[] compilerProblems = new CompilerProblem[problems.size()];
-		
+	protected void loadProblemArgsFromJavaFile(List<CategorizedProblem> problems, ArrayList<CompilerProblem> destination, String packageName) {
 		File outputFolder = (packageName == null) ? srcFolder : new File(srcFolder, packageName.replace('.', '/'));
 		File javaFile = new File(outputFolder, sketchName + ".java");
 		
@@ -1551,6 +1549,8 @@ public class Build {
 				return a.getSourceStart() - b.getSourceStart();
 			}
 		});
+		
+		destination.clear();
 		
 		try {
 			reader = new BufferedReader(new FileReader(javaFile));
@@ -1568,12 +1568,12 @@ public class Build {
 						// Sanity
 						if (start >= 0 && start <= line.length() && end >= 0 && end <= line.length()) {
 							String arg = line.substring(start, end);
-							compilerProblems[problem] = new CompilerProblem(
+							destination.add(new CompilerProblem(
 									problems.get(problem).getSourceLineNumber(),
 									findPosInLine(line, arg, start),
 									arg,
 									problems.get(problem).isError(),
-									problems.get(problem).getMessage());
+									problems.get(problem).getMessage()));
 						}
 						problem++;
 					} else {
@@ -1593,8 +1593,6 @@ public class Build {
 				}
 			}
 		}
-		
-		return compilerProblems;
 	}
 	
 	/**
@@ -2737,8 +2735,8 @@ public class Build {
 				os.write(buf, 0, len);
 				total += len;
 			}
-		} catch (IOException ioe) {
-			throw new RuntimeException("error reading stream", ioe);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		return total;
 	}

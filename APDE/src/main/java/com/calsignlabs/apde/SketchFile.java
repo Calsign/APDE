@@ -945,14 +945,13 @@ public class SketchFile implements Parcelable {
 	 *
 	 * @param problems
 	 */
-	public void setCompilerProblems(CompilerProblem[] problems) {
+	public void setCompilerProblems(List<CompilerProblem> problems) {
 		String[] lineTexts = getText().split("\n");
 		compilerProblems = new ArrayList<>();
-		for (int i = 0; i < problems.length; i ++) {
-			CompilerProblem problem = problems[i];
+		for (CompilerProblem problem : problems) {
 			int line = problem.getJavaLine() - getJavaOffset();
 			
-			if (line > 0 && line < lineTexts.length) {
+			if (line >= 0 && line < lineTexts.length) {
 				initCompilerProblem(problem, lineTexts, line);
 				compilerProblems.add(problem);
 			}
