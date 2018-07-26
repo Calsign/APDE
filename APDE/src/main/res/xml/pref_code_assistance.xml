@@ -15,4 +15,22 @@
             android:summary="@string/pref_curly_brace_insertion_desc"
             android:title="@string/pref_curly_brace_insertion" />
     </android.support.v7.preference.PreferenceCategory>
+    
+    <android.support.v7.preference.PreferenceCategory
+        android:key="pref_problem_overview"
+        android:title="@string/pref_problem_overview">
+        
+        <android.support.v14.preference.SwitchPreference
+            android:defaultValue="true"
+            android:key="pref_problem_overview_enable"
+            android:title="@string/pref_problem_overview_enable"
+            android:summary="@string/pref_problem_overview_enable_desc" />
+        
+        <android.support.v14.preference.SwitchPreference
+            android:defaultValue="true"
+            android:key="pref_problem_overview_highlight"
+            android:dependency="pref_problem_overview_enable"
+            android:title="@string/pref_problem_overview_highlight"
+            android:summary="@string/pref_problem_overview_highlight_desc" />
+    </android.support.v7.preference.PreferenceCategory>
 </android.support.v7.preference.PreferenceScreen>

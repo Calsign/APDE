@@ -824,7 +824,8 @@ public class CodeEditText extends AppCompatEditText {
 					break;
 			}
 			
-			if (sketchFile.getCompilerProblems() != null) {
+			if (sketchFile.getCompilerProblems() != null
+					&& PreferenceManager.getDefaultSharedPreferences(getContext()).getBoolean("pref_problem_overview_highlight", true)) {
 				for (CompilerProblem problem : sketchFile.getCompilerProblems()) {
 					if (problem.line >= topVis && problem.line <= bottomVis) {
 						displayCompilerProblem(problem, canvas);

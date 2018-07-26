@@ -37,28 +37,28 @@ android {
 
 dependencies {
     implementation 'com.android.support.constraint:constraint-layout:1.1.2'
-    compile project(':aFileChooser')
-    compile files('libs/android-core.jar')
-    compile files('libs/antlr.jar')
-    compile files('libs/core-1.51.0.0.jar')
-    compile files('libs/dx.jar')
-    compile files('libs/ecj.jar')
-    compile files('libs/JavaMode.jar')
-    compile files('libs/jsch-0.1.51.jar')
-    compile files('libs/kellinwood-logging-android-1.4.jar')
-    compile files('libs/kellinwood-logging-lib-1.1.jar')
-    compile files('libs/org.eclipse.jgit-3.5.2.201411120430-r.jar')
-    compile files('libs/pde.jar')
-    compile files('libs/pkix-1.51.0.0.jar')
-    compile files('libs/prov-1.51.0.0.jar')
-    compile files('libs/sdklib.jar')
-    compile files('libs/zipio-lib-1.8.jar')
-    compile files('libs/zipsigner-lib-1.17.jar')
-    compile files('libs/zipsigner-lib-optional-1.17.jar')
-    compile 'com.android.support:support-v4:27.0.1'
-    compile 'com.android.support:appcompat-v7:27.0.1'
-    compile 'com.android.support:design:27.0.1'
-    compile 'com.takisoft.fix:preference-v7:27.0.1.0'
-    compile 'com.google.android.gms:play-services-auth:15.0.1'
+    implementation project(':aFileChooser')
+    implementation files('libs/android-core.jar')
+    implementation files('libs/antlr.jar')
+    implementation files('libs/core-1.51.0.0.jar')
+    implementation files('libs/dx.jar')
+    implementation files('libs/org.eclipse.jdt.core.jar')
+    implementation files('libs/JavaMode.jar')
+    implementation files('libs/jsch-0.1.51.jar')
+    implementation files('libs/kellinwood-logging-android-1.4.jar')
+    implementation files('libs/kellinwood-logging-lib-1.1.jar')
+    implementation files('libs/org.eclipse.jgit-3.5.2.201411120430-r.jar')
+    implementation files('libs/pde.jar')
+    implementation files('libs/pkix-1.51.0.0.jar')
+    implementation files('libs/prov-1.51.0.0.jar')
+    implementation files('libs/sdklib.jar')
+    implementation files('libs/zipio-lib-1.8.jar')
+    implementation files('libs/zipsigner-lib-1.17.jar')
+    implementation files('libs/zipsigner-lib-optional-1.17.jar')
+    implementation 'com.android.support:support-v4:27.1.1'
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:design:27.1.1'
+    implementation 'com.takisoft.fix:preference-v7:27.1.1.0'
+    implementation 'com.google.android.gms:play-services-auth:15.0.1'
     implementation 'com.google.android.gms:play-services-wearable:15.0.1'
 }

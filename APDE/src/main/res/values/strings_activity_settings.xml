@@ -139,6 +139,12 @@
 	<string name="pref_curly_brace_insertion">Close Code Blocks</string>
 	<string name="pref_curly_brace_insertion_desc">Assist in placement of curly braces</string>
 	
+	<string name="pref_problem_overview">Problem Overview</string>
+	<string name="pref_problem_overview_enable">Enable Problem Overview</string>
+	<string name="pref_problem_overview_enable_desc">Extract problems from compiler</string>
+	<string name="pref_problem_overview_highlight">Highlight Problems</string>
+	<string name="pref_problem_overview_highlight_desc">Errors and warnings underlined in code</string>
+	
 	<!-- About -->
 	
 	<string name="pref_about">About</string>

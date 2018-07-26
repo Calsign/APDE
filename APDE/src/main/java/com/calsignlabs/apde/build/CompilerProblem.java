@@ -20,10 +20,22 @@ public class CompilerProblem {
 	public boolean error;
 	public String message;
 	
+	public boolean preloaded = false;
+	
 	public CompilerProblem(int javaLine, int posInLine, String arg, boolean error, String message) {
 		this.javaLine = javaLine;
 		this.posInLine = posInLine;
 		this.arg = arg;
+		this.error = error;
+		this.message = message;
+	}
+	
+	public CompilerProblem(SketchFile sketchFile, int line, int start, int length, boolean error, String message) {
+		preloaded = true;
+		this.sketchFile = sketchFile;
+		this.line = line;
+		this.start = start;
+		this.length = length;
 		this.error = error;
 		this.message = message;
 	}

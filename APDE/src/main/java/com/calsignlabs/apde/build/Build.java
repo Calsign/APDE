@@ -437,6 +437,8 @@ public class Build {
 		
 		File androidJarLoc = getAndroidJarLoc(editor);
 		
+		boolean customProblems = PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_problem_overview_enable", true);
+		
 		try {
 			// Generate a new manifest and populate it with sketch properties
 			manifest = new Manifest(this);
@@ -756,10 +758,27 @@ public class Build {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (SketchException e) {
-			e.printStackTrace();
-			
-			editor.errorExt(e.getMessage());
-			editor.highlightLineExt(e.getCodeIndex(), e.getCodeLine());
+			if (customProblems) {
+				SketchFile sketchFile = null;
+				
+				if (e.getCodeIndex() >= 0 && e.getCodeIndex() < editor.getTabMetas().length) {
+					sketchFile = editor.getTabMetas()[e.getCodeIndex()];
+				}
+				
+				int line = sketchFile == null ? e.getCodeLine()
+						: Math.min(e.getCodeLine(), sketchFile.getFragment().getCodeEditText().getLineCount());
+				
+				System.out.println("column: " + e.getCodeColumn());
+				
+				editor.compilerProblems.clear();
+				editor.compilerProblems.add(new CompilerProblem(sketchFile, line, e.getCodeColumn(), 1, true, e.getMessage()));
+				
+				editor.showProblems();
+			} else {
+				System.err.println(e.getMessage());
+				editor.errorExt(e.getMessage());
+				editor.highlightLineExt(e.getCodeIndex(), e.getCodeLine());
+			}
 			
 			//Bail out
 			cleanUp();
@@ -928,9 +947,6 @@ public class Build {
 		//Run ECJ
 		{
 			System.out.println(editor.getResources().getString(R.string.build_compiling_ecj));
-			
-			// TODO make setting for this
-			boolean customProblems = true;
 			
 			Compiler compiler = new Compiler(customProblems);
 			
@@ -1715,25 +1731,25 @@ public class Build {
 						errorFile, errorLine, re.getColumn(), false);
 			}
 			
-			if (msg.indexOf("expecting RBRACK") != -1) {
+			if (msg.contains("expecting RBRACK")) {
 				System.err.println(msg);
 				throw new SketchException(editor.getResources().getString(R.string.preproc_missing_right_bracket),
 						errorFile, errorLine, re.getColumn(), false);
 			}
 			
-			if (msg.indexOf("expecting SEMI") != -1) {
+			if (msg.contains("expecting SEMI")) {
 				System.err.println(msg);
 				throw new SketchException(editor.getResources().getString(R.string.preproc_missing_semi),
 						errorFile, errorLine, re.getColumn(), false);
 			}
 			
-			if (msg.indexOf("expecting RPAREN") != -1) {
+			if (msg.contains("expecting RPAREN")) {
 				System.err.println(msg);
 				throw new SketchException(editor.getResources().getString(R.string.preproc_missing_right_paren),
 						errorFile, errorLine, re.getColumn(), false);
 			}
 			
-			if (msg.indexOf("preproc.web_colors") != -1) {
+			if (msg.contains("preproc.web_colors")) {
 				throw new SketchException(editor.getResources().getString(R.string.preproc_bad_web_color),
 						errorFile, errorLine, re.getColumn(), false);
 			}

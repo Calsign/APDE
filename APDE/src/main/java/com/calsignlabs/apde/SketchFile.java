@@ -949,11 +949,17 @@ public class SketchFile implements Parcelable {
 		String[] lineTexts = getText().split("\n");
 		compilerProblems = new ArrayList<>();
 		for (CompilerProblem problem : problems) {
-			int line = problem.getJavaLine() - getJavaOffset();
-			
-			if (line >= 0 && line < lineTexts.length) {
-				initCompilerProblem(problem, lineTexts, line);
-				compilerProblems.add(problem);
+			if (problem.preloaded) {
+				if (problem.sketchFile == this) {
+					compilerProblems.add(problem);
+				}
+			} else {
+				int line = problem.getJavaLine() - getJavaOffset();
+				
+				if (line >= 0 && line < lineTexts.length) {
+					initCompilerProblem(problem, lineTexts, line);
+					compilerProblems.add(problem);
+				}
 			}
 		}
 	}

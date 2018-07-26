@@ -3665,11 +3665,11 @@ public class EditorActivity extends AppCompatActivity {
 	 */
 	public void showProblems() {
 		// Give the problems to all of the sketch files
-    	for (SketchFile sketchFile : getSketchFiles()) {
-    		// Each SketchFile figures out which problems it needs, so just give them every problem
-    		sketchFile.setCompilerProblems(compilerProblems);
-    		if (sketchFile.getFragment() != null && sketchFile.getFragment().getCodeEditText() != null) {
-    			sketchFile.getFragment().getCodeEditText().invalidate();
+		for (SketchFile sketchFile : getSketchFiles()) {
+			// Each SketchFile figures out which problems it needs, so just give them every problem
+			sketchFile.setCompilerProblems(compilerProblems);
+			if (sketchFile.getFragment() != null && sketchFile.getFragment().getCodeEditText() != null) {
+				sketchFile.getFragment().getCodeEditText().invalidate();
 			}
 		}
 		
