@@ -10,6 +10,7 @@ android {
         targetSdkVersion 27
         versionCode 28
         versionName "0.5.1-pre2"
+        multiDexEnabled true
     }
 
     buildTypes {
@@ -28,6 +29,11 @@ android {
         }
     }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
     dexOptions {
         javaMaxHeapSize "4g"
     }
@@ -36,6 +42,7 @@ android {
 }
 
 dependencies {
+    compile 'com.android.support:multidex:1.0.3'
     implementation 'com.android.support.constraint:constraint-layout:1.1.2'
     implementation project(':aFileChooser')
     implementation files('libs/android-core.jar')
@@ -43,6 +50,13 @@ dependencies {
     implementation files('libs/core-1.51.0.0.jar')
     implementation files('libs/dx.jar')
     implementation files('libs/org.eclipse.jdt.core.jar')
+    implementation files('libs/org.eclipse.core.runtime.jar')
+    implementation files('libs/org.eclipse.osgi.jar')
+    implementation files('libs/org.eclipse.equinox.common.jar')
+    implementation files('libs/org.eclipse.core.resources.jar')
+    implementation files('libs/org.eclipse.core.contenttype.jar')
+    implementation files('libs/org.eclipse.equinox.preferences.jar')
+    implementation files('libs/jdi.jar')
     implementation files('libs/JavaMode.jar')
     implementation files('libs/jsch-0.1.51.jar')
     implementation files('libs/kellinwood-logging-android-1.4.jar')

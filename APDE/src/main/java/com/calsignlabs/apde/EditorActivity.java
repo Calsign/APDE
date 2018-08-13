@@ -3674,14 +3674,11 @@ public class EditorActivity extends AppCompatActivity {
 		}
 		
 		// Put problems before warnings
-		Collections.sort(compilerProblems, new Comparator<CompilerProblem>() {
-			@Override
-			public int compare(CompilerProblem a, CompilerProblem b) {
-				if (a.isError() == b.isError()) {
-					return 0;
-				} else {
-					return a.isError() ? -1 : 1;
-				}
+		Collections.sort(compilerProblems, (a, b) -> {
+			if (a.isError() == b.isError()) {
+				return 0;
+			} else {
+				return a.isError() ? -1 : 1;
 			}
 		});
     	

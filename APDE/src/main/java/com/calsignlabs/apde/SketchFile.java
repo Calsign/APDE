@@ -520,6 +520,10 @@ public class SketchFile implements Parcelable {
 		this.suffix = suffix;
 	}
 	
+	public boolean isPde() {
+		return getSuffix().equals(".pde");
+	}
+	
 	/**
 	 * @return
 	 */
@@ -962,6 +966,14 @@ public class SketchFile implements Parcelable {
 				}
 			}
 		}
+	}
+	
+	public int lineForOffset(int offset) {
+		return CodeEditText.lineForOffset(text, offset);
+	}
+	
+	public int offsetForLine(int line) {
+		return CodeEditText.offsetForLine(text, line);
 	}
 	
 	private void initCompilerProblem(CompilerProblem compilerProblem, String[] lineTexts, int line) {

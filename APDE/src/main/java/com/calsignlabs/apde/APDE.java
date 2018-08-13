@@ -2,7 +2,6 @@ package com.calsignlabs.apde;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.Application;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -16,6 +15,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
 import android.preference.PreferenceManager;
+import android.support.multidex.MultiDexApplication;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.view.ContextThemeWrapper;
@@ -40,7 +40,6 @@ import com.calsignlabs.apde.tool.AutoFormat;
 import com.calsignlabs.apde.tool.ColorSelector;
 import com.calsignlabs.apde.tool.CommentUncomment;
 import com.calsignlabs.apde.tool.DecreaseIndent;
-import com.calsignlabs.apde.tool.ExportGradleProject;
 import com.calsignlabs.apde.tool.ExportSignedPackage;
 import com.calsignlabs.apde.tool.FindInReference;
 import com.calsignlabs.apde.tool.FindReplace;
@@ -88,7 +87,7 @@ import processing.app.Platform;
  * This is the Application global state for APDE. It manages things like the
  * currently selected sketch and references to the various activities.
  */
-public class APDE extends Application {
+public class APDE extends MultiDexApplication {
 	public static final String DEFAULT_SKETCHBOOK_LOCATION = "Sketchbook";
 	public static final String LIBRARIES_FOLDER = "libraries";
 	

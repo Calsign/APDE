@@ -21,7 +21,6 @@ import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.content.FileProvider;
-import android.util.Log;
 import android.view.inputmethod.InputMethodManager;
 
 import com.android.sdklib.build.ApkBuilder;
@@ -329,6 +328,9 @@ public class Build {
 		
 		running.set(true);
 		
+		// Reset compiler problems
+		editor.compilerProblems.clear();
+		
 		//Throughout this function, perform periodic checks to see if the user has cancelled the build
 		
 		editor.messageExt(editor.getResources().getString(R.string.build_message_begin));
@@ -505,43 +507,38 @@ public class Build {
 				return;
 			}
 			
-			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
-			
-			//Enable all of the fancy preprocessor stuff
-			Preferences.setBoolean("preproc.enhanced_casting", true);
-			Preferences.setBoolean("preproc.web_colors", true);
-			Preferences.setBoolean("preproc.color_datatype", true);
-			Preferences.setBoolean("preproc.substitute_floats", true);
-			Preferences.setBoolean("preproc.substitute_unicode", true);
+//			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
+//
+//			//Enable all of the fancy preprocessor stuff
+//			Preferences.setBoolean("preproc.enhanced_casting", true);
+//			Preferences.setBoolean("preproc.web_colors", true);
+//			Preferences.setBoolean("preproc.color_datatype", true);
+//			Preferences.setBoolean("preproc.substitute_floats", true);
+//			Preferences.setBoolean("preproc.substitute_unicode", true);
 			
 			if (verbose) {
 				System.out.println(editor.getResources().getString(R.string.build_preprocessing));
 			}
 			
-			Preproc preproc = new Preproc(sketchName, packageName);
+			//Preproc preproc = new Preproc(sketchName, packageName);
 			
 			//Combine all of the tabs to check for size
-			String combinedText = "";
-			for(SketchFile tab : tabs)
-				combinedText += tab.getText();
-			SurfaceInfo surfaceInfo = preproc.initSketchSize(combinedText, editor, getAppComponent());
-			preproc.initSketchSmooth(combinedText, editor);
-			sketchClassName = preprocess(srcFolder, packageName, preproc);
+			//String combinedText = "";
+			//for(SketchFile tab : tabs)
+			//	combinedText += tab.getText();
+			//SurfaceInfo surfaceInfo = preproc.initSketchSize(combinedText, editor, getAppComponent());
+			//preproc.initSketchSmooth(combinedText, editor);
+			//sketchClassName = preprocess(srcFolder, packageName, preproc);
 			
-			//Detect if the renderer is one of the OpenGL renderers
-			//XTODO support custom renderers that require OpenGL or... other problems that may arise
-//			String sketchRenderer = preproc.getSketchRenderer();
-//			if(sketchRenderer != null)
-//				isOpenGL = sketchRenderer.equals("OPENGL") || sketchRenderer.equals("P3D") || sketchRenderer.equals("P2D");
-//			else
-//				isOpenGL = false;
+			Preprocessor preprocessor = new Preprocessor(this, srcFolder, packageName, sketchName, getCodeFolderPackages());
+			preprocessor.preprocess();
 			
-			//This OpenGL-checking isn't really useful anymore...
+			// This will update with preprocessor problems
+			editor.showProblems();
 			
-//			if(isOpenGL)
-//				System.out.println("Detected renderer " + sketchRenderer + "; including OpenGL libraries");
-//			else
-//				System.out.println("Detected renderer " + sketchRenderer + "; leaving out OpenGL libraries");
+			if (true) {
+				return;
+			}
 			
 			if(!running.get()) { //CHECK
 				cleanUpHalt();
@@ -568,7 +565,7 @@ public class Build {
 				final File resFolder = new File(buildFolder, "res");
 				writeRes(resFolder, sketchClassName);
 				
-				writeMainClass(srcFolder, Preproc.getRenderer(surfaceInfo), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
+				writeMainClass(srcFolder, preprocessor.isOpenGL(), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
 				
 				final File libsFolder = mkdirs(buildFolder, "libs", editor);
 				final File assetsFolder = mkdirs(buildFolder, "assets", editor);
@@ -768,9 +765,6 @@ public class Build {
 				int line = sketchFile == null ? e.getCodeLine()
 						: Math.min(e.getCodeLine(), sketchFile.getFragment().getCodeEditText().getLineCount());
 				
-				System.out.println("column: " + e.getCodeColumn());
-				
-				editor.compilerProblems.clear();
 				editor.compilerProblems.add(new CompilerProblem(sketchFile, line, e.getCodeColumn(), 1, true, e.getMessage()));
 				
 				editor.showProblems();
@@ -1519,6 +1513,23 @@ public class Build {
 		}
 	}
 	
+	private String[] getCodeFolderPackages() {
+		String[] codeFolderPackages = null;
+		if (getSketchCodeFolder().exists()) {
+			File codeFolder = getSketchCodeFolder();
+			javaLibraryPath = codeFolder.getAbsolutePath();
+			
+			// get a list of .jar files in the "code" folder
+			// (class files in subfolders should also be picked up)
+			String codeFolderClassPath = contentsToClassPath(codeFolder);
+			// append the jar files in the code folder to the class path
+			classPath += File.pathSeparator + codeFolderClassPath;
+			// get list of packages found in those jars
+			codeFolderPackages = packageListFromClassPath(codeFolderClassPath, editor);
+		}
+		return codeFolderPackages;
+	}
+	
 	protected String removeSize(String code) {
 		final String left = "(?:^|\\s|;)";
 		final String right = "\\s*\\(([^\\)]*)\\)\\s*;";
@@ -1565,8 +1576,6 @@ public class Build {
 				return a.getSourceStart() - b.getSourceStart();
 			}
 		});
-		
-		destination.clear();
 		
 		try {
 			reader = new BufferedReader(new FileReader(javaFile));
@@ -1631,7 +1640,7 @@ public class Build {
 	private int findPosInLine(String line, String text, int start) {
 		int posInLine = -1, index = -1;
 		while (index < start && (index = line.indexOf(text, index + 1)) != -1) {
-			posInLine ++;
+			posInLine++;
 		}
 		return posInLine;
 	}
@@ -2172,18 +2181,14 @@ public class Build {
 		}
 	}
 	
-	private static boolean isOpenGL(String renderer) {
-		return renderer != null && (renderer.equals("P2D") || renderer.equals("P3D") || renderer.equals("OPENGL"));
-	}
-	
-	private void writeMainClass(final File srcDirectory, String renderer, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+	private void writeMainClass(final File srcDirectory, boolean isOpenGL, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
 		ComponentTarget comp = getAppComponent();
 		if (comp == ComponentTarget.APP || comp == ComponentTarget.PREVIEW) {
 			writeFragmentActivity(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 		} else if (comp == ComponentTarget.WALLPAPER) {
 			writeWallpaperService(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 		} else if (comp == ComponentTarget.WATCHFACE) {
-			if (isOpenGL(renderer)) {
+			if (isOpenGL) {
 				writeWatchFaceGLESService(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 			} else {
 				writeWatchFaceCanvasService(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);

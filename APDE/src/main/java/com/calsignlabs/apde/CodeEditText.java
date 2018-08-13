@@ -719,6 +719,10 @@ public class CodeEditText extends AppCompatEditText {
 		return -1;
 	}
 	
+	public int offsetForLine(int line) {
+		return offsetForLine(getText().toString(), line);
+	}
+	
 	/**
 	 * Returns the character offset for the specified line.
 	 * This is related to offsetForLineEnd(int)
@@ -726,9 +730,9 @@ public class CodeEditText extends AppCompatEditText {
 	 * @param line
 	 * @return
 	 */
-	public int offsetForLine(int line) {
+	public static int offsetForLine(String text, int line) {
 		//Get a list of lines
-		String[] lines = getText().toString().split("\n");
+		String[] lines = text.split("\n");
 		
 		//Count up to the specified line
 		int off = 0;
@@ -737,9 +741,9 @@ public class CodeEditText extends AppCompatEditText {
 			off += lines[i].length() + 1;
 		
 		//We don't want to return values that are too big...
-		if(off > getText().length())
-			off = getText().length();
-		//...or to small
+		if(off > text.length())
+			off = text.length();
+		//...or too small
 		if(off < 0)
 			off = 0;
 		
@@ -766,7 +770,7 @@ public class CodeEditText extends AppCompatEditText {
 		//We don't want to return values that are too big
 		if(off > getText().length())
 			off = getText().length();
-		//...or to small
+		//...or too small
 		if(off < 0)
 			off = 0;
 		
@@ -774,8 +778,12 @@ public class CodeEditText extends AppCompatEditText {
 	}
 	
 	public int lineForOffset(int offset) {
+		return lineForOffset(getText().toString(), offset);
+	}
+	
+	public static int lineForOffset(String text, int offset) {
 		//Get a list of lines
-		String[] lines = getText().toString().split("\n");
+		String[] lines = text.split("\n");
 		
 		int off = 0;
 		for(int i = 0; i < lines.length; i ++) {
