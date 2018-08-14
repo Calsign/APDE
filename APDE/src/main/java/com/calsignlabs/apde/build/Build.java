@@ -21,7 +21,6 @@ import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.content.FileProvider;
-import android.util.Log;
 import android.view.inputmethod.InputMethodManager;
 
 import com.android.sdklib.build.ApkBuilder;
@@ -30,7 +29,6 @@ import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.contrib.Library;
-import com.jcraft.jsch.IO;
 
 import org.eclipse.jdt.internal.compiler.batch.Main;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
@@ -1336,9 +1334,14 @@ public class Build {
 		
 		dexUri = makeFileAvailableToPreview(dexFile);
 		
+		// Delete old dexed libs
+		for (File file : editor.getFilesDir().listFiles()) {
+			if (file.getName().startsWith("preview_dexed_lib_")) {
+				deleteFile(file, editor);
+			}
+		}
+		
 		// We need to copy the dexed libs to the sketch previewer
-		File dexedLibDestDir = new File(editor.getFilesDir(), "dexed_lib");
-		dexedLibDestDir.mkdirs();
 		String[] libUris = new String[dexedLibs.length];
 		for (int i = 0; i < dexedLibs.length; i ++) {
 			// Don't copy the dexed Processing core lib, already included in sketch previewer
@@ -1346,7 +1349,9 @@ public class Build {
 			// on API 20 and below
 			if (!(dexedLibs[i].getName().equals("all-lib-dex.jar") || dexedLibs[i].getName().equals("support-wearable-dex.jar"))) {
 				try {
-					File dest = new File(dexedLibDestDir, dexedLibs[i].getName());
+					// We used to put the dexed libs in their own folder, but this didn't work on 4.4
+					// So instead we give them all a prefix
+					File dest = new File(editor.getFilesDir(), "preview_dexed_lib_" + dexedLibs[i].getName());
 					copyFile(dexedLibs[i], dest);
 					libUris[i] = makeFileAvailableToPreview(dest).toString();
 				} catch (IOException e) {
