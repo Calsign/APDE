@@ -2,12 +2,14 @@ package com.calsignlabs.apde.sketchpreview;
 
 import android.content.Context;
 import android.net.Uri;
+import android.os.Build;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -15,6 +17,7 @@ import java.io.InputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import dalvik.system.DexClassLoader;
 import dalvik.system.PathClassLoader;
 import processing.core.PApplet;
 
@@ -23,6 +26,10 @@ import processing.core.PApplet;
  */
 public class PreviewUtil {
 	public static PApplet loadSketchPApplet(Context context, String packageName, String className) {
+		if (usesDexOptCache()) {
+			clearDexOptCacheFolder(context);
+		}
+		
 		File dexFile = getSketchDex(context);
 		
 		if (dexFile.exists()) {
@@ -36,7 +43,15 @@ public class PreviewUtil {
 			
 			// Really important to set up our class loader with the default one as parent
 			// Otherwise we get two copies of loaded classes and things get ugly
-			PathClassLoader classLoader = new PathClassLoader(dexPathList.toString(), PApplet.class.getClassLoader());
+			ClassLoader classLoader;
+			if (usesDexOptCache()) {
+				// On KitKat we have to specify an optimized dex folder
+				classLoader = new DexClassLoader(dexPathList.toString(),
+						getDexOptCacheFolder(context).getAbsolutePath(),
+						null, PApplet.class.getClassLoader());
+			} else {
+				classLoader = new PathClassLoader(dexPathList.toString(), PApplet.class.getClassLoader());
+			}
 			String classPath = packageName + "." + className;
 			
 			try {
@@ -63,6 +78,22 @@ public class PreviewUtil {
 	
 	public static File getSketchDex(Context context) {
 		return new File(context.getFilesDir(), "sketch.dex");
+	}
+	
+	public static boolean usesDexOptCache() {
+		return Build.VERSION.SDK_INT < 21;
+	}
+	
+	public static File getDexOptCacheFolder(Context context) {
+		return context.getDir("dexopt", Context.MODE_PRIVATE);
+	}
+	
+	public static void clearDexOptCacheFolder(Context context) {
+		try {
+			deleteFile(getDexOptCacheFolder(context));
+		} catch (IOException e) {
+			Log.e("apde", "APDE Sketch Preview: Failed to delete dex opt cache folder");
+		}
 	}
 	
 	/**
@@ -214,5 +245,25 @@ public class PreviewUtil {
 		}
 		
 		return destFile;
+	}
+	
+	/**
+	 * Recursive file deletion
+	 *
+	 * @param file
+	 * @throws IOException
+	 */
+	public static void deleteFile(File file) throws IOException {
+		if (file.exists()) {
+			if (file.isDirectory()) {
+				for (File content : file.listFiles()) {
+					deleteFile(content);
+				}
+			}
+			
+			if (!file.delete()) { //Uh-oh...
+				throw new FileNotFoundException("Failed to delete file: " + file);
+			}
+		}
 	}
 }
