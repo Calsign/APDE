@@ -46,11 +46,6 @@ public class SketchFile implements Parcelable {
 	//Whether or not we should save this (because we need this for some reason...?)
 	private boolean enabled;
 	
-	// The offset of this file into the pre-processed, combined JAVA file
-	private int preprocOffset;
-	// Similar to preprocOffset, but used for compiler problems instead of preprocessor problems
-	private int javaOffset;
-	
 	//Current text
 	protected String text;
 	
@@ -67,6 +62,12 @@ public class SketchFile implements Parcelable {
 	protected boolean isExample;
 	
 	private List<CompilerProblem> compilerProblems;
+	
+	/**
+	 * Used only for java files, the number of characters added to the start of the file for the
+	 * import statement.
+	 */
+	public int javaImportHeaderOffset = 0;
 	
 	public static class FileChange implements Parcelable {
 		public int changeIndex;
@@ -190,19 +191,8 @@ public class SketchFile implements Parcelable {
 		setTitle(title);
 		setSuffix(".pde");
 		
-		undo = new LinkedList<FileChange>();
-		redo = new LinkedList<FileChange>();
-
-//		FileChange state = new FileChange();
-//		state.changeIndex = 0;
-//		state.beforeText = "";
-//		state.afterText = "";
-//		state.selectionStart = 0;
-//		state.selectionEnd = 0;
-//		state.scrollX = 0;
-//		state.scrollY = 0;
-//		
-//		undo.push(state);
+		undo = new LinkedList<>();
+		redo = new LinkedList<>();
 		
 		text = "";
 		selectionStart = 0;
@@ -213,60 +203,14 @@ public class SketchFile implements Parcelable {
 		enabled = true;
 	}
 	
-	public SketchFile(String title, EditorActivity context) {
-		initFragment();
-		
-		EditText code = fragment.getCodeEditText();
-		HorizontalScrollView scrollerX = fragment.getCodeScrollerX();
-		ScrollView scrollerY = fragment.getCodeScroller();
-		
-		setTitle(title);
-		setSuffix(".pde");
-		
-		undo = new LinkedList<FileChange>();
-		redo = new LinkedList<FileChange>();
-
-//		FileChange state = new FileChange();
-//		state.changeIndex = 0;
-//		state.beforeText = code.getText().toString();
-//		state.afterText = code.getText().toString();
-//		state.selectionStart = code.getSelectionStart();
-//		state.selectionEnd = code.getSelectionEnd();
-//		state.scrollX = scrollerX.getScrollX();
-//		state.scrollY = scrollerY.getScrollY();
-//		
-//		undo.push(state);
-		
-		text = code.getText().toString();
-		selectionStart = code.getSelectionStart();
-		selectionEnd = code.getSelectionEnd();
-		scrollX = scrollerX.getScrollX();
-		scrollY = scrollerY.getScrollY();
-		
-		enabled = true;
-
-//		System.out.println("setting tab " + title + ", scrollX: " + scrollX + ", scrollY: " + scrollY);
-	}
-	
 	public SketchFile(String title, String text, int selectionStart, int selectionEnd, int scrollX, int scrollY) {
 		initFragment();
 		
 		setTitle(title);
 		setSuffix(".pde");
 		
-		undo = new LinkedList<FileChange>();
-		redo = new LinkedList<FileChange>();
-		
-//		FileChange state = new FileChange();
-//		state.changeIndex = 0;
-//		state.beforeText = text;
-//		state.afterText = text;
-//		state.selectionStart = selectionStart;
-//		state.selectionEnd = selectionEnd;
-//		state.scrollX = scrollX;
-//		state.scrollY = scrollY;
-//		
-//		undo.push(state);
+		undo = new LinkedList<>();
+		redo = new LinkedList<>();
 		
 		this.text = text;
 		this.selectionStart = selectionStart;
@@ -524,6 +468,10 @@ public class SketchFile implements Parcelable {
 		return getSuffix().equals(".pde");
 	}
 	
+	public boolean isJava() {
+		return getSuffix().equals(".java");
+	}
+	
 	/**
 	 * @return
 	 */
@@ -584,23 +532,11 @@ public class SketchFile implements Parcelable {
 		//Update the code area selection
 		code.setSelection(getSelectionStart(), getSelectionEnd());
 		
-		code.post(new Runnable() {
-			public void run() {
-				code.updateBracketMatch();
-			}
-		});
+		code.post(code::updateBracketMatch);
 		
-		scrollerX.post(new Runnable() {
-			public void run() {
-				scrollerX.scrollTo(getScrollX(), 0);
-			}
-		});
+		scrollerX.post(() -> scrollerX.scrollTo(getScrollX(), 0));
 		
-		scrollerY.post(new Runnable() {
-			public void run() {
-				scrollerY.scrollTo(0, getScrollY());
-			}
-		});
+		scrollerY.post(() -> scrollerY.scrollTo(0, getScrollY()));
 		
 		context.supportInvalidateOptionsMenu();
 	}
@@ -619,23 +555,6 @@ public class SketchFile implements Parcelable {
 		return selectionEnd;
 	}
 	
-//	/**
-//	 * @param selection
-//	 */
-//	private void setSelection(int selection) {
-//		selectionStart = selection;
-//		selectionEnd = selection;
-//	}
-//	
-//	/**
-//	 * @param selectionStart
-//	 * @param selectionEnd
-//	 */
-//	private void setSelection(int selectionStart, int selectionEnd) {
-//		this.selectionStart = selectionStart;
-//		this.selectionEnd = selectionEnd;
-//	}
-	
 	/**
 	 * @return
 	 */
@@ -649,15 +568,6 @@ public class SketchFile implements Parcelable {
 	public int getScrollY() {
 		return scrollY;
 	}
-	
-//	/**
-//	 * @param scrollX
-//	 * @param scrollY
-//	 * /
-//	public void setScroll(int scrollX, int scrollY) {
-//		this.scrollX = scrollX;
-//		this.scrollY = scrollY;
-//	}
 	
 	/**
 	 * Writes this file in the directory specified by the path
@@ -705,7 +615,7 @@ public class SketchFile implements Parcelable {
 	public boolean readData(String filename) {
 		//Create the input stream
 		BufferedInputStream inputStream = null;
-		String output = "";
+		StringBuilder output = new StringBuilder();
 		boolean success;
 		
 		try {
@@ -716,11 +626,12 @@ public class SketchFile implements Parcelable {
 			byte[] contents = new byte[1024];
 			int bytesRead = 0;
 			
-			while ((bytesRead = inputStream.read(contents)) != -1)
-				output += new String(contents, 0, bytesRead);
+			while ((bytesRead = inputStream.read(contents)) != -1) {
+				output.append(new String(contents, 0, bytesRead));
+			}
 			
 			//Set the data
-			text = output;
+			text = handleBadChars(output.toString());
 			
 			success = true;
 		} catch (Exception e) { //Errors
@@ -740,33 +651,9 @@ public class SketchFile implements Parcelable {
 		return success;
 	}
 	
-	/**
-	 * @return
-	 */
-	public int getPreprocOffset() {
-		return preprocOffset;
-	}
-	
-	/**
-	 * @param preprocOffset
-	 */
-	public void setPreprocOffset(int preprocOffset) {
-		this.preprocOffset = preprocOffset;
-	}
-	
-	public int getJavaOffset() {
-		return javaOffset;
-	}
-	
-	public void setJavaOffset(int javaOffset) {
-		this.javaOffset = javaOffset;
-	}
-	
-	/**
-	 * @param extra
-	 */
-	public void addPreprocOffset(int extra) {
-		preprocOffset += extra;
+	private static String handleBadChars(String string) {
+		// Convert all newlines to something we know how to deal with
+		return string.replaceAll("\\R", "\n");
 	}
 	
 	private void initFragment() {
@@ -806,7 +693,7 @@ public class SketchFile implements Parcelable {
 	}
 	
 	//Only used when converting to a parcel
-	public int tabNum = -1;
+	protected int tabNum = -1;
 	
 	@Override
 	public int describeContents() {
@@ -822,8 +709,6 @@ public class SketchFile implements Parcelable {
 		dest.writeList(redo);
 		
 		dest.writeByte((byte) (enabled ? 1 : 0));
-		
-		dest.writeInt(preprocOffset);
 		
 		dest.writeInt(tabNum);
 		
@@ -842,15 +727,13 @@ public class SketchFile implements Parcelable {
 		title = source.readString();
 		suffix = source.readString();
 		
-		undo = new LinkedList<FileChange>();
-		redo = new LinkedList<FileChange>();
+		undo = new LinkedList<>();
+		redo = new LinkedList<>();
 		
 		source.readList(undo, getClass().getClassLoader());
 		source.readList(redo, getClass().getClassLoader());
 		
 		enabled = source.readByte() != 0;
-		
-		preprocOffset = source.readInt();
 		
 		tabNum = source.readInt();
 		
@@ -953,17 +836,8 @@ public class SketchFile implements Parcelable {
 		String[] lineTexts = getText().split("\n");
 		compilerProblems = new ArrayList<>();
 		for (CompilerProblem problem : problems) {
-			if (problem.preloaded) {
-				if (problem.sketchFile == this) {
-					compilerProblems.add(problem);
-				}
-			} else {
-				int line = problem.getJavaLine() - getJavaOffset();
-				
-				if (line >= 0 && line < lineTexts.length) {
-					initCompilerProblem(problem, lineTexts, line);
-					compilerProblems.add(problem);
-				}
+			if (problem.sketchFile == this) {
+				compilerProblems.add(problem);
 			}
 		}
 	}
@@ -974,47 +848,6 @@ public class SketchFile implements Parcelable {
 	
 	public int offsetForLine(int line) {
 		return CodeEditText.offsetForLine(text, line);
-	}
-	
-	private void initCompilerProblem(CompilerProblem compilerProblem, String[] lineTexts, int line) {
-		compilerProblem.sketchFile = this;
-		compilerProblem.line = line;
-		
-		// Basically, ECJ compiles a preprocessed java file, but that java file doesn't like up with
-		// the text of the sketch because it's preprocessed. The line numbers do line up, though. So
-		// we scrape the highlighted text from the java file (done in Build) and then search for
-		// that text in the sketch text. The below code handles searching in the sketch text.
-		
-		// In theory this shouldn't be an issue
-		// Maybe if the user deletes a line and the error was on the last line
-		if (compilerProblem.line >= 0 && compilerProblem.line < lineTexts.length && compilerProblem.arg != null) {
-			String lineText = lineTexts.length > compilerProblem.line ? lineTexts[compilerProblem.line] : "";
-			
-			// We could have multiple problems on one line, hence different pos for each one
-			// Traverse line, finding matches, until we get to correct pos
-			int index = -1, intoLine = -1;
-			while (intoLine < compilerProblem.posInLine) {
-				// Look for next one after last found one
-				index = lineText.indexOf(compilerProblem.arg, index + 1);
-				if (index == -1) {
-					break;
-				}
-				intoLine++;
-			}
-			
-			// TODO remove these print statements
-			// Technically these are debug statements, but they should never be called
-			// Leaving it in can help us fix potentially nasty errors down the line
-			if (index == -1) {
-				System.out.println("could not find in line: " + compilerProblem.line + ", pos: " + compilerProblem.posInLine);
-				System.out.println(lineText);
-				System.out.println(compilerProblem.arg);
-			}
-			
-			// If we can't find the text in the line, then just highlight the entire line
-			compilerProblem.start = index != -1 ? index : 0;
-			compilerProblem.length = index != -1 ? compilerProblem.arg.length() : lineText.length();
-		}
 	}
 	
 	public List<CompilerProblem> getCompilerProblems() {

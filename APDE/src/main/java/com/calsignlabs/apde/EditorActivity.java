@@ -655,7 +655,6 @@ public class EditorActivity extends AppCompatActivity {
 								messageArea.setTextColor(getResources().getColor(R.color.warning_text));
 								break;
 						}
-						
 						CodeEditText codeArea = getSelectedCodeArea();
 						
 						if (codeArea != null) {
@@ -668,8 +667,18 @@ public class EditorActivity extends AppCompatActivity {
 							toggleCharInsertsProblemOverviewButton(false, true);
 							
 							if (charInserts) {
-								findViewById(R.id.message).setVisibility(View.GONE);
-								findViewById(R.id.char_insert_tray).setVisibility(View.VISIBLE);
+								View charInsertTray = findViewById(R.id.char_insert_tray);
+								
+								correctMessageAreaHeight();
+								toggleCharInserts.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_right_black);
+								
+								// This is really screwy, but it gets the job done
+								messageArea.getLayoutParams().width = 0;
+								charInsertTray.setVisibility(View.VISIBLE);
+								charInsertTray.getLayoutParams().width = findViewById(R.id.message_char_insert_wrapper).getWidth();
+								
+								messageArea.requestLayout();
+								charInsertTray.requestLayout();
 							}
 						}
 					}
@@ -680,7 +689,7 @@ public class EditorActivity extends AppCompatActivity {
 						View codeArea = getSelectedCodeAreaScroller();
 						View consoleArea = findViewById(R.id.console_wrapper);
 						
-						ViewGroup content = (ViewGroup) findViewById(R.id.content);
+						ViewGroup content = findViewById(R.id.content);
 						
 						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
 						
@@ -700,10 +709,7 @@ public class EditorActivity extends AppCompatActivity {
 						// Update the character insert tray
 						toggleCharInsertsProblemOverviewButton(true, true);
 						
-						final View messageView = findViewById(R.id.message);
-						
-						findViewById(R.id.message).setVisibility(View.VISIBLE);
-						findViewById(R.id.char_insert_tray).setVisibility(View.GONE);
+						hideCharInsertsNoAnimation(false);
 					}
 				}
 			}
@@ -2977,7 +2983,7 @@ public class EditorActivity extends AppCompatActivity {
 		charInserts = false;
     }
 	
-	public void hideCharInsertsNoAnimation() {
+	public void hideCharInsertsNoAnimation(boolean disable) {
 		final View messageView = findViewById(R.id.message);
 		final View charInsertTray = findViewById(R.id.char_insert_tray);
 		
@@ -2989,7 +2995,9 @@ public class EditorActivity extends AppCompatActivity {
 		messageView.getLayoutParams().width = -1;
 		messageView.requestLayout();
 		
-		charInserts = false;
+		if (disable) {
+			charInserts = false;
+		}
 	}
     
     /**
@@ -3294,7 +3302,7 @@ public class EditorActivity extends AppCompatActivity {
     	messageType = MessageType.MESSAGE;
     	// Update message area height
     	correctMessageAreaHeight();
-    	hideCharInsertsNoAnimation();
+//    	hideCharInsertsNoAnimation();
     }
     
     /**
@@ -3333,7 +3341,7 @@ public class EditorActivity extends AppCompatActivity {
     	messageType = MessageType.ERROR;
     	// Update message area height
     	correctMessageAreaHeight();
-    	hideCharInsertsNoAnimation();
+//    	hideCharInsertsNoAnimation();
     }
     
     /**
@@ -3367,7 +3375,7 @@ public class EditorActivity extends AppCompatActivity {
 		messageType = MessageType.WARNING;
 		// Update message area height
 		correctMessageAreaHeight();
-		hideCharInsertsNoAnimation();
+//		hideCharInsertsNoAnimation();
 	}
 	
 	public void warningExt(final String msg) {
@@ -3387,7 +3395,7 @@ public class EditorActivity extends AppCompatActivity {
     	
     	//Update the toggle button
     	toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_black : R.drawable.ic_caret_left_black);
-    	toggleProblemOverview.setImageResource(charInserts ? R.drawable.problem_overview_black_unfilled : R.drawable.problem_overview_white_unfilled);
+    	toggleProblemOverview.setImageResource(charInserts ? R.drawable.problem_overview_black_unfilled : R.drawable.problem_overview_black_unfilled);
     	
     	//Update the separator line
     	findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator));
@@ -3407,7 +3415,7 @@ public class EditorActivity extends AppCompatActivity {
     	
     	//Update the toggle button
     	toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_left_white);
-		toggleProblemOverview.setImageResource(charInserts ? R.drawable.problem_overview_white_unfilled : R.drawable.problem_overview_black_unfilled);
+		toggleProblemOverview.setImageResource(charInserts ? R.drawable.problem_overview_white_unfilled : R.drawable.problem_overview_white_unfilled);
     	
     	//Update the separator line
     	findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator_light));
@@ -3427,7 +3435,7 @@ public class EditorActivity extends AppCompatActivity {
 		
 		//Update the toggle button
 		toggleCharInserts.setImageResource(charInserts ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_left_white);
-		toggleProblemOverview.setImageResource(charInserts ? R.drawable.problem_overview_black_unfilled : R.drawable.problem_overview_white_unfilled);
+		toggleProblemOverview.setImageResource(charInserts ? R.drawable.problem_overview_white_unfilled : R.drawable.problem_overview_white_unfilled);
 		
 		//Update the separator line
 		findViewById(R.id.toggle_char_inserts_separator).setBackgroundColor(getResources().getColor(R.color.toggle_char_inserts_separator_light));
@@ -3440,61 +3448,60 @@ public class EditorActivity extends AppCompatActivity {
 	}
     
     // Called internally to correct issues with 2-line messages vs 1-line messages (and maybe some other issues)
-    protected void correctMessageAreaHeight() {
+	protected void correctMessageAreaHeight() {
     	final TextView messageArea = findViewById(R.id.message);
-    	
     	final View buffer = findViewById(R.id.buffer);
     	
     	// Update the message area's height
     	messageArea.requestLayout();
     	
     	// Check back in later when the height has updated...
-    	messageArea.post(new Runnable() {
-    		@SuppressWarnings("SuspiciousNameCombination")
-			public void run() {
-    			// ...and update the console's height...
+    	messageArea.post(() -> {
+			// ...and update the console's height...
+			
+			int totalWidth = findViewById(R.id.message_char_insert_wrapper).getWidth();
+			
+			// We need to use this in case the message area is partially off the screen
+			// This is the DESIRED height, not the ACTUAL height
+			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
+			
+			// The height the text view would be if it were just one line
+			int singleLineHeight = getTextViewHeight(getApplicationContext(), "", messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
+			
+			// Obtain some references
+			View console = getConsoleWrapper();
+			View content = findViewById(R.id.content);
+			
+			if (isSelectedCodeAreaInitialized()) {
+				int consoleCodeHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+				int consoleHeight = consoleCodeHeight - codePager.getHeight();
 				
-				int totalWidth = findViewById(R.id.message_char_insert_wrapper).getWidth();
-    			
-    			// We need to use this in case the message area is partially off the screen
-    			// This is the DESIRED height, not the ACTUAL height
-    			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
-    			
-    			// The height the text view would be if it were just one line
-    			int singleLineHeight = getTextViewHeight(getApplicationContext(), "", messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
-				
-    			// Obtain some references
-    			View console = getConsoleWrapper();
-    			View content = findViewById(R.id.content);
-				
-				if (isSelectedCodeAreaInitialized()) {
-					int consoleCodeHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
-					int consoleHeight = consoleCodeHeight - codePager.getHeight();
-					
-					// We can't shrink the console if it's hidden (like when the keyboard is visible)...
-					// ...so shrink the code area instead
-					if (consoleHeight < 0 || keyboardVisible) {
-						codePager.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, consoleCodeHeight));
-						console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0));
-					} else {
-						console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, consoleHeight));
-					}
-					
-					// Note: For some reason modifying the LayoutParams directly is not working.
-					// That's why we're re-setting the LayoutParams every time. Perhaps worth
-					// looking into later.
+				// We can't shrink the console if it's hidden (like when the keyboard is visible)...
+				// ...so shrink the code area instead
+				if (consoleHeight < 0 || keyboardVisible) {
+					codePager.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, consoleCodeHeight));
+					console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0));
+				} else {
+					console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, consoleHeight));
 				}
 				
-				buffer.getLayoutParams().height = message;
-				messageArea.getLayoutParams().height = message;
-				
-				setViewLayoutParams(toggleCharInserts, singleLineHeight, message);
-				setViewLayoutParams(toggleProblemOverview, singleLineHeight, message);
-				setViewLayoutParams(findViewById(R.id.toggle_wrapper), singleLineHeight, message);
+				// Note: For some reason modifying the LayoutParams directly is not working.
+				// That's why we're re-setting the LayoutParams every time. Perhaps worth
+				// looking into later.
+			}
 			
-				buffer.requestLayout();
-    		}
-    	});
+			buffer.getLayoutParams().height = message;
+			messageArea.getLayoutParams().height = message;
+		
+			//noinspection SuspiciousNameCombination
+			setViewLayoutParams(toggleCharInserts, singleLineHeight, message);
+			//noinspection SuspiciousNameCombination
+			setViewLayoutParams(toggleProblemOverview, singleLineHeight, message);
+			//noinspection SuspiciousNameCombination
+			setViewLayoutParams(findViewById(R.id.toggle_wrapper), singleLineHeight, message);
+		
+			buffer.requestLayout();
+		});
     }
     
     private void setViewLayoutParams(View view, int width, int height) {
@@ -3614,9 +3621,8 @@ public class EditorActivity extends AppCompatActivity {
 //					me.recycle();
 //				}
 				
-				code.post(new Runnable() {
-					@Override
-					public void run() {
+				code.post(() -> {
+					if (start >= 0 && start < code.length() && stop >= 0 && stop < code.length() && stop >= start) {
 						// Select the text in the code area
 						code.setSelection(start, stop);
 					}
@@ -3663,7 +3669,10 @@ public class EditorActivity extends AppCompatActivity {
 	 * Update the list of compiler problems displayed for the current sketch. Called by build upon
 	 * the completion of ECJ.
 	 */
-	public void showProblems() {
+	public void showProblems(List<CompilerProblem> problems) {
+		compilerProblems.clear();
+		compilerProblems.addAll(problems);
+		
 		// Give the problems to all of the sketch files
 		for (SketchFile sketchFile : getSketchFiles()) {
 			// Each SketchFile figures out which problems it needs, so just give them every problem
@@ -3674,6 +3683,7 @@ public class EditorActivity extends AppCompatActivity {
 		}
 		
 		// Put problems before warnings
+		// TODO sort by position (need to sort by file first)
 		Collections.sort(compilerProblems, (a, b) -> {
 			if (a.isError() == b.isError()) {
 				return 0;
@@ -3693,16 +3703,13 @@ public class EditorActivity extends AppCompatActivity {
 			}
 		}
 		
-		runOnUiThread(new Runnable() {
-			@Override
-			public void run() {
-				problemOverviewListAdapter.notifyDataSetChanged();
-				
-				// If there are no problems, leave the user a nice message
-				boolean hasItems = compilerProblems.size() > 0;
-				problemOverviewList.setVisibility(hasItems ? View.VISIBLE : View.GONE);
-				findViewById(R.id.problem_overview_list_empty_message).setVisibility(hasItems ? View.GONE : View.VISIBLE);
-			}
+		runOnUiThread(() -> {
+			problemOverviewListAdapter.notifyDataSetChanged();
+			
+			// If there are no problems, leave the user a nice message
+			boolean hasItems = compilerProblems.size() > 0;
+			problemOverviewList.setVisibility(hasItems ? View.VISIBLE : View.GONE);
+			findViewById(R.id.problem_overview_list_empty_message).setVisibility(hasItems ? View.GONE : View.VISIBLE);
 		});
 	}
 	

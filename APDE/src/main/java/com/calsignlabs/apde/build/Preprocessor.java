@@ -5,6 +5,7 @@ import android.preference.PreferenceManager;
 import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
+import com.calsignlabs.apde.contrib.Library;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -43,27 +44,65 @@ public class Preprocessor {
 	
 	private String[] codeFolderPackages;
 	
+	private CharSequence preprocessedText;
 	private boolean isOpenGL;
+	private boolean hasSyntaxErrors;
+	private List<Library> importedLibraries;
 	
-	public Preprocessor(Build build, File srcFolder, String packageName, String className, String[] codeFolderPackages) {
+	public Preprocessor(Build build, String packageName, String className, String[] codeFolderPackages) {
 		this.build = build;
 		this.editor = build.editor;
 		this.packageName = packageName;
 		this.className = className;
 		this.codeFolderPackages = codeFolderPackages;
+		
+		hasSyntaxErrors = false;
+		importedLibraries = new ArrayList<>();
 	}
 	
 	protected void addCompilerProblem(CompilerProblem compilerProblem) {
-		editor.compilerProblems.add(compilerProblem);
+		build.compilerProblems.add(compilerProblem);
+		if (compilerProblem.isError()) {
+			hasSyntaxErrors = true;
+		}
 	}
 	
 	public CompilerProblem buildCompilerProblem(TextTransform.Range range, boolean error, String message, boolean shallow) throws TextTransform.LockException {
-		CompoundTextTransform.CompoundRange mapped = transform.mapBackward(range, true);
+		CompoundTextTransform.CompoundRange mapped = transform.mapBackward(range, shallow);
 		SketchFile sketchFile = editor.getSketchFiles().get(mapped.section);
 		int line = sketchFile.lineForOffset(mapped.index);
-		System.out.println("mapped: " + line + ", " + mapped.index);
 		int start = mapped.index - sketchFile.offsetForLine(line);
 		return new CompilerProblem(editor.getSketchFiles().get(mapped.section), line, start, mapped.length, error, message);
+	}
+	
+	public CompilerProblem buildCompilerProblem(IProblem problem) throws TextTransform.LockException {
+		// ECJ gives us the full path to the file, we just want the filename
+		String filename = new File(new String(problem.getOriginatingFileName())).getName();
+		
+		// Check to see if main file or not
+		if (build.getSketchMainFilename().equals(filename)) {
+			return buildCompilerProblem(
+					new TextTransform.Range(problem.getSourceStart(), problem.getSourceEnd() - problem.getSourceStart() + 1),
+					problem.isError(), problem.getMessage(), false);
+		} else {
+			// Check all java files
+			for (SketchFile sketchFile : editor.getSketchFiles()) {
+				if (sketchFile.isJava() && sketchFile.getFilename().equals(filename)) {
+					int absStart = problem.getSourceStart() - sketchFile.javaImportHeaderOffset;
+					int line = sketchFile.lineForOffset(absStart);
+					int start = absStart - sketchFile.offsetForLine(line);
+					
+					return new CompilerProblem(sketchFile, line, start,
+							problem.getSourceEnd() - problem.getSourceStart() + 1,
+							problem.isError(), problem.getMessage());
+				}
+			}
+			
+			// If we can't find it
+			System.err.println("Unable to find java file: " + filename);
+			return new CompilerProblem(editor.getSketchFiles().get(0), 0, 0, 1,
+					problem.isError(), problem.getMessage());
+		}
 	}
 	
 	public void preprocess() {
@@ -85,23 +124,31 @@ public class Preprocessor {
 			StringBuilder scrubbed = new StringBuilder(transform.getBaseText());
 			scrubCommentsAndStrings(scrubbed);
 			
-			List<String> imports = new ArrayList<>();
-			addBaseImports(imports);
-			addCodeFolderImports(imports);
-			extractImports(scrubbed, imports);
+			List<TextTransform.Range> sketchImports = new ArrayList<>();
+			List<String> baseImports = new ArrayList<>();
+			addBaseImports(baseImports);
+			addCodeFolderImports(baseImports);
+			extractImports(scrubbed, sketchImports);
 			
 			mode = getMode(scrubbed);
 			
+			// Settings statements aren't done with the move transformation because they don't
+			// preserve the text, they rewrite it. This is OK, though, because there shouldn't be
+			// any problems with them that doesn't get picked up by the preprocessor.
 			List<String> settingsStatements = extractSettings(scrubbed);
 			replaceTypeConstructors(scrubbed);
 			replaceHexLiterals(scrubbed);
 			
-			writeHeader(imports); // imports get written here
+			writeHeader(baseImports, sketchImports); // imports get written here
 			writeFooter(settingsStatements);
 			
 			advancedPreprocess();
 			
-			findSyntaxProblems();
+			buildPreprocessedText();
+			// The compiler can actually do this for us...
+			// The only benefit to doing it here is that we can get preprocessor errors earlier
+			// But that will be moot because we are switching to synchronous build
+//			findSyntaxProblems();
 		} catch (TextTransform.OverlappingEditException | TextTransform.LockException e) {
 			e.printStackTrace();
 		}
@@ -111,8 +158,35 @@ public class Preprocessor {
 		return isOpenGL;
 	}
 	
+	public CharSequence getPreprocessedText() {
+		return preprocessedText;
+	}
+	
+	public boolean hasSyntaxErrors() {
+		return hasSyntaxErrors;
+	}
+	
+	public List<Library> getImportedLibraries() {
+		return importedLibraries;
+	}
+	
+	public CompoundTextMapper getTextMapper() {
+		return transform;
+	}
+	
 	private String fixNewlines(String string) {
 		return string.replace("\r\n", "\n");
+	}
+	
+	private static final Pattern PACKAGE_REGEX = Pattern.compile("(?:^|\\s|;)package\\s+(\\S+)\\;");
+	
+	public static String extractPackageName(CharSequence code) {
+		Matcher matcher = PACKAGE_REGEX.matcher(code);
+		if (matcher.find()) {
+			return matcher.group(1);
+		} else {
+			return null;
+		}
 	}
 	
 	private List<String> extractSettings(CharSequence scrubbed) throws TextTransform.LockException {
@@ -155,20 +229,15 @@ public class Preprocessor {
 	
 	protected static class MethodMatch {
 		protected String text;
-		protected int start, length;
+		protected int start, length, semicolonLength;
 		protected String[] arguments;
 		
-		protected MethodMatch(String text, int start, String[] arguments) {
+		protected MethodMatch(String text, int start, String[] arguments, int semicolonLength) {
 			this.text = text;
 			this.start = start;
 			this.length = text.length();
 			this.arguments = arguments;
-			
-			System.out.println();
-			System.out.println(text);
-			System.out.println(start);
-			System.out.println(length);
-			System.out.println();
+			this.semicolonLength = semicolonLength;
 		}
 		
 		protected String getArg(int i) {
@@ -184,19 +253,19 @@ public class Preprocessor {
 			return arg;
 		}
 		
-		protected TextTransform.Range toRange() {
-			return new TextTransform.Range(start, length);
+		protected TextTransform.Range toRange(int offset) {
+			return new TextTransform.Range(start + offset, length);
 		}
 	}
 	
 	private static MethodMatch findMethod(CharSequence code, String name) {
-		final String left = "(?:^|\\s|;)";
-		final String right = "\\s*\\(([^\\)]*)\\)\\s*;";
+		final String left = "(?:^|\\s|;)(";
+		final String right = "\\s*\\(([^\\)]*)\\))\\s*;";
 		Pattern pattern = Pattern.compile(left + name + right, Pattern.MULTILINE | Pattern.DOTALL);
 		Matcher matcher = pattern.matcher(code);
 		if (matcher.find()) {
 			// Get arguments
-			String[] groups = matcher.group(1).split(",");
+			String[] groups = matcher.group(2).split(",");
 			for (int i = 0; i < groups.length; i++) {
 				groups[i] = groups[i].trim();
 			}
@@ -204,7 +273,7 @@ public class Preprocessor {
 			if (groups.length > 0 && groups[0].equals("")) {
 				groups = new String[] {};
 			}
-			return new MethodMatch(matcher.group(), matcher.start(), groups);
+			return new MethodMatch(matcher.group(1), matcher.start(1), groups, matcher.end() - matcher.start(1));
 		} else {
 			return null;
 		}
@@ -232,13 +301,15 @@ public class Preprocessor {
 	}
 	
 	private void extractSizeFullScreen(CharSequence code, int offset, List<String> statements, ComponentTarget componentTarget) throws TextTransform.LockException {
+		// TODO detect more than one of size(), fullScreen(), etc. -> should be error
+		
 		MethodMatch sizeStatement = findMethod(code, "size");
 		MethodMatch fullScreenStatement = findMethod(code, "fullScreen");
 		
 		if (sizeStatement != null && fullScreenStatement != null) {
 			// Can't have both
-			addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_both_size_fullscreen), true));
-			addCompilerProblem(buildCompilerProblem(fullScreenStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_both_size_fullscreen), true));
+			addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_both_size_fullscreen), true));
+			addCompilerProblem(buildCompilerProblem(fullScreenStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_both_size_fullscreen), true));
 		}
 		
 		// We default to fullScreen, even if nothing is specified
@@ -262,11 +333,11 @@ public class Preprocessor {
 						break;
 					default:
 						// Poorly formed size statement
-						addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_size_argument_number), true));
+						addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_size_argument_number), true));
 				}
 			} catch (NumberFormatException e) {
 				// Bad size arguments
-				addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_size_bad_number), true));
+				addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_size_bad_number), true));
 			}
 		}
 		
@@ -279,7 +350,7 @@ public class Preprocessor {
 				renderer = fullScreenStatement.getArg(0);
 			} else if (fullScreenStatement.arguments.length > 2) {
 				// Too many args
-				addCompilerProblem(buildCompilerProblem(fullScreenStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_fullscreen_arguement_number), true));
+				addCompilerProblem(buildCompilerProblem(fullScreenStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_fullscreen_arguement_number), true));
 			}
 			// "SPAN" is not a renderer, discard it
 			if ("SPAN".equals(renderer)) {
@@ -295,7 +366,7 @@ public class Preprocessor {
 		if (renderer != null && !RENDERERS.contains(renderer)) {
 			// Invalid renderer
 			// If renderer is not null, then we have either a size() or fullScreen() statement
-			addCompilerProblem(buildCompilerProblem(fullScreen ? fullScreenStatement.toRange() : sizeStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_invalid_renderer), true));
+			addCompilerProblem(buildCompilerProblem(fullScreen ? fullScreenStatement.toRange(offset) : sizeStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_invalid_renderer), true));
 			renderer = null;
 		}
 		
@@ -330,10 +401,10 @@ public class Preprocessor {
 		builder.append(");");
 		
 		if (fullScreenStatement != null) {
-			transform.remove(fullScreenStatement.start + offset, fullScreenStatement.length);
+			transform.remove(fullScreenStatement.start + offset, fullScreenStatement.semicolonLength);
 		}
 		if (sizeStatement != null) {
-			transform.remove(sizeStatement.start + offset, sizeStatement.length);
+			transform.remove(sizeStatement.start + offset, sizeStatement.semicolonLength);
 		}
 		statements.add(builder.toString());
 	}
@@ -344,17 +415,17 @@ public class Preprocessor {
 		
 		if (smoothStatement != null && noSmoothStatement != null) {
 			// Can't have both
-			addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_both_smooth_nosmooth), true));
-			addCompilerProblem(buildCompilerProblem(noSmoothStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_both_smooth_nosmooth), true));
+			addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_both_smooth_nosmooth), true));
+			addCompilerProblem(buildCompilerProblem(noSmoothStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_both_smooth_nosmooth), true));
 		}
 		
 		if (noSmoothStatement != null) {
 			if (noSmoothStatement.arguments.length > 0) {
 				// Too many args
-				addCompilerProblem(buildCompilerProblem(noSmoothStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_nosmooth_argument_number), true));
+				addCompilerProblem(buildCompilerProblem(noSmoothStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_nosmooth_argument_number), true));
 			}
 			
-			transform.remove(noSmoothStatement.start + offset, noSmoothStatement.length);
+			transform.remove(noSmoothStatement.start + offset, noSmoothStatement.semicolonLength);
 			if (smoothStatement == null) {
 				// Default to smooth() over noSmooth()
 				// We still have an error if both are specified, but we want to correct as many
@@ -371,14 +442,14 @@ public class Preprocessor {
 					arg = smoothStatement.getIntArg(0, "");
 				} catch (NumberFormatException e) {
 					// Bad arg
-					addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_smooth_bad_number), true));
+					addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_smooth_bad_number), true));
 				}
 			} else if (smoothStatement.arguments.length > 1) {
 				// Too many args
-				addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(), true, editor.getResources().getString(R.string.preprocessor_problem_smooth_argument_number), true));
+				addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_smooth_argument_number), true));
 			}
 			
-			transform.remove(smoothStatement.start + offset, smoothStatement.length);
+			transform.remove(smoothStatement.start + offset, smoothStatement.semicolonLength);
 			statements.add("smooth(" + (arg != null ? arg : "") + ");");
 		}
 	}
@@ -397,15 +468,82 @@ public class Preprocessor {
 		}
 	}
 	
+	private Library getLibrary(String pkgName) {
+		ArrayList<Library> libraries = editor.getGlobalState().getImportToLibraryTable().get(pkgName);
+		if (libraries == null) {
+			return null;
+		} else if (libraries.size() > 1) {
+			// Multiple libraries have the same package name
+			// This used to be a fancy message, but I don't think it's work it
+			// This probably never happens in practice anyway
+			System.err.println(editor.getResources().getString(R.string.preprocessor_problem_conflicting_library, pkgName));
+			return null;
+		} else {
+			return libraries.get(0);
+		}
+	}
+	
+	private static boolean ignorableImport(String pkg, ComponentTarget comp) {
+		if (pkg.startsWith("android.")) return true;
+		if (pkg.startsWith("java.")) return true;
+		if (pkg.startsWith("javax.")) return true;
+		if (pkg.startsWith("org.apache.http.")) return true;
+		if (pkg.startsWith("org.json.")) return true;
+		if (pkg.startsWith("org.w3c.dom.")) return true;
+		if (pkg.startsWith("org.xml.sax.")) return true;
+		
+		if (pkg.startsWith("processing.core.")) return true;
+		if (pkg.startsWith("processing.data.")) return true;
+		if (pkg.startsWith("processing.event.")) return true;
+		if (pkg.startsWith("processing.opengl.")) return true;
+		
+		// We import the VR library by default when using the VR target
+		if (pkg.startsWith("processing.vr.") && comp == ComponentTarget.VR) return true;
+		
+		return false;
+	}
+	
+	private void checkImport(String libraryPkg) {
+		if (!ignorableImport(libraryPkg, build.getAppComponent())) {
+			Library library = getLibrary(libraryPkg);
+			
+			if (library != null) {
+				if (!importedLibraries.contains(library)) {
+					importedLibraries.add(library);
+				}
+			} else {
+				boolean found = false;
+				if (codeFolderPackages != null) {
+					for (String codeFolderPkg : codeFolderPackages) {
+						if (libraryPkg.equals(codeFolderPkg)) {
+							found = true;
+							break;
+						}
+					}
+				}
+				if (!found) {
+					System.err.println();
+					System.err.println(editor.getResources().getString(R.string.build_library_import_missing, libraryPkg));
+					System.err.println();
+				}
+			}
+		}
+	}
+	
 	private static final Pattern IMPORT_REGEX = Pattern.compile(
 			"(?:^|;)\\s*(import\\s+(?:(static)\\s+)?((?:\\w+\\s*\\.)*)\\s*(\\S+)\\s*;)",
 			Pattern.MULTILINE | Pattern.DOTALL);
 	
-	private void extractImports(CharSequence scrubbed, List<String> imports) {
+	private void extractImports(CharSequence scrubbed, List<TextTransform.Range> imports) {
 		Matcher matcher = IMPORT_REGEX.matcher(scrubbed);
 		while (matcher.find()) {
-			transform.remove(matcher.start(1), matcher.end(1) - matcher.start(1));
-			imports.add(matcher.group(1));
+			imports.add(new TextTransform.Range(matcher.start(1), matcher.end(1) - matcher.start(1)));
+			
+			String libraryPkg = matcher.group(3);
+			int dot = libraryPkg.lastIndexOf('.');
+			libraryPkg = dot == -1 ? libraryPkg : libraryPkg.substring(0, dot);
+			
+			checkImport(libraryPkg);
 		}
 	}
 	
@@ -450,25 +588,46 @@ public class Preprocessor {
 		}
 	}
 	
-	private void writeHeader(List<String> imports) {
-		StringBuilder builder = new StringBuilder();
-		
-		for (String imp : imports) {
-			builder.append(imp);
-			builder.append('\n');
+	private void writeHeader(List<String> baseImports, List<TextTransform.Range> sketchImports) {
+		{
+			StringBuilder builder = new StringBuilder();
+			
+			builder.append("package ");
+			builder.append(packageName);
+			builder.append(";\n\n");
+			
+			for (String imp : baseImports) {
+				builder.append(imp);
+				builder.append('\n');
+			}
+			
+			transform.insert(0, builder).weight(-101 - sketchImports.size() * 2);
 		}
 		
-		if (mode != Mode.JAVA) {
-			builder.append("\npublic class ");
-			builder.append(className);
-			builder.append(" extends PApplet {\n");
-			
-			if (mode == Mode.STATIC) {
-				builder.append("public void setup() {\n");
+		{
+			int i = 0;
+			for (TextTransform.Range range : sketchImports) {
+				transform.move(range, 0).getInsert().weight(-102 - i * 2);
+				transform.insert(0, "\n").weight(-101 - i * 2);
+				i++;
 			}
 		}
 		
-		transform.insert(0, builder);
+		{
+			StringBuilder builder = new StringBuilder();
+			
+			if (mode != Mode.JAVA) {
+				builder.append("\npublic class ");
+				builder.append(className);
+				builder.append(" extends PApplet {\n");
+				
+				if (mode == Mode.STATIC) {
+					builder.append("public void setup() {\n");
+				}
+			}
+			
+			transform.insert(0, builder).weight(-100);
+		}
 	}
 	
 	private void writeFooter(List<String> settingsStatements) {
@@ -490,7 +649,7 @@ public class Preprocessor {
 			builder.append("\n}\n");
 		}
 		
-		transform.insert(transform.getBaseText().length(), builder);
+		transform.insert(transform.getBaseText().length(), builder).weight(100);
 	}
 	
 	private CompilationUnit parse(CharSequence source) {
@@ -542,7 +701,7 @@ public class Preprocessor {
 				// Replace 'color' with 'int'
 				if ("color".equals(node.getName().toString())) {
 					try {
-						edits.add(transform.makeReplace(transform.mapBackward(node.getStartPosition(), node.getLength()), "int"));
+						edits.add(transform.makeReplace(transform.mapBackward(node.getStartPosition(), node.getLength()), "int").weight(10));
 					} catch (TextTransform.LockException e) {
 						e.printStackTrace();
 					}
@@ -556,7 +715,7 @@ public class Preprocessor {
 				String token = node.getToken().toLowerCase();
 				if (FLOATING_POINT_LITERAL_VERIFIER.matcher(token).matches() && !token.endsWith("f") && !token.endsWith("d")) {
 					try {
-					edits.add(transform.makeInsert(transform.mapBackward(node.getStartPosition() + node.getLength()), "f"));
+					edits.add(transform.makeInsert(transform.mapBackward(node.getStartPosition() + node.getLength()), "f").weight(10));
 					} catch (TextTransform.LockException e) {
 						e.printStackTrace();
 					}
@@ -569,7 +728,7 @@ public class Preprocessor {
 				// Add 'public' to methods with default visibility
 				if ((node.getModifiers() & ACCESS_MODIFIERS_MASK) == 0) {
 					try {
-						edits.add(transform.makeInsert(transform.mapBackward(node.getStartPosition()), "public "));
+						edits.add(transform.makeInsert(transform.mapBackward(node.getStartPosition()), "public ").weight(0));
 					} catch (TextTransform.LockException e) {
 						e.printStackTrace();
 					}
@@ -581,28 +740,15 @@ public class Preprocessor {
 		transform.edit(edits);
 	}
 	
-	private void findSyntaxProblems() throws TextTransform.OverlappingEditException {
-		StringBuilder out = transform.applyForward();
-		CompilationUnit compilable = parse(out);
-		boolean hasSyntaxErrors = false;
+	private void buildPreprocessedText() throws TextTransform.OverlappingEditException {
+		preprocessedText = transform.applyForward();
+	}
+	
+	private void findSyntaxProblems() throws TextTransform.LockException {
+		CompilationUnit compilable = parse(preprocessedText);
 		for (IProblem problem : compilable.getProblems()) {
-			System.err.println(problem);
-			if (problem.isError()) {
-				hasSyntaxErrors = true;
-				break;
-			}
+			addCompilerProblem(buildCompilerProblem(problem));
 		}
-		
-//		List<IProblem> problems = Arrays
-		
-		if (hasSyntaxErrors) {
-			System.err.println("Syntax problems found");
-		} else {
-			System.out.println("No syntax problems found");
-		}
-		
-		System.out.println();
-		System.out.println(out.toString());
 	}
 	
 	public String[] getBaseImports() {

@@ -43,3 +43,4 @@
 -keep class antlr.** { *; }
 -keep class org.spongycastle.jcajce.provider.** { *; }
 -keep class kellinwood.security.zipsigner.** { *; }
+-keep class org.eclipse.core.internal.runtime.** { *; }

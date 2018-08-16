@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
 	<!-- Preprocessor problem messages -->
 	<string name="preprocessor_problem_both_size_fullscreen">Can\'t have both size() and fullScreen() in the same sketch</string>
 	<string name="preprocessor_problem_size_argument_number">size() takes either two or three parameters</string>
@@ -10,4 +10,5 @@
 	<string name="preprocessor_problem_smooth_argument_number">smooth() takes either zero or one arguments</string>
 	<string name="preprocessor_problem_nosmooth_argument_number">noSmooth() doesn\'t take any arguments</string>
 	<string name="preprocessor_problem_smooth_bad_number">smooth() parameter must be an integer</string>
+	<string name="preprocessor_problem_conflicting_library">Multiple libraries with same package name: <xliff:g example="ketai" id="packageName">%1$s</xliff:g></string>
 </resources>

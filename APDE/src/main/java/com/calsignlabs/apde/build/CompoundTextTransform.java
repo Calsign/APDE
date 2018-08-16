@@ -1,6 +1,6 @@
 package com.calsignlabs.apde.build;
 
-public class CompoundTextTransform extends TextTransform {
+public class CompoundTextTransform extends TextTransform implements CompoundTextMapper {
 	private int[] charOffsets;
 	
 	public static CompoundTextTransform create(TextHolder holder) {
@@ -39,27 +39,39 @@ public class CompoundTextTransform extends TextTransform {
 		replace(section, range.index, range.length, text);
 	}
 	
+	@Override
 	public Range mapForward(int section, int index, int length) throws LockException {
 		return mapForward(index + charOffsets[section], length);
 	}
 	
+	@Override
 	public Range mapBackward(int section, int index, int length) throws LockException {
 		return mapBackward(index - charOffsets[section], length);
 	}
 	
+	@Override
+	public Range mapForward(CompoundRange range) throws LockException {
+		return mapForward(range.section, range.index, range.length);
+	}
+	
+	@Override
+	public Range mapBackward(CompoundRange range) throws LockException {
+		return mapBackward(range.section, range.index, range.length);
+	}
+	
+	@Override
 	public CompoundRange mapBackward(Range range, boolean shallow) throws LockException {
 		return mapBackward(range.index, range.length, shallow);
 	}
 	
+	@Override
 	public CompoundRange mapBackward(int index, int length, boolean shallow) throws LockException {
 		Range range = shallow ? new Range(index, length) : super.mapBackward(index, length);
-		for (int section = 0; section < charOffsets.length; section ++) {
-			if (charOffsets[section] > range.index) {
-				return new CompoundRange(range, section - 1);
-			}
+		int section = -1;
+		while (section < charOffsets.length - 1 && charOffsets[section + 1] <= range.index) {
+			section++;
 		}
-		
-		return new CompoundRange(range, charOffsets.length - 1);
+		return new CompoundRange(range.index - charOffsets[section], range.length, section);
 	}
 	
 	public interface TextHolder {

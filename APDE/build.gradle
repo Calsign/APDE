@@ -17,6 +17,7 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-project.txt'
+            multiDexKeepProguard file('multidex-config.pro')
 
             lintOptions {
                 disable 'MissingTranslation'
@@ -26,6 +27,7 @@ android {
         debug {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-project.txt'
+            multiDexKeepProguard file('multidex-config.pro')
         }
     }
 
@@ -56,6 +58,7 @@ dependencies {
     implementation files('libs/org.eclipse.core.resources.jar')
     implementation files('libs/org.eclipse.core.contenttype.jar')
     implementation files('libs/org.eclipse.equinox.preferences.jar')
+    implementation files('libs/org.eclipse.core.jobs.jar')
     implementation files('libs/jdi.jar')
     implementation files('libs/JavaMode.jar')
     implementation files('libs/jsch-0.1.51.jar')

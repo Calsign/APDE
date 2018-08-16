@@ -5,12 +5,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-public class TextTransform {
+public class TextTransform implements TextMapper {
 	private static final String EMPTY = "";
 	
 	public static class Edit {
 		private int index, beforeLength, afterLength;
 		private CharSequence before, after;
+		private int weight;
+		private Edit moveLink;
 		
 		public int index() {
 			return index;
@@ -38,6 +40,7 @@ public class TextTransform {
 			this.after = after;
 			this.beforeLength = before.length();
 			this.afterLength = after.length();
+			weight = 0;
 		}
 		
 		public static Edit insert(int index, CharSequence text) {
@@ -50,6 +53,22 @@ public class TextTransform {
 		
 		public static Edit replace(int index, CharSequence before, CharSequence after) {
 			return new Edit(index, before, after);
+		}
+		
+		public static MoveEdit move(int index, CharSequence text, int dest) {
+			Edit remove = remove(index, text);
+			Edit insert = insert(dest, text);
+			remove.moveLink = insert;
+			insert.moveLink = remove;
+			return new MoveEdit(remove, insert);
+		}
+		
+		public boolean hasMoveLink() {
+			return moveLink != null;
+		}
+		
+		public Edit getMoveLink() {
+			return moveLink;
 		}
 		
 		public void apply(StringBuilder text, boolean forward) {
@@ -68,6 +87,15 @@ public class TextTransform {
 			return forward ? after() : before();
 		}
 		
+		public Edit weight(int weight) {
+			this.weight = weight;
+			return this;
+		}
+		
+		public int getWeight() {
+			return weight;
+		}
+		
 		@Override
 		public Edit clone() {
 			return new Edit(index, before, after);
@@ -76,6 +104,27 @@ public class TextTransform {
 		@Override
 		public String toString() {
 			return "Edit: " + index + ": '" + before + "' -> '" + after + "'";
+		}
+	}
+	
+	public static class MoveEdit extends ArrayList<Edit> {
+		public MoveEdit(Edit remove, Edit insert) {
+			add(remove);
+			add(insert);
+		}
+		
+		public Edit getRemove() {
+			if (size() != 2) {
+				throw new RuntimeException("MoveEdit tampered with");
+			}
+			return get(0);
+		}
+		
+		public Edit getInsert() {
+			if (size() != 2) {
+				throw new RuntimeException("MoveEdit tampered with");
+			}
+			return get(1);
 		}
 	}
 	
@@ -98,32 +147,32 @@ public class TextTransform {
 		return baseText;
 	}
 	
-	public void edit(Edit edit) {
+	public Edit edit(Edit edit) {
 		unlock();
 		edits.add(edit);
+		return edit;
 	}
 	
-	public void edit(Collection<Edit> edits) {
+	public <T extends Collection<Edit>> T edit(T edits) {
 		unlock();
 		this.edits.addAll(edits);
+		return edits;
 	}
 	
-	public void insert(int index, CharSequence text) {
-		unlock();
-		edits.add(makeInsert(index, text));
+	public Edit insert(int index, CharSequence text) {
+		return edit(makeInsert(index, text));
 	}
 	
 	public Edit makeInsert(int index, CharSequence text) {
 		return Edit.insert(index, text);
 	}
 	
-	public void remove(int index, int length) {
-		unlock();
-		edits.add(makeRemove(index, length));
+	public Edit remove(int index, int length) {
+		return edit(makeRemove(index, length));
 	}
 	
-	public void remove(Range range) {
-		remove(range.index, range.length);
+	public Edit remove(Range range) {
+		return remove(range.index, range.length);
 	}
 	
 	public Edit makeRemove(int index, int length) {
@@ -134,13 +183,12 @@ public class TextTransform {
 		return makeRemove(range.index, range.length);
 	}
 	
-	public void replace(int index, int length, CharSequence text) {
-		unlock();
-		edits.add(makeReplace(index, length, text));
+	public Edit replace(int index, int length, CharSequence text) {
+		return edit(makeReplace(index, length, text));
 	}
 	
-	public void replace(Range range, CharSequence text) {
-		replace(range.index, range.length, text);
+	public Edit replace(Range range, CharSequence text) {
+		return replace(range.index, range.length, text);
 	}
 	
 	public Edit makeReplace(int index, int length, CharSequence text) {
@@ -149,6 +197,22 @@ public class TextTransform {
 	
 	public Edit makeReplace(Range range, CharSequence text) {
 		return makeReplace(range.index, range.length, text);
+	}
+	
+	public MoveEdit move(int index, int length, int dest) {
+		return edit(makeMove(index, length, dest));
+	}
+	
+	public MoveEdit move(Range range, int dest) {
+		return edit(makeMove(range, dest));
+	}
+	
+	public MoveEdit makeMove(int index, int length, int dest) {
+		return Edit.move(index, baseText.subSequence(index, index + length), dest);
+	}
+	
+	public MoveEdit makeMove(Range range, int dest) {
+		return Edit.move(range.index, baseText.subSequence(range.index, range.index + range.length), dest);
 	}
 	
 	public StringBuilder applyForward() throws OverlappingEditException {
@@ -160,20 +224,39 @@ public class TextTransform {
 		return apply(text, false);
 	}
 	
+	@Override
 	public Range mapForward(int index, int length) throws LockException {
 		return map(index, length, true);
 	}
 	
+	@Override
 	public Range mapBackward(int index, int length) throws LockException {
 		return map(index, length, false);
 	}
 	
+	@Override
+	public Range mapForward(Range range) throws LockException {
+		return mapForward(range.index, range.length);
+	}
+	
+	@Override
+	public Range mapBackward(Range range) throws LockException {
+		return mapBackward(range.index, range.length);
+	}
+	
+	@Override
 	public int mapForward(int index) throws LockException {
 		return mapForward(index, 0).index;
 	}
 	
+	@Override
 	public int mapBackward(int index) throws LockException {
 		return mapBackward(index, 0).index;
+	}
+	
+	@Override
+	public boolean isLocked() {
+		return lock;
 	}
 	
 	public void lock() {
@@ -202,7 +285,7 @@ public class TextTransform {
 					// needed for functions with color as the return type (potentially other cases)
 					//   color fcn() {} -> public int fcn() {}
 					// 'color' -> 'int' and '' -> 'public ' both occur at the same index
-					? edit2.beforeLength() - edit1.beforeLength()
+					? edit2.getWeight() - edit1.getWeight()
 					: edit2.index() - edit1.index());
 			
 			int block = workingText.length();
@@ -231,7 +314,11 @@ public class TextTransform {
 		
 		// First to last
 		for (Edit edit : edits) {
-			if (edit.index() >= index) {
+			if (edit.hasMoveLink() && edit.index() <= index && edit.index() + edit.directionalLength(!forward) >= index + length) {
+				// This is a move edit, so get the linked edit
+				// Map the range from the original to the linked edit range
+				return constrainRange(new Range(edit.getMoveLink().index() + (index - edit.index()), length), forward);
+			} else if (edit.index() >= index) {
 				if (edit.index() >= index + length) {
 					// Entirely after
 					return constrainRange(new Range(index, length), forward);
