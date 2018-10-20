@@ -31,7 +31,7 @@ import java.util.List;
  * Utility class for storing information about files
  * This started out as a meta... but is has grown to incorporate far more information than that
  */
-public class SketchFile implements Parcelable {
+public class SketchFile extends BareSketchFile implements Parcelable {
 	//Filename meta
 	private String title;
 	private String suffix;
@@ -201,6 +201,8 @@ public class SketchFile implements Parcelable {
 		scrollY = 0;
 		
 		enabled = true;
+		
+		compilerProblems = new ArrayList<>();
 	}
 	
 	public SketchFile(String title, String text, int selectionStart, int selectionEnd, int scrollX, int scrollY) {
@@ -219,6 +221,8 @@ public class SketchFile implements Parcelable {
 		this.scrollY = scrollY;
 		
 		enabled = true;
+		
+		compilerProblems = new ArrayList<>();
 	}
 	
 	public static void getTextChange(FileChange change, String oldText, String newText) {
@@ -428,19 +432,15 @@ public class SketchFile implements Parcelable {
 		return enabled;
 	}
 	
-	/**
-	 * @return the filename as it is saved (name + suffix)
-	 */
-	public String getFilename() {
-		return title + suffix;
+	@Override
+	public String getTitle() {
+		// If this isn't a PDE file, add the custom suffix to the title
+		return suffix.equals(".pde") ? title : title + suffix;
 	}
 	
-	/**
-	 * @return the tab name as it is displayed in the GUI
-	 */
-	public String getTitle() {
-		//If this isn't a PDE file, add the custom suffix to the title
-		return suffix.equals(".pde") ? title : title + suffix;
+	@Override
+	public String getRawTitle() {
+		return title;
 	}
 	
 	/**
@@ -450,9 +450,7 @@ public class SketchFile implements Parcelable {
 		this.title = title;
 	}
 	
-	/**
-	 * @return
-	 */
+	@Override
 	public String getSuffix() {
 		return suffix;
 	}
@@ -464,17 +462,7 @@ public class SketchFile implements Parcelable {
 		this.suffix = suffix;
 	}
 	
-	public boolean isPde() {
-		return getSuffix().equals(".pde");
-	}
-	
-	public boolean isJava() {
-		return getSuffix().equals(".java");
-	}
-	
-	/**
-	 * @return
-	 */
+	@Override
 	public String getText() {
 		return text;
 	}
@@ -744,6 +732,8 @@ public class SketchFile implements Parcelable {
 		
 		scrollX = source.readInt();
 		scrollY = source.readInt();
+		
+		compilerProblems = new ArrayList<>();
 	}
 	
 	public static final Parcelable.Creator<SketchFile> CREATOR = new Parcelable.Creator<SketchFile>() {
@@ -832,22 +822,13 @@ public class SketchFile implements Parcelable {
 	 *
 	 * @param problems
 	 */
-	public void setCompilerProblems(List<CompilerProblem> problems) {
-		String[] lineTexts = getText().split("\n");
-		compilerProblems = new ArrayList<>();
+	public void setCompilerProblems(List<CompilerProblem> problems, int i) {
+		compilerProblems.clear();
 		for (CompilerProblem problem : problems) {
-			if (problem.sketchFile == this) {
+			if (problem.sketchFile.getIndex() == i) {
 				compilerProblems.add(problem);
 			}
 		}
-	}
-	
-	public int lineForOffset(int offset) {
-		return CodeEditText.lineForOffset(text, offset);
-	}
-	
-	public int offsetForLine(int line) {
-		return CodeEditText.offsetForLine(text, line);
 	}
 	
 	public List<CompilerProblem> getCompilerProblems() {

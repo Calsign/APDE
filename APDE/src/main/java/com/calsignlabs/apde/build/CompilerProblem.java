@@ -1,6 +1,6 @@
 package com.calsignlabs.apde.build;
 
-import com.calsignlabs.apde.SketchFile;
+import com.calsignlabs.apde.build.dag.SketchCode;
 
 /**
  * Stores information about a compiler problem within APDE.
@@ -8,12 +8,12 @@ import com.calsignlabs.apde.SketchFile;
  * Similar to ECJ's CategorizedProblem, but that type proved insufficient for our needs.
  */
 public class CompilerProblem {
-	public SketchFile sketchFile;
+	public SketchCode sketchFile;
 	public int line, start, length;
 	public boolean error;
 	public String message;
 	
-	public CompilerProblem(SketchFile sketchFile, int line, int start, int length, boolean error, String message) {
+	public CompilerProblem(SketchCode sketchFile, int line, int start, int length, boolean error, String message) {
 		this.sketchFile = sketchFile;
 		this.line = line;
 		this.start = start;

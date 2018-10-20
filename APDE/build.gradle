@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 27
-    buildToolsVersion '27.0.3'
+    buildToolsVersion '28.0.2'
 
     defaultConfig {
         applicationId "com.calsignlabs.apde"
@@ -44,8 +44,7 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:multidex:1.0.3'
-    implementation 'com.android.support.constraint:constraint-layout:1.1.2'
+    implementation 'com.android.support:multidex:1.0.3'
     implementation project(':aFileChooser')
     implementation files('libs/android-core.jar')
     implementation files('libs/antlr.jar')

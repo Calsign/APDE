@@ -84,6 +84,7 @@ import com.calsignlabs.apde.build.CompilerProblem;
 import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.build.dag.ModularBuild;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
@@ -856,7 +857,7 @@ public class EditorActivity extends AppCompatActivity {
 			@Override
 			public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 				CompilerProblem problem = problemOverviewListAdapter.getItem(i);
-				highlightTextExt(getSketchFileIndex(problem.sketchFile), problem.line, problem.start, problem.length);
+				highlightTextExt(problem.sketchFile.getIndex(), problem.line, problem.start, problem.length);
 				if (problem.isError()) {
 					errorExt(problem.getMessage());
 				} else {
@@ -866,22 +867,19 @@ public class EditorActivity extends AppCompatActivity {
 		});
 		
 		// Copy the problem description to the clipboard when the user long-presses
-		problemOverviewList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-			@Override
-			public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
-				ClipboardManager clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-				if (clipboardManager != null) {
-					CompilerProblem problem = problemOverviewListAdapter.getItem(i);
-					String text = getProblemOverviewDescription(EditorActivity.this, problem).toString();
-					ClipData clipData = ClipData.newPlainText(getResources().getString(R.string.problem_overview_list_copy_description), text);
-					clipboardManager.setPrimaryClip(clipData);
-					
-					Toast.makeText(EditorActivity.this, R.string.problem_overview_list_copy_toast_message, Toast.LENGTH_SHORT).show();
-					
-					return true;
-				} else {
-					return false;
-				}
+		problemOverviewList.setOnItemLongClickListener((adapterView, view, i, l) -> {
+			ClipboardManager clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+			if (clipboardManager != null) {
+				CompilerProblem problem = problemOverviewListAdapter.getItem(i);
+				String text = getProblemOverviewDescription(EditorActivity.this, problem).toString();
+				ClipData clipData = ClipData.newPlainText(getResources().getString(R.string.problem_overview_list_copy_description), text);
+				clipboardManager.setPrimaryClip(clipData);
+				
+				Toast.makeText(EditorActivity.this, R.string.problem_overview_list_copy_toast_message, Toast.LENGTH_SHORT).show();
+				
+				return true;
+			} else {
+				return false;
 			}
 		});
 		
@@ -3155,7 +3153,7 @@ public class EditorActivity extends AppCompatActivity {
     		break;
     	}
     	
-    	//In case the user presses the button twice, we don't want any errors
+    	// In case the user presses the button twice, we don't want any errors
     	if (building) {
     		return;
     	}
@@ -3169,24 +3167,39 @@ public class EditorActivity extends AppCompatActivity {
     	// For some reason, lint screams at us when we don't cast to LinearLayout here
 		// Even though the cast actually does nothing
 		// And it only screams at us when we do a release build - very strange
-		imm.hideSoftInputFromWindow(((LinearLayout) findViewById(R.id.content)).getWindowToken(), 0);
+		imm.hideSoftInputFromWindow((findViewById(R.id.content)).getWindowToken(), 0);
     	
-    	//Clear the console
+    	// Clear the console
     	((TextView) findViewById(R.id.console)).setText("");
     	
-    	final Build builder = new Build(getGlobalState());
-    	
-    	//Build the sketch in a separate thread
-    	Thread buildThread = new Thread(new Runnable() {
-    		@Override
-    		public void run() {
-    			building = true;
-    			changeRunStopIcon(true);
-    			builder.build("debug", getComponentTarget());
-    			changeRunStopIcon(false);
-    			building = false;
-    	}});
-    	buildThread.start();
+//    	final Build builder = new Build(getGlobalState());
+//
+//    	//Build the sketch in a separate thread
+//    	Thread buildThread = new Thread(new Runnable() {
+//    		@Override
+//    		public void run() {
+//    			building = true;
+//    			changeRunStopIcon(true);
+//    			builder.build("debug", getComponentTarget());
+//    			changeRunStopIcon(false);
+//    			building = false;
+//    	}});
+//    	buildThread.start();
+		
+		building = true;
+		changeRunStopIcon(true);
+		
+		getGlobalState().getModularBuild().build(new ModularBuild.ContextualizedOnCompleteListener() {
+			@Override
+			public boolean onComplete(boolean success) {
+				runOnUiThread(() -> {
+					changeRunStopIcon(false);
+					building = false;
+				});
+				
+				return true;
+			}
+		});
 		
     	if (android.os.Build.VERSION.SDK_INT >= 21) {
 			runStopMenuButtonAnimating = true;
@@ -3203,30 +3216,24 @@ public class EditorActivity extends AppCompatActivity {
     	// ...that's what the BACK button is for
     	
     	if (building) {
-			Build.halt();
+			getGlobalState().getModularBuild().halt();
 		}
     }
 	
 	public void changeRunStopIcon(final boolean run) {
-		runOnUiThread(new Runnable() {
-			@Override
-			public void run() {
-				if (android.os.Build.VERSION.SDK_INT >= 21) {
-					AnimatedVectorDrawable anim = (AnimatedVectorDrawable) getResources().getDrawable(run ? R.drawable.run_to_stop : R.drawable.stop_to_run);
-					runStopMenuButton.setImageDrawable(anim);
-					anim.start();
-					runStopMenuButtonAnimating = true;
-					
-					runStopMenuButton.postDelayed(new Runnable() {
-						@Override
-						public void run() {
-							supportInvalidateOptionsMenu();
-							runStopMenuButtonAnimating = false;
-						}
-					}, getResources().getInteger(R.integer.run_stop_animation_duration));
-				} else {
+		runOnUiThread(() -> {
+			if (android.os.Build.VERSION.SDK_INT >= 21) {
+				AnimatedVectorDrawable anim = (AnimatedVectorDrawable) getDrawable(run ? R.drawable.run_to_stop : R.drawable.stop_to_run);
+				runStopMenuButton.setImageDrawable(anim);
+				anim.start();
+				runStopMenuButtonAnimating = true;
+				
+				runStopMenuButton.postDelayed(() -> {
 					supportInvalidateOptionsMenu();
-				}
+					runStopMenuButtonAnimating = false;
+				}, getResources().getInteger(R.integer.run_stop_animation_duration));
+			} else {
+				supportInvalidateOptionsMenu();
 			}
 		});
 	}
@@ -3270,17 +3277,11 @@ public class EditorActivity extends AppCompatActivity {
 			builder.setTitle(R.string.screen_overlay_dialog_title);
 			builder.setMessage(R.string.screen_overlay_dialog_message);
 			
-			builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialogInterface, int i) {}
-			});
+			builder.setPositiveButton(R.string.ok, (dialogInterface, i) -> {});
 			
-			builder.setNeutralButton(R.string.export_signed_package_long_info_button, new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialogInterface, int i) {
-					startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.screen_overlay_info_wiki_url))));
-				}
-			});
+			builder.setNeutralButton(R.string.export_signed_package_long_info_button, (dialogInterface, i)
+					-> startActivity(new Intent(Intent.ACTION_VIEW,
+					Uri.parse(getResources().getString(R.string.screen_overlay_info_wiki_url)))));
 			
 			builder.show();
 			
@@ -3674,12 +3675,14 @@ public class EditorActivity extends AppCompatActivity {
 		compilerProblems.addAll(problems);
 		
 		// Give the problems to all of the sketch files
+		int i = 0;
 		for (SketchFile sketchFile : getSketchFiles()) {
 			// Each SketchFile figures out which problems it needs, so just give them every problem
-			sketchFile.setCompilerProblems(compilerProblems);
+			sketchFile.setCompilerProblems(compilerProblems, i);
 			if (sketchFile.getFragment() != null && sketchFile.getFragment().getCodeEditText() != null) {
 				sketchFile.getFragment().getCodeEditText().invalidate();
 			}
+			i++;
 		}
 		
 		// Put problems before warnings

@@ -1,10 +1,8 @@
 package com.calsignlabs.apde.build;
 
-import android.preference.PreferenceManager;
-
-import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
-import com.calsignlabs.apde.SketchFile;
+import com.calsignlabs.apde.build.dag.BuildContext;
+import com.calsignlabs.apde.build.dag.SketchCode;
 import com.calsignlabs.apde.contrib.Library;
 
 import java.io.File;
@@ -32,8 +30,7 @@ import org.eclipse.jdt.core.dom.SimpleType;
  * mode preprocessor.
  */
 public class Preprocessor {
-	private Build build;
-	private EditorActivity editor;
+	private BuildContext context;
 	
 	private final ASTParser parser = ASTParser.newParser(AST.JLS8);
 	
@@ -49,19 +46,34 @@ public class Preprocessor {
 	private boolean hasSyntaxErrors;
 	private List<Library> importedLibraries;
 	
+	private List<CompilerProblem> compilerProblems;
+	
 	public Preprocessor(Build build, String packageName, String className, String[] codeFolderPackages) {
-		this.build = build;
-		this.editor = build.editor;
+		this.context = BuildContext.create(build.editor.getGlobalState());
 		this.packageName = packageName;
 		this.className = className;
 		this.codeFolderPackages = codeFolderPackages;
 		
 		hasSyntaxErrors = false;
 		importedLibraries = new ArrayList<>();
+		
+		compilerProblems = build.compilerProblems;
+	}
+	
+	public Preprocessor(BuildContext context) {
+		this.context = context;
+		this.packageName = context.getPackageName();
+		this.className = context.getSketchName();
+		this.codeFolderPackages = null;
+		
+		hasSyntaxErrors = false;
+		importedLibraries = new ArrayList<>();
+		
+		compilerProblems = context.getProblems();
 	}
 	
 	protected void addCompilerProblem(CompilerProblem compilerProblem) {
-		build.compilerProblems.add(compilerProblem);
+		compilerProblems.add(compilerProblem);
 		if (compilerProblem.isError()) {
 			hasSyntaxErrors = true;
 		}
@@ -69,10 +81,10 @@ public class Preprocessor {
 	
 	public CompilerProblem buildCompilerProblem(TextTransform.Range range, boolean error, String message, boolean shallow) throws TextTransform.LockException {
 		CompoundTextTransform.CompoundRange mapped = transform.mapBackward(range, shallow);
-		SketchFile sketchFile = editor.getSketchFiles().get(mapped.section);
+		SketchCode sketchFile = context.getSketchFiles().get(mapped.section);
 		int line = sketchFile.lineForOffset(mapped.index);
 		int start = mapped.index - sketchFile.offsetForLine(line);
-		return new CompilerProblem(editor.getSketchFiles().get(mapped.section), line, start, mapped.length, error, message);
+		return new CompilerProblem(context.getSketchFiles().get(mapped.section), line, start, mapped.length, error, message);
 	}
 	
 	public CompilerProblem buildCompilerProblem(IProblem problem) throws TextTransform.LockException {
@@ -80,13 +92,13 @@ public class Preprocessor {
 		String filename = new File(new String(problem.getOriginatingFileName())).getName();
 		
 		// Check to see if main file or not
-		if (build.getSketchMainFilename().equals(filename)) {
+		if (context.getSketchMainFilename().equals(filename)) {
 			return buildCompilerProblem(
 					new TextTransform.Range(problem.getSourceStart(), problem.getSourceEnd() - problem.getSourceStart() + 1),
 					problem.isError(), problem.getMessage(), false);
 		} else {
 			// Check all java files
-			for (SketchFile sketchFile : editor.getSketchFiles()) {
+			for (SketchCode sketchFile : context.getSketchFiles()) {
 				if (sketchFile.isJava() && sketchFile.getFilename().equals(filename)) {
 					int absStart = problem.getSourceStart() - sketchFile.javaImportHeaderOffset;
 					int line = sketchFile.lineForOffset(absStart);
@@ -100,7 +112,7 @@ public class Preprocessor {
 			
 			// If we can't find it
 			System.err.println("Unable to find java file: " + filename);
-			return new CompilerProblem(editor.getSketchFiles().get(0), 0, 0, 1,
+			return new CompilerProblem(context.getSketchFiles().get(0), 0, 0, 1,
 					problem.isError(), problem.getMessage());
 		}
 	}
@@ -109,14 +121,14 @@ public class Preprocessor {
 		transform = CompoundTextTransform.create(new CompoundTextTransform.TextHolder() {
 			@Override
 			public int count() {
-				return editor.getSketchFiles().size();
+				return context.getSketchFiles().size();
 			}
 			
 			@Override
 			public CharSequence getText(int section) {
 				// Only preprocess .pde files
-				SketchFile sketchFile = editor.getSketchFiles().get(section);
-				return sketchFile.isPde() ? fixNewlines(sketchFile.getText()) : "";
+				SketchCode sketchFile = context.getSketchFiles().get(section);
+				return sketchFile.isPde() ? fixNewlines(sketchFile.getText().toString()) : "";
 			}
 		});
 		
@@ -215,7 +227,7 @@ public class Preprocessor {
 		}
 		
 		if (searchArea != null) {
-			extractSizeFullScreen(searchArea, offset, statements, build.getAppComponent());
+			extractSizeFullScreen(searchArea, offset, statements, context.getComponentTarget());
 			extractSmooth(searchArea, offset, statements);
 		}
 		
@@ -280,7 +292,7 @@ public class Preprocessor {
 	}
 	
 	private String getDefaultVrRenderer() {
-		return PreferenceManager.getDefaultSharedPreferences(editor).getString("pref_vr_default_renderer", editor.getResources().getString(R.string.pref_vr_default_renderer_default_value));
+		return context.getPreferences().getString("pref_vr_default_renderer", context.getResources().getString(R.string.pref_vr_default_renderer_default_value));
 	}
 	
 	private static final List<String> RENDERERS;
@@ -308,8 +320,8 @@ public class Preprocessor {
 		
 		if (sizeStatement != null && fullScreenStatement != null) {
 			// Can't have both
-			addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_both_size_fullscreen), true));
-			addCompilerProblem(buildCompilerProblem(fullScreenStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_both_size_fullscreen), true));
+			addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_both_size_fullscreen), true));
+			addCompilerProblem(buildCompilerProblem(fullScreenStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_both_size_fullscreen), true));
 		}
 		
 		// We default to fullScreen, even if nothing is specified
@@ -333,11 +345,11 @@ public class Preprocessor {
 						break;
 					default:
 						// Poorly formed size statement
-						addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_size_argument_number), true));
+						addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_size_argument_number), true));
 				}
 			} catch (NumberFormatException e) {
 				// Bad size arguments
-				addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_size_bad_number), true));
+				addCompilerProblem(buildCompilerProblem(sizeStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_size_bad_number), true));
 			}
 		}
 		
@@ -350,7 +362,7 @@ public class Preprocessor {
 				renderer = fullScreenStatement.getArg(0);
 			} else if (fullScreenStatement.arguments.length > 2) {
 				// Too many args
-				addCompilerProblem(buildCompilerProblem(fullScreenStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_fullscreen_arguement_number), true));
+				addCompilerProblem(buildCompilerProblem(fullScreenStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_fullscreen_arguement_number), true));
 			}
 			// "SPAN" is not a renderer, discard it
 			if ("SPAN".equals(renderer)) {
@@ -366,7 +378,7 @@ public class Preprocessor {
 		if (renderer != null && !RENDERERS.contains(renderer)) {
 			// Invalid renderer
 			// If renderer is not null, then we have either a size() or fullScreen() statement
-			addCompilerProblem(buildCompilerProblem(fullScreen ? fullScreenStatement.toRange(offset) : sizeStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_invalid_renderer), true));
+			addCompilerProblem(buildCompilerProblem(fullScreen ? fullScreenStatement.toRange(offset) : sizeStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_invalid_renderer), true));
 			renderer = null;
 		}
 		
@@ -415,14 +427,14 @@ public class Preprocessor {
 		
 		if (smoothStatement != null && noSmoothStatement != null) {
 			// Can't have both
-			addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_both_smooth_nosmooth), true));
-			addCompilerProblem(buildCompilerProblem(noSmoothStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_both_smooth_nosmooth), true));
+			addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_both_smooth_nosmooth), true));
+			addCompilerProblem(buildCompilerProblem(noSmoothStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_both_smooth_nosmooth), true));
 		}
 		
 		if (noSmoothStatement != null) {
 			if (noSmoothStatement.arguments.length > 0) {
 				// Too many args
-				addCompilerProblem(buildCompilerProblem(noSmoothStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_nosmooth_argument_number), true));
+				addCompilerProblem(buildCompilerProblem(noSmoothStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_nosmooth_argument_number), true));
 			}
 			
 			transform.remove(noSmoothStatement.start + offset, noSmoothStatement.semicolonLength);
@@ -442,11 +454,11 @@ public class Preprocessor {
 					arg = smoothStatement.getIntArg(0, "");
 				} catch (NumberFormatException e) {
 					// Bad arg
-					addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_smooth_bad_number), true));
+					addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_smooth_bad_number), true));
 				}
 			} else if (smoothStatement.arguments.length > 1) {
 				// Too many args
-				addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(offset), true, editor.getResources().getString(R.string.preprocessor_problem_smooth_argument_number), true));
+				addCompilerProblem(buildCompilerProblem(smoothStatement.toRange(offset), true, context.getResources().getString(R.string.preprocessor_problem_smooth_argument_number), true));
 			}
 			
 			transform.remove(smoothStatement.start + offset, smoothStatement.semicolonLength);
@@ -469,14 +481,14 @@ public class Preprocessor {
 	}
 	
 	private Library getLibrary(String pkgName) {
-		ArrayList<Library> libraries = editor.getGlobalState().getImportToLibraryTable().get(pkgName);
+		List<Library> libraries = context.getImportToLibraryTable().get(pkgName);
 		if (libraries == null) {
 			return null;
 		} else if (libraries.size() > 1) {
 			// Multiple libraries have the same package name
 			// This used to be a fancy message, but I don't think it's work it
 			// This probably never happens in practice anyway
-			System.err.println(editor.getResources().getString(R.string.preprocessor_problem_conflicting_library, pkgName));
+			System.err.println(context.getResources().getString(R.string.preprocessor_problem_conflicting_library, pkgName));
 			return null;
 		} else {
 			return libraries.get(0);
@@ -504,7 +516,7 @@ public class Preprocessor {
 	}
 	
 	private void checkImport(String libraryPkg) {
-		if (!ignorableImport(libraryPkg, build.getAppComponent())) {
+		if (!ignorableImport(libraryPkg, context.getComponentTarget())) {
 			Library library = getLibrary(libraryPkg);
 			
 			if (library != null) {
@@ -523,7 +535,7 @@ public class Preprocessor {
 				}
 				if (!found) {
 					System.err.println();
-					System.err.println(editor.getResources().getString(R.string.build_library_import_missing, libraryPkg));
+					System.err.println(context.getResources().getString(R.string.build_library_import_missing, libraryPkg));
 					System.err.println();
 				}
 			}

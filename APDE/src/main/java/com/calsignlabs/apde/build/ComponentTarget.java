@@ -7,25 +7,25 @@ import com.calsignlabs.apde.R;
  * components that APDE can build for.
  */
 public enum ComponentTarget {
-	APP(R.drawable.ic_comp_app, R.string.editor_menu_comp_select_app, 17, "AppActivity.java.tmpl", "AppManifest.xml.tmpl"),
-	WALLPAPER(R.drawable.ic_comp_wallpaper, R.string.editor_menu_comp_select_wallpaper, 17, "WallpaperService.java.tmpl", "WallpaperManifest.xml.tmpl"),
-	WATCHFACE(R.drawable.ic_comp_watchface, R.string.editor_menu_comp_select_watchface, 19, "WatchFaceService.java.tmpl", "WatchFaceManifest.xml.tmpl"),
-	VR(R.drawable.ic_comp_vr, R.string.editor_menu_comp_select_vr, 25, "VRActivity.java.tmpl", "VRManifest.xml.tmpl"),
-	PREVIEW(R.drawable.ic_comp_preview, R.string.editor_menu_comp_select_preview, 17, "AppActivity.java.tmpl", "AppManifest.xml.tmpl");
+	APP(R.drawable.ic_comp_app, R.string.editor_menu_comp_select_app, 17, "AppActivity.java", "MainActivity.java", "AppManifest.xml"),
+	WALLPAPER(R.drawable.ic_comp_wallpaper, R.string.editor_menu_comp_select_wallpaper, 17, "WallpaperService.java", "MainService.java", "WallpaperManifest.xml"),
+	WATCHFACE(R.drawable.ic_comp_watchface, R.string.editor_menu_comp_select_watchface, 19, "WatchFaceService.java", "MainService.java", "WatchFaceManifest.xml"),
+	VR(R.drawable.ic_comp_vr, R.string.editor_menu_comp_select_vr, 25, "VRActivity.java", "MainService.java", "VRManifest.xml"),
+	PREVIEW(R.drawable.ic_comp_preview, R.string.editor_menu_comp_select_preview, 17, "AppActivity.java", "MainActivity.java", "AppManifest.xml");
 	
 	private int iconId;
 	private int nameId;
 	
 	private int minSdk;
 	
-	private String mainClassTemplate;
-	private String manifestTemplate;
+	private String mainClassTemplate, mainClassName, manifestTemplate;
 	
-	ComponentTarget(int iconId, int nameId, int minSdk, String mainClassTemplate, String manifestTemplate) {
+	ComponentTarget(int iconId, int nameId, int minSdk, String mainClassTemplate, String mainClassName, String manifestTemplate) {
 		this.iconId = iconId;
 		this.nameId = nameId;
 		this.minSdk = minSdk;
 		this.mainClassTemplate = mainClassTemplate;
+		this.mainClassName = mainClassName;
 		this.manifestTemplate = manifestTemplate;
 	}
 	
@@ -42,11 +42,15 @@ public enum ComponentTarget {
 	}
 	
 	public String getMainClassTemplate() {
-		return mainClassTemplate;
+		return mainClassTemplate + ".tmpl";
+	}
+	
+	public String getMainClassName() {
+		return mainClassName;
 	}
 	
 	public String getManifestTemplate() {
-		return manifestTemplate;
+		return manifestTemplate + ".tmpl";
 	}
 	
 	public int serialize() {

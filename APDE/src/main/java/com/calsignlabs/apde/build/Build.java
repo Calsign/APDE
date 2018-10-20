@@ -40,7 +40,6 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -417,11 +416,6 @@ public class Build {
 			return;
 		}
 		
-		//Used to determine whether or not to build with ALL of the OpenGL libraries...
-		//...it takes a lot longer to run DEX if they're included
-//		boolean isOpenGL = false;
-		//File glLibLoc = new File(binFolder, "libs.dex");
-		
 		File androidJarLoc = getAndroidJarLoc(editor);
 		
 		boolean customProblems = PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_problem_overview_enable", true);
@@ -449,37 +443,34 @@ public class Build {
 				if (intent.resolveActivity(editor.getPackageManager()) == null || additionalPermissions.size() > 0) {
 					// Need to install or add permissions
 					
-					editor.runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-							AlertDialog.Builder builder = new AlertDialog.Builder(editor);
-							
-							StringBuilder message = new StringBuilder(editor.getResources().getString(R.string.preview_sketch_previewer_install_dialog_message));
-							if (additionalPermissions.size() > 0) {
-								// Tell the user which new permissions are being installed
-								message.append("\n\n");
-								for (String permission : additionalPermissions) {
-									message.append(permission);
-									message.append("\n");
-								}
+					editor.runOnUiThread(() -> {
+						AlertDialog.Builder builder = new AlertDialog.Builder(editor);
+						
+						StringBuilder message = new StringBuilder(editor.getResources().getString(R.string.preview_sketch_previewer_install_dialog_message));
+						if (additionalPermissions.size() > 0) {
+							// Tell the user which new permissions are being installed
+							message.append("\n\n");
+							for (String permission : additionalPermissions) {
+								message.append(permission);
+								message.append("\n");
 							}
-							
-							builder.setTitle(R.string.preview_sketch_previewer_install_dialog_title);
-							builder.setMessage(message.toString());
-							
-							builder.setPositiveButton(R.string.preview_sketch_previewer_install_dialog_install_button, new DialogInterface.OnClickListener() {
-								@Override
-								public void onClick(DialogInterface dialogInterface, int i) {
-									editor.getGlobalState().getTaskManager().launchTask("sketchPreviewBuild", false,null, false, new SketchPreviewerBuilder(editor, sketchPermissions, true, false));
-								}
-							});
-							builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-								@Override
-								public void onClick(DialogInterface dialogInterface, int i) {}
-							});
-							
-							builder.show();
 						}
+						
+						builder.setTitle(R.string.preview_sketch_previewer_install_dialog_title);
+						builder.setMessage(message.toString());
+						
+						builder.setPositiveButton(R.string.preview_sketch_previewer_install_dialog_install_button, new DialogInterface.OnClickListener() {
+							@Override
+							public void onClick(DialogInterface dialogInterface, int i) {
+								editor.getGlobalState().getTaskManager().launchTask("sketchPreviewBuild", false,null, false, new SketchPreviewerBuilder(editor, sketchPermissions, true, false));
+							}
+						});
+						builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+							@Override
+							public void onClick(DialogInterface dialogInterface, int i) {}
+						});
+						
+						builder.show();
 					});
 					
 					cleanUpHalt();
@@ -1138,7 +1129,6 @@ public class Build {
 			System.out.println(editor.getResources().getString(R.string.build_installing_apk));
 		}
 		
-		
 		//Copy the APK file to a new (and hopefully readable) location
 		
 		String apkName = sketchName + ".apk";
@@ -1334,7 +1324,7 @@ public class Build {
 		intent.putExtra("SKETCH_DEX", dexUri.toString());
 		intent.putExtra("SKETCH_DATA_FOLDER", dataUri == null ? "" : dataUri.toString());
 		intent.putExtra("SKETCH_DEXED_LIBS", libUris);
-		intent.putExtra("SKETCH_ORIENTATION", manifest.getOrientation(editor));
+		intent.putExtra("SKETCH_ORIENTATION", manifest.getOrientation());
 		intent.putExtra("SKETCH_PACKAGE_NAME", manifest.getPackageName());
 		intent.putExtra("SKETCH_CLASS_NAME", sketchName);
 		
@@ -1815,22 +1805,6 @@ public class Build {
 	private void writeResXMLWatchFace(final File xmlFolder) {
 		File xmlFile = new File(xmlFolder, "watch_face.xml");
 		createFileFromTemplate(XML_WATCHFACE_TEMPLATE, xmlFile, null, editor);
-	}
-	
-	private String generatePermissionsString(final String[] permissions) {
-		String permissionsStr = "";
-		for (String p: permissions) {
-			permissionsStr += (0 < permissionsStr.length() ? "," : "");
-			if (p.indexOf("permission") == -1) {
-				permissionsStr += "Manifest.permission." + p;
-			} else if (p.indexOf("Manifest.permission") == 0) {
-				permissionsStr += p;
-			} else {
-				permissionsStr += "\"" + p + "\"";
-			}
-		}
-		permissionsStr = "{" + permissionsStr + "}";
-		return permissionsStr;
 	}
 	
 	private void copyLibraries(final File libsFolder, final File dexedLibsFolder, final File assetsFolder) throws IOException { //TODO support native library stuffs

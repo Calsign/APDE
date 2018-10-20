@@ -409,4 +409,7 @@
 	<!-- This is the tag for the clipboard data -->
 	<string name="problem_overview_list_copy_description">APDE Problem</string>
 	<string name="problem_overview_list_copy_toast_message">Copied to clipboard</string>
+	
+	<!-- Build misc. -->
+	<string name="build_copying">Copying…</string>
 </resources>

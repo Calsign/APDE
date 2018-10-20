@@ -92,7 +92,9 @@ public abstract class Task {
 	 * If overriding, make sure to call super.stop().
 	 */
 	public void stop() {
-		statusRelay.close();
+		if (statusRelay != null) {
+			statusRelay.close();
+		}
 		running.set(false);
 	}
 	

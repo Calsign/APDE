@@ -14,7 +14,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
 
 public class Library {
@@ -275,13 +277,13 @@ public class Library {
 	}
 	
 	//Add this library's packages to the master list
-	public void addPackageList(HashMap<String, ArrayList<Library>> importToLibraryTable, APDE context) {
+	public void addPackageList(Map<String, List<Library>> importToLibraryTable, APDE context) {
 		String[] packageList = getPackageList(context);
 		
 		for (String pkg : packageList) {
-			ArrayList<Library> libraries = importToLibraryTable.get(pkg);
+			List<Library> libraries = importToLibraryTable.get(pkg);
 			if (libraries == null) {
-				libraries = new ArrayList<Library>();
+				libraries = new ArrayList<>();
 				importToLibraryTable.put(pkg, libraries);
 			} else {
 				StringBuilder libraryConflicts = new StringBuilder();

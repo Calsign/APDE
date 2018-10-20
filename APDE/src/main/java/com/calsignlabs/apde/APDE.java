@@ -33,6 +33,8 @@ import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
 import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.build.SketchProperties;
+import com.calsignlabs.apde.build.dag.BuildContext;
+import com.calsignlabs.apde.build.dag.ModularBuild;
 import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.support.AndroidPlatform;
 import com.calsignlabs.apde.task.TaskManager;
@@ -78,7 +80,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
 
 import processing.app.Platform;
@@ -106,11 +110,13 @@ public class APDE extends MultiDexApplication {
 	private EditorActivity editor;
 	private SketchPropertiesActivity propertiesActivity;
 	
-	private HashMap<String, ArrayList<Library>> importToLibraryTable;
+	private Map<String, List<Library>> importToLibraryTable;
 	private ArrayList<Library> contributedLibraries;
 	
 	private HashMap<String, Tool> packageToToolTable;
 	private ArrayList<Tool> tools;
+	
+	private ModularBuild modularBuild;
 	
 	public static enum SketchLocation {
 		SKETCHBOOK, // A sketch in the sketchbook folder
@@ -1393,13 +1399,17 @@ public class APDE extends MultiDexApplication {
 	 * @return the sketch properties of the current sketch
 	 */
 	public SketchProperties getProperties() {
+		return getProperties(BuildContext.create(this));
+	}
+	
+	public SketchProperties getProperties(BuildContext buildContext) {
 		// TODO maybe load once and store reference?
 		if (needsPropertiesUpgrade()) {
 			// Sketch still has an AndroidManifest.xml, upgrade to sketch.properties
 			return upgradeManifestToProperties();
 		} else {
 			// Load sketch.properties
-			SketchProperties properties = new SketchProperties(this, getSketchPropertiesFile());
+			SketchProperties properties = new SketchProperties(buildContext, getSketchPropertiesFile());
 			if (!isExample()) {
 				properties.save(getSketchPropertiesFile());
 			}
@@ -1470,9 +1480,18 @@ public class APDE extends MultiDexApplication {
 		return properties;
 	}
 	
+	public File getBuildFolder() {
+		// Let the user pick where to build
+		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_build_internal_storage", true)) {
+			return getDir("build", 0);
+		} else {
+			return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), "build");
+		}
+	}
+	
 	public void rebuildLibraryList() {
 		// Reset the table mapping imports to libraries
-		importToLibraryTable = new HashMap<String, ArrayList<Library>>();
+		importToLibraryTable = new HashMap<String, List<Library>>();
 		
 		// Android mode has no core libraries - but we'll leave this here just in case
 		
@@ -1491,7 +1510,7 @@ public class APDE extends MultiDexApplication {
 		}
 	}
 	
-	public HashMap<String, ArrayList<Library>> getImportToLibraryTable() {
+	public Map<String, List<Library>> getImportToLibraryTable() {
 		return importToLibraryTable;
 	}
 	
@@ -1724,6 +1743,14 @@ public class APDE extends MultiDexApplication {
 		intent.setDataAndType(uri, "*/*");
 		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Start this in a separate task
 		activityContext.startActivity(Intent.createChooser(intent, getResources().getString(R.string.show_sketch_folder_title)));
+	}
+	
+	public ModularBuild getModularBuild() {
+		if (modularBuild == null) {
+			modularBuild = new ModularBuild(this);
+		}
+		
+		return modularBuild;
 	}
 	
 	public static final SimpleDateFormat DEBUG_LOG_TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
