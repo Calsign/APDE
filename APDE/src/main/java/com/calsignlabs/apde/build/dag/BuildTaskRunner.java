@@ -8,6 +8,7 @@ import com.calsignlabs.apde.APDE;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,11 +43,30 @@ public class BuildTaskRunner {
 		startBuildTask(buildTask);
 	}
 	
+	// Seems like we can turn off the synchronized collections with no harm done. It even gives us
+	// a performance boost. Shrug?
+	public static final boolean synchronize = true;
+	
+	private <T> Set<T> getSynchronizedSet() {
+		return synchronize ? Collections.synchronizedSet(new LinkedHashSet<>())
+				: new LinkedHashSet<>();
+	}
+	
+	private <K, V> Map<K, V> getSyncrhonizedMap() {
+		return synchronize ? Collections.synchronizedMap(new LinkedHashMap<>())
+				: new LinkedHashMap<>();
+	}
+	
+	private <T> List<T> getSynchronizedList() {
+		return synchronize ? Collections.synchronizedList(new LinkedList<>())
+				: new LinkedList<>();
+	}
+	
 	private void startBuildTask(BuildTask task) {
-		runningTasks = Collections.synchronizedSet(new LinkedHashSet<>());
+		runningTasks = getSynchronizedSet();
 		finishedTasks = buildContext.getCompletedTasks();
-		completionListeners = Collections.synchronizedMap(new HashMap<>());
-		successes = Collections.synchronizedMap(new HashMap<>());
+		completionListeners = getSyncrhonizedMap();
+		successes = getSyncrhonizedMap();
 		executeWithDependencies(task);
 	}
 	
@@ -167,7 +187,7 @@ public class BuildTaskRunner {
 				&& completionListeners.get(parentTask).contains(depTask))) {
 			if (parentTask != null) {
 				if (!completionListeners.containsKey(parentTask)) {
-					completionListeners.put(parentTask, Collections.synchronizedList(new LinkedList<>()));
+					completionListeners.put(parentTask, getSynchronizedList());
 				}
 				completionListeners.get(parentTask).add(depTask);
 			}

@@ -3196,12 +3196,12 @@ public class EditorActivity extends AppCompatActivity {
 					changeRunStopIcon(false);
 					building = false;
 				});
-				
+
 				return true;
 			}
 		});
-		
-    	if (android.os.Build.VERSION.SDK_INT >= 21) {
+	
+		if (android.os.Build.VERSION.SDK_INT >= 21) {
 			runStopMenuButtonAnimating = true;
 		}
     }
@@ -3221,7 +3221,7 @@ public class EditorActivity extends AppCompatActivity {
     }
 	
 	public void changeRunStopIcon(final boolean run) {
-		runOnUiThread(() -> {
+		runStopMenuButton.post(() -> {
 			if (android.os.Build.VERSION.SDK_INT >= 21) {
 				AnimatedVectorDrawable anim = (AnimatedVectorDrawable) getDrawable(run ? R.drawable.run_to_stop : R.drawable.stop_to_run);
 				runStopMenuButton.setImageDrawable(anim);

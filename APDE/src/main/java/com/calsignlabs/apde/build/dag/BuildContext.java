@@ -69,7 +69,9 @@ public class BuildContext {
 			buildContext.sketchFiles.add(SketchCode.fromSketchFile(context.getEditor().getSketchFiles().get(i), i));
 		}
 		
-		buildContext.completedTasks = Collections.synchronizedSet(new LinkedHashSet<>());
+		buildContext.completedTasks = BuildTaskRunner.synchronize
+				? Collections.synchronizedSet(new LinkedHashSet<>())
+				: new LinkedHashSet<>();
 		
 		buildContext.resources = context.getResources();
 		buildContext.preferences = PreferenceManager.getDefaultSharedPreferences(context);
