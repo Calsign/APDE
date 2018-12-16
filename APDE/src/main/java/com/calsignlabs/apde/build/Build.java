@@ -49,6 +49,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.lang.reflect.Method;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -990,7 +991,10 @@ public class Build {
 			//This is some side-stepping to avoid System.exit() calls
 			
 			com.androidjarjar.dx.command.dexer.Main.Arguments dexArgs = new com.androidjarjar.dx.command.dexer.Main.Arguments();
-			dexArgs.parse(args);
+			
+			Method mtd = com.androidjarjar.dx.command.dexer.Main.Arguments.class.getDeclaredMethod("parse", String[].class);
+			mtd.setAccessible(true);
+			mtd.invoke(dexArgs, new Object[] {args});
 			
 			int resultCode = com.androidjarjar.dx.command.dexer.Main.run(dexArgs);
 			
