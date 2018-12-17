@@ -222,7 +222,7 @@ public class SketchPreviewerBuilder extends Task {
 			try {
 				File aaptLoc = getAaptFile();
 				
-				InputStream inputStream = editor.getAssets().open(Build.getAaptName(editor, false));
+				InputStream inputStream = editor.getAssets().open(Build.getAaptName());
 				Build.createFileFromInputStream(inputStream, aaptLoc);
 				
 				if (!aaptLoc.setExecutable(true, true)) {

@@ -273,46 +273,19 @@ public class Build {
 		is.close();
 	}
 	
-	public static String getAaptName(Context context, boolean print) {
+	public static String getAaptName() {
 		String arch = android.os.Build.CPU_ABI.substring(0, 3).toLowerCase(Locale.US);
-		String aaptName;
 		
-		// Position Independent Executables (PIE) were first supported in Jelly Bean 4.1 (API level 16)
-		// In Android 5.0, they are required
-		// Android versions before 4.1 still need the old binary...
-		boolean usePie = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN;
+		// We no longer support Android 4.0 or below, so all devices now use the PIE AAPT binaries
 		
 		// Get the correct AAPT binary for this processor architecture
 		switch (arch) {
 			case "x86":
-				if (usePie) {
-					aaptName = "aapt-binaries/aapt-x86-pie";
-					
-					if (print) {
-						System.out.println(context.getResources().getString(R.string.build_using_pie_aapt_binary));
-					}
-				} else {
-					aaptName = "aapt-binaries/aapt-x86";
-				}
-				break;
+				return "aapt-binaries/aapt-x86-pie";
 			case "arm":
 			default:
-				// Default to ARM, just in case
-				
-				if (usePie) {
-					// Disabled above pref because old aapt contains vulnerable version of libpng
-					aaptName = "aapt-binaries/aapt-arm-pie";
-					
-					if (print) {
-						System.out.println(context.getResources().getString(R.string.build_using_pie_aapt_binary));
-					}
-				} else {
-					aaptName = "aapt-binaries/aapt-arm";
-				}
-				break;
+				return "aapt-binaries/aapt-arm-pie";
 		}
-		
-		return aaptName;
 	}
 	
 	/**
@@ -792,7 +765,7 @@ public class Build {
 			
 			AssetManager am = editor.getAssets();
 			
-			InputStream inputStream = am.open(getAaptName(editor, verbose));
+			InputStream inputStream = am.open(getAaptName());
 			createFileFromInputStream(inputStream, aaptLoc);
 			inputStream.close();
 			
