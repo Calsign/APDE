@@ -2893,6 +2893,9 @@ public class EditorActivity extends AppCompatActivity {
     		button.setLayoutParams(new LinearLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 25, getResources().getDisplayMetrics()), message));
     		button.setPadding(0, 0, 0, 0);
     		
+    		// Disable key press sounds if the user wants them disabled
+    		button.setSoundEffectsEnabled(getGlobalState().getPref("char_inserts_key_press_sound", false));
+    		
     		//Maybe we'll want these at some point in time... but for now, they just cause more problems...
     		//...and the user won't be dragging the divider around if the keyboard is open (which it really should be)
 //    		//Still let the user drag the message area
