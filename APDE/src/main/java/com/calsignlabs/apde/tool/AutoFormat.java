@@ -27,13 +27,14 @@ public class AutoFormat implements Tool {
 	
 	@Override
 	public void run() {
-		if(!context.isExample()) {
-			CodeEditText code = (CodeEditText) context.getEditor().findViewById(R.id.code);
-			
+		CodeEditText code = context.getEditor().getSelectedCodeArea();
+		
+		if(!context.isExample() && code != null) {
 			processing.app.Preferences.setInteger("editor.tabs.size", 2);
 			
 			code.setUpdateText((new processing.mode.java.AutoFormat()).format(code.getText().toString()));
 			code.clearTokens();
+			code.flagRefreshTokens();
 			
 			context.getEditor().message(context.getResources().getString(R.string.tool_auto_format_success));
 		}
