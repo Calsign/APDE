@@ -212,7 +212,7 @@ public class FindReplace implements Tool {
 			
 			@Override
 			public void afterTextChanged(Editable s) {
-				find(findTextField.getText().toString(), false);
+				find(findTextField.getText().toString(), false, 0);
 			}
 		};
 	}
@@ -340,7 +340,7 @@ public class FindReplace implements Tool {
 				assignBooleanSwitch(context, "case_sensitive", false, caseSensitiveCheckBox, caseSensitive, new CompoundButton.OnCheckedChangeListener() {
 					@Override
 					public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-						find(findTextField.getText().toString(), false);
+						find(findTextField.getText().toString(), false, 0);
 					}
 				});
 				assignBooleanSwitch(context, "reg_exp", false, regExpCheckBox, regExp, null);
@@ -433,14 +433,14 @@ public class FindReplace implements Tool {
 					
 					@Override
 					public void afterTextChanged(Editable s) {
-						find(findTextField.getText().toString(), false);
+						find(findTextField.getText().toString(), false, 0);
 					}
 				});
 				
 				findButton.setOnClickListener(new ImageButton.OnClickListener() {
 					@Override
 					public void onClick(View v) {
-						find(findTextField.getText().toString(), true);
+						find(findTextField.getText().toString(), true, 0);
 					}
 				});
 				
@@ -448,8 +448,9 @@ public class FindReplace implements Tool {
 					@Override
 					public void onClick(View v) {
 						//Replace and find
-						replace(lastFindMatch, replaceTextField.getText().toString());
-						find(findTextField.getText().toString(), false);
+						String replaceWith = replaceTextField.getText().toString();
+						replace(lastFindMatch, replaceWith);
+						find(findTextField.getText().toString(), false, replaceWith.length());
 					}
 				});
 				
@@ -592,7 +593,7 @@ public class FindReplace implements Tool {
 		return context.getSharedPreferences("find_replace", 0);
 	}
 	
-	public void find(final String token, final boolean advance) {
+	public void find(final String token, final boolean advance, final int offset) {
 //		context.getTaskManager().launchTask("findTask", false, context.getEditor(), true, new Task() {
 //			@Override
 //			public void run() {
@@ -652,7 +653,7 @@ public class FindReplace implements Tool {
 				if (advance) {
 					nextFindMatch();
 				} else {
-					selectCursorFindMatch();
+					selectCursorFindMatch(offset);
 				}
 //			}
 //			
@@ -803,7 +804,7 @@ public class FindReplace implements Tool {
 		context.getEditor().message((finalNextFindMatch + 1) + " / " + findMatches.size());
 	}
 	
-	public void selectCursorFindMatch() {
+	public void selectCursorFindMatch(int offset) {
 		if (findMatches.size() == 0) {
 			//Bail out
 			return;
@@ -811,7 +812,9 @@ public class FindReplace implements Tool {
 		
 		boolean forward = direction.get().equals(Direction.FORWARD);
 		
-		int cursorFindMatch = indexOfTextPos(context.getEditor().getSelectedCodeIndex(), forward ? context.getCodeArea().getSelectionStart() : context.getCodeArea().getSelectionEnd(), forward);
+		int cursorFindMatch = indexOfTextPos(context.getEditor().getSelectedCodeIndex(),
+				forward ? context.getCodeArea().getSelectionStart() + offset
+						: context.getCodeArea().getSelectionEnd() - offset, forward);
 		
 		if (cursorFindMatch == -1 && wrapAround.get()) {
 			cursorFindMatch = forward ? 0 : findMatches.size() - 1;
@@ -945,6 +948,9 @@ public class FindReplace implements Tool {
 				final String outputText;
 				Editable[] tabTexts;
 				
+				int pos = 0;
+				int lengthDiff = replace.length();
+				
 				switch (scope.get()) {
 				case SELECTION:
 					//TODO Selection scope isn't currently implemented
@@ -970,15 +976,17 @@ public class FindReplace implements Tool {
 					break;
 				case CURRENT_TAB:
 					Editable currentTabText = Editable.Factory.getInstance().newEditable(context.getCodeArea().getText());
+					FindMatch currentTabFindMatch;
 					
 					while (true) {
-						FindMatch currentTabFindMatch = findFirstMatch(find, currentTabText.toString(), context.getEditor().getSelectedCodeIndex(), 0, 0);
+						currentTabFindMatch = findFirstMatch(find, currentTabText.toString(), context.getEditor().getSelectedCodeIndex(), 0, pos);
 						
 						if (currentTabFindMatch == null) {
 							break;
 						}
 						
 						currentTabText.replace(currentTabFindMatch.position, currentTabFindMatch.position + currentTabFindMatch.tokenLength, replace);
+						pos = currentTabFindMatch.position + lengthDiff;
 						count ++;
 					}
 					
@@ -999,19 +1007,23 @@ public class FindReplace implements Tool {
 						}
 					}
 					
+					FindMatch tabFindMatch;
+					
 					while (true) {
-						FindMatch tabFindMatch = findFirstMatch(find, tabTexts[tabNum].toString(), tabNum, 0, 0);
+						tabFindMatch = findFirstMatch(find, tabTexts[tabNum].toString(), tabNum, 0, pos);
 						
 						if (tabFindMatch == null) {
 							if (tabNum >= context.getEditor().getCodeCount() - 1) {
 								break;
 							} else {
 								tabNum ++;
+								pos = 0;
 								continue;
 							}
 						}
 						
 						tabTexts[tabNum].replace(tabFindMatch.position, tabFindMatch.position + tabFindMatch.tokenLength, replace);
+						pos = tabFindMatch.position + lengthDiff;
 						count ++;
 					}
 					

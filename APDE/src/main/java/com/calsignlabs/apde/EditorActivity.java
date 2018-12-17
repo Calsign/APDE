@@ -301,7 +301,10 @@ public class EditorActivity extends AppCompatActivity {
 		codeTabStrip.setSelectedTabIndicatorHeight((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, getResources().getDisplayMetrics()));
 		codeTabStrip.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
 			@Override
-			public void onTabSelected(TabLayout.Tab tab) {}
+			public void onTabSelected(TabLayout.Tab tab) {
+				// Different undo/redo history for different tabs
+				correctUndoRedoEnabled();
+			}
 			
 			@Override
 			public void onTabUnselected(TabLayout.Tab tab) {}
