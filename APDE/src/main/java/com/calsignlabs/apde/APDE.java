@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.graphics.Rect;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -18,16 +19,21 @@ import android.os.StatFs;
 import android.preference.PreferenceManager;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
+import android.util.DisplayMetrics;
 import android.view.ContextThemeWrapper;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
 import com.calsignlabs.apde.build.ComponentTarget;
@@ -1700,6 +1706,47 @@ public class APDE extends Application {
 		builder.setView(frameLayout);
 		
 		return input;
+	}
+	
+	public void assignLongPressDescription(final ImageButton button, final int descId) {
+		button.setOnLongClickListener(new ImageButton.OnLongClickListener() {
+			@Override
+			public boolean onLongClick(View v) {
+				Toast toast = Toast.makeText(getEditor(), descId, Toast.LENGTH_SHORT);
+				positionToast(toast, button, getEditor().getWindow(), 0, 0);
+				toast.show();
+				
+				return true;
+			}
+		});
+	}
+	
+	/** Mimic native Android action bar button long-press behavior.
+	 * http://stackoverflow.com/a/21026866
+	 */
+	public static void positionToast(Toast toast, View view, Window window, int offsetX, int offsetY) {
+		// toasts are positioned relatively to decor view, views relatively to their parents, we have to gather additional data to have a common coordinate system
+		Rect rect = new Rect();
+		window.getDecorView().getWindowVisibleDisplayFrame(rect);
+		// covert anchor view absolute position to a position which is relative to decor view
+		int[] viewLocation = new int[2];
+		view.getLocationInWindow(viewLocation);
+		int viewLeft = viewLocation[0] - rect.left;
+		int viewTop = viewLocation[1] - rect.top;
+		
+		// measure toast to center it relatively to the anchor view
+		DisplayMetrics metrics = new DisplayMetrics();
+		window.getWindowManager().getDefaultDisplay().getMetrics(metrics);
+		int widthMeasureSpec = View.MeasureSpec.makeMeasureSpec(metrics.widthPixels, View.MeasureSpec.UNSPECIFIED);
+		int heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(metrics.heightPixels, View.MeasureSpec.UNSPECIFIED);
+		toast.getView().measure(widthMeasureSpec, heightMeasureSpec);
+		int toastWidth = toast.getView().getMeasuredWidth();
+		
+		// compute toast offsets
+		int toastX = viewLeft + (view.getWidth() / 2 - toastWidth) + offsetX;
+		int toastY = viewTop + view.getHeight() + offsetY;
+		
+		toast.setGravity(Gravity.LEFT | Gravity.TOP, toastX, toastY);
 	}
 	
 	public void launchSketchFolder(Activity activityContext) {

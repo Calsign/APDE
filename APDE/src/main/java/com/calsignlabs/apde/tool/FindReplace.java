@@ -267,12 +267,12 @@ public class FindReplace implements Tool {
 					
 					ResizeAnimation<LinearLayout> resizeCode;
 					ResizeAnimation<LinearLayout> resizeConsole;
-					if (codePager.getHeight() - codeTabStrip.getHeight() >= height) {
+					if (codePager.getHeight() >= height) {
 						resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight(), LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
 						resizeConsole = null;
 					} else {
-						resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codeTabStrip.getHeight(), false);
-						resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight() + codeTabStrip.getHeight()), false);
+						resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0, false);
+						resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight()), false);
 					}
 					codePager.startAnimation(resizeCode);
 					if (resizeConsole != null) {
@@ -313,12 +313,12 @@ public class FindReplace implements Tool {
 				//TODO Regular Expressions aren't currently implemented
 				options.findViewById(R.id.find_replace_options_reg_exp_container).setVisibility(View.GONE);
 				
-				assignLongPressDescription(context, findButton, R.string.tool_find_replace_find);
-				assignLongPressDescription(context, replaceButton, R.string.tool_find_replace_replace_and_find);
-				assignLongPressDescription(context, replaceAllButton, R.string.tool_find_replace_replace_all);
+				context.assignLongPressDescription(findButton, R.string.tool_find_replace_find);
+				context.assignLongPressDescription(replaceButton, R.string.tool_find_replace_replace_and_find);
+				context.assignLongPressDescription(replaceAllButton, R.string.tool_find_replace_replace_all);
 				
-				assignLongPressDescription(context, closeButton, R.string.tool_find_replace_close);
-				assignLongPressDescription(context, expandCollapseButton, R.string.tool_find_replace_expand);
+				context.assignLongPressDescription(closeButton, R.string.tool_find_replace_close);
+				context.assignLongPressDescription(expandCollapseButton, R.string.tool_find_replace_expand);
 				
 				assignEnumRadioGroup(context, "direction", 0, new RadioButton[]{directionForward, directionBackward}, new Direction[]{Direction.FORWARD, Direction.BACKWARD}, direction);
 				assignEnumRadioGroup(context, "scope", 1, new RadioButton[]{scopeSelection, scopeCurrentTab, scopeAllTabs}, new Scope[]{Scope.SELECTION, Scope.CURRENT_TAB, Scope.ALL_TABS}, scope);
@@ -377,7 +377,7 @@ public class FindReplace implements Tool {
 							
 							TabLayout codeTabStrip = context.getEditor().getCodeTabStrip();
 							
-							assignLongPressDescription(context, expandCollapseButton, R.string.tool_find_replace_collapse);
+							context.assignLongPressDescription(expandCollapseButton, R.string.tool_find_replace_collapse);
 							
 							findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, height, LinearLayout.LayoutParams.MATCH_PARENT, height * 2));
 							
@@ -385,12 +385,12 @@ public class FindReplace implements Tool {
 							
 							ResizeAnimation<LinearLayout> resizeCode;
 							ResizeAnimation<LinearLayout> resizeConsole;
-							if (codePager.getHeight() - codeTabStrip.getHeight() >= height) {
+							if (codePager.getHeight() >= height) {
 								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
 								resizeConsole = null;
 							} else {
-								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codeTabStrip.getHeight(), false);
-								resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight() + codeTabStrip.getHeight()), false);
+								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0, false);
+								resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight()), false);
 							}
 							codePager.startAnimation(resizeCode);
 							if (resizeConsole != null) {
@@ -401,7 +401,7 @@ public class FindReplace implements Tool {
 							
 //							context.getEditor().refreshMessageAreaLocation();
 							
-							assignLongPressDescription(context, expandCollapseButton, R.string.tool_find_replace_expand);
+							context.assignLongPressDescription(expandCollapseButton, R.string.tool_find_replace_expand);
 							
 							ResizeAnimation<LinearLayout> resize = new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, height * 2, LinearLayout.LayoutParams.MATCH_PARENT, height);
 							resize.setAnimationListener(new Animation.AnimationListener() {
@@ -528,19 +528,6 @@ public class FindReplace implements Tool {
 		}
 	}
 	
-	protected void assignLongPressDescription(final APDE context, final ImageButton button, final int descId) {
-		button.setOnLongClickListener(new ImageButton.OnLongClickListener() {
-			@Override
-			public boolean onLongClick(View v) {
-				Toast toast = Toast.makeText(context.getEditor(), descId, Toast.LENGTH_SHORT);
-				positionToast(toast, button, context.getEditor().getWindow(), 0, 0);
-				toast.show();
-				
-				return true;
-			}
-		});
-	}
-	
 	protected void assignBooleanSwitch(final APDE context, final String key, final boolean defaultValue, final SwitchCompat switchCompat, final MutableBoolean value, final CompoundButton.OnCheckedChangeListener listener) {
 		boolean savedValue = getPreferences(context).getBoolean(key, defaultValue);
 		value.set(savedValue);
@@ -603,36 +590,6 @@ public class FindReplace implements Tool {
 	
 	protected SharedPreferences getPreferences(APDE context) {
 		return context.getSharedPreferences("find_replace", 0);
-	}
-	
-	/*
-	Mimic native Android action bar button long-press behavior
-	
-	http://stackoverflow.com/a/21026866
-	 */
-	public static void positionToast(Toast toast, View view, Window window, int offsetX, int offsetY) {
-		// toasts are positioned relatively to decor view, views relatively to their parents, we have to gather additional data to have a common coordinate system
-		Rect rect = new Rect();
-		window.getDecorView().getWindowVisibleDisplayFrame(rect);
-		// covert anchor view absolute position to a position which is relative to decor view
-		int[] viewLocation = new int[2];
-		view.getLocationInWindow(viewLocation);
-		int viewLeft = viewLocation[0] - rect.left;
-		int viewTop = viewLocation[1] - rect.top;
-		
-		// measure toast to center it relatively to the anchor view
-		DisplayMetrics metrics = new DisplayMetrics();
-		window.getWindowManager().getDefaultDisplay().getMetrics(metrics);
-		int widthMeasureSpec = View.MeasureSpec.makeMeasureSpec(metrics.widthPixels, View.MeasureSpec.UNSPECIFIED);
-		int heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(metrics.heightPixels, View.MeasureSpec.UNSPECIFIED);
-		toast.getView().measure(widthMeasureSpec, heightMeasureSpec);
-		int toastWidth = toast.getView().getMeasuredWidth();
-		
-		// compute toast offsets
-		int toastX = viewLeft + (view.getWidth() / 2 - toastWidth) + offsetX;
-		int toastY = viewTop + view.getHeight() + offsetY;
-		
-		toast.setGravity(Gravity.LEFT | Gravity.TOP, toastX, toastY);
 	}
 	
 	public void find(final String token, final boolean advance) {
