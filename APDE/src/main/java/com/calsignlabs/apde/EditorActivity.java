@@ -70,6 +70,7 @@ import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
@@ -185,21 +186,15 @@ public class EditorActivity extends AppCompatActivity {
 	
 	public ScheduledThreadPoolExecutor autoSaveTimer;
 	public ScheduledFuture<?> autoSaveTimerTask;
-	public Runnable autoSaveTimerAction = new Runnable() {
-		@Override
-		public void run() {
-			// This looks really messy, but we need to run on the UI thread in order to display
-			// the "sketch has been saved" message in the message area
-			runOnUiThread(new Runnable() {
-				@Override
-				public void run() {
-					autoSave();
-				}
-			});
-		}
+	public Runnable autoSaveTimerAction = () -> {
+		// This looks really messy, but we need to run on the UI thread in order to display
+		// the "sketch has been saved" message in the message area
+		runOnUiThread(this::autoSave);
 	};
 	
 	protected ComponentTarget componentTarget;
+	
+	private boolean FLAG_SCREEN_OVERLAY_INSTALL_ANYWAY = false;
 	
     @SuppressLint("NewApi")
 	@Override
@@ -2900,7 +2895,15 @@ public class EditorActivity extends AppCompatActivity {
     		return;
     	}
 		
-		if (!checkScreenOverlay()) {
+    	// Don't check for screen overlay in these cases:
+		//  - user has explicitly disabled check
+		//  - user has opted to build despite the warning
+		//  - component target is set to preview, which has no installation to worry about, and the
+		//    sketch previewer is already installed
+		if (getGlobalState().getPref("pref_build_check_screen_overlay", true)
+				&& !FLAG_SCREEN_OVERLAY_INSTALL_ANYWAY
+				&& !(getComponentTarget() == ComponentTarget.PREVIEW && SketchPreviewerBuilder.isPreviewerInstalled(this))
+				&& !checkScreenOverlay()) {
 			return;
 		}
 		
@@ -3008,19 +3011,30 @@ public class EditorActivity extends AppCompatActivity {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			
 			builder.setTitle(R.string.screen_overlay_dialog_title);
-			builder.setMessage(R.string.screen_overlay_dialog_message);
 			
-			builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialogInterface, int i) {}
-			});
+			LinearLayout layout = (LinearLayout) View.inflate(new ContextThemeWrapper(this, R.style.Theme_AppCompat_Dialog), R.layout.screen_overlay_dialog, null);
+			final CheckBox dontShowAgain = (CheckBox) layout.findViewById(R.id.screen_overlay_dialog_dont_show_again);
+			builder.setView(layout);
 			
-			builder.setNeutralButton(R.string.export_signed_package_long_info_button, new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialogInterface, int i) {
-					startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.screen_overlay_info_wiki_url))));
-				}
-			});
+			builder.setPositiveButton(R.string.screen_overlay_dialog_install_anyway, (dialogInterface, i) ->
+					{
+						if (dontShowAgain.isChecked()) {
+							// Change the setting to prevent dialog from appearing in the future
+							getGlobalState().putPref("pref_build_check_screen_overlay", false);
+						} else {
+							// This will last until the activity gets destroyed. If the user wants to
+							// make this permanent, then they should check "don't show again".
+							FLAG_SCREEN_OVERLAY_INSTALL_ANYWAY = true;
+						}
+						
+						// Run again
+						runApplication();
+					});
+			
+			builder.setNegativeButton(R.string.cancel, (dialogInterface, i) -> {});
+			
+			builder.setNeutralButton(R.string.export_signed_package_long_info_button, (dialogInterface, i) ->
+					startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.screen_overlay_info_wiki_url)))));
 			
 			builder.show();
 			

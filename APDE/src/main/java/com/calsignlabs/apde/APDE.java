@@ -896,10 +896,10 @@ public class APDE extends Application {
 			new Thread(new Runnable() {
 				public void run() {
 					// For some reason, there's a lot of useless console output here...
-					// 
-					// This will also block console output for a couple of 
-					// things that run after this because this runs in a 
-					// separate thread, but it's worth it. The user can turn 
+					//
+					// This will also block console output for a couple of
+					// things that run after this because this runs in a
+					// separate thread, but it's worth it. The user can turn
 					// the output back on from Settings if it becomes a problem.
 					getEditor().FLAG_SUSPEND_OUT_STREAM.set(true);
 					
@@ -1662,6 +1662,12 @@ public class APDE extends Application {
 	
 	public String getPref(String pref, String def) {
 		return PreferenceManager.getDefaultSharedPreferences(this).getString(pref, def);
+	}
+	
+	public void putPref(String pref, boolean val) {
+		SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(this).edit();
+		edit.putBoolean(pref, val);
+		edit.apply();
 	}
 	
 	public void putPref(String pref, String val) {

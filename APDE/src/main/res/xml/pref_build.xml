@@ -15,6 +15,12 @@
             android:key="inject_log_broadcaster"
             android:title="@string/pref_inject_log_broadcaster"
             android:summary="@string/pref_inject_log_broadcaster_desc" />
+	
+		<android.support.v14.preference.SwitchPreference
+			android:defaultValue="true"
+			android:key="pref_build_check_screen_overlay"
+			android:title="@string/pref_build_check_screen_overlay"
+			android:summary="@string/pref_build_check_screen_overlay_desc" />
     </android.support.v7.preference.PreferenceCategory>
 	
 	<android.support.v7.preference.PreferenceCategory

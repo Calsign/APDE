@@ -47,6 +47,15 @@ public class SketchPreviewerBuilder extends Task {
 		this.forceSetPermissions = forceSetPermissions;
 	}
 	
+	public static boolean isPreviewerInstalled(Context context) {
+		try {
+			context.getPackageManager().getPackageInfo("com.calsignlabs.apde.sketchpreview", PackageManager.GET_PERMISSIONS);
+			return true;
+		} catch (PackageManager.NameNotFoundException e) {
+			return false;
+		}
+	}
+	
 	public static String[] getInstalledPermissions(Context context) {
 		String[] permissions = null;
 		try {

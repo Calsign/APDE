@@ -360,8 +360,10 @@
 	     package installer. See the following link for more information:
 	     https://github.com/Calsign/APDE/wiki/Screen-Overlays-and-the-Install-Screen -->
 	<string name="screen_overlay_dialog_title">Screen Overlay Detected</string>
-	<string name="screen_overlay_dialog_message">Please disable your screen overlay app for the duration of the sketch installation.\n\nAnother app is currently drawing over the entire screen. This app may be Twilight, Lux, or a similar screen dimming/blue light filter app. As a security feature, the Android system will prevent you from pressing the \"Install\" button in the package installer screen while this app is enabled.\n\nPress \"Info\" below for more information online.</string>
+	<string name="screen_overlay_dialog_message">Please disable your screen overlay app for the duration of the sketch installation.\n\nAnother app is currently drawing over the entire screen. This app may be Twilight, Lux, or a similar screen dimming/blue light filter app. As a security feature, the Android system will prevent you from pressing the \"Install\" button in the package installer screen while this app is enabled.\n\nPress \"Info\" below for more information online. Press \"Install\" if you want to run anyway.</string>
+	<string name="screen_overlay_dialog_dont_show_again">Don\'t show again</string>
 	<string name="screen_overlay_info_wiki_url">https://github.com/Calsign/APDE/wiki/Screen-Overlays-and-the-Install-Screen</string>
+	<string name="screen_overlay_dialog_install_anyway">Install</string>
 	
 	<!-- Find in reference tool (contextual). -->
 	<string name="tool_find_in_reference">Find In Reference</string>
