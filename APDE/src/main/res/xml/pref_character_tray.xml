@@ -14,5 +14,11 @@
             android:key="char_inserts_include_numbers"
             android:title="@string/pref_char_inserts_include_numbers"
             android:dependency="char_inserts" />
+        
+        <android.support.v14.preference.SwitchPreference
+			android:defaultValue="false"
+			android:key="char_inserts_key_press_sound"
+			android:title="@string/pref_char_inserts_key_press_sound"
+			android:dependency="char_inserts" />
     </android.support.v7.preference.PreferenceCategory>
 </android.support.v7.preference.PreferenceScreen>

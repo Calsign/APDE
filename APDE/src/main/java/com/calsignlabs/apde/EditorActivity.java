@@ -85,6 +85,7 @@ import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.build.dag.ModularBuild;
+import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
@@ -137,6 +138,10 @@ public class EditorActivity extends AppCompatActivity {
 	public FragmentStatePagerAdapter codePagerAdapter;
 	
 	protected TabLayout codeTabStrip;
+	protected ViewGroup tabBarContainer;
+	
+	protected ImageButton undoButton;
+	protected ImageButton redoButton;
 	
 	//List of tabs
 	protected ArrayList<SketchFile> tabs;
@@ -236,21 +241,16 @@ public class EditorActivity extends AppCompatActivity {
 	
 	public ScheduledThreadPoolExecutor autoSaveTimer;
 	public ScheduledFuture<?> autoSaveTimerTask;
-	public Runnable autoSaveTimerAction = new Runnable() {
-		@Override
-		public void run() {
-			// This looks really messy, but we need to run on the UI thread in order to display
-			// the "sketch has been saved" message in the message area
-			runOnUiThread(new Runnable() {
-				@Override
-				public void run() {
-					autoSave();
-				}
-			});
-		}
+	public Runnable autoSaveTimerAction = () -> {
+		// This looks really messy, but we need to run on the UI thread in order to display
+		// the "sketch has been saved" message in the message area
+		runOnUiThread(this::autoSave);
 	};
 	
 	protected ComponentTarget componentTarget;
+	
+	private boolean FLAG_SCREEN_OVERLAY_INSTALL_ANYWAY = false;
+	private boolean FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = false;
 	
     @SuppressLint("NewApi")
 	@Override
@@ -359,6 +359,9 @@ public class EditorActivity extends AppCompatActivity {
 				if (getSelectedCodeArea() != null) {
 					getSelectedCodeArea().updateCursorCompilerProblem();
 				}
+				
+				// Different undo/redo history for different tabs
+				correctUndoRedoEnabled();
 			}
 			
 			@Override
@@ -370,6 +373,17 @@ public class EditorActivity extends AppCompatActivity {
 				EditorActivity.this.onTabReselected(anchor);
 			}
 		});
+		
+		tabBarContainer = findViewById(R.id.tab_bar_container);
+		
+		undoButton = findViewById(R.id.undo_redo_undo);
+		redoButton = findViewById(R.id.undo_redo_redo);
+		
+		getGlobalState().assignLongPressDescription(undoButton, R.string.editor_menu_undo);
+		getGlobalState().assignLongPressDescription(redoButton, R.string.editor_menu_redo);
+		
+		undoButton.setOnClickListener(view -> undo());
+		redoButton.setOnClickListener(view -> redo());
 		
         // Load all of the permissions
         Manifest.loadPermissions(this);
@@ -628,7 +642,7 @@ public class EditorActivity extends AppCompatActivity {
 							oldCodeHeight = codePager.getHeight();
 						}
 						
-						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
 						
 						if (totalHeight > oldCodeHeight) {
 							codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, totalHeight));
@@ -684,18 +698,18 @@ public class EditorActivity extends AppCompatActivity {
 						}
 					}
 				} else {
+					View consoleArea = findViewById(R.id.console_scroller);
+					ViewGroup content = findViewById(R.id.content);
+					
 					if (keyboardVisible) {
+						//Configure the layout for the absence of the keyboard
 						// Configure the layout for the absence of the keyboard
 						
-						View codeArea = getSelectedCodeAreaScroller();
-						View consoleArea = findViewById(R.id.console_wrapper);
-						
-						ViewGroup content = findViewById(R.id.content);
-						
 						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
 						
 						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight, false));
-						consoleArea.startAnimation(new ResizeAnimation<LinearLayout>(consoleArea, ResizeAnimation.DEFAULT, codeArea.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight, false));
+						consoleArea.startAnimation(new ResizeAnimation<LinearLayout>(consoleArea, ResizeAnimation.DEFAULT, totalHeight - codePager.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight, false));
 						
 						keyboardVisible = false;
 						
@@ -710,7 +724,15 @@ public class EditorActivity extends AppCompatActivity {
 						// Update the character insert tray
 						toggleCharInsertsProblemOverviewButton(true, true);
 						
+						findViewById(R.id.message).setVisibility(View.VISIBLE);
+						findViewById(R.id.char_insert_tray).setVisibility(View.GONE);
+						
 						hideCharInsertsNoAnimation(false);
+					} else if (!firstResize) {
+						// Fix console height
+						// This is necessary when toggling between fullscreen and non-fullscreen
+						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
+						consoleArea.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, totalHeight - codePager.getHeight()));
 					}
 				}
 			}
@@ -917,7 +939,7 @@ public class EditorActivity extends AppCompatActivity {
 		});
 		
 		// Fallback component target
-		setComponentTarget(ComponentTarget.APP);
+		setComponentTarget(ComponentTarget.PREVIEW);
 		
 		try {
 			// Try to load the auto-save sketch, otherwise set the editor up as a new sketch
@@ -931,6 +953,12 @@ public class EditorActivity extends AppCompatActivity {
 		} catch (Exception e) {
 			// Who knows really...
 			e.printStackTrace();
+		}
+		
+		// On first run, we want to switch to the preview component target to demo the new feature
+		if (FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED) {
+			setComponentTarget(ComponentTarget.PREVIEW);
+			FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = false;
 		}
 		
 		autoSaveTimer = new ScheduledThreadPoolExecutor(1);
@@ -1321,6 +1349,44 @@ public class EditorActivity extends AppCompatActivity {
 		
         //In case the user has enabled / disabled undo / redo in settings
         supportInvalidateOptionsMenu();
+        
+        correctUndoRedoEnabled();
+	}
+	
+	public void correctUndoRedoEnabled() {
+    	boolean settingsEnabled = getGlobalState().getPref("pref_key_undo_redo", true);
+    	
+		// Hide undo/redo if user has disabled undo/redo or if we're in an example
+		findViewById(R.id.undo_redo_container).setVisibility(settingsEnabled && !getGlobalState().isExample() ? View.VISIBLE : View.GONE);
+    	
+    	SketchFile sketchFile = getSelectedSketchFile();
+    	boolean canUndo = sketchFile != null && sketchFile.canUndo();
+    	boolean canRedo = sketchFile != null && sketchFile.canRedo();
+    	
+    	undoButton.setEnabled(canUndo);
+    	redoButton.setEnabled(canRedo);
+    	undoButton.setClickable(canUndo);
+    	redoButton.setClickable(canRedo);
+		
+		int alphaEnabled = getResources().getInteger(R.integer.prop_menu_comp_select_alpha_selected);
+		int alphaDisabled = getResources().getInteger(R.integer.prop_menu_comp_select_alpha_unselected);
+		
+		undoButton.setImageAlpha(canUndo ? alphaEnabled : alphaDisabled);
+		redoButton.setImageAlpha(canRedo ? alphaEnabled : alphaDisabled);
+	}
+	
+	public void undo() {
+    	if (getSelectedCodeIndex() >= 0 && getSelectedCodeIndex() < tabs.size()) {
+			tabs.get(getSelectedCodeIndex()).undo(this);
+			correctUndoRedoEnabled();
+		}
+	}
+	
+	public void redo() {
+		if (getSelectedCodeIndex() >= 0 && getSelectedCodeIndex() < tabs.size()) {
+			tabs.get(getSelectedCodeIndex()).redo(this);
+			correctUndoRedoEnabled();
+		}
 	}
 	
 	private boolean loadExternalSketch(String filePath) {
@@ -1466,13 +1532,13 @@ public class EditorActivity extends AppCompatActivity {
     	
     	if (keyBindings.get("undo").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		if (!getGlobalState().isExample() && getCodeCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
-    			tabs.get(getSelectedCodeIndex()).undo(this);
+    			undo();
     		}
     		return true;
     	}
     	if (keyBindings.get("redo").matches(key, ctrl, meta, func, alt, sym, shift)) {
     		if (!getGlobalState().isExample() && getCodeCount() > 0 && PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true)) {
-    			tabs.get(getSelectedCodeIndex()).redo(this);
+    			redo();
     		}
     		
     		return true;
@@ -2073,6 +2139,9 @@ public class EditorActivity extends AppCompatActivity {
 			// Close Find/Replace (if it's open)
 			((FindReplace) getGlobalState().getPackageToToolTable().get(FindReplace.PACKAGE_NAME)).close();
 			
+			// We hide undo/redo for examples
+			correctUndoRedoEnabled();
+			
 //    		if(getGlobalState().isExample()) {
 //    			//Make sure the code area isn't editable
 //        		((CodeEditText) findViewById(R.id.code)).setFocusable(false);
@@ -2596,7 +2665,7 @@ public class EditorActivity extends AppCompatActivity {
 			@Override
 			public boolean onLongClick(View v) {
 				Toast toast = Toast.makeText(EditorActivity.this, building ? R.string.editor_menu_stop_sketch : R.string.editor_menu_run_sketch, Toast.LENGTH_SHORT);
-				FindReplace.positionToast(toast, runStopMenuButton, getWindow(), 0, 0);
+				APDE.positionToast(toast, runStopMenuButton, getWindow(), 0, 0);
 				toast.show();
 				
 				return true;
@@ -2670,8 +2739,8 @@ public class EditorActivity extends AppCompatActivity {
         	
         	// Enable/disable undo/redo buttons
         	SketchFile meta = getSelectedSketchFile();
-        	menu.findItem(R.id.menu_undo).setEnabled(meta != null ? meta.canUndo() : false);
-        	menu.findItem(R.id.menu_redo).setEnabled(meta != null ? meta.canRedo() : false);
+        	menu.findItem(R.id.menu_undo).setEnabled(meta != null && meta.canUndo());
+        	menu.findItem(R.id.menu_redo).setEnabled(meta != null && meta.canRedo());
         	
         	// Make sure to make all of the sketch-specific actions visible
         	
@@ -2733,6 +2802,10 @@ public class EditorActivity extends AppCompatActivity {
 		
 		// We are now using the combined run-stop button
 		menu.findItem(R.id.menu_stop).setVisible(false);
+    	
+    	// We have moved undo/redo to the tab bar to make it more accessible
+    	menu.findItem(R.id.menu_undo).setVisible(false);
+    	menu.findItem(R.id.menu_redo).setVisible(false);
 		
 		menu.findItem(R.id.menu_comp_select).setIcon(getComponentTarget().getIconId());
     	menu.findItem(R.id.menu_comp_select).setTitle(getComponentTarget().getNameId());
@@ -3035,6 +3108,9 @@ public class EditorActivity extends AppCompatActivity {
     		button.setLayoutParams(new LinearLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 25, getResources().getDisplayMetrics()), message));
     		button.setPadding(0, 0, 0, 0);
     		
+    		// Disable key press sounds if the user wants them disabled
+    		button.setSoundEffectsEnabled(getGlobalState().getPref("char_inserts_key_press_sound", false));
+    		
     		//Maybe we'll want these at some point in time... but for now, they just cause more problems...
     		//...and the user won't be dragging the divider around if the keyboard is open (which it really should be)
 //    		//Still let the user drag the message area
@@ -3158,7 +3234,15 @@ public class EditorActivity extends AppCompatActivity {
     		return;
     	}
 		
-		if (!checkScreenOverlay()) {
+    	// Don't check for screen overlay in these cases:
+		//  - user has explicitly disabled check
+		//  - user has opted to build despite the warning
+		//  - component target is set to preview, which has no installation to worry about, and the
+		//    sketch previewer is already installed
+		if (getGlobalState().getPref("pref_build_check_screen_overlay", true)
+				&& !FLAG_SCREEN_OVERLAY_INSTALL_ANYWAY
+				&& !(getComponentTarget() == ComponentTarget.PREVIEW && SketchPreviewerBuilder.isPreviewerInstalled(this))
+				&& !checkScreenOverlay()) {
 			return;
 		}
 		
@@ -3275,13 +3359,30 @@ public class EditorActivity extends AppCompatActivity {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			
 			builder.setTitle(R.string.screen_overlay_dialog_title);
-			builder.setMessage(R.string.screen_overlay_dialog_message);
 			
-			builder.setPositiveButton(R.string.ok, (dialogInterface, i) -> {});
+			LinearLayout layout = (LinearLayout) View.inflate(new ContextThemeWrapper(this, R.style.Theme_AppCompat_Dialog), R.layout.screen_overlay_dialog, null);
+			final CheckBox dontShowAgain = (CheckBox) layout.findViewById(R.id.screen_overlay_dialog_dont_show_again);
+			builder.setView(layout);
 			
-			builder.setNeutralButton(R.string.export_signed_package_long_info_button, (dialogInterface, i)
-					-> startActivity(new Intent(Intent.ACTION_VIEW,
-					Uri.parse(getResources().getString(R.string.screen_overlay_info_wiki_url)))));
+			builder.setPositiveButton(R.string.screen_overlay_dialog_install_anyway, (dialogInterface, i) ->
+					{
+						if (dontShowAgain.isChecked()) {
+							// Change the setting to prevent dialog from appearing in the future
+							getGlobalState().putPref("pref_build_check_screen_overlay", false);
+						} else {
+							// This will last until the activity gets destroyed. If the user wants to
+							// make this permanent, then they should check "don't show again".
+							FLAG_SCREEN_OVERLAY_INSTALL_ANYWAY = true;
+						}
+						
+						// Run again
+						runApplication();
+					});
+			
+			builder.setNegativeButton(R.string.cancel, (dialogInterface, i) -> {});
+			
+			builder.setNeutralButton(R.string.export_signed_package_long_info_button, (dialogInterface, i) ->
+					startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.screen_overlay_info_wiki_url)))));
 			
 			builder.show();
 			
@@ -3457,33 +3558,39 @@ public class EditorActivity extends AppCompatActivity {
     	messageArea.requestLayout();
     	
     	// Check back in later when the height has updated...
-    	messageArea.post(() -> {
-			// ...and update the console's height...
+    	messageArea.post(new Runnable() {
+    		public void run() {
+    			// ...and update the console's height...
 			
-			int totalWidth = findViewById(R.id.message_char_insert_wrapper).getWidth();
-			
-			// We need to use this in case the message area is partially off the screen
-			// This is the DESIRED height, not the ACTUAL height
-			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
-			
-			// The height the text view would be if it were just one line
-			int singleLineHeight = getTextViewHeight(getApplicationContext(), "", messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
-			
-			// Obtain some references
-			View console = getConsoleWrapper();
-			View content = findViewById(R.id.content);
-			
-			if (isSelectedCodeAreaInitialized()) {
-				int consoleCodeHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
-				int consoleHeight = consoleCodeHeight - codePager.getHeight();
+				int totalWidth = findViewById(R.id.message_char_insert_wrapper).getWidth();
 				
-				// We can't shrink the console if it's hidden (like when the keyboard is visible)...
-				// ...so shrink the code area instead
-				if (consoleHeight < 0 || keyboardVisible) {
-					codePager.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, consoleCodeHeight));
-					console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0));
-				} else {
-					console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, consoleHeight));
+    			// We need to use this in case the message area is partially off the screen
+    			// This is the DESIRED height, not the ACTUAL height
+    			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
+			
+				// The height the text view would be if it were just one line
+				int singleLineHeight = getTextViewHeight(getApplicationContext(), "", messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
+    
+				((LinearLayout) findViewById(R.id.buffer)).getLayoutParams().height = message;
+				
+    			// Obtain some references
+    			View console = findViewById(R.id.console_scroller);
+    			View content = findViewById(R.id.content);
+				
+				if (isSelectedCodeAreaInitialized()) {
+					int consoleCodeHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)  - tabBarContainer.getHeight();
+					int consoleHeight = consoleCodeHeight - codePager.getHeight();
+					
+					// We can't shrink the console if it's hidden (like when the keyboard is visible)...
+					// ...so shrink the code area instead
+					if (consoleHeight < 0 || keyboardVisible) {
+						codePager.setLayoutParams(new LinearLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+								content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
+						console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0));
+					} else {
+						console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+								content.getHeight() - codePager.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
+					}
 				}
 				
 				// Note: For some reason modifying the LayoutParams directly is not working.
@@ -3545,14 +3652,14 @@ public class EditorActivity extends AppCompatActivity {
 				//This is the DESIRED height, not the ACTUAL height
 				message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), findViewById(R.id.message_char_insert_wrapper).getWidth(), messageArea.getPaddingTop());
 
-				int consoleSize = content.getHeight() - code.getHeight() - codeTabStrip.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+				int consoleSize = content.getHeight() - code.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
 
 				//We can't shrink the console if it's hidden (like when the keyboard is visible)...
 				//...so shrink the code area instead
 				if (consoleSize < 0 || consoleWasHidden || keyboardVisible) {
 					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
 					code.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-							content.getHeight() - codeTabStrip.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)));
+							content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
 
 					consoleWasHidden = true;
 				} else {
@@ -4466,7 +4573,7 @@ public class EditorActivity extends AppCompatActivity {
 					// includes the height of the tab bar
 					
 					// Calculate maximum possible code view height
-					int maxCode = content.getHeight() - message - codeTabStrip.getHeight() - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
+					int maxCode = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
 					
 					// Find relative movement for this event
 					int y = (int) event.getY() - touchOff;
@@ -4478,7 +4585,7 @@ public class EditorActivity extends AppCompatActivity {
 					int codeDim = maxCode - consoleDim;
 					
 					// Set the new dimensions
-					codePager.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim + codeTabStrip.getHeight()));
+					codePager.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim));
 					console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
 					
 					firstResize = false;
@@ -4661,7 +4768,7 @@ public class EditorActivity extends AppCompatActivity {
 			}
 		});
 		
-		// v0.5.0-pre1 (branch android-mode-4)
+		// v0.5.0 Alpha-pre1 (branch android-mode-4)
 		
 		// Upgrade android.jar to latest version (API level 27)
 		upgradeChanges.add(new UpgradeChange(22) {
@@ -4695,6 +4802,16 @@ public class EditorActivity extends AppCompatActivity {
 					e.printStackTrace();
 					System.err.println(getResources().getString(R.string.apde_0_5_upgrade_error));
 				}
+			}
+		});
+		
+		// v0.5.1 Alpha-pre4 (branch preview)
+		
+		// Change to preview component target for first run
+		upgradeChanges.add(new UpgradeChange(30) {
+			@Override
+			public void run() {
+				FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = true;
 			}
 		});
 		

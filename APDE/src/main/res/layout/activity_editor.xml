@@ -23,19 +23,67 @@
 			tools:context=".APDE"
 			android:orientation="vertical" >
 			
+			<RelativeLayout
+				android:id="@+id/tab_bar_container"
+				android:layout_width="match_parent"
+				android:layout_height="48dp"
+				android:orientation="horizontal"
+				android:background="@color/bar_overlay">
+				
+				<LinearLayout
+					android:id="@+id/undo_redo_container"
+					android:layout_width="wrap_content"
+					android:layout_height="48dp"
+					android:orientation="horizontal"
+					android:layout_alignParentRight="true">
+					
+					<View
+						android:id="@+id/tab_undo_redo_separator"
+						android:layout_width="1dp"
+						android:layout_height="fill_parent"
+						android:background="@color/grayed_out"
+						android:layout_marginLeft="3dp"
+						android:layout_marginRight="3dp"
+						android:layout_marginTop="6dp"
+						android:layout_marginBottom="6dp" />
+					
+					<ImageButton
+						android:id="@+id/undo_redo_undo"
+						android:layout_width="48dp"
+						android:layout_height="match_parent"
+						android:layout_gravity="center"
+						android:adjustViewBounds="false"
+						android:scaleType="centerInside"
+						android:contentDescription="@string/editor_menu_undo"
+						android:src="@drawable/ic_undo_white"
+						style="@style/Widget.AppCompat.ActionButton" />
+					
+					<ImageButton
+						android:id="@+id/undo_redo_redo"
+						android:layout_width="48dp"
+						android:layout_height="match_parent"
+						android:layout_gravity="center"
+						android:scaleType="centerInside"
+						android:contentDescription="@string/editor_menu_redo"
+						android:src="@drawable/ic_redo_white"
+						style="@style/Widget.AppCompat.ActionButton" />
+				</LinearLayout>
+				
+				<android.support.design.widget.TabLayout
+					style="@style/CodeTabStrip"
+					android:id="@+id/code_pager_tabs"
+					android:layout_width="match_parent"
+					android:layout_height="48dp"
+					android:layout_toLeftOf="@id/undo_redo_container"
+					android:layout_alignParentLeft="true"
+					app:tabMode="scrollable" />
+			</RelativeLayout>
+			
 			<android.support.v4.view.ViewPager
 				android:id="@+id/code_pager"
 				android:layout_width="match_parent"
 				android:layout_weight="3"
-				android:layout_height="0dp">
-                
-                <android.support.design.widget.TabLayout
-					style="@style/CodeTabStrip"
-                    android:id="@+id/code_pager_tabs"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-					app:tabMode="scrollable" />
-            </android.support.v4.view.ViewPager>
+				android:layout_height="0dp" />
 			
 			<LinearLayout
 				android:id="@+id/buffer"
@@ -79,7 +127,8 @@
 					android:layout_width="1dp"
 					android:layout_height="match_parent"
 					android:background="@color/toggle_char_inserts_separator"
-					android:layout_margin="3dp" />
+					android:layout_margin="3dp"
+					android:visibility="gone" />
 				
 				<!-- Wrapped in a FrameLayout allows for crossfading -->
 				<FrameLayout

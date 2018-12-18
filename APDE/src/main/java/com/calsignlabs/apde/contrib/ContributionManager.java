@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
@@ -312,7 +313,10 @@ public class ContributionManager {
 			//This is some side-stepping to avoid System.exit() calls
 			
 			com.androidjarjar.dx.command.dexer.Main.Arguments dexArgs = new com.androidjarjar.dx.command.dexer.Main.Arguments();
-			dexArgs.parse(args);
+			
+			Method mtd = com.androidjarjar.dx.command.dexer.Main.Arguments.class.getDeclaredMethod("parse", String[].class);
+			mtd.setAccessible(true);
+			mtd.invoke(dexArgs, new Object[] {args});
 			
 			int resultCode = com.androidjarjar.dx.command.dexer.Main.run(dexArgs);
 			

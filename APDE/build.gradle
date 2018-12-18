@@ -8,8 +8,8 @@ android {
         applicationId "com.calsignlabs.apde"
         minSdkVersion 17
         targetSdkVersion 27
-        versionCode 29
-        versionName "0.5.1-pre3"
+        versionCode 30
+        versionName "0.5.1-pre4"
         multiDexEnabled true
     }
 

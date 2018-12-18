@@ -1,7 +1,6 @@
 /*
  * [CalsignLabs]
  * This example taken from the Processing distribution.
- * This example uses JAVA2D instead of P2D as a workaround for unknown issues with OpenGL.
  */
 
 /**
@@ -23,7 +22,7 @@ int[][][] world;
 
 void setup()
 {
-  size(640, 200, JAVA2D);
+  size(640, 200, P2D);
   frameRate(12);
   sx = width;
   sy = height;
@@ -33,11 +32,11 @@ void setup()
   for (int i = 0; i < sx * sy * density; i++) {
     world[(int)random(sx)][(int)random(sy)][1] = 1;
   }
-} 
+}
 
 void draw()
 {
-  background(0); 
+  background(0);
   
   // Drawing and update cycle
   for (int x = 0; x < sx; x=x+1) {

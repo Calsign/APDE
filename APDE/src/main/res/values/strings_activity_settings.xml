@@ -69,6 +69,7 @@
 	
 	<string name="pref_char_inserts">Enable Special Character Tray</string>
 	<string name="pref_char_inserts_include_numbers">Include Numbers</string>
+	<string name="pref_char_inserts_key_press_sound">Key Press Sound</string>
 	
 	<string name="pref_undo_redo">Undo/Redo</string>
 	<string name="pref_undo_redo_enable">Enable Undo/Redo</string>
@@ -104,6 +105,8 @@
 	<string name="pref_build_internal_storage_desc">May consume additional internal storage space</string>
 	<string name="pref_inject_log_broadcaster">Inject Log Broadcaster</string>
 	<string name="pref_inject_log_broadcaster_desc">Allows console to display sketch output</string>
+	<string name="pref_build_check_screen_overlay">Enable Screen Overlay Check</string>
+	<string name="pref_build_check_screen_overlay_desc">Check for screen overlay apps that prevent installation before build</string>
 	
 	<string name="pref_build_preview">Preview Mode</string>
 	<string name="pref_build_preview_permissions">Change Previewer Permissions</string>
