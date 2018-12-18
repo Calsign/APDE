@@ -824,7 +824,7 @@ public class CodeEditText extends AppCompatEditText {
 			public void run() {
 				updatingTokens.set(true);
 				
-				Token[] tempTokens = splitTokens(text, 0, new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '"', '\'', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' '});
+				Token[] tempTokens = splitTokens(text, 0, new char[] {'(', ')', '[', ']', '{', '}', '=', '+', '-', '/', '*', '"', '\'', '%', '&', '|', '?', ':', ';', '<', '>', ',', '.', ' ', '\\'});
 				
 				for(int i = 0; i < tempTokens.length; i ++) {
 					String nextNonSpace = "";
@@ -851,6 +851,8 @@ public class CodeEditText extends AppCompatEditText {
 				String prev = "";
 				String next;
 				
+				boolean escaped = false, prevEscaped = false;
+				
 				for(int i = 0; i < tempTokens.length; i ++) {
 					Token token = tempTokens[i];
 					next = (i < tempTokens.length - 1 ? tempTokens[i + 1].text : "");
@@ -863,10 +865,13 @@ public class CodeEditText extends AppCompatEditText {
 						continue;
 					}
 					
-					if(stringLiteral && prev.equals("\"") && i > startLiteral + 1)
+					prevEscaped = escaped;
+					escaped = prev.equals("\\");
+					
+					if(stringLiteral && prev.equals("\"") && i > startLiteral + 1 && !prevEscaped)
 						stringLiteral = false;
 					
-					if(charLiteral && prev.equals("'") && i > startLiteral + 1)
+					if(charLiteral && prev.equals("'") && i > startLiteral + 1 && !prevEscaped)
 						charLiteral = false;
 					
 					if(!multiLineComment && !singleLineComment && !stringLiteral && !charLiteral) {
