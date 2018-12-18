@@ -1,11 +1,14 @@
-v0.5.1-pre3 Alpha
+v0.5.1-pre4 Alpha
 
  - Preview mode runs sketches without installing them
    - You must install the APDE Sketch Previewer once, but then you can
      run sketches without installation indefinitely
    - Preview mode is available as another target, along with wallpapers,
      watch faces, and VR
- - Bug fixes
+ - Support for the new Processing sound library
+ - Undo and redo are more accessible
+ - Ability to bypass screen overlay warning
+ - Lots of bug fixes
 
 These changes are driven by GSoC '18.
 
