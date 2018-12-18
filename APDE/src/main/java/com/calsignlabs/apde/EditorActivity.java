@@ -199,6 +199,7 @@ public class EditorActivity extends AppCompatActivity {
 	protected ComponentTarget componentTarget;
 	
 	private boolean FLAG_SCREEN_OVERLAY_INSTALL_ANYWAY = false;
+	private boolean FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = false;
 	
     @SuppressLint("NewApi")
 	@Override
@@ -786,7 +787,7 @@ public class EditorActivity extends AppCompatActivity {
 		codeTabStrip.setupWithViewPager(codePager);
 		
 		// Fallback component target
-		setComponentTarget(ComponentTarget.APP);
+		setComponentTarget(ComponentTarget.PREVIEW);
 		
 		try {
 			// Try to load the auto-save sketch, otherwise set the editor up as a new sketch
@@ -800,6 +801,12 @@ public class EditorActivity extends AppCompatActivity {
 		} catch (Exception e) {
 			// Who knows really...
 			e.printStackTrace();
+		}
+		
+		// On first run, we want to switch to the preview component target to demo the new feature
+		if (FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED) {
+			setComponentTarget(ComponentTarget.PREVIEW);
+			FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = false;
 		}
 		
 		autoSaveTimer = new ScheduledThreadPoolExecutor(1);
@@ -4338,7 +4345,7 @@ public class EditorActivity extends AppCompatActivity {
 			}
 		});
 		
-		// v0.5.0-pre1 (branch android-mode-4)
+		// v0.5.0 Alpha-pre1 (branch android-mode-4)
 		
 		// Upgrade android.jar to latest version (API level 27)
 		upgradeChanges.add(new UpgradeChange(22) {
@@ -4372,6 +4379,16 @@ public class EditorActivity extends AppCompatActivity {
 					e.printStackTrace();
 					System.err.println(getResources().getString(R.string.apde_0_5_upgrade_error));
 				}
+			}
+		});
+		
+		// v0.5.1 Alpha-pre4 (branch preview)
+		
+		// Change to preview component target for first run
+		upgradeChanges.add(new UpgradeChange(30) {
+			@Override
+			public void run() {
+				FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = true;
 			}
 		});
 		
