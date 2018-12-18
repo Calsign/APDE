@@ -408,31 +408,18 @@ public class ModularBuild {
 		}
 	}
 	
-	private static String getAaptName() {
+	public static String getAaptName() {
 		String arch = android.os.Build.CPU_ABI.substring(0, 3).toLowerCase(Locale.US);
 		
-		// Position Independent Executables (PIE) were first supported in Jelly Bean 4.1 (API level 16)
-		// In Android 5.0, they are required
-		// Android versions before 4.1 still need the old binary...
-		boolean usePie = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN;
+		// We no longer support Android 4.0 or below, so all devices now use the PIE AAPT binaries
 		
 		// Get the correct AAPT binary for this processor architecture
 		switch (arch) {
 			case "x86":
-				if (usePie) {
-					return "aapt-binaries/aapt-x86-pie";
-				} else {
-					return "aapt-binaries/aapt-x86";
-				}
+				return "aapt-binaries/aapt-x86-pie";
 			case "arm":
 			default:
-				// Default to ARM, just in case
-				
-				if (usePie) {
-					return "aapt-binaries/aapt-arm-pie";
-				} else {
-					return "aapt-binaries/aapt-arm";
-				}
+				return "aapt-binaries/aapt-arm-pie";
 		}
 	}
 	

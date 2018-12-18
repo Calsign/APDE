@@ -4,6 +4,7 @@ import com.androidjarjar.dx.command.dexer.Main;
 import com.calsignlabs.apde.R;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -22,7 +23,11 @@ public class DxDexBuildTask extends ArgLambdaBuildTask {
 			
 			try {
 				Main.Arguments dexArgs = new Main.Arguments();
-				dexArgs.parse(argsArray(args));
+				
+				Method mtd = com.androidjarjar.dx.command.dexer.Main.Arguments.class.getDeclaredMethod("parse", String[].class);
+				mtd.setAccessible(true);
+				mtd.invoke(dexArgs, new Object[] {argsArray(args)});
+				
 				int resultCode = Main.run(dexArgs);
 				
 				if (resultCode != 0) {

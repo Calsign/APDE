@@ -127,8 +127,7 @@
 					android:layout_width="1dp"
 					android:layout_height="match_parent"
 					android:background="@color/toggle_char_inserts_separator"
-					android:layout_margin="3dp"
-					android:visibility="gone" />
+					android:layout_margin="3dp" />
 				
 				<!-- Wrapped in a FrameLayout allows for crossfading -->
 				<FrameLayout

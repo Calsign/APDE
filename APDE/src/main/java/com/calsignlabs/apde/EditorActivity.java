@@ -698,14 +698,13 @@ public class EditorActivity extends AppCompatActivity {
 						}
 					}
 				} else {
-					View consoleArea = findViewById(R.id.console_scroller);
+					View consoleArea = findViewById(R.id.console_wrapper);
 					ViewGroup content = findViewById(R.id.content);
 					
 					if (keyboardVisible) {
 						//Configure the layout for the absence of the keyboard
 						// Configure the layout for the absence of the keyboard
 						
-						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0);
 						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
 						
 						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight, false));
@@ -3574,7 +3573,7 @@ public class EditorActivity extends AppCompatActivity {
 				((LinearLayout) findViewById(R.id.buffer)).getLayoutParams().height = message;
 				
     			// Obtain some references
-    			View console = findViewById(R.id.console_scroller);
+    			View console = findViewById(R.id.console_wrapper);
     			View content = findViewById(R.id.content);
 				
 				if (isSelectedCodeAreaInitialized()) {
@@ -3596,19 +3595,19 @@ public class EditorActivity extends AppCompatActivity {
 				// Note: For some reason modifying the LayoutParams directly is not working.
 				// That's why we're re-setting the LayoutParams every time. Perhaps worth
 				// looking into later.
-			}
 			
-			buffer.getLayoutParams().height = message;
-			messageArea.getLayoutParams().height = message;
-		
-			//noinspection SuspiciousNameCombination
-			setViewLayoutParams(toggleCharInserts, singleLineHeight, message);
-			//noinspection SuspiciousNameCombination
-			setViewLayoutParams(toggleProblemOverview, singleLineHeight, message);
-			//noinspection SuspiciousNameCombination
-			setViewLayoutParams(findViewById(R.id.toggle_wrapper), singleLineHeight, message);
-		
-			buffer.requestLayout();
+				buffer.getLayoutParams().height = message;
+				messageArea.getLayoutParams().height = message;
+			
+				//noinspection SuspiciousNameCombination
+				setViewLayoutParams(toggleCharInserts, singleLineHeight, message);
+				//noinspection SuspiciousNameCombination
+				setViewLayoutParams(toggleProblemOverview, singleLineHeight, message);
+				//noinspection SuspiciousNameCombination
+				setViewLayoutParams(findViewById(R.id.toggle_wrapper), singleLineHeight, message);
+			
+				buffer.requestLayout();
+			}
 		});
     }
     
