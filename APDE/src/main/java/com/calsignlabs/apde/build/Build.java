@@ -28,6 +28,7 @@ import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
+import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.contrib.Library;
 
 import org.eclipse.jdt.core.compiler.IProblem;
@@ -121,7 +122,9 @@ public class Build {
 	
 	protected List<CompilerProblem> compilerProblems;
 	
-	public Build(APDE global) {
+	protected BuildContext buildContext;
+	
+	public Build(APDE global, BuildContext buildContext) {
 		this.editor = global.getEditor();
 		
 		sketchName = global.getSketchName();
@@ -132,6 +135,8 @@ public class Build {
 		verbose = PreferenceManager.getDefaultSharedPreferences(global).getBoolean("build_output_verbose", false);
 		
 		compilerProblems = new ArrayList<>();
+		
+		this.buildContext = buildContext;
 	}
 	
 	public ComponentTarget getAppComponent() {
@@ -172,7 +177,7 @@ public class Build {
 	public static void cleanUpPostLaunch(EditorActivity editor) {
 		if(!PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_folder_keep", true)) {
 			//Delete the build folder
-			if (!deleteFile((new Build(((APDE) editor.getApplicationContext())).getBuildFolder()), editor)) {
+			if (!deleteFile(getBuildFolder(editor), editor)) {
 				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_failed));
 			} else if (verbose) {
 				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_success));
@@ -399,9 +404,9 @@ public class Build {
 		
 		try {
 			// Generate a new manifest and populate it with sketch properties
-			manifest = new Manifest(this);
+			manifest = new Manifest(buildContext);
 			manifest.initBlank();
-			manifest.loadProperties(editor.getGlobalState().getProperties(), sketchName); // unsure whether to use sketchName or sketchClassName here
+			manifest.loadProperties(editor.getGlobalState().getProperties(buildContext), sketchName); // unsure whether to use sketchName or sketchClassName here
 			
 			// We need to do this after we load the manifest because it depends on permissions
 			if (getAppComponent() == ComponentTarget.PREVIEW) {
@@ -464,7 +469,7 @@ public class Build {
 				System.out.println(editor.getResources().getString(R.string.build_preprocessing));
 			}
 			
-			preprocessor = new Preprocessor(this, packageName, sketchName, getCodeFolderPackages());
+			preprocessor = new Preprocessor(buildContext, this, packageName, sketchName, getCodeFolderPackages());
 			preprocessor.preprocess();
 			sketchClassName = sketchName; // stupid holdover, get rid of in the future
 			importedLibraries = preprocessor.getImportedLibraries();
@@ -2127,12 +2132,16 @@ public class Build {
 		}
 	}
 	
-	public File getBuildFolder() {
+	public static File getBuildFolder(Context context) {
 		//Let the user pick where to build
-		if(PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_internal_storage", true))
-			return editor.getDir("build", 0);
+		if(PreferenceManager.getDefaultSharedPreferences(context).getBoolean("pref_build_internal_storage", true))
+			return context.getDir("build", 0);
 		else
 			return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), "build");
+	}
+	
+	public File getBuildFolder() {
+		return getBuildFolder(editor);
 	}
 	
 	public static File getTempFolder(Context context) {

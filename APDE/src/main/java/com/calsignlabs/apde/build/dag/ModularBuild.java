@@ -370,7 +370,7 @@ public class ModularBuild {
 	}
 	
 	private static BuildTask makeChecksummer(Getter<File> file) {
-		return new ChangeNoticerWrapper(new ChecksumChangeNoticer(file));
+		return new ChangeNoticerWrapper(new ChecksumChangeNoticer(file).setVacuousChange(false));
 	}
 	
 	private Getter<File> getSketchClassLocation(String filename, List<BuildTask> deps) {

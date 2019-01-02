@@ -24,6 +24,8 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 	
 	private List<BuildTask> deps;
 	
+	private boolean vacuousChange = true;
+	
 	public ChecksumChangeNoticer(Getter<File> fileGetter) {
 		this.fileGetter = fileGetter;
 		deps = fileGetter.getDependencies();
@@ -38,6 +40,18 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 		deps.addAll(baseGetter.getDependencies());
 	}
 	
+	/**
+	 * Whether or not a change should be reported in the event that the input file does not exist.
+	 * Default is true.
+	 *
+	 * @param vacuousChange
+	 * @return
+	 */
+	public ChecksumChangeNoticer setVacuousChange(boolean vacuousChange) {
+		this.vacuousChange = vacuousChange;
+		return this;
+	}
+	
 	@Override
 	public List<BuildTask> getDependencies() {
 		return deps;
@@ -47,6 +61,7 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 		InputStream inputStream = null;
 		
 		if (!file.exists()) {
+			System.out.println("CHK doesn't exist: " + file.getAbsolutePath());
 			return null;
 		}
 		
@@ -116,13 +131,20 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 	public boolean hasChanged(BuildContext context) {
 		if (fileGetter != null) {
 			File file = fileGetter.get(context);
+			if (!vacuousChange && !file.exists()) {
+				return false;
+			}
 			BigInteger newChecksum = calculateChecksum(file);
-			boolean changed = checksum == null || checksum.equals(newChecksum);
+			System.out.println("OLD CHECKSUM: " + (checksum == null ? "null" : checksum.toString()));
+			System.out.println("NEW CHECKSUM: " + (newChecksum == null ? "null" : newChecksum.toString()));
+			boolean changed = checksum == null || !checksum.equals(newChecksum);
 			checksum = newChecksum;
 			return changed;
 		} else if (inputStreamGetter != null && baseGetter != null) {
 			BigInteger test = calculateChecksum(inputStreamGetter, context);
 			BigInteger base = calculateChecksum(baseGetter, context);
+			System.out.println("BASE CHECKSUM: " + (base == null ? "null" : base.toString()));
+			System.out.println("TEST CHECKSUM: " + (test == null ? "null" : test.toString()));
 			return test == null || !test.equals(base);
 		}
 		

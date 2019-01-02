@@ -84,6 +84,7 @@ import com.calsignlabs.apde.build.CompilerProblem;
 import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.build.dag.ModularBuild;
 import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.support.ResizeAnimation;
@@ -3255,34 +3256,37 @@ public class EditorActivity extends AppCompatActivity {
     	// Clear the console
     	((TextView) findViewById(R.id.console)).setText("");
     	
-//    	final Build builder = new Build(getGlobalState());
-//
-//    	//Build the sketch in a separate thread
-//    	Thread buildThread = new Thread(new Runnable() {
-//    		@Override
-//    		public void run() {
-//    			building = true;
-//    			changeRunStopIcon(true);
-//    			builder.build("debug", getComponentTarget());
-//    			changeRunStopIcon(false);
-//    			building = false;
-//    	}});
-//    	buildThread.start();
+    	boolean oldBuild = false;
+    	
+    	if (oldBuild) {
+    		final BuildContext context = BuildContext.create(getGlobalState());
+			final Build builder = new Build(getGlobalState(), context);
+	
+			//Build the sketch in a separate thread
+			Thread buildThread = new Thread(() -> {
+				building = true;
+				changeRunStopIcon(true);
+				builder.build("debug", getComponentTarget());
+				changeRunStopIcon(false);
+				building = false;
+			});
+			buildThread.start();
+		} else {
+			building = true;
+			changeRunStopIcon(true);
 		
-		building = true;
-		changeRunStopIcon(true);
-		
-		getGlobalState().getModularBuild().build(new ModularBuild.ContextualizedOnCompleteListener() {
-			@Override
-			public boolean onComplete(boolean success) {
-				runOnUiThread(() -> {
-					changeRunStopIcon(false);
-					building = false;
-				});
-
-				return true;
-			}
-		});
+			getGlobalState().getModularBuild().build(new ModularBuild.ContextualizedOnCompleteListener() {
+				@Override
+				public boolean onComplete(boolean success) {
+					runOnUiThread(() -> {
+						changeRunStopIcon(false);
+						building = false;
+					});
+				
+					return true;
+				}
+			});
+		}
 	
 		if (android.os.Build.VERSION.SDK_INT >= 21) {
 			runStopMenuButtonAnimating = true;

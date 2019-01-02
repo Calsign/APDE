@@ -48,8 +48,8 @@ public class Preprocessor {
 	
 	private List<CompilerProblem> compilerProblems;
 	
-	public Preprocessor(Build build, String packageName, String className, String[] codeFolderPackages) {
-		this.context = BuildContext.create(build.editor.getGlobalState());
+	public Preprocessor(BuildContext context, Build build, String packageName, String className, String[] codeFolderPackages) {
+		this.context = context;
 		this.packageName = packageName;
 		this.className = className;
 		this.codeFolderPackages = codeFolderPackages;

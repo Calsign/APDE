@@ -1464,7 +1464,7 @@ public class APDE extends MultiDexApplication {
 	protected SketchProperties upgradeManifestToProperties() {
 		// The old AndroidManifest.xml
 		File manifestFile = new File(getSketchLocation(), Manifest.MANIFEST_XML);
-		Manifest manifest = new Manifest(new com.calsignlabs.apde.build.Build(this));
+		Manifest manifest = new Manifest(BuildContext.create(this));
 		manifest.load(manifestFile, ComponentTarget.APP);
 		
 		// Upgrade to Android mode 3.0 (activity -> fragment) if needed

@@ -7,7 +7,6 @@ import com.calsignlabs.apde.APDE;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -52,7 +51,7 @@ public class BuildTaskRunner {
 				: new LinkedHashSet<>();
 	}
 	
-	private <K, V> Map<K, V> getSyncrhonizedMap() {
+	private <K, V> Map<K, V> getSynchronizedMap() {
 		return synchronize ? Collections.synchronizedMap(new LinkedHashMap<>())
 				: new LinkedHashMap<>();
 	}
@@ -65,8 +64,8 @@ public class BuildTaskRunner {
 	private void startBuildTask(BuildTask task) {
 		runningTasks = getSynchronizedSet();
 		finishedTasks = buildContext.getCompletedTasks();
-		completionListeners = getSyncrhonizedMap();
-		successes = getSyncrhonizedMap();
+		completionListeners = getSynchronizedMap();
+		successes = getSynchronizedMap();
 		executeWithDependencies(task);
 	}
 	
@@ -204,7 +203,7 @@ public class BuildTaskRunner {
 			}
 		}
 	}
-
+	
 	private static void writeLog(String message) {
 		writeLog(message, 0);
 	}

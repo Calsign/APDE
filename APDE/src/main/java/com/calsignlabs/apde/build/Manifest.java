@@ -48,10 +48,6 @@ public class Manifest {
 		this.context = context;
 	}
 	
-	public Manifest(Build build) {
-		this.context = BuildContext.create(build.editor.getGlobalState());
-	}
-	
 	public static void loadPermissions(Context context) {
 		//TODO this is probably a grossly incorrect method of doing this...
 		

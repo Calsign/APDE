@@ -204,6 +204,7 @@ public abstract class BuildTask extends Task {
 			}
 			
 			hasChanged = changeNoticer.hasChanged(context);
+			System.out.println("TASK " + getName() + " changed status: " + hasChanged);
 		}
 		
 		return hasChanged;
