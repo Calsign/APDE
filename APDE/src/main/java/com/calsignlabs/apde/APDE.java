@@ -1415,8 +1415,10 @@ public class APDE extends MultiDexApplication {
 			return upgradeManifestToProperties();
 		} else {
 			// Load sketch.properties
-			SketchProperties properties = new SketchProperties(buildContext, getSketchPropertiesFile());
-			if (!isExample()) {
+			File propertiesFile = getSketchPropertiesFile();
+			SketchProperties properties = new SketchProperties(buildContext, propertiesFile);
+			// Create properties if they don't exist
+			if (!propertiesFile.exists() && !isExample()) {
 				properties.save(getSketchPropertiesFile());
 			}
 			return properties;

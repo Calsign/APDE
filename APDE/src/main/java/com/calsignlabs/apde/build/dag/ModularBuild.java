@@ -191,7 +191,7 @@ public class ModularBuild {
 		//BuildTask deleteOldDexedLibs = TODO
 		//BuildTask deleteOldApkRes = TODO
 		
-		BuildTask copySketchCode = new CopyBuildTask(codeFolder, init).inFolder(SKETCH_CODE_FOLDER).outFolder(LIBS).setVacuousSuccess(true).setName("copy skech code");
+		BuildTask copySketchCode = new CopyBuildTask(codeFolder, init).inFolder(SKETCH_CODE_FOLDER).outFolder(LIBS).setVacuousSuccess(true).setName("copy sketch code");
 		BuildTask copySketchCodeDex = new CopyBuildTask(codeDexFolder, init).inFolder(SKETCH_CODE_DEX_FOLDER).outFolder(DEXED_LIBS).setVacuousSuccess(true).setName("copy sketch code dex");
 		
 		BuildTask copySketchRes = new CopyBuildTask(resFolder, init).inFolder(SKETCH_RES).outFolder(RES).setVacuousSuccess(true).setName("copy sketch res");
