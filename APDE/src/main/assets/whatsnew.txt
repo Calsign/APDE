@@ -1,4 +1,4 @@
-v0.5.1-pre4 Alpha
+v0.5.1 Alpha
 
  - Preview mode runs sketches without installing them
    - You must install the APDE Sketch Previewer once, but then you can
