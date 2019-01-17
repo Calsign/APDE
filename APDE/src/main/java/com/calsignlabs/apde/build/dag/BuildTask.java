@@ -214,6 +214,20 @@ public abstract class BuildTask extends Task {
 		return false;
 	}
 	
+	public boolean treeShouldRunIfNotUpdated(BuildContext context) {
+		if (shouldRunIfNotUpdated()) {
+			return true;
+		}
+		
+		for (BuildTask task : getDependencies(context)) {
+			if (task.treeShouldRunIfNotUpdated(context)) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
 	public void addOnCompleteListener(OnCompleteListener onCompleteListener) {
 		onCompleteListeners.add(onCompleteListener);
 	}

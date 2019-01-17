@@ -34,12 +34,12 @@ public class BuildTaskRunner {
 	}
 	
 	public void addOnCompleteListener(BuildTask.OnCompleteListener onCompleteListener) {
-		// Setup is not insignificant
-		(new Thread(() -> buildTask.addOnCompleteListener(onCompleteListener))).start();
+		buildTask.addOnCompleteListener(onCompleteListener);
 	}
 	
 	public void run() {
-		startBuildTask(buildTask);
+		// Setup is not insignificant
+		(new Thread(() -> startBuildTask(buildTask))).start();
 	}
 	
 	// Seems like we can turn off the synchronized collections with no harm done. It even gives us
@@ -80,7 +80,7 @@ public class BuildTaskRunner {
 					deps.add(changeDep);
 				}
 			}
-			if (changeReady && (dep.hasChanged(buildContext) || dep.shouldRunIfNotUpdated())
+			if (changeReady && (dep.hasChanged(buildContext) || dep.treeShouldRunIfNotUpdated(buildContext))
 					&& !containsList(finishedTasks, dep)) {
 				writeLog("debug add dep name: " + dep.getName() + ", tag: " + dep.getTag() + ", changed: "
 						+ dep.hasChanged(buildContext) + ", finished: " + containsList(finishedTasks, dep), 3);

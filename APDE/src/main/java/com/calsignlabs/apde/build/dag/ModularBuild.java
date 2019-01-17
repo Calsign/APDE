@@ -208,7 +208,7 @@ public class ModularBuild {
 					Map<String, String> replaceMap = new HashMap<>();
 					replaceMap.put("@@package_name@@", context.getPackageName());
 					return replaceMap;
-				}, makeSketchClassFolder, generateManifest, deleteOldSrc, init).setName("load broadcaster util");
+				}, makeSketchClassFolder, generateManifest, deleteOldSrc, init).setName("write log broadcaster util");
 		
 		// RES
 		
@@ -272,8 +272,8 @@ public class ModularBuild {
 		
 		// THE MEAT OF THE BUILD
 		
-		BuildTask preprocess = new PreprocessBuildTask(SRC, init, generateManifest, sketchCode,
-				deleteOldSrc).setName("preprocess");
+		BuildTask preprocess = new PreprocessBuildTask(SRC, init, makeSketchClassFolder,
+				generateManifest, sketchCode, deleteOldSrc).setName("preprocess");
 		
 		BuildTask writeMainClass = new WriteTemplateBuildTask(
 				context -> context.getComponentTarget().getMainClassTemplate(),
