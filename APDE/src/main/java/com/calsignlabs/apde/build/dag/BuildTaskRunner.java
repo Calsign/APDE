@@ -7,6 +7,7 @@ import com.calsignlabs.apde.APDE;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -40,6 +41,16 @@ public class BuildTaskRunner {
 	public void run() {
 		// Setup is not insignificant
 		(new Thread(() -> startBuildTask(buildTask))).start();
+	}
+	
+	public Set<String> getFailedTasks() {
+		Set<String> failures = new HashSet<>();
+		for (String key : successes.keySet()) {
+			if (!successes.get(key)) {
+				failures.add(key);
+			}
+		}
+		return failures;
 	}
 	
 	// Seems like we can turn off the synchronized collections with no harm done. It even gives us
@@ -80,7 +91,10 @@ public class BuildTaskRunner {
 					deps.add(changeDep);
 				}
 			}
-			if (changeReady && (dep.hasChanged(buildContext) || dep.treeShouldRunIfNotUpdated(buildContext))
+			if (changeReady
+					&& (dep.hasChanged(buildContext)
+						|| dep.treeShouldRunIfNotUpdated(buildContext)
+						|| buildContext.isPreviousFailedTask(dep))
 					&& !containsList(finishedTasks, dep)) {
 				writeLog("debug add dep name: " + dep.getName() + ", tag: " + dep.getTag() + ", changed: "
 						+ dep.hasChanged(buildContext) + ", finished: " + containsList(finishedTasks, dep), 3);

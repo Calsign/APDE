@@ -35,7 +35,7 @@ public class BuildContext {
 	private Preprocessor preprocessor;
 	private boolean hasData;
 	
-	private Set<String> completedTasks;
+	private Set<String> completedTasks, previousFailedTasks;
 	
 	private Resources resources;
 	private SharedPreferences preferences;
@@ -192,6 +192,14 @@ public class BuildContext {
 	
 	public boolean isTaskCompleted(BuildTask buildTask) {
 		return completedTasks.contains(buildTask.getName());
+	}
+	
+	public boolean isPreviousFailedTask(BuildTask buildTask) {
+		return previousFailedTasks != null && previousFailedTasks.contains(buildTask.getName());
+	}
+	
+	public void setPreviousFailedTasks(Set<String> previousFailedTasks) {
+		this.previousFailedTasks = previousFailedTasks;
 	}
 	
 	public Resources getResources() {

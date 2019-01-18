@@ -20,9 +20,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public class ModularBuild {
 	private APDE global;
+	
+	private Set<String> previousFailedTasks;
 	
 	// Prettier name alias
 	private interface BuildFile extends Getter<File> {}
@@ -467,7 +470,6 @@ public class ModularBuild {
 			@Override
 			public boolean onComplete(boolean success) {
 				global.getEditor().showProblems(getContext().getProblems());
-				
 				return true;
 			}
 		}, listeners);
@@ -480,7 +482,13 @@ public class ModularBuild {
 	private void buildInternal(BuildTask buildTask, ContextualizedOnCompleteListener listener,
 							   ContextualizedOnCompleteListener... listeners) {
 		BuildContext context = BuildContext.create(global);
+		context.setPreviousFailedTasks(previousFailedTasks);
 		BuildTaskRunner runner = new BuildTaskRunner(global, buildTask, context);
+		
+		runner.addOnCompleteListener(success -> {
+			previousFailedTasks = runner.getFailedTasks();
+			return true;
+		});
 		
 		if (listener != null) {
 			listener.setContext(context);
