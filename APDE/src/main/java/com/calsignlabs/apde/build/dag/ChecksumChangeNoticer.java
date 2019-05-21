@@ -128,26 +128,26 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 	private BigInteger checksum;
 	
 	@Override
-	public boolean hasChanged(BuildContext context) {
+	public BuildTask.ChangeStatus hasChanged(BuildContext context) {
 		if (fileGetter != null) {
 			File file = fileGetter.get(context);
 			if (!vacuousChange && !file.exists()) {
-				return false;
+				return BuildTask.ChangeStatus.UNCHANGED;
 			}
 			BigInteger newChecksum = calculateChecksum(file);
 			System.out.println("OLD CHECKSUM: " + (checksum == null ? "null" : checksum.toString()));
 			System.out.println("NEW CHECKSUM: " + (newChecksum == null ? "null" : newChecksum.toString()));
 			boolean changed = checksum == null || !checksum.equals(newChecksum);
 			checksum = newChecksum;
-			return changed;
+			return BuildTask.ChangeStatus.bool(changed);
 		} else if (inputStreamGetter != null && baseGetter != null) {
 			BigInteger test = calculateChecksum(inputStreamGetter, context);
 			BigInteger base = calculateChecksum(baseGetter, context);
 			System.out.println("BASE CHECKSUM: " + (base == null ? "null" : base.toString()));
 			System.out.println("TEST CHECKSUM: " + (test == null ? "null" : test.toString()));
-			return test == null || !test.equals(base);
+			return BuildTask.ChangeStatus.bool(test == null || !test.equals(base));
 		}
 		
-		return false;
+		return BuildTask.ChangeStatus.UNCHANGED;
 	}
 }

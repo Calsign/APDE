@@ -82,7 +82,7 @@ public class BuildTaskRunner {
 	
 	private void executeWithDependencies(BuildTask task) {
 		List<BuildTask> deps = new ArrayList<>();
-		boolean shouldRun = task.hasChanged(buildContext) || task.shouldRunIfNotUpdated();
+		boolean shouldRun = task.hasChanged(buildContext).changed() || task.shouldRunIfNotUpdated();
 		for (BuildTask dep : task.getDependencies(buildContext)) {
 			boolean changeReady = true;
 			for (BuildTask changeDep : task.getChangeDependencies()) {
@@ -92,14 +92,14 @@ public class BuildTaskRunner {
 				}
 			}
 			if (changeReady
-					&& (dep.hasChanged(buildContext)
+					&& (dep.hasChanged(buildContext).changed()
 						|| dep.treeShouldRunIfNotUpdated(buildContext)
 						|| buildContext.isPreviousFailedTask(dep))
 					&& !containsList(finishedTasks, dep)) {
 				writeLog("debug add dep name: " + dep.getName() + ", tag: " + dep.getTag() + ", changed: "
 						+ dep.hasChanged(buildContext) + ", finished: " + containsList(finishedTasks, dep), 3);
 				deps.add(dep);
-				shouldRun |= dep.hasChanged(buildContext);
+				shouldRun |= dep.hasChanged(buildContext).changed();
 			} else {
 				writeLog("debug dont dep name: " + dep.getName() + ", tag: " + dep.getTag() + ", changed: "
 						+ dep.hasChanged(buildContext) + ", finished: " + containsList(finishedTasks, dep), 3);

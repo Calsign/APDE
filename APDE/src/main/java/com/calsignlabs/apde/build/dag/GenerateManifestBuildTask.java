@@ -15,7 +15,7 @@ public class GenerateManifestBuildTask extends BuildTask {
 		this.manifestFile = manifestFile;
 		
 		// We need to reload the first time, in addition to whenever any of the dependencies change
-		orChangeNoticer(context -> previous == null);
+		orChangeNoticer(context -> ChangeStatus.bool(previous == null));
 		orChangeNoticer(new ChecksumChangeNoticer(manifestFile));
 		orGetterChangeNoticer(manifestFile);
 	}
@@ -23,7 +23,7 @@ public class GenerateManifestBuildTask extends BuildTask {
 	@Override
 	public void run() throws InterruptedException {
 		// We only need to reload if dependencies have changed
-		if (previous == null || hasChanged(getBuildContext())) {
+		if (previous == null || hasChanged(getBuildContext()).changed()) {
 			Manifest manifest = new Manifest(getBuildContext());
 			manifest.initBlank();
 			manifest.loadProperties();

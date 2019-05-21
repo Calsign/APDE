@@ -23,7 +23,7 @@ public class PreprocessBuildTask extends BuildTask {
 	
 	@Override
 	public void run() throws InterruptedException {
-		if (previous == null || hasChanged(getBuildContext())) {
+		if (previous == null || hasChanged(getBuildContext()).changed()) {
 			Preprocessor preprocessor = new Preprocessor(getBuildContext());
 			preprocessor.preprocess();
 			

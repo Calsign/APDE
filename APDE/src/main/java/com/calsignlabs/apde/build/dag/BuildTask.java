@@ -29,26 +29,25 @@ public abstract class BuildTask extends Task {
 		dependencies = new ArrayList<>(deps.length);
 		dependencies.addAll(Arrays.asList(deps));
 		
-		changeNoticer = context -> false;
+		changeNoticer = context -> ChangeStatus.UNCHANGED;
 		
 		changeNoticer = context -> {
+			ChangeStatus status = ChangeStatus.UNCHANGED;
+
 			for (BuildTask buildTask : getDependencies(context)) {
 				for (BuildTask changeDep : buildTask.getChangeDependencies()) {
 					if (!context.isTaskCompleted(changeDep)) {
 						// Unstable - could still turn out to be unchanged
-						return true;
+						return ChangeStatus.UNSTABLE;
 					}
 				}
 				
-				if (buildTask.hasChanged(context)) {
-					// Stable - we know that this has changed for sure
-					changedStable.set(true);
-					return true;
+				status = ChangeStatus.or(status, buildTask.hasChanged(context));
+				if (status.changed()) {
+					return status;
 				}
 			}
-			// Stable - we know that this has not changed for sure
-			changedStable.set(true);
-			return false;
+			return status;
 		};
 		
 		tag = "build" + tagCounter.getAndIncrement();
@@ -73,8 +72,8 @@ public abstract class BuildTask extends Task {
 		
 		this.changeNoticer = new ChangeNoticer() {
 			@Override
-			public boolean hasChanged(BuildContext context) {
-				return old.hasChanged(context) || changeNoticer.hasChanged(context);
+			public ChangeStatus hasChanged(BuildContext context) {
+				return ChangeStatus.or(old.hasChanged(context), changeNoticer.hasChanged(context));
 			}
 			
 			@Override
@@ -101,8 +100,8 @@ public abstract class BuildTask extends Task {
 		
 		orChangeNoticer(new ChangeNoticer() {
 			@Override
-			public boolean hasChanged(BuildContext context) {
-				return false;
+			public ChangeStatus hasChanged(BuildContext context) {
+				return ChangeStatus.UNCHANGED;
 			}
 			
 			@Override
@@ -129,8 +128,8 @@ public abstract class BuildTask extends Task {
 		
 		orChangeNoticer(new ChangeNoticer() {
 			@Override
-			public boolean hasChanged(BuildContext context) {
-				return false;
+			public ChangeStatus hasChanged(BuildContext context) {
+				return ChangeStatus.UNCHANGED;
 			}
 			
 			@Override
@@ -183,28 +182,25 @@ public abstract class BuildTask extends Task {
 		return name != null ? name : getTag();
 	}
 	
-	/** Whether or not the changed status has stabilized.
-	    The changed status is unstable if the change noticers have unresolved dependencies. */
-	private AtomicBoolean changedStable = new AtomicBoolean(false);
 	private AtomicLong lastTimestamp = new AtomicLong(-1);
-	private boolean hasChanged = true;
+	private ChangeStatus hasChanged = ChangeStatus.CHANGED;
 	
-	public final boolean hasChanged(BuildContext context) {
+	public final ChangeStatus hasChanged(BuildContext context) {
 		// Only update if we have a new build context or changed status has not stabilized
 		if (context.getTimestamp() > lastTimestamp.get()) {
-			if (changedStable.get()) {
-				lastTimestamp.set(context.getTimestamp());
-			}
-			
 			for (BuildTask changeDep : getChangeDependencies()) {
 				if (!context.isTaskCompleted(changeDep)) {
 					// We can't call hasChanged() yet
-					return true;
+					return ChangeStatus.UNSTABLE;
 				}
 			}
 			
 			hasChanged = changeNoticer.hasChanged(context);
 			System.out.println("TASK " + getName() + " changed status: " + hasChanged);
+			
+			if (!hasChanged.unstable()) {
+				lastTimestamp.set(context.getTimestamp());
+			}
 		}
 		
 		return hasChanged;
@@ -255,8 +251,38 @@ public abstract class BuildTask extends Task {
 		return onCompleteListeners;
 	}
 	
+	public enum ChangeStatus {
+		CHANGED, UNCHANGED, UNSTABLE;
+		
+		public boolean changed() {
+			return this == CHANGED;
+		}
+		
+		public boolean unchanged() {
+			return this == UNCHANGED;
+		}
+		
+		public boolean unstable() {
+			return this == UNSTABLE;
+		}
+		
+		public static ChangeStatus or(ChangeStatus a, ChangeStatus b) {
+			if (a == CHANGED || b == CHANGED) {
+				return CHANGED;
+			} else if (a == UNSTABLE || b == UNSTABLE) {
+				return UNSTABLE;
+			} else {
+				return UNCHANGED;
+			}
+		}
+		
+		public static ChangeStatus bool(boolean bool) {
+			return bool ? CHANGED : UNCHANGED;
+		}
+	}
+	
 	public interface ChangeNoticer {
-		boolean hasChanged(BuildContext context);
+		ChangeStatus hasChanged(BuildContext context);
 		
 		default List<BuildTask> getDependencies() {
 			return Collections.emptyList();

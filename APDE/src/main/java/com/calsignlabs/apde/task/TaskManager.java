@@ -31,7 +31,9 @@ public class TaskManager {
 		taskThreads = new HashMap<>();
 		
 //		threadPool = Executors.newCachedThreadPool();
-		threadPool = Executors.newFixedThreadPool(BuildContext.getNumCores());
+
+//		threadPool = Executors.newFixedThreadPool(BuildContext.getNumCores());
+		threadPool = Executors.newFixedThreadPool(1);
 	}
 	
 	/**

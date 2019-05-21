@@ -23,7 +23,7 @@ public class MkdirBuildTask extends BuildTask {
 			for (Getter<File> dir : dirs) {
 				hasChanged |= !dir.get(context).exists();
 			}
-			return hasChanged;
+			return ChangeStatus.bool(hasChanged);
 		});
 		orGetterChangeNoticer(dirs);
 	}

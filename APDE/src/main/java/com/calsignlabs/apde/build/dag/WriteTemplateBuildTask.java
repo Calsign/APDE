@@ -39,6 +39,11 @@ public class WriteTemplateBuildTask extends BuildTask {
 		PrintStream writer = null;
 		
 		try {
+			if (!file.getParentFile().mkdirs()) {
+				System.err.println("Failed to make parent directory");
+				return false;
+			}
+			
 			reader = new BufferedReader(new InputStreamReader(context.getResources().getAssets().open("templates/" + template)));
 			writer = new PrintStream(new FileOutputStream(file));
 			

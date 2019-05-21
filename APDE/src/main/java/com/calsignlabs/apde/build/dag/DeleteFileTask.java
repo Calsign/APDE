@@ -19,7 +19,7 @@ public class DeleteFileTask extends BuildTask {
 		contentsOnly = false;
 		dependencyOnly = false;
 		
-		orChangeNoticer(context -> !dependencyOnly && file.get(context).exists());
+		orChangeNoticer(context -> ChangeStatus.bool(!dependencyOnly && file.get(context).exists()));
 		orGetterChangeNoticer(file);
 	}
 	

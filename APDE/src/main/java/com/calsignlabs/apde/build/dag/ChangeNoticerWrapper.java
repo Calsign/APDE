@@ -3,7 +3,7 @@ package com.calsignlabs.apde.build.dag;
 public	class ChangeNoticerWrapper<T> extends BuildTask {
 	public ChangeNoticerWrapper(MemoryChangeNoticer<T> changeNoticer, BuildTask... deps) {
 		super(deps);
-		orChangeNoticer(context -> changeNoticer.hasChanged(this, context));
+		orChangeNoticer(context -> ChangeStatus.bool(changeNoticer.hasChanged(this, context)));
 	}
 	
 	public ChangeNoticerWrapper(ChangeNoticer changeNoticer, BuildTask... deps) {
