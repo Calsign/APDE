@@ -1,5 +1,6 @@
 aFileChooser/build/**
 APDE/build/**
+APDE/src/main/gen/**
 wear-companion/build/**
 sketch-preview/build/**
 build/**

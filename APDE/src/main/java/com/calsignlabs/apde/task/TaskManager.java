@@ -32,8 +32,8 @@ public class TaskManager {
 		
 //		threadPool = Executors.newCachedThreadPool();
 
-//		threadPool = Executors.newFixedThreadPool(BuildContext.getNumCores());
-		threadPool = Executors.newFixedThreadPool(1);
+		threadPool = Executors.newFixedThreadPool(BuildContext.getNumCores());
+//		threadPool = Executors.newFixedThreadPool(1);
 	}
 	
 	/**

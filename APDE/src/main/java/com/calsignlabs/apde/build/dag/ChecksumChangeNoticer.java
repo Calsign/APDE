@@ -18,26 +18,54 @@ import java.util.List;
 public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 	private static final int BUFFER_SIZE = 8192;
 	
+	enum Mode { FILE_DIFF, SOURCE_DEST_STREAM, SOURCE_DEST_FILE }
+	
+	private Mode mode;
+	
 	private Getter<File> fileGetter;
 	private Getter<InputStream> inputStreamGetter;
 	private Getter<InputStream> baseGetter;
+	private Getter<File> sourceFileGetter;
+	private Getter<File> destFileGetter;
 	
 	private List<BuildTask> deps;
 	
 	private boolean vacuousChange = true;
 	
-	public ChecksumChangeNoticer(Getter<File> fileGetter) {
+	public ChecksumChangeNoticer() {}
+	
+	public ChecksumChangeNoticer fileDiff(Getter<File> fileGetter) {
+		mode = Mode.FILE_DIFF;
 		this.fileGetter = fileGetter;
 		deps = fileGetter.getDependencies();
+		
+		return this;
 	}
 	
-	public ChecksumChangeNoticer(Getter<InputStream> inputStreamGetter, Getter<InputStream> baseGetter) {
+	public ChecksumChangeNoticer sourceDestStream(Getter<InputStream> inputStreamGetter, Getter<InputStream> baseGetter) {
+		mode = Mode.SOURCE_DEST_STREAM;
+		
 		this.inputStreamGetter = inputStreamGetter;
 		this.baseGetter = baseGetter;
 		
 		deps = new ArrayList<>(inputStreamGetter.getDependencies().size() + baseGetter.getDependencies().size());
 		deps.addAll(inputStreamGetter.getDependencies());
 		deps.addAll(baseGetter.getDependencies());
+		
+		return this;
+	}
+	
+	public ChecksumChangeNoticer sourceDestFile(Getter<File> sourceFile, Getter<File> destFile) {
+		mode = Mode.SOURCE_DEST_FILE;
+		
+		this.sourceFileGetter = sourceFile;
+		this.destFileGetter = destFile;
+		
+		deps = new ArrayList<>(sourceFileGetter.getDependencies().size() + destFileGetter.getDependencies().size());
+		deps.addAll(sourceFileGetter.getDependencies());
+		deps.addAll(destFileGetter.getDependencies());
+		
+		return this;
 	}
 	
 	/**
@@ -129,23 +157,46 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 	
 	@Override
 	public BuildTask.ChangeStatus hasChanged(BuildContext context) {
-		if (fileGetter != null) {
-			File file = fileGetter.get(context);
-			if (!vacuousChange && !file.exists()) {
-				return BuildTask.ChangeStatus.UNCHANGED;
-			}
-			BigInteger newChecksum = calculateChecksum(file);
-			System.out.println("OLD CHECKSUM: " + (checksum == null ? "null" : checksum.toString()));
-			System.out.println("NEW CHECKSUM: " + (newChecksum == null ? "null" : newChecksum.toString()));
-			boolean changed = checksum == null || !checksum.equals(newChecksum);
-			checksum = newChecksum;
-			return BuildTask.ChangeStatus.bool(changed);
-		} else if (inputStreamGetter != null && baseGetter != null) {
-			BigInteger test = calculateChecksum(inputStreamGetter, context);
-			BigInteger base = calculateChecksum(baseGetter, context);
-			System.out.println("BASE CHECKSUM: " + (base == null ? "null" : base.toString()));
-			System.out.println("TEST CHECKSUM: " + (test == null ? "null" : test.toString()));
-			return BuildTask.ChangeStatus.bool(test == null || !test.equals(base));
+		switch (mode) {
+			case FILE_DIFF:
+				File file = fileGetter.get(context);
+				if (!vacuousChange && !file.exists()) {
+					System.out.println("CHK vacuous change");
+					checksum = null;
+					return BuildTask.ChangeStatus.UNCHANGED;
+				}
+				BigInteger newChecksum = calculateChecksum(file);
+				System.out.println("OLD CHECKSUM: " + (checksum == null ? "null" : checksum.toString()));
+				System.out.println("NEW CHECKSUM: " + (newChecksum == null ? "null" : newChecksum.toString()));
+				boolean changed = checksum == null || !checksum.equals(newChecksum);
+				checksum = newChecksum;
+				return BuildTask.ChangeStatus.bool(changed);
+			case SOURCE_DEST_STREAM:
+				BigInteger test = calculateChecksum(inputStreamGetter, context);
+				BigInteger base = calculateChecksum(baseGetter, context);
+				System.out.println("BASE CHECKSUM: " + (base == null ? "null" : base.toString()));
+				System.out.println("TEST CHECKSUM: " + (test == null ? "null" : test.toString()));
+				return BuildTask.ChangeStatus.bool(test == null || !test.equals(base));
+			case SOURCE_DEST_FILE:
+				File source = sourceFileGetter.get(context);
+				File dest = destFileGetter.get(context);
+				if (source.exists() != dest.exists()) {
+					if (source.exists()) {
+						System.err.println("Source exists, dest does not");
+					} else {
+						System.err.println("Dest exists, source does not");
+					}
+					return BuildTask.ChangeStatus.CHANGED;
+				}
+				BigInteger sourceChecksum = calculateChecksum(source);
+				BigInteger destChecksum = calculateChecksum(dest);
+				System.out.println("SOURCE CHECKSUM: " + (sourceChecksum == null ? "null" : source.toString()));
+				System.out.println("DEST CHECKSUM: " + (destChecksum == null ? "null" : dest.toString()));
+				if (sourceChecksum == null || destChecksum == null) {
+					System.err.println("Either source or dest checksums is null");
+					return BuildTask.ChangeStatus.CHANGED;
+				}
+				return BuildTask.ChangeStatus.bool(!sourceChecksum.equals(destChecksum));
 		}
 		
 		return BuildTask.ChangeStatus.UNCHANGED;

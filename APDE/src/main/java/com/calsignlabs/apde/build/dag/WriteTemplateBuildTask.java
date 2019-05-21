@@ -39,7 +39,7 @@ public class WriteTemplateBuildTask extends BuildTask {
 		PrintStream writer = null;
 		
 		try {
-			if (!file.getParentFile().mkdirs()) {
+			if (!(file.getParentFile().exists() || file.getParentFile().mkdirs())) {
 				System.err.println("Failed to make parent directory");
 				return false;
 			}

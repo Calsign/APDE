@@ -149,7 +149,14 @@ public class BuildTaskRunner {
 			}
 		} else {
 			if (shouldRun) {
-				if (!containsList(runningTasks, task) && !containsList(finishedTasks, task)) {
+				boolean actuallyRun = false;
+				synchronized (this) {
+					if (!containsList(runningTasks, task) && !containsList(finishedTasks, task)) {
+						runningTasks.add(task.getName());
+						actuallyRun = true;
+					}
+				}
+				if (actuallyRun) {
 					addOnCompleteListener(null, task, success -> {
 						addList(finishedTasks, task);
 						if (!success) {
@@ -160,7 +167,6 @@ public class BuildTaskRunner {
 						return true;
 					});
 					writeLog("launching task: " + task.getName());
-					runningTasks.add(task.getName());
 					launchBuildTask(task);
 				}
 			} else {

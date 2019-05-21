@@ -1182,7 +1182,7 @@ public class APDE extends MultiDexApplication {
 	 * @param file
 	 * @throws IOException
 	 */
-    public static void deleteFile(File file) throws IOException {
+    public static void deleteFile(File file, boolean suppressFailure) throws IOException {
     	if (file.exists()) {
 			if (file.isDirectory()) {
 				for (File content : file.listFiles()) {
@@ -1191,10 +1191,18 @@ public class APDE extends MultiDexApplication {
 			}
 		
 			if (!file.delete()) { //Uh-oh...
-				throw new FileNotFoundException("Failed to delete file: " + file);
+				if (suppressFailure) {
+					System.err.println("Failed to delete file: " + file);
+				} else {
+					throw new FileNotFoundException("Failed to delete file: " + file);
+				}
 			}
 		}
     }
+    
+    public static void deleteFile(File file) throws IOException {
+    	deleteFile(file, false);
+	}
 	
 	/**
 	 * @return the current version code of APDE

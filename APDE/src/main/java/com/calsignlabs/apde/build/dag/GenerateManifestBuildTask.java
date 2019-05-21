@@ -16,17 +16,28 @@ public class GenerateManifestBuildTask extends BuildTask {
 		
 		// We need to reload the first time, in addition to whenever any of the dependencies change
 		orChangeNoticer(context -> ChangeStatus.bool(previous == null));
-		orChangeNoticer(new ChecksumChangeNoticer(manifestFile));
 		orGetterChangeNoticer(manifestFile);
+		
+		// The user does not modify the manifest directly; instead they modify sketch.properties
+		// through the sketch properties interface. Thus this check is not necessary.
+		// This check causes problems because it is actually comparing the previous manifest against
+		// the one before that, meaning that any change to the manifest requires two build cycles
+		// to resolve the changed status. This can be fixed essentially by generating a new manifest
+		// every build and then diffing against that, but this seems like a lot of work to do when
+		// the manifest is always generated from sketch properties, and never changes unless sketch
+		// properties also changes.
+		//orChangeNoticer(new ChecksumChangeNoticer(manifestFile));
 	}
 	
 	@Override
 	public void run() throws InterruptedException {
 		// We only need to reload if dependencies have changed
+		
 		if (previous == null || hasChanged(getBuildContext()).changed()) {
 			Manifest manifest = new Manifest(getBuildContext());
 			manifest.initBlank();
 			manifest.loadProperties();
+			
 			manifest.writeCopy(manifestFile.get(getBuildContext()));
 			
 			previous = manifest;

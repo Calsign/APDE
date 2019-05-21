@@ -293,12 +293,13 @@ public class ModularBuild {
 					replaceMap.put("@@watchface_classs@@", context.getPreprocessor().isOpenGL()
 							? "PWatchFaceGLES" : "PWatchFaceCanvas");
 					return replaceMap;
-				}, sketchName, generateManifest, preprocess, makeSketchClassFolder).setName("write main class");
+				}, sketchName, generateManifest, preprocess, makeSketchClassFolder)
+				.setName("write main class");
 		
 		BuildTask aapt = new AaptBuildTask(AAPT, RES, SUPPORT_RES, SUPPORT_WEARABLE_RES, VR_RES,
 				GEN, ASSETS, MANIFEST, ANDROID_JAR, SKETCH_APK_RES,
-				init, generateManifest, writeRes, copyIcons, copySketchRes, copySketchData,
-				makeSketchClassFolder).setName("run aapt");
+				init, generateManifest, writeRes, copyIcons, copySketchRes, copySketchData)
+				.setName("run aapt");
 		
 		BuildTask copyImportedLibraries = new ContextualCompoundBuildTask((context, tasks) -> {
 			// TODO will this work?
@@ -373,7 +374,7 @@ public class ModularBuild {
 	}
 	
 	private static BuildTask makeChecksummer(Getter<File> file) {
-		return new ChangeNoticerWrapper(new ChecksumChangeNoticer(file).setVacuousChange(false));
+		return new ChangeNoticerWrapper((new ChecksumChangeNoticer()).fileDiff(file).setVacuousChange(false));
 	}
 	
 	private Getter<File> getSketchClassLocation(String filename, List<BuildTask> deps) {

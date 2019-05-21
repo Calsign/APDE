@@ -96,9 +96,7 @@ public class CopyBuildTask extends BuildTask {
 		outputFile = out;
 		if (inputType == FILE || inputType == STREAM) {
 			populateStreamsForFiles();
-			orChangeNoticer(new ChecksumChangeNoticer(inputStreamGetter, fis(out)));
-		} else {
-			orChangeNoticer(new ChecksumChangeNoticer(out));
+			orChangeNoticer((new ChecksumChangeNoticer()).sourceDestStream(inputStreamGetter, fis(out)));
 		}
 		orGetterChangeNoticer(out);
 		return this;
@@ -107,7 +105,10 @@ public class CopyBuildTask extends BuildTask {
 	public CopyBuildTask outFolder(Getter<File> out) {
 		outputType = FOLDER;
 		outputFile = out;
-		orChangeNoticer(new ChecksumChangeNoticer(out));
+		// It's better to just do diffs on the source
+//		if (inputType == FOLDER) {
+//			orChangeNoticer((new ChecksumChangeNoticer()).sourceDestFile(inputFile, out));
+//		}
 		orGetterChangeNoticer(out);
 		return this;
 	}
