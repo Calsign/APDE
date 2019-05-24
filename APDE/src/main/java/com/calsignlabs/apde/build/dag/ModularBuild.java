@@ -222,6 +222,7 @@ public class ModularBuild {
 		BuildTask makeResDirs = new MkdirBuildTask(Arrays.asList(RES_LAYOUT, RES_VALUES, RES_XML), init, deleteOldRes).setName("make res dirs");
 		BuildTask makeResDrawableDirs = new MkdirBuildTask(Arrays.asList(RES_DRAWABLE), init, deleteOldRes).setName("make res drawable dirs");
 		
+		// TODO respect "inject log broadcaster" settting
 		BuildTask writeLogBroadcasterUtil = new WriteTemplateBuildTask(
 				Getter.wrap("APDEInternalLogBroadcasterUtil.java.tmpl"),
 				getSketchClassLocation("APDEInternalLogBroadcasterUtil.java", manifestDepList),
@@ -521,7 +522,7 @@ public class ModularBuild {
 			for (File file : ROOT_FILES_INTERNAL.get(context).listFiles()) {
 				if (file.getName().startsWith(previewDexJarPrefix)) {
 					tasks.add(new DeleteFileTask(Getter.wrap(file))
-							.setName("delete preview sketch dex jar: " + file.getAbsolutePath()));
+							.setName("delete preview sketch dex jar: " + file.getName()));
 				}
 			}
 		});
@@ -654,6 +655,8 @@ public class ModularBuild {
 			Logger.writeLog("Build already running");
 			return;
 		}
+		
+		Logger.setLogLevelFromPrefs(global);
 		
 		long start = System.currentTimeMillis();
 		

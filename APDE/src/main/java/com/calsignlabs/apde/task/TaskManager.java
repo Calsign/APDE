@@ -30,10 +30,11 @@ public class TaskManager {
 		tasks = new HashMap<>();
 		taskThreads = new HashMap<>();
 		
-//		threadPool = Executors.newCachedThreadPool();
-
-		threadPool = Executors.newFixedThreadPool(BuildContext.getNumCores());
-//		threadPool = Executors.newFixedThreadPool(1);
+		if (context.getPref("pref_build_modular_parallel", true)) {
+			threadPool = Executors.newFixedThreadPool(BuildContext.getNumCores());
+		} else {
+			threadPool = Executors.newFixedThreadPool(1);
+		}
 	}
 	
 	/**

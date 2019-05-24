@@ -1149,11 +1149,6 @@ public class Build {
 					if (verbose) {
 						System.out.println(editor.getResources().getString(R.string.watchface_push_success));
 					}
-					
-					// Make some space in the console
-					for (int i = 0; i < 10; i++) {
-						System.out.println("");
-					}
 				}
 				
 				@Override
@@ -1176,13 +1171,6 @@ public class Build {
 			
 			// Get result from installation so that we can launch the sketch afterward
 			promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
-			
-			if (injectLogBroadcaster) {
-				// Make some space in the console
-				for (int i = 0; i < 10; i++) {
-					System.out.println("");
-				}
-			}
 			
 			// Hide the keyboard just before opening the installer dialog so that it doesn't
 			// obscure the "Install" button
@@ -1319,11 +1307,6 @@ public class Build {
 		}
 		if (intent.resolveActivity(editor.getPackageManager()) != null) {
 			editor.startActivity(intent);
-		}
-		
-		// Make some space in the console
-		for (int i = 0; i < 10; i++) {
-			System.out.println("");
 		}
 	}
 	

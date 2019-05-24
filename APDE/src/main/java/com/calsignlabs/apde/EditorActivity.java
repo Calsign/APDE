@@ -3256,7 +3256,7 @@ public class EditorActivity extends AppCompatActivity {
     	// Clear the console
     	((TextView) findViewById(R.id.console)).setText("");
     	
-    	boolean oldBuild = false;
+    	boolean oldBuild = !getGlobalState().getPref("pref_build_modular_enable", true);
     	
     	if (oldBuild) {
     		final BuildContext context = BuildContext.create(getGlobalState());
@@ -3266,7 +3266,19 @@ public class EditorActivity extends AppCompatActivity {
 			Thread buildThread = new Thread(() -> {
 				building = true;
 				changeRunStopIcon(true);
+				
+				long start = System.currentTimeMillis();
+				
 				builder.build("debug", getComponentTarget());
+				
+				System.out.println(String.format(Locale.US, "Finished in %1$dms",
+						System.currentTimeMillis() - start));
+				
+				// Make some space in the console
+				for (int i = 0; i < 10; i++) {
+					System.out.println("");
+				}
+				
 				changeRunStopIcon(false);
 				building = false;
 			});
