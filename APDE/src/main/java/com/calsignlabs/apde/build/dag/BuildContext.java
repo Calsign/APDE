@@ -35,7 +35,7 @@ public class BuildContext {
 	private List<CompilerProblem> problems;
 	private Map<String, List<Library>> importToLibraryTable;
 	private Preprocessor preprocessor;
-	private List<File> libraryDexedLibs;
+	private List<File> libraryLibs, libraryDexedLibs;
 	private boolean hasData;
 	
 	private Set<String> completedTasks, previousFailedTasks;
@@ -182,6 +182,14 @@ public class BuildContext {
 	
 	public void setPreprocessor(Preprocessor preprocessor) {
 		this.preprocessor = preprocessor;
+	}
+	
+	public void setLibraryLibs(List<File> libraryLibs) {
+		this.libraryLibs = libraryLibs;
+	}
+	
+	public List<File> getLibraryLibs() {
+		return libraryLibs;
 	}
 	
 	public void setLibraryDexedLibs(List<File> libraryDexedLibs) {
