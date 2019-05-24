@@ -116,7 +116,7 @@ public class APDE extends MultiDexApplication {
 	private EditorActivity editor;
 	private SketchPropertiesActivity propertiesActivity;
 	
-	private Map<String, List<Library>> importToLibraryTable;
+	private Map<String, List<Library>> importToLibraryTable = Collections.synchronizedMap(new HashMap<>());
 	private ArrayList<Library> contributedLibraries;
 	
 	private HashMap<String, Tool> packageToToolTable;
@@ -1420,7 +1420,7 @@ public class APDE extends MultiDexApplication {
 		// TODO maybe load once and store reference?
 		if (needsPropertiesUpgrade()) {
 			// Sketch still has an AndroidManifest.xml, upgrade to sketch.properties
-			return upgradeManifestToProperties();
+			return upgradeManifestToProperties(buildContext);
 		} else {
 			// Load sketch.properties
 			File propertiesFile = getSketchPropertiesFile();
@@ -1443,7 +1443,6 @@ public class APDE extends MultiDexApplication {
 	
 	protected boolean needsPropertiesUpgrade() {
 		// Determine whether or not we need to upgrade to sketch.properties
-		
 		
 		// We can't upgrade if we don't have a manifest
 		if (!(new File(getSketchLocation(), Manifest.MANIFEST_XML)).exists()) {
@@ -1471,10 +1470,10 @@ public class APDE extends MultiDexApplication {
 		}
 	}
 	
-	protected SketchProperties upgradeManifestToProperties() {
+	protected SketchProperties upgradeManifestToProperties(BuildContext buildContext) {
 		// The old AndroidManifest.xml
 		File manifestFile = new File(getSketchLocation(), Manifest.MANIFEST_XML);
-		Manifest manifest = new Manifest(BuildContext.create(this));
+		Manifest manifest = new Manifest(buildContext);
 		manifest.load(manifestFile, ComponentTarget.APP);
 		
 		// Upgrade to Android mode 3.0 (activity -> fragment) if needed
@@ -1506,15 +1505,7 @@ public class APDE extends MultiDexApplication {
 	}
 	
 	public void rebuildLibraryList() {
-		// Reset the table mapping imports to libraries
-		importToLibraryTable = new HashMap<String, List<Library>>();
-		
-		// Android mode has no core libraries - but we'll leave this here just in case
-		
-//		coreLibraries = Library.list(librariesFolder);
-//		for (Library lib : coreLibraries) {
-//			lib.addPackageList(importToLibraryTable);
-//		}
+		importToLibraryTable.clear();
 		
 		File contribLibrariesFolder = getLibrariesFolder();
 		if (contribLibrariesFolder != null) {

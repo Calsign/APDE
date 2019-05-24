@@ -85,7 +85,7 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 		return deps;
 	}
 	
-	private static BigInteger calculateChecksum(File file) {
+	private static BigInteger calculateChecksum(File file, boolean ignoreTitle) {
 		InputStream inputStream = null;
 		
 		if (!file.exists()) {
@@ -96,13 +96,17 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 		try {
 			// Handle md5-ing directories
 			List<InputStream> sequence = new ArrayList<>();
-			buildFileStreamList(file, sequence);
+			buildFileStreamList(file, sequence, ignoreTitle);
 			inputStream = new SequenceInputStream(Collections.enumeration(sequence));
 			return calculateChecksum(inputStream);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
 		}
+	}
+	
+	private static BigInteger calculateChecksum(File file) {
+		return calculateChecksum(file, true);
 	}
 	
 	private static BigInteger calculateChecksum(Getter<InputStream> getter, BuildContext context) {
@@ -140,17 +144,26 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 		}
 	}
 	
-	private static void buildFileStreamList(File file, List<InputStream> children) throws FileNotFoundException {
-		// Track file names
-		children.add(new ByteArrayInputStream(file.getName().getBytes()));
+	private static void buildFileStreamList(File file, List<InputStream> children, boolean ignoreTitle) throws FileNotFoundException {
+		if (!ignoreTitle) {
+			// Track file names
+			children.add(new ByteArrayInputStream(file.getName().getBytes()));
+		}
 		
 		if (file.isDirectory()) {
 			for (File f : file.listFiles()) {
-				buildFileStreamList(f, children);
+				// Don't ignore title when we recurse, only for the top level
+				buildFileStreamList(f, children, false);
 			}
 		} else {
 			children.add(new FileInputStream(file));
 		}
+	}
+	
+	public static boolean sameChecksum(File a, File b, boolean ignoreTitle) {
+		BigInteger checksumA = calculateChecksum(a, ignoreTitle);
+		BigInteger checksumB = calculateChecksum(b, ignoreTitle);
+		return checksumA == null ? checksumB == null : checksumA.equals(checksumB);
 	}
 	
 	private BigInteger checksum;

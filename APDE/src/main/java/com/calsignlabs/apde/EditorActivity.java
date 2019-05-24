@@ -3219,15 +3219,15 @@ public class EditorActivity extends AppCompatActivity {
      */
     private void runApplication() {
     	switch(getGlobalState().getSketchLocationType()) {
-    	case EXAMPLE:
-    	case LIBRARY_EXAMPLE:
-    		break;
-    	case SKETCHBOOK:
-    	case EXTERNAL:
-		case TEMPORARY:
-    		saveSketch();
-    		break;
-    	}
+			case EXAMPLE:
+			case LIBRARY_EXAMPLE:
+				break;
+			case SKETCHBOOK:
+			case EXTERNAL:
+			case TEMPORARY:
+				saveSketch();
+				break;
+		}
     	
     	// In case the user presses the button twice, we don't want any errors
     	if (building) {

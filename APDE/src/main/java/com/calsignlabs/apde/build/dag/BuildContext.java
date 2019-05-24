@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 public class BuildContext {
+	private APDE apde;
+	
 	private File buildFolder, sketchFolder, stageFolder, librariesFolder, rootFilesDir;
 	private String sketchName;
 	private boolean isExample, verbose, external, injectLogBroadcaster, customProblems;
@@ -33,6 +35,7 @@ public class BuildContext {
 	private List<CompilerProblem> problems;
 	private Map<String, List<Library>> importToLibraryTable;
 	private Preprocessor preprocessor;
+	private List<File> libraryDexedLibs;
 	private boolean hasData;
 	
 	private Set<String> completedTasks, previousFailedTasks;
@@ -50,6 +53,8 @@ public class BuildContext {
 	
 	public static BuildContext create(APDE context) {
 		BuildContext buildContext = new BuildContext();
+		
+		buildContext.apde = context;
 		
 		buildContext.buildFolder = context.getBuildFolder();
 		buildContext.sketchFolder = context.getSketchLocation();
@@ -178,6 +183,14 @@ public class BuildContext {
 		this.preprocessor = preprocessor;
 	}
 	
+	public void setLibraryDexedLibs(List<File> libraryDexedLibs) {
+		this.libraryDexedLibs = libraryDexedLibs;
+	}
+	
+	public List<File> getLibraryDexedLibs() {
+		return libraryDexedLibs;
+	}
+	
 	public void setHasData(boolean hasData) {
 		this.hasData = hasData;
 	}
@@ -220,6 +233,10 @@ public class BuildContext {
 	
 	public void post(Runnable runnable) {
 		handler.post(runnable);
+	}
+	
+	public void reloadLibraries() {
+		apde.rebuildLibraryList();
 	}
 	
 	/**

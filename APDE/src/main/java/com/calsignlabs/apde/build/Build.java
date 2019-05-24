@@ -1793,7 +1793,7 @@ public class Build {
 	private void copyLibraries(final File libsFolder, final File dexedLibsFolder, final File assetsFolder) throws IOException { //TODO support native library stuffs
 		for (Library library : importedLibraries) {
 			//Add each item from the library folder / export list to the output
-			for (File exportFile : library.getAndroidExports((APDE) editor.getApplicationContext())) {
+			for (File exportFile : library.getAndroidExports(((APDE) editor.getApplicationContext()).getLibrariesFolder())) {
 				String exportName = exportFile.getName();
 				if (!exportFile.exists()) {
 					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_export_library_file_missing), exportFile.getName()));
@@ -1857,31 +1857,6 @@ public class Build {
 				}
 			}
 		}
-	}
-	
-	// https://gist.github.com/tylerchesley/6198074
-	private static File createFolderFromAssets(AssetManager am, String folder, File destFile) {
-		String[] assets;
-		try {
-			assets = am.list(folder);
-			if (assets.length == 0) {
-				createFileFromInputStream(am.open(folder), destFile);
-			} else {
-				if (!destFile.exists()) {
-					destFile.mkdir();
-				}
-				
-				for (String asset : assets) {
-					createFolderFromAssets(am, folder + "/" + asset, new File(destFile, asset));
-				}
-			}
-			
-			return destFile;
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		return null;
 	}
 	
 	private static File createFolderFromZippedAssets(AssetManager am, String zipFile, File destFile) {

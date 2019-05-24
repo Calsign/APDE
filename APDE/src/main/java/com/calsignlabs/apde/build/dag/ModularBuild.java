@@ -108,6 +108,8 @@ public class ModularBuild {
 		}
 	}
 	
+	private String previewDexJarPrefix = "preview_dexed_lib_";
+	
 	private BuildTask RUN, COMPILE, CLEAN;
 	
 	public ModularBuild(APDE global) {
@@ -170,7 +172,7 @@ public class ModularBuild {
 		
 		BuildTask sketchIcons = new ContextualCompoundBuildTask((context, tasks) -> {
 			for (IconSet icon : ICONS) {
-				tasks.add(makeChecksummer(icon.resIcon));
+				tasks.add(makeChecksummer(icon.resIcon).setName("icon checksum: " + icon.assetsPath));
 			}
 			
 			if (context.getComponentTarget() == ComponentTarget.WATCHFACE) {
@@ -181,6 +183,10 @@ public class ModularBuild {
 		BuildTask sketchCode = new ChangeNoticerWrapper(new SketchCodeChangeNoticer()).setName("sketch code");
 		
 		// STUFF
+		
+		BuildTask reloadLibraries = new LambdaBuildTask(context -> {
+			context.reloadLibraries(); return true;
+		}, "Reload libraries", sketchbookLibrariesFolder).setName("reload libraries");
 		
 		BuildTask generateManifest = new GenerateManifestBuildTask(MANIFEST, sketchName, sketchProperties, init).setName("generate manifest");
 		List<BuildTask> manifestDepList = Collections.singletonList(generateManifest);
@@ -262,11 +268,11 @@ public class ModularBuild {
 				if (icon.sketchIcon.get(context).exists()) {
 					tasks.add(new CopyBuildTask(makeResDrawableDirs, sketchIcons)
 							.inFile(icon.sketchIcon).outFile(icon.resIcon)
-							.setName("copy icon " + icon.assetsPath));
+							.setName("copy user icon " + icon.assetsPath));
 				} else {
 					tasks.add(new CopyBuildTask(makeResDrawableDirs)
 							.inAsset(icon.assetsPath).outFile(icon.resIcon)
-							.setName("copy icon " + icon.assetsPath));
+							.setName("copy assets icon " + icon.assetsPath));
 				}
 			}
 			
@@ -276,7 +282,7 @@ public class ModularBuild {
 		// THE MEAT OF THE BUILD
 		
 		BuildTask preprocess = new PreprocessBuildTask(SRC, init, makeSketchClassFolder,
-				generateManifest, sketchCode, deleteOldSrc).setName("preprocess");
+				generateManifest, sketchCode, deleteOldSrc, reloadLibraries).setName("preprocess");
 		
 		BuildTask writeMainClass = new WriteTemplateBuildTask(
 				context -> context.getComponentTarget().getMainClassTemplate(),
@@ -302,33 +308,152 @@ public class ModularBuild {
 				.setName("run aapt");
 		
 		BuildTask copyImportedLibraries = new ContextualCompoundBuildTask((context, tasks) -> {
-			// TODO will this work?
-			if (context.getPreprocessor() != null) {
-				for (Library library : context.getImportedLibraries()) {
-					// TODO copy library files
-					// there is a lot of stuff here
-				}
-			}
-			
 			tasks.add(preprocess);
 			tasks.add(init);
+			
+			// This can be called before the preprocessing has been done, but we won't run until
+			// the preprocessor is ready
+			if (context.getPreprocessor() != null) {
+				List<File> libraryDexedLibs = new ArrayList<>();
+				
+				for (Library library : context.getImportedLibraries()) {
+					for (File exportFile : library.getAndroidExports(context.getLibrariesFolder())) {
+						String exportName = exportFile.getName();
+						String exportPath = exportFile.getAbsolutePath();
+						
+						if (!exportFile.exists()) {
+							System.err.println(String.format(Locale.US, context.getResources()
+									.getString(R.string.build_export_library_file_missing), exportName));
+						} else if (exportFile.isDirectory()) {
+							// Copy native library folders
+							if (exportName.equals("armeabi") ||
+									exportName.equals("armeabi-v7a") ||
+									exportName.equals("x86")) {
+								
+								tasks.add(new CopyBuildTask(preprocess, sketchbookLibrariesFolder)
+										.inFolder(Getter.wrap(exportFile))
+										.outFolder(makeBuildFile(LIBS, exportName))
+										.setName("copy library export native folder: " + exportPath));
+							} else {
+								tasks.add(new CopyBuildTask(preprocess, sketchbookLibrariesFolder)
+										.inFolder(Getter.wrap(exportFile))
+										.outFolder(makeBuildFile(ASSETS, exportName))
+										.setName("copy library export folder: " + exportPath));
+							}
+						} else if (exportFile.isFile()) {
+							BuildFile dest;
+							String name;
+							
+							if (exportName.toLowerCase(Locale.US).endsWith(".zip")) {
+								// As of r4 of the Android SDK, it looks like .zip files
+								// are ignored in the libs folder, so rename to .jar
+								System.err.println(String.format(Locale.US, context.getResources()
+										.getString(R.string.build_library_zip), exportFile.getName()));
+								
+								String jarName = exportName.substring(0, exportName.length() - 4) + ".jar";
+								
+								dest = makeBuildFile(LIBS, jarName);
+								name = "copy library export jar: " + exportPath;
+							} else if (exportName.toLowerCase(Locale.US).endsWith("-dex.jar")) {
+								libraryDexedLibs.add(exportFile);
+								
+								dest = makeBuildFile(DEXED_LIBS, exportName);
+								name = "copy library export dex jar: " + exportPath;
+							} else if (exportName.toLowerCase(Locale.US).endsWith(".jar")) {
+								dest = makeBuildFile(LIBS, exportName);
+								name = "copy library export jar: " + exportPath;
+							} else {
+								dest = makeBuildFile(ASSETS, exportName);
+								name = "copy library export unknown/asset: " + exportPath;
+							}
+							
+							tasks.add(new CopyBuildTask(preprocess, sketchbookLibrariesFolder)
+									.inFile(Getter.wrap(exportFile)).outFile(dest).setName(name));
+						}
+					}
+				}
+				
+				context.setLibraryDexedLibs(libraryDexedLibs);
+			}
 		}).setName("copy imported libraries");
 		
 		BuildTask compile = new CompileBuildTask(LIBS, ANDROID_JAR, SRC, GEN, BIN_CLASSES,
 				init, preprocess, aapt, writeMainClass, writeLogBroadcasterUtil, copySketchCode,
-				copySketchCodeDex, copyImportedLibraries, deleteOldSrc).setName("compile");
+				copySketchCodeDex, copyImportedLibraries, deleteOldSrc, reloadLibraries)
+				.setName("compile");
 		
 		BuildTask dxDex = new DxDexBuildTask(BIN_SKETCH_CLASSES, BIN_CLASSES, compile).setName("dx dex");
 		
-		BuildTask previewSketchDex = new CopyBuildTask(dxDex).inFile(BIN_SKETCH_CLASSES).outFile(PREVIEW_SKETCH_DEX).setName("preview copy sketch dex");
-		BuildTask previewDataZip = new CopyBuildTask(dataFolder).inFolder(SKETCH_DATA).outFile(PREVIEW_SKETCH_DATA).compress().setName("preview copy sketch data");
+		BuildTask previewSketchDex = new CopyBuildTask(dxDex)
+				.inFile(BIN_SKETCH_CLASSES).outFile(PREVIEW_SKETCH_DEX)
+				.setName("preview copy sketch dex");
+		BuildTask previewDataZip = new CopyBuildTask(dataFolder)
+				.inFolder(SKETCH_DATA).outFile(PREVIEW_SKETCH_DATA).compress()
+				.setName("preview copy sketch data");
 		
 		BuildTask prepareDexedLibsPreview = new ContextualCompoundBuildTask((context, tasks) -> {
-			// TODO
+			tasks.add(copyImportedLibraries);
+			
+			if (context.getLibraryDexedLibs() != null) {
+				List<File> newDexedLibs = context.getLibraryDexedLibs();
+				List<String> alreadyPresent = new ArrayList<>();
+				
+				// We have two sets of files: those already present, and those needed for the new
+				// sketch. We can ignore the intersection of these sets; those present but not
+				// necessary should be deleted, and those not present but needed should be copied.
+				
+				List<BuildTask> deleteTasks = new ArrayList<>();
+				
+				deleteFilesLoop:
+				for (File file : ROOT_FILES_INTERNAL.get(context).listFiles()) {
+					if (file.getName().startsWith(previewDexJarPrefix)) {
+						String realName = file.getName().substring(previewDexJarPrefix.length());
+						
+						// Don't delete if we want it again
+						for (File newDexedLib : newDexedLibs) {
+							// We compare names and then checksums
+							// If names are the same, file might not necessarily be the same;
+							// e.g. the user may have updated the library
+							if (realName.equals(newDexedLib.getName())
+									&& ChecksumChangeNoticer.sameChecksum(file, newDexedLib, true)) {
+								alreadyPresent.add(realName);
+								continue deleteFilesLoop;
+							}
+						}
+						
+						deleteTasks.add(new DeleteFileTask(Getter.wrap(file), copyImportedLibraries)
+								.setName("delete old preview sketch dex jar: " + file.getAbsolutePath()));
+					}
+				}
+				
+				tasks.addAll(deleteTasks);
+				
+				BuildTask[] deleteTasksArr = new BuildTask[deleteTasks.size()];
+				deleteTasks.toArray(deleteTasksArr);
+				
+				copyFilesLoop:
+				for (File newDexedLib : newDexedLibs) {
+					// Don't delete if we want it again
+					for (String present : alreadyPresent) {
+						if (present.equals(newDexedLib.getName())) {
+							continue copyFilesLoop;
+						}
+					}
+					
+					tasks.add(new CopyBuildTask(deleteTasksArr)
+							.inFile(Getter.wrap(newDexedLib))
+							.outFile(makeBuildFile(ROOT_FILES_INTERNAL, previewDexJarPrefix + newDexedLib.getName()))
+							.setName("copy preview sketch dex jar: " + newDexedLib.getAbsolutePath()));
+				}
+			}
 		}).setName("preview copy dexed libs");
 		
 		BuildTask preparePreview = new ContextualCompoundBuildTask((context, tasks) -> {
 			tasks.add(previewSketchDex);
+			
+			if (context.getLibraryDexedLibs() != null && !context.getLibraryDexedLibs().isEmpty()) {
+				tasks.add(prepareDexedLibsPreview);
+			}
 			
 			File dataFolderFile = SKETCH_DATA.get(context);
 			context.setHasData(dataFolderFile.isDirectory() && dataFolderFile.listFiles().length > 0);
@@ -437,6 +562,8 @@ public class ModularBuild {
 	 * @param listeners
 	 */
 	public void build(ContextualizedOnCompleteListener... listeners) {
+		// TODO: check if the sketch previewer is installed
+		
 		buildInternal(RUN, new ContextualizedOnCompleteListener() {
 			@Override
 			public boolean onComplete(boolean success) {
@@ -512,9 +639,12 @@ public class ModularBuild {
 		String dataUri = context.hasData() ?
 				makeFileAvailableToPreview(PREVIEW_SKETCH_DATA.get(context)).toString() : "";
 		
-		// TODO dexed libs
+		String[] libUris = new String[context.getLibraryDexedLibs().size()];
 		
-		String[] libUris = {};
+		for (int i = 0; i < libUris.length; i ++) {
+			libUris[i] = makeFileAvailableToPreview(new File(context.getRootFilesDir(),
+					previewDexJarPrefix + context.getLibraryDexedLibs().get(i).getName())).toString();
+		}
 		
 		// Build intent specifically for sketch previewer
 		Intent intent = new Intent("com.calsignlabs.apde.RUN_SKETCH_PREVIEW");
