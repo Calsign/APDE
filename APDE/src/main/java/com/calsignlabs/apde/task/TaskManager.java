@@ -150,7 +150,9 @@ public class TaskManager {
 			
 			try {
 				task.start();
+				long start = System.currentTimeMillis();
 				task.run();
+				task.setDuration(System.currentTimeMillis() - start);
 				task.stop();
 			} catch (InterruptedException e) {
 				// Do nothing
@@ -167,7 +169,6 @@ public class TaskManager {
 		};
 		
 		threadPool.submit(runnable);
-//		(new Thread(runnable)).start();
 	}
 	
 	public void moveToBackground(final Task task) {

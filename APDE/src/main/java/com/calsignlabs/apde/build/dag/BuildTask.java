@@ -154,7 +154,6 @@ public abstract class BuildTask extends Task {
 	
 	public void finish(boolean successful) {
 		success.set(successful);
-		stop();
 	}
 	
 	public boolean success() {
@@ -196,7 +195,7 @@ public abstract class BuildTask extends Task {
 			}
 			
 			hasChanged = changeNoticer.hasChanged(context);
-			System.out.println("TASK " + getName() + " changed status: " + hasChanged);
+			Logger.writeLog("TASK " + getName() + " changed status: " + hasChanged, 1);
 			
 			if (!hasChanged.unstable()) {
 				lastTimestamp.set(context.getTimestamp());

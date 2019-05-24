@@ -89,7 +89,7 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 		InputStream inputStream = null;
 		
 		if (!file.exists()) {
-			System.out.println("CHK doesn't exist: " + file.getAbsolutePath());
+			Logger.writeLog("CHK doesn't exist: " + file.getAbsolutePath());
 			return null;
 		}
 		
@@ -174,39 +174,39 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 			case FILE_DIFF:
 				File file = fileGetter.get(context);
 				if (!vacuousChange && !file.exists()) {
-					System.out.println("CHK vacuous change");
+					Logger.writeLog("CHK vacuous change", 1);
 					checksum = null;
 					return BuildTask.ChangeStatus.UNCHANGED;
 				}
 				BigInteger newChecksum = calculateChecksum(file);
-				System.out.println("OLD CHECKSUM: " + (checksum == null ? "null" : checksum.toString()));
-				System.out.println("NEW CHECKSUM: " + (newChecksum == null ? "null" : newChecksum.toString()));
+				Logger.writeLog("OLD CHECKSUM: " + (checksum == null ? "null" : checksum.toString()), 1);
+				Logger.writeLog("NEW CHECKSUM: " + (newChecksum == null ? "null" : newChecksum.toString()), 1);
 				boolean changed = checksum == null || !checksum.equals(newChecksum);
 				checksum = newChecksum;
 				return BuildTask.ChangeStatus.bool(changed);
 			case SOURCE_DEST_STREAM:
 				BigInteger test = calculateChecksum(inputStreamGetter, context);
 				BigInteger base = calculateChecksum(baseGetter, context);
-				System.out.println("BASE CHECKSUM: " + (base == null ? "null" : base.toString()));
-				System.out.println("TEST CHECKSUM: " + (test == null ? "null" : test.toString()));
+				Logger.writeLog("BASE CHECKSUM: " + (base == null ? "null" : base.toString()), 1);
+				Logger.writeLog("TEST CHECKSUM: " + (test == null ? "null" : test.toString()), 1);
 				return BuildTask.ChangeStatus.bool(test == null || !test.equals(base));
 			case SOURCE_DEST_FILE:
 				File source = sourceFileGetter.get(context);
 				File dest = destFileGetter.get(context);
 				if (source.exists() != dest.exists()) {
 					if (source.exists()) {
-						System.err.println("Source exists, dest does not");
+						Logger.writeLog("Source exists, dest does not", 1);
 					} else {
-						System.err.println("Dest exists, source does not");
+						Logger.writeLog("Dest exists, source does not", 1);
 					}
 					return BuildTask.ChangeStatus.CHANGED;
 				}
 				BigInteger sourceChecksum = calculateChecksum(source);
 				BigInteger destChecksum = calculateChecksum(dest);
-				System.out.println("SOURCE CHECKSUM: " + (sourceChecksum == null ? "null" : source.toString()));
-				System.out.println("DEST CHECKSUM: " + (destChecksum == null ? "null" : dest.toString()));
+				Logger.writeLog("SOURCE CHECKSUM: " + (sourceChecksum == null ? "null" : source.toString()), 1);
+				Logger.writeLog("DEST CHECKSUM: " + (destChecksum == null ? "null" : dest.toString()), 1);
 				if (sourceChecksum == null || destChecksum == null) {
-					System.err.println("Either source or dest checksums is null");
+					Logger.writeLog("Either source or dest checksums is null", 0);
 					return BuildTask.ChangeStatus.CHANGED;
 				}
 				return BuildTask.ChangeStatus.bool(!sourceChecksum.equals(destChecksum));

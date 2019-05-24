@@ -21,8 +21,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ModularBuild {
+	private static AtomicBoolean BUILD_LOCK = new AtomicBoolean(false);
+	
 	private APDE global;
 	
 	private Set<String> previousFailedTasks;
@@ -198,7 +201,6 @@ public class ModularBuild {
 		
 		//BuildTask deleteOldLibs = TODO
 		//BuildTask deleteOldDexedLibs = TODO
-		//BuildTask deleteOldApkRes = TODO
 		
 		BuildTask copySketchCode = new CopyBuildTask(codeFolder, init).inFolder(SKETCH_CODE_FOLDER).outFolder(LIBS).setVacuousSuccess(true).setName("copy sketch code");
 		BuildTask copySketchCodeDex = new CopyBuildTask(codeDexFolder, init).inFolder(SKETCH_CODE_DEX_FOLDER).outFolder(DEXED_LIBS).setVacuousSuccess(true).setName("copy sketch code dex");
@@ -483,11 +485,22 @@ public class ModularBuild {
 		COMPILE = compile;
 		
 		BuildTask deleteBuild = new DeleteFileTask(BUILD).setName("delete build");
+		BuildTask deleteAlternateBuild = new DeleteFileTask(BuildContext::getAlternateBuildFolder).setName("delete alternate build");
 		BuildTask deleteStage = new DeleteFileTask(STAGE).setName("delete stage");
 		BuildTask deletePreviewDex = new DeleteFileTask(PREVIEW_SKETCH_DEX).setName("delete preview dex");
 		BuildTask deletePreviewData = new DeleteFileTask(PREVIEW_SKETCH_DATA).setName("delete preview data");
 		
-		CLEAN = new CompoundBuildTask(deleteBuild, deleteStage, deletePreviewDex, deletePreviewData).setName("clean");
+		BuildTask deletePreviewLibraryDex = new ContextualCompoundBuildTask((context, tasks) -> {
+			for (File file : ROOT_FILES_INTERNAL.get(context).listFiles()) {
+				if (file.getName().startsWith(previewDexJarPrefix)) {
+					tasks.add(new DeleteFileTask(Getter.wrap(file))
+							.setName("delete preview sketch dex jar: " + file.getAbsolutePath()));
+				}
+			}
+		});
+		
+		CLEAN = new CompoundBuildTask(deleteBuild, deleteAlternateBuild, deleteStage,
+				deletePreviewDex, deletePreviewData, deletePreviewLibraryDex).setName("clean");
 	}
 	
 	private static BuildTask makeAssetsExtractor(Getter<File> file, BuildContext context, BuildTask... deps) {
@@ -609,12 +622,26 @@ public class ModularBuild {
 	
 	private void buildInternal(BuildTask buildTask, ContextualizedOnCompleteListener listener,
 							   ContextualizedOnCompleteListener... listeners) {
+		
+		if (!BUILD_LOCK.compareAndSet(false, true)) {
+			Logger.writeLog("Build already running");
+			return;
+		}
+		
+		long start = System.currentTimeMillis();
+		
 		BuildContext context = BuildContext.create(global);
 		context.setPreviousFailedTasks(previousFailedTasks);
 		BuildTaskRunner runner = new BuildTaskRunner(global, buildTask, context);
 		
 		runner.addOnCompleteListener(success -> {
 			previousFailedTasks = runner.getFailedTasks();
+			Logger.writeLog(String.format(Locale.US, "Finished in %1$dms", System.currentTimeMillis() - start));
+			// Make some space in the console
+			for (int i = 0; i < 10; i++) {
+				System.out.println();
+			}
+			BUILD_LOCK.set(false);
 			return true;
 		});
 		
@@ -629,6 +656,10 @@ public class ModularBuild {
 		}
 		
 		runner.run();
+	}
+	
+	public boolean isBuilding() {
+		return BUILD_LOCK.get();
 	}
 	
 	private void launchPreview(BuildContext context) {
@@ -664,11 +695,6 @@ public class ModularBuild {
 		}
 		if (intent.resolveActivity(global.getPackageManager()) != null) {
 			global.startActivity(intent);
-		}
-		
-		// Make some space in the console
-		for (int i = 0; i < 10; i++) {
-			System.out.println();
 		}
 	}
 	

@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 public class BuildContext {
 	private APDE apde;
 	
-	private File buildFolder, sketchFolder, stageFolder, librariesFolder, rootFilesDir;
+	private File buildFolder, sketchFolder, stageFolder, librariesFolder, rootFilesDir, alternateBuildFolder;
 	private String sketchName;
 	private boolean isExample, verbose, external, injectLogBroadcaster, customProblems;
 	private ComponentTarget componentTarget;
@@ -87,6 +87,7 @@ public class BuildContext {
 		buildContext.importToLibraryTable = context.getImportToLibraryTable();
 		
 		buildContext.rootFilesDir = context.getFilesDir();
+		buildContext.alternateBuildFolder = context.getAlternateBuildFolder();
 		
 		buildContext.timestamp = System.currentTimeMillis();
 		
@@ -237,6 +238,10 @@ public class BuildContext {
 	
 	public void reloadLibraries() {
 		apde.rebuildLibraryList();
+	}
+	
+	public File getAlternateBuildFolder() {
+		return alternateBuildFolder;
 	}
 	
 	/**

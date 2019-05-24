@@ -1,7 +1,6 @@
 package com.calsignlabs.apde.build.dag;
 
 import android.support.annotation.Nullable;
-import android.util.Log;
 
 import com.calsignlabs.apde.APDE;
 
@@ -12,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -24,9 +24,6 @@ public class BuildTaskRunner {
 	private Set<String> runningTasks, finishedTasks;
 	private Map<BuildTask, List<BuildTask>> completionListeners;
 	private Map<String, Boolean> successes;
-	
-	private static boolean debugOut = true;
-	private static int logLevel = 1;
 	
 	public BuildTaskRunner(APDE global, BuildTask buildTask, BuildContext buildContext) {
 		this.global = global;
@@ -96,12 +93,12 @@ public class BuildTaskRunner {
 						|| dep.treeShouldRunIfNotUpdated(buildContext)
 						|| buildContext.isPreviousFailedTask(dep))
 					&& !containsList(finishedTasks, dep)) {
-				writeLog("debug add dep name: " + dep.getName() + ", tag: " + dep.getTag() + ", changed: "
+				Logger.writeLog("debug add dep name: " + dep.getName() + ", tag: " + dep.getTag() + ", changed: "
 						+ dep.hasChanged(buildContext) + ", finished: " + containsList(finishedTasks, dep), 3);
 				deps.add(dep);
 				shouldRun |= dep.hasChanged(buildContext).changed();
 			} else {
-				writeLog("debug dont dep name: " + dep.getName() + ", tag: " + dep.getTag() + ", changed: "
+				Logger.writeLog("debug dont dep name: " + dep.getName() + ", tag: " + dep.getTag() + ", changed: "
 						+ dep.hasChanged(buildContext) + ", finished: " + containsList(finishedTasks, dep), 3);
 			}
 		}
@@ -111,13 +108,13 @@ public class BuildTaskRunner {
 		}
 		
 		if (!deps.isEmpty()) {
-			if (debugOut) {
+			if (Logger.getLogLevel() >= 3) {
 				StringBuilder remaining = new StringBuilder();
 				for (BuildTask remDep : deps) {
 					remaining.append(remDep.getName());
 					remaining.append(", ");
 				}
-				writeLog("task " + task.getName() + " has remaining deps " + remaining.toString(), 2);
+				Logger.writeLog("task " + task.getName() + " has remaining deps " + remaining.toString(), 2);
 			}
 			
 			for (BuildTask dep : deps) {
@@ -134,10 +131,10 @@ public class BuildTaskRunner {
 					
 					if (!failedBefore) {
 						if (success) {
-							writeLog("task " + task.getName() + " finished dep " + dep.getName(), 2);
+							Logger.writeLog("task " + task.getName() + " finished dep " + dep.getName(), 2);
 							executeWithDependencies(task);
 						} else {
-							writeLog("FAILURE in task " + dep.getName() + " or one of its dependencies");
+							Logger.writeLog("FAILURE in task " + dep.getName() + " or one of its dependencies", 1);
 							task.fail();
 						}
 					}
@@ -159,18 +156,13 @@ public class BuildTaskRunner {
 				if (actuallyRun) {
 					addOnCompleteListener(null, task, success -> {
 						addList(finishedTasks, task);
-						if (!success) {
-							writeLog("task FAILED: " + task.getName());
-						} else {
-							writeLog("task succeeded: " + task.getName());
-						}
 						return true;
 					});
-					writeLog("launching task: " + task.getName());
+					Logger.writeLog("launching task: " + task.getName(), 1);
 					launchBuildTask(task);
 				}
 			} else {
-				writeLog("short circuit task: " + task.getName());
+				Logger.writeLog("short circuit task: " + task.getName(), 1);
 				addList(runningTasks, task);
 				addList(finishedTasks, task);
 				task.finish(true);
@@ -224,22 +216,19 @@ public class BuildTaskRunner {
 		}
 	}
 	
-	private static void writeLog(String message) {
-		writeLog(message, 0);
-	}
-	
-	private static void writeLog(String message, int level) {
-		if (debugOut && level <= logLevel) {
-			System.out.println(message);
-			Log.d("modular_build", message);
-		}
-	}
-	
 	private void launchBuildTask(BuildTask task) {
 		if (!global.getTaskManager().containsTask(task.getTag())) {
 			global.getTaskManager().registerTask(task.getTag(), task);
 		}
 		task.setBuildContext(buildContext);
+		task.addOnCompleteListener(success -> {
+			if (success) {
+				Logger.writeLog(String.format(Locale.US, "Task %1$s finished in %2$dms", task.getName(), task.getDuration()));
+			} else {
+				Logger.writeLog(String.format(Locale.US, "FAILURE: Task %1$s failed", task.getName()));
+			}
+			return true;
+		});
 		global.getTaskManager().startBackgroundTask(task);
 	}
 }

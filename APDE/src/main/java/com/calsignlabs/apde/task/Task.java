@@ -3,12 +3,15 @@ package com.calsignlabs.apde.task;
 import com.calsignlabs.apde.APDE;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class Task {
 	private AtomicBoolean running = new AtomicBoolean(false);
 	private TaskStatusRelay statusRelay;
 	
 	private APDE context;
+	
+	private AtomicLong duration = new AtomicLong(-1);
 	
 	protected void setContext(APDE context) {
 		this.context = context;
@@ -131,5 +134,14 @@ public abstract class Task {
 	 */
 	public boolean canRunInBackground() {
 		return true;
+	}
+	
+	// Called from TaskManager
+	protected void setDuration(long duration) {
+		this.duration.set(duration);
+	}
+	
+	public long getDuration() {
+		return duration.get();
 	}
 }

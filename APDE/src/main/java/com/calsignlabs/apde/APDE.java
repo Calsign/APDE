@@ -1495,13 +1495,25 @@ public class APDE extends MultiDexApplication {
 		return properties;
 	}
 	
-	public File getBuildFolder() {
+	private File getBuildFolder(boolean alternate) {
 		// Let the user pick where to build
-		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_build_internal_storage", true)) {
+		if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_build_internal_storage", true) ^ alternate) {
 			return getDir("build", 0);
 		} else {
 			return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), "build");
 		}
+	}
+	
+	public File getBuildFolder() {
+		return getBuildFolder(false);
+	}
+	
+	/**
+	 * @return the other build folder not currently in use, i.e. /sdcard/build if using the internal
+	 * storage to build
+	 */
+	public File getAlternateBuildFolder() {
+		return getBuildFolder(true);
 	}
 	
 	public void rebuildLibraryList() {
