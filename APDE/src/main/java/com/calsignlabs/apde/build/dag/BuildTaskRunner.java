@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BuildTaskRunner {
 	private APDE global;
@@ -25,10 +26,14 @@ public class BuildTaskRunner {
 	private Map<BuildTask, List<BuildTask>> completionListeners;
 	private Map<String, Boolean> successes;
 	
+	private AtomicBoolean halt;
+	
 	public BuildTaskRunner(APDE global, BuildTask buildTask, BuildContext buildContext) {
 		this.global = global;
 		this.buildTask = buildTask;
 		this.buildContext = buildContext;
+		
+		halt = new AtomicBoolean(false);
 	}
 	
 	public void addOnCompleteListener(BuildTask.OnCompleteListener onCompleteListener) {
@@ -38,6 +43,15 @@ public class BuildTaskRunner {
 	public void run() {
 		// Setup is not insignificant
 		(new Thread(() -> startBuildTask(buildTask))).start();
+	}
+	
+	public void halt() {
+		halt.set(true);
+		buildTask.stop();
+	}
+	
+	public BuildContext getBuildContext() {
+		return buildContext;
 	}
 	
 	public Set<String> getFailedTasks() {
@@ -78,6 +92,12 @@ public class BuildTaskRunner {
 	}
 	
 	private void executeWithDependencies(BuildTask task) {
+		if (halt.get()) {
+			task.fail();
+			task.stop();
+			return;
+		}
+		
 		List<BuildTask> deps = new ArrayList<>();
 		boolean shouldRun = task.hasChanged(buildContext).changed() || task.shouldRunIfNotUpdated();
 		for (BuildTask dep : task.getDependencies(buildContext)) {

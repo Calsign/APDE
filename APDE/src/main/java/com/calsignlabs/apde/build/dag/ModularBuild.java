@@ -29,6 +29,7 @@ public class ModularBuild {
 	private APDE global;
 	
 	private Set<String> previousFailedTasks;
+	private BuildTaskRunner runner;
 	
 	// Prettier name alias
 	private interface BuildFile extends Getter<File> {}
@@ -594,7 +595,13 @@ public class ModularBuild {
 	}
 	
 	public void halt() {
-		// TODO implement
+//		if (runner != null) {
+//			runner.halt();
+//			previousFailedTasks = runner.getFailedTasks();
+//			BUILD_LOCK.set(false);
+//
+//			clean();
+//		}
 	}
 	
 	/**
@@ -662,7 +669,7 @@ public class ModularBuild {
 		
 		BuildContext context = BuildContext.create(global);
 		context.setPreviousFailedTasks(previousFailedTasks);
-		BuildTaskRunner runner = new BuildTaskRunner(global, buildTask, context);
+		runner = new BuildTaskRunner(global, buildTask, context);
 		
 		runner.addOnCompleteListener(success -> {
 			previousFailedTasks = runner.getFailedTasks();
