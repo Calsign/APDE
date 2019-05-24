@@ -89,7 +89,7 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 		InputStream inputStream = null;
 		
 		if (!file.exists()) {
-			Logger.writeLog("CHK doesn't exist: " + file.getAbsolutePath());
+			Logger.writeLog("CHK doesn't exist: " + file.getAbsolutePath(), 1);
 			return null;
 		}
 		
@@ -181,7 +181,7 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 				BigInteger newChecksum = calculateChecksum(file);
 				Logger.writeLog("OLD CHECKSUM: " + (checksum == null ? "null" : checksum.toString()), 1);
 				Logger.writeLog("NEW CHECKSUM: " + (newChecksum == null ? "null" : newChecksum.toString()), 1);
-				boolean changed = checksum == null || !checksum.equals(newChecksum);
+				boolean changed = (checksum == null && newChecksum != null) || (checksum != null && !checksum.equals(newChecksum));
 				checksum = newChecksum;
 				return BuildTask.ChangeStatus.bool(changed);
 			case SOURCE_DEST_STREAM:

@@ -173,15 +173,15 @@ public class ModularBuild {
 		BuildTask resFolder = makeChecksummer(SKETCH_RES).setName("sketch res");
 		BuildTask sketchbookLibrariesFolder = makeChecksummer(SKETCHBOOK_LIBRARIES).setName("sketchbook libraries");
 		
-		BuildTask sketchIcons = new ContextualCompoundBuildTask((context, tasks) -> {
-			for (IconSet icon : ICONS) {
-				tasks.add(makeChecksummer(icon.resIcon).setName("icon checksum: " + icon.assetsPath));
-			}
-			
-			if (context.getComponentTarget() == ComponentTarget.WATCHFACE) {
-				// TODO watch face icons
-			}
-		}).setName("sketch icons");
+		List<BuildTask> sketchIconChecksumList = new ArrayList<>();
+		
+		for (IconSet icon : ICONS) {
+			sketchIconChecksumList.add(makeChecksummer(icon.sketchIcon).setName("icon checksum: " + icon.assetsPath));
+		}
+		
+		// TODO watch face icons
+		
+		BuildTask sketchIcons = new CompoundBuildTask(sketchIconChecksumList).setName("sketch icons");
 		
 		BuildTask sketchCode = new ChangeNoticerWrapper(new SketchCodeChangeNoticer()).setName("sketch code");
 		
@@ -269,11 +269,11 @@ public class ModularBuild {
 				// TODO need to add sketchIcons as a change dependency?
 				if (icon.sketchIcon.get(context).exists()) {
 					tasks.add(new CopyBuildTask(makeResDrawableDirs, sketchIcons)
-							.inFile(icon.sketchIcon).outFile(icon.resIcon)
+							.inFile(icon.sketchIcon).outFile(icon.resIcon, false)
 							.setName("copy user icon " + icon.assetsPath));
 				} else {
-					tasks.add(new CopyBuildTask(makeResDrawableDirs)
-							.inAsset(icon.assetsPath).outFile(icon.resIcon)
+					tasks.add(new CopyBuildTask(makeResDrawableDirs, sketchIcons)
+							.inAsset(icon.assetsPath).outFile(icon.resIcon, false)
 							.setName("copy assets icon " + icon.assetsPath));
 				}
 			}
@@ -512,7 +512,7 @@ public class ModularBuild {
 	}
 	
 	private static BuildTask makeChecksummer(Getter<File> file) {
-		return new ChangeNoticerWrapper((new ChecksumChangeNoticer()).fileDiff(file).setVacuousChange(false));
+		return new ChangeNoticerWrapper((new ChecksumChangeNoticer()).fileDiff(file));
 	}
 	
 	private Getter<File> getSketchClassLocation(String filename, List<BuildTask> deps) {

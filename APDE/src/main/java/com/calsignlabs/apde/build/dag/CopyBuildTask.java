@@ -91,15 +91,19 @@ public class CopyBuildTask extends BuildTask {
 		});
 	}
 	
-	public CopyBuildTask outFile(Getter<File> out) {
+	public CopyBuildTask outFile(Getter<File> out, boolean detectChange) {
 		outputType = FILE;
 		outputFile = out;
-		if (inputType == FILE || inputType == STREAM) {
+		if (detectChange && (inputType == FILE || inputType == STREAM)) {
 			populateStreamsForFiles();
 			orChangeNoticer((new ChecksumChangeNoticer()).sourceDestStream(inputStreamGetter, fis(out)));
 		}
 		orGetterChangeNoticer(out);
 		return this;
+	}
+	
+	public CopyBuildTask outFile(Getter<File> out) {
+		return outFile(out, true);
 	}
 	
 	public CopyBuildTask outFolder(Getter<File> out) {
