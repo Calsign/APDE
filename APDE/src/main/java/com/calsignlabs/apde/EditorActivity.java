@@ -111,7 +111,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -3406,6 +3405,25 @@ public class EditorActivity extends AppCompatActivity {
 			return true;
 		}
 	}
+	
+	private void updateMessageArea(String msg, MessageType type) {
+		// Write the message
+    	((TextView) findViewById(R.id.message)).setText(msg);
+    	switch (type) {
+			case MESSAGE:
+				colorMessageAreaMessage();
+				break;
+			case ERROR:
+				colorMessageAreaError();
+				break;
+			case WARNING:
+				colorMessageAreaWarning();
+				break;
+		}
+    	messageType = type;
+    	// Update message area height
+    	correctMessageAreaHeight();
+	}
     
     /**
      * Writes a message to the message area
@@ -3413,13 +3431,7 @@ public class EditorActivity extends AppCompatActivity {
      * @param msg
      */
     public void message(String msg) {
-    	// Write the message
-    	((TextView) findViewById(R.id.message)).setText(msg);
-    	colorMessageAreaMessage();
-    	messageType = MessageType.MESSAGE;
-    	// Update message area height
-    	correctMessageAreaHeight();
-//    	hideCharInsertsNoAnimation();
+    	updateMessageArea(msg, MessageType.MESSAGE);
     }
     
     /**
@@ -3429,11 +3441,7 @@ public class EditorActivity extends AppCompatActivity {
      * @param msg
      */
     public void messageExt(final String msg) {
-    	runOnUiThread(new Runnable() {
-			public void run() {
-				message(msg);
-			}
-		});
+    	runOnUiThread(() -> message(msg));
     }
     
     /**
@@ -3452,13 +3460,7 @@ public class EditorActivity extends AppCompatActivity {
      * @param msg
      */
     public void error(String msg) {
-    	// Write the error message
-    	((TextView) findViewById(R.id.message)).setText(msg);
-    	colorMessageAreaError();
-    	messageType = MessageType.ERROR;
-    	// Update message area height
-    	correctMessageAreaHeight();
-//    	hideCharInsertsNoAnimation();
+    	updateMessageArea(msg, MessageType.ERROR);
     }
     
     /**
@@ -3468,11 +3470,7 @@ public class EditorActivity extends AppCompatActivity {
      * @param msg
      */
     public void errorExt(final String msg) {
-    	runOnUiThread(new Runnable() {
-			public void run() {
-				error(msg);
-			}
-		});
+    	runOnUiThread(() -> error(msg));
     }
     
     /**
@@ -3486,22 +3484,11 @@ public class EditorActivity extends AppCompatActivity {
     }
     
     public void warning(String msg) {
-		// Write the warning message
-		((TextView) findViewById(R.id.message)).setText(msg);
-		colorMessageAreaWarning();
-		messageType = MessageType.WARNING;
-		// Update message area height
-		correctMessageAreaHeight();
-//		hideCharInsertsNoAnimation();
+    	updateMessageArea(msg, MessageType.WARNING);
 	}
 	
 	public void warningExt(final String msg) {
-    	runOnUiThread(new Runnable() {
-			@Override
-			public void run() {
-				warning(msg);
-			}
-		});
+    	runOnUiThread(() -> warning(msg));
 	}
     
     //Utility function for switching to message-style message area
@@ -3570,21 +3557,21 @@ public class EditorActivity extends AppCompatActivity {
     	final View buffer = findViewById(R.id.buffer);
     	
     	// Update the message area's height
-    	messageArea.requestLayout();
+    	buffer.requestLayout();
     	
     	// Check back in later when the height has updated...
-    	messageArea.post(() -> {
+    	buffer.post(() -> {
 			// ...and update the console's height...
-		
+			
 			int totalWidth = findViewById(R.id.message_char_insert_wrapper).getWidth();
 			
 			// We need to use this in case the message area is partially off the screen
 			// This is the DESIRED height, not the ACTUAL height
-			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
-		
+			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
+			
 			// The height the text view would be if it were just one line
 			int singleLineHeight = getTextViewHeight(getApplicationContext(), "", messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
-
+			
 			buffer.getLayoutParams().height = message;
 			
 			// Obtain some references
@@ -3610,10 +3597,10 @@ public class EditorActivity extends AppCompatActivity {
 			// Note: For some reason modifying the LayoutParams directly is not working.
 			// That's why we're re-setting the LayoutParams every time. Perhaps worth
 			// looking into later.
-		
+			
 			buffer.getLayoutParams().height = message;
 			messageArea.getLayoutParams().height = message;
-		
+			
 			//noinspection SuspiciousNameCombination
 			setViewLayoutParams(toggleCharInserts, singleLineHeight, message);
 			//noinspection SuspiciousNameCombination
@@ -3659,27 +3646,25 @@ public class EditorActivity extends AppCompatActivity {
 		
 		messageArea.requestLayout();
 		
-		messageArea.post(new Runnable() {
-			public void run() {
-				//We need to use this in case the message area is partially off the screen
-				//This is the DESIRED height, not the ACTUAL height
-				message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), findViewById(R.id.message_char_insert_wrapper).getWidth(), messageArea.getPaddingTop());
+		messageArea.post(() -> {
+			//We need to use this in case the message area is partially off the screen
+			//This is the DESIRED height, not the ACTUAL height
+			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), findViewById(R.id.message_char_insert_wrapper).getWidth(), messageArea.getPaddingTop());
 
-				int consoleSize = content.getHeight() - code.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
+			int consoleSize = content.getHeight() - code.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
 
-				//We can't shrink the console if it's hidden (like when the keyboard is visible)...
-				//...so shrink the code area instead
-				if (consoleSize < 0 || consoleWasHidden || keyboardVisible) {
-					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
-					code.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-							content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
+			//We can't shrink the console if it's hidden (like when the keyboard is visible)...
+			//...so shrink the code area instead
+			if (consoleSize < 0 || consoleWasHidden || keyboardVisible) {
+				console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
+				code.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+						content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
 
-					consoleWasHidden = true;
-				} else {
-					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, consoleSize));
+				consoleWasHidden = true;
+			} else {
+				console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, consoleSize));
 
-					consoleWasHidden = false;
-				}
+				consoleWasHidden = false;
 			}
 		});
 	}
