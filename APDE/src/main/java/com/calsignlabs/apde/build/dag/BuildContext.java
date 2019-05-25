@@ -38,7 +38,8 @@ public class BuildContext {
 	private List<File> libraryLibs, libraryDexedLibs;
 	private boolean hasData;
 	
-	private Set<String> completedTasks, previousFailedTasks;
+	private Set<String> completedTasks;
+	private Map<String, Boolean> previousTaskSucess;
 	
 	private Resources resources;
 	private SharedPreferences preferences;
@@ -217,11 +218,18 @@ public class BuildContext {
 	}
 	
 	public boolean isPreviousFailedTask(BuildTask buildTask) {
-		return previousFailedTasks != null && previousFailedTasks.contains(buildTask.getName());
+		return previousTaskSucess != null && previousTaskSucess.containsKey(buildTask.getName())
+				&& !previousTaskSucess.get(buildTask.getName());
 	}
 	
-	public void setPreviousFailedTasks(Set<String> previousFailedTasks) {
-		this.previousFailedTasks = previousFailedTasks;
+	public void setTaskSuccess(BuildTask task, boolean success) {
+		if (previousTaskSucess != null) {
+			previousTaskSucess.put(task.getName(), success);
+		}
+	}
+	
+	public void setPreviousTaskSucess(Map<String, Boolean> previousTaskSucess) {
+		this.previousTaskSucess = previousTaskSucess;
 	}
 	
 	public Resources getResources() {

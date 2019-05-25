@@ -3573,57 +3573,55 @@ public class EditorActivity extends AppCompatActivity {
     	messageArea.requestLayout();
     	
     	// Check back in later when the height has updated...
-    	messageArea.post(new Runnable() {
-    		public void run() {
-    			// ...and update the console's height...
+    	messageArea.post(() -> {
+			// ...and update the console's height...
+		
+			int totalWidth = findViewById(R.id.message_char_insert_wrapper).getWidth();
 			
-				int totalWidth = findViewById(R.id.message_char_insert_wrapper).getWidth();
-				
-    			// We need to use this in case the message area is partially off the screen
-    			// This is the DESIRED height, not the ACTUAL height
-    			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
+			// We need to use this in case the message area is partially off the screen
+			// This is the DESIRED height, not the ACTUAL height
+			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), messageArea.getWidth(), messageArea.getPaddingTop());
+		
+			// The height the text view would be if it were just one line
+			int singleLineHeight = getTextViewHeight(getApplicationContext(), "", messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
+
+			buffer.getLayoutParams().height = message;
 			
-				// The height the text view would be if it were just one line
-				int singleLineHeight = getTextViewHeight(getApplicationContext(), "", messageArea.getTextSize(), totalWidth, messageArea.getPaddingTop());
-    
-				((LinearLayout) findViewById(R.id.buffer)).getLayoutParams().height = message;
+			// Obtain some references
+			View console = findViewById(R.id.console_wrapper);
+			View content = findViewById(R.id.content);
+			
+			if (isSelectedCodeAreaInitialized()) {
+				int consoleCodeHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)  - tabBarContainer.getHeight();
+				int consoleHeight = consoleCodeHeight - codePager.getHeight();
 				
-    			// Obtain some references
-    			View console = findViewById(R.id.console_wrapper);
-    			View content = findViewById(R.id.content);
-				
-				if (isSelectedCodeAreaInitialized()) {
-					int consoleCodeHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)  - tabBarContainer.getHeight();
-					int consoleHeight = consoleCodeHeight - codePager.getHeight();
-					
-					// We can't shrink the console if it's hidden (like when the keyboard is visible)...
-					// ...so shrink the code area instead
-					if (consoleHeight < 0 || keyboardVisible) {
-						codePager.setLayoutParams(new LinearLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-								content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
-						console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0));
-					} else {
-						console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-								content.getHeight() - codePager.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
-					}
+				// We can't shrink the console if it's hidden (like when the keyboard is visible)...
+				// ...so shrink the code area instead
+				if (consoleHeight < 0 || keyboardVisible) {
+					codePager.setLayoutParams(new LinearLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+							content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
+					console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0));
+				} else {
+					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+							content.getHeight() - codePager.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
 				}
-				
-				// Note: For some reason modifying the LayoutParams directly is not working.
-				// That's why we're re-setting the LayoutParams every time. Perhaps worth
-				// looking into later.
-			
-				buffer.getLayoutParams().height = message;
-				messageArea.getLayoutParams().height = message;
-			
-				//noinspection SuspiciousNameCombination
-				setViewLayoutParams(toggleCharInserts, singleLineHeight, message);
-				//noinspection SuspiciousNameCombination
-				setViewLayoutParams(toggleProblemOverview, singleLineHeight, message);
-				//noinspection SuspiciousNameCombination
-				setViewLayoutParams(findViewById(R.id.toggle_wrapper), singleLineHeight, message);
-			
-				buffer.requestLayout();
 			}
+			
+			// Note: For some reason modifying the LayoutParams directly is not working.
+			// That's why we're re-setting the LayoutParams every time. Perhaps worth
+			// looking into later.
+		
+			buffer.getLayoutParams().height = message;
+			messageArea.getLayoutParams().height = message;
+		
+			//noinspection SuspiciousNameCombination
+			setViewLayoutParams(toggleCharInserts, singleLineHeight, message);
+			//noinspection SuspiciousNameCombination
+			setViewLayoutParams(toggleProblemOverview, singleLineHeight, message);
+			//noinspection SuspiciousNameCombination
+			setViewLayoutParams(findViewById(R.id.toggle_wrapper), singleLineHeight, message);
+		
+			buffer.requestLayout();
 		});
     }
     

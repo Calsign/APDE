@@ -92,6 +92,8 @@ public class BuildTaskRunner {
 	}
 	
 	private void executeWithDependencies(BuildTask task) {
+		task.setBuildContext(buildContext);
+		
 		if (halt.get()) {
 			task.fail();
 			task.stop();
@@ -109,9 +111,7 @@ public class BuildTaskRunner {
 				}
 			}
 			if (changeReady
-					&& (dep.hasChanged(buildContext).changed()
-						|| dep.treeShouldRunIfNotUpdated(buildContext)
-						|| buildContext.isPreviousFailedTask(dep))
+					&& (dep.hasChanged(buildContext).changed() || dep.treeShouldRunIfNotUpdated(buildContext))
 					&& !containsList(finishedTasks, dep)) {
 				Logger.writeLog("debug add dep name: " + dep.getName() + ", tag: " + dep.getTag() + ", changed: "
 						+ dep.hasChanged(buildContext) + ", finished: " + containsList(finishedTasks, dep), 3);
@@ -156,6 +156,7 @@ public class BuildTaskRunner {
 						} else {
 							Logger.writeLog("FAILURE in task " + dep.getName() + " or one of its dependencies", 1);
 							task.fail();
+							task.stop();
 						}
 					}
 					return true;

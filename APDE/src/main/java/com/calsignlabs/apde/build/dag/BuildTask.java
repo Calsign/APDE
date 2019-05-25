@@ -144,6 +144,8 @@ public abstract class BuildTask extends Task {
 		return changeNoticer.getDependencies();
 	}
 	
+	long lastSuccessTimestamp = 0;
+	
 	public void succeed() {
 		finish(true);
 	}
@@ -153,6 +155,11 @@ public abstract class BuildTask extends Task {
 	}
 	
 	public void finish(boolean successful) {
+		if (getBuildContext().getTimestamp() > lastSuccessTimestamp) {
+			lastSuccessTimestamp = getBuildContext().getTimestamp();
+			getBuildContext().setTaskSuccess(this, successful);
+		}
+		
 		success.set(successful);
 	}
 	
@@ -194,8 +201,13 @@ public abstract class BuildTask extends Task {
 				}
 			}
 			
-			hasChanged = changeNoticer.hasChanged(context);
-			Logger.writeLog("TASK " + getName() + " changed status: " + hasChanged, 1);
+			if (context.isPreviousFailedTask(this)) {
+				hasChanged = ChangeStatus.CHANGED;
+				Logger.writeLog("TASK " + getName() + " previously failed", 1);
+			} else {
+				hasChanged = changeNoticer.hasChanged(context);
+				Logger.writeLog("TASK " + getName() + " changed status: " + hasChanged, 1);
+			}
 			
 			if (!hasChanged.unstable()) {
 				lastTimestamp.set(context.getTimestamp());

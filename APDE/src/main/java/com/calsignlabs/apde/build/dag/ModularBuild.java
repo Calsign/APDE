@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ModularBuild {
@@ -28,7 +27,7 @@ public class ModularBuild {
 	
 	private APDE global;
 	
-	private Set<String> previousFailedTasks;
+	private Map<String, Boolean> previousTaskStatus;
 	private BuildTaskRunner runner;
 	
 	// Prettier name alias
@@ -118,6 +117,8 @@ public class ModularBuild {
 	
 	public ModularBuild(APDE global) {
 		this.global = global;
+		
+		previousTaskStatus = new HashMap<>();
 		
 		makeDag();
 	}
@@ -668,11 +669,10 @@ public class ModularBuild {
 		long start = System.currentTimeMillis();
 		
 		BuildContext context = BuildContext.create(global);
-		context.setPreviousFailedTasks(previousFailedTasks);
+		context.setPreviousTaskSucess(previousTaskStatus);
 		runner = new BuildTaskRunner(global, buildTask, context);
 		
 		runner.addOnCompleteListener(success -> {
-			previousFailedTasks = runner.getFailedTasks();
 			Logger.writeLog(String.format(Locale.US, "Finished in %1$dms", System.currentTimeMillis() - start));
 			// Make some space in the console
 			for (int i = 0; i < 10; i++) {
