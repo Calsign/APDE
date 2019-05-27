@@ -596,12 +596,18 @@ public class ModularBuild {
 	}
 	
 	public void halt() {
+		// Unstable
 //		if (runner != null) {
 //			runner.halt();
-//			previousFailedTasks = runner.getFailedTasks();
 //			BUILD_LOCK.set(false);
 //
-//			clean();
+//			runner.addOnCompleteListener(success -> {
+//				if (!success) {
+//					// Undo partial progress that potentially breaks things
+//					global.getEditor().runOnUiThread(this::clean);
+//				}
+//				return true;
+//			});
 //		}
 	}
 	
