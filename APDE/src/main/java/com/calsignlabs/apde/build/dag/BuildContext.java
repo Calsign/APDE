@@ -44,6 +44,8 @@ public class BuildContext {
 	private Resources resources;
 	private SharedPreferences preferences;
 	
+	private List<String> previewAdditionalRequiredPermissions;
+	
 	private long timestamp;
 	
 	private Handler handler;
@@ -258,6 +260,14 @@ public class BuildContext {
 	
 	public File getAlternateBuildFolder() {
 		return alternateBuildFolder;
+	}
+	
+	public void setPreviewAdditionalRequiredPermissions(List<String> additionalRequiredPermissions) {
+		this.previewAdditionalRequiredPermissions = additionalRequiredPermissions;
+	}
+	
+	public List<String> getPreviewAdditionalRequiredPermissions() {
+		return previewAdditionalRequiredPermissions;
 	}
 	
 	/**

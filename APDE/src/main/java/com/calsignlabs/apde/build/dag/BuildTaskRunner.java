@@ -47,7 +47,6 @@ public class BuildTaskRunner {
 	
 	public void halt() {
 		halt.set(true);
-		buildTask.stop();
 	}
 	
 	public BuildContext getBuildContext() {
@@ -155,6 +154,7 @@ public class BuildTaskRunner {
 							executeWithDependencies(task);
 						} else {
 							Logger.writeLog("FAILURE in task " + dep.getName() + " or one of its dependencies", 1);
+							halt();
 							task.fail();
 							task.stop();
 						}

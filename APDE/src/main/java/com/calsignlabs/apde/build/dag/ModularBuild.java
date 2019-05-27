@@ -1,13 +1,14 @@
 package com.calsignlabs.apde.build.dag;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.support.v4.content.FileProvider;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.R;
-import com.calsignlabs.apde.build.ComponentTarget;
+import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.contrib.Library;
 
 import java.io.File;
@@ -441,6 +442,9 @@ public class ModularBuild {
 		
 		BuildTask dxDex = new DxDexBuildTask(BIN_SKETCH_CLASSES, BIN_CLASSES, compile).setName("dx dex");
 		
+		BuildTask checkPreviewerInstalled = new CheckPreviewerInstalledBuildTask(generateManifest)
+				.setName("check previewer installed");
+		
 		BuildTask previewSketchDex = new CopyBuildTask(dxDex)
 				.inFile(BIN_SKETCH_CLASSES).outFile(PREVIEW_SKETCH_DEX)
 				.setName("preview copy sketch dex");
@@ -499,6 +503,7 @@ public class ModularBuild {
 		RUN = new ContextualCompoundBuildTask(((context, tasks) -> {
 			switch (context.getComponentTarget()) {
 				case PREVIEW:
+					tasks.add(checkPreviewerInstalled);
 					tasks.add(preparePreview);
 					break;
 				case APP:
@@ -617,8 +622,6 @@ public class ModularBuild {
 	 * @param listeners
 	 */
 	public void build(ContextualizedOnCompleteListener... listeners) {
-		// TODO: check if the sketch previewer is installed
-		
 		buildInternal(RUN, new ContextualizedOnCompleteListener() {
 			@Override
 			public boolean onComplete(boolean success) {
@@ -636,11 +639,45 @@ public class ModularBuild {
 						case WATCHFACE:
 							break;
 					}
+				} else if (getContext().getPreviewAdditionalRequiredPermissions() != null) {
+					promptInstallPreviewer(getContext().getPreviewAdditionalRequiredPermissions());
 				}
 				
 				return true;
 			}
 		}, listeners);
+	}
+	
+	private void promptInstallPreviewer(List<String> newPermissions) {
+		global.getEditor().runOnUiThread(() -> {
+			AlertDialog.Builder builder = new AlertDialog.Builder(global.getEditor());
+			
+			StringBuilder message = new StringBuilder(global.getResources()
+					.getString(R.string.preview_sketch_previewer_install_dialog_message));
+			if (newPermissions.size() > 0) {
+				// Tell the user which new permissions are being installed
+				message.append("\n\n");
+				for (String permission : newPermissions) {
+					message.append(permission);
+					message.append("\n");
+				}
+			}
+			
+			builder.setTitle(R.string.preview_sketch_previewer_install_dialog_title);
+			builder.setMessage(message.toString());
+			
+			String[] newPermissionsArr = new String[newPermissions.size()];
+			
+			builder.setPositiveButton(R.string.preview_sketch_previewer_install_dialog_install_button,
+					(dialogInterface, i) -> {
+						global.getTaskManager().launchTask("sketchPreviewBuild", false, null, false,
+								new SketchPreviewerBuilder(global.getEditor(),
+										newPermissions.toArray(newPermissionsArr), true, false));
+					});
+			builder.setNegativeButton(R.string.cancel, (dialogInterface, i) -> {});
+			
+			builder.show();
+		});
 	}
 	
 	/**
