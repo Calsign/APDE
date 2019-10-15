@@ -27,7 +27,7 @@ dependencies {
     implementation 'com.android.support:support-v4:27.1.1'
     implementation 'com.android.support:recyclerview-v7:27.1.1'
     implementation 'com.android.support:wear:27.1.1'
-    compileOnly 'com.google.android.wearable:wearable:2.3.0'
+    implementation 'com.google.android.wearable:wearable:2.3.0'
 
     implementation files('libs/processing-core.jar')
 }
