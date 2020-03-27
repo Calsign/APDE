@@ -25,6 +25,14 @@
             android:key="pref_problem_overview_enable"
             android:title="@string/pref_problem_overview_enable"
             android:summary="@string/pref_problem_overview_enable_desc" />
+    
+        <android.support.v7.preference.ListPreference
+            android:key="pref_key_build_compile_timeout"
+            android:title="@string/pref_build_compile_timeout"
+            android:dependency="pref_problem_overview_enable"
+            android:entries="@array/pref_build_compile_timeout_entries"
+            android:entryValues="@array/pref_build_compile_timeout_values"
+            android:defaultValue="@string/pref_build_compile_timeout_default_value" />
         
         <android.support.v14.preference.SwitchPreference
             android:defaultValue="true"

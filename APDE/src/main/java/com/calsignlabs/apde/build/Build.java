@@ -281,12 +281,16 @@ public class Build {
 		}
 	}
 	
+	public void build(String target, ComponentTarget comp) {
+		build(target, comp, false);
+	}
+	
 	/**
 	 * @param target either "release" or "debug"
 	 */
 	@SuppressLint("WorldReadableFiles")
 	@SuppressWarnings("deprecation")
-	public void build(String target, ComponentTarget comp) {
+	public void build(String target, ComponentTarget comp, boolean stopAfterCompile) {
 		boolean debug = target.equals("debug");
 		appComponent = comp;
 		
@@ -297,14 +301,18 @@ public class Build {
 		
 		//Throughout this function, perform periodic checks to see if the user has cancelled the build
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_begin));
-		System.out.println(editor.getResources().getString(R.string.build_initializing));
+		if (!stopAfterCompile) {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_begin));
+		}
+		if (!stopAfterCompile || verbose) {
+			System.out.println(editor.getResources().getString(R.string.build_initializing));
+		}
 		
 		if (verbose) {
 			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_target_release_debug), target));
 		}
 		
-		if (debug && getAppComponent() == ComponentTarget.WATCHFACE) {
+		if (debug && getAppComponent() == ComponentTarget.WATCHFACE && !stopAfterCompile) {
 			// We want to test to make sure that a watch is available
 			// If it is, then all good
 			// If not, then stop the build and tell the user that something is wrong
@@ -366,7 +374,9 @@ public class Build {
 		//Wipe the old build folder
 		if(buildFolder.exists()) {
 			if (deleteFile(buildFolder, editor)) {
-				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_success));
+				if (!stopAfterCompile || verbose) {
+					System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_success));
+				}
 			} else if (verbose) {
 				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_failed));
 			}
@@ -389,7 +399,9 @@ public class Build {
 		Manifest manifest = null;
 		String sketchClassName = null;
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_gen_project));
+		if (!stopAfterCompile) {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_gen_project));
+		}
 		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
@@ -409,7 +421,7 @@ public class Build {
 			manifest.loadProperties(editor.getGlobalState().getProperties(buildContext), sketchName); // unsure whether to use sketchName or sketchClassName here
 			
 			// We need to do this after we load the manifest because it depends on permissions
-			if (getAppComponent() == ComponentTarget.PREVIEW) {
+			if (getAppComponent() == ComponentTarget.PREVIEW && !stopAfterCompile) {
 				// Make sure that the sketch previewer is installed
 				
 				Intent intent = new Intent("com.calsignlabs.apde.RUN_SKETCH_PREVIEW");
@@ -692,7 +704,9 @@ public class Build {
 			return;
 		}
 		
-		System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_detected_architecture), android.os.Build.CPU_ABI));
+		if (!stopAfterCompile || verbose) {
+			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_detected_architecture), android.os.Build.CPU_ABI));
+		}
 		
 		int numCores = getNumCores();
 		
@@ -745,7 +759,9 @@ public class Build {
 		// NOTE: make sure that all places where build folders are specfied
 		// (e.g. "buildFolder") it is followed by ".getAbsolutePath()"!!!!!
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_run_aapt));
+		if (!stopAfterCompile) {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_run_aapt));
+		}
 		
 		File glslFolder = null;
 		
@@ -777,11 +793,15 @@ public class Build {
 			return;
 		}
 		
-		System.out.println(); //Separator
+		if (!stopAfterCompile || verbose) {
+			System.out.println(); //Separator
+		}
 		
 		// Run AAPT
 		try {
-			System.out.println(editor.getResources().getString(R.string.build_packaging_aapt));
+			if (!stopAfterCompile || verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_packaging_aapt));
+			}
 			
 			// Create folder structure for R.java TODO why is this necessary?
 			(new File(genFolder.getAbsolutePath() + "/" + mainActivityLoc + "/")).mkdirs();
@@ -841,11 +861,15 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_run_ecj));
+		if (!stopAfterCompile) {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_run_ecj));
+		}
 		
 		//Run ECJ
 		{
-			System.out.println(editor.getResources().getString(R.string.build_compiling_ecj));
+			if (!stopAfterCompile || verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_compiling_ecj));
+			}
 			
 			Compiler compiler = new Compiler(customProblems);
 			
@@ -884,11 +908,15 @@ public class Build {
 			}
 			
 			if (success) {
-				System.out.println();
+				if (!stopAfterCompile || verbose) {
+					System.out.println();
+				}
 			} else {
 				//We have some compilation errors
-				System.out.println();
-				System.out.println(editor.getResources().getString(R.string.build_ecj_failed));
+				if (!stopAfterCompile || verbose) {
+					System.out.println();
+					System.out.println(editor.getResources().getString(R.string.build_ecj_failed));
+				}
 				
 				if (customProblems) {
 					// Don't show the "build failed" message, show the ECJ error message
@@ -898,6 +926,11 @@ public class Build {
 				}
 				return;
 			}
+		}
+		
+		if (stopAfterCompile) {
+			cleanUp();
+			return;
 		}
 		
 		if(!running.get()) { //CHECK
@@ -1662,7 +1695,9 @@ public class Build {
 			
 			String out = new String(buffer);
 			
-			System.out.println(editor.getResources().getString(R.string.build_inject_log_broadcaster_success));
+			if (verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_inject_log_broadcaster_success));
+			}
 			
 			return out;
 		} catch (IOException e) {

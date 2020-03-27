@@ -21,6 +21,8 @@ import android.graphics.drawable.AnimatedVectorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.SystemClock;
+import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
@@ -246,6 +248,10 @@ public class EditorActivity extends AppCompatActivity {
 		// the "sketch has been saved" message in the message area
 		runOnUiThread(this::autoSave);
 	};
+	
+	public ScheduledThreadPoolExecutor autoCompileTimer;
+	public ScheduledFuture<?> autoCompileTask;
+	public Runnable autoCompileAction = this::autoCompile;
 	
 	protected ComponentTarget componentTarget;
 	
@@ -936,6 +942,9 @@ public class EditorActivity extends AppCompatActivity {
 				// Do nothing
 			}
 		});
+	
+		autoSaveTimer = new ScheduledThreadPoolExecutor(1);
+		autoCompileTimer = new ScheduledThreadPoolExecutor(1);
 		
 		// Fallback component target
 		setComponentTarget(ComponentTarget.PREVIEW);
@@ -959,8 +968,6 @@ public class EditorActivity extends AppCompatActivity {
 			setComponentTarget(ComponentTarget.PREVIEW);
 			FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = false;
 		}
-		
-		autoSaveTimer = new ScheduledThreadPoolExecutor(1);
     }
 	
 	@Override
@@ -1016,6 +1023,7 @@ public class EditorActivity extends AppCompatActivity {
 	public void setComponentTarget(ComponentTarget componentTarget) {
 		this.componentTarget = componentTarget;
 		invalidateOptionsMenu();
+		scheduleAutoCompile();
 	}
 	
 	public int getSelectedCodeIndex() {
@@ -1350,6 +1358,8 @@ public class EditorActivity extends AppCompatActivity {
         supportInvalidateOptionsMenu();
         
         correctUndoRedoEnabled();
+        
+        scheduleAutoCompile();
 	}
 	
 	public void correctUndoRedoEnabled() {
@@ -1996,6 +2006,49 @@ public class EditorActivity extends AppCompatActivity {
 		}
 	}
 	
+	public void cancelAutoCompile() {
+		if (autoCompileTask != null && !autoCompileTask.isDone() && !autoCompileTask.isCancelled()) {
+			autoCompileTask.cancel(false);
+		}
+	}
+	
+	public void scheduleAutoCompile() {
+		cancelAutoCompile();
+		
+		long timeout = Long.parseLong(getGlobalState().getPref("pref_key_build_modular_compile_timeout", getGlobalState().getString(R.string.pref_build_compile_timeout)));
+				
+		if (timeout != -1L) {
+			autoCompileTask = autoCompileTimer.schedule(autoCompileAction, timeout, TimeUnit.SECONDS);
+		}
+	}
+	
+	public void autoCompile() {
+		if (isOldBuild()) {
+			runOnUiThread(() -> {
+				final BuildContext context = BuildContext.create(getGlobalState());
+				final Build builder = new Build(getGlobalState(), context);
+				
+				autoCompileTimer.schedule(() -> {
+							long start = System.currentTimeMillis();
+							
+							builder.build("debug", getComponentTarget(), true);
+							
+							if (getGlobalState().getPref("build_output_verbose", false)) {
+								System.out.println(String.format(Locale.US, "Finished in %1$dms",
+										System.currentTimeMillis() - start));
+							}
+						}, 0, TimeUnit.SECONDS);
+				
+				cancelAutoCompile();
+			});
+		} else {
+			runOnUiThread(() -> {
+				getGlobalState().getModularBuild().compile();
+				cancelAutoCompile();
+			});
+		}
+	}
+	
 	/**
 	 * Sets up the editor for a new sketch
 	 */
@@ -2159,6 +2212,8 @@ public class EditorActivity extends AppCompatActivity {
     		
     		//Add this to the recent sketches
     		getGlobalState().putRecentSketch(sketchLocation, sketchPath);
+    		
+    		scheduleAutoCompile();
     	}
 		
 		getGlobalState().writeCodeDeletionDebugStatus("after loadSketch()");
@@ -3118,42 +3173,39 @@ public class EditorActivity extends AppCompatActivity {
     		
     		container.addView(button);
     		
-    		button.setOnClickListener(new OnClickListener() {
-				@Override
-				public void onClick(View view) {
-					// A special check for the tab key... making special exceptions aren't exactly ideal, but this is probably the most concise solution (for now)...
-					KeyEvent event = c.equals("\u2192") ? new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB) : new KeyEvent(android.os.SystemClock.uptimeMillis(), c, keyboardID, 0);
+    		button.setOnClickListener(view -> {
+				// A special check for the tab key... making special exceptions aren't exactly ideal, but this is probably the most concise solution (for now)...
+				KeyEvent event = c.equals("\u2192") ? new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB) : new KeyEvent(SystemClock.uptimeMillis(), c, keyboardID, 0);
+				
+				boolean dispatched = false;
+				
+				if (extraHeaderView != null) {
+					// If the find/replace toolbar is open
 					
-					boolean dispatched = false;
+					EditText findTextField = extraHeaderView.findViewById(R.id.find_replace_find_text);
+					EditText replaceTextField = extraHeaderView.findViewById(R.id.find_replace_replace_text);
 					
-					if (extraHeaderView != null) {
-						// If the find/replace toolbar is open
-						
-						EditText findTextField = (EditText) extraHeaderView.findViewById(R.id.find_replace_find_text);
-						EditText replaceTextField = (EditText) extraHeaderView.findViewById(R.id.find_replace_replace_text);
-						
-						if (findTextField != null) {
-							if (findTextField.hasFocus()) {
-								findTextField.dispatchKeyEvent(event);
+					if (findTextField != null) {
+						if (findTextField.hasFocus()) {
+							findTextField.dispatchKeyEvent(event);
+							dispatched = true;
+						} else {
+							if (replaceTextField != null && replaceTextField.hasFocus()) {
+								replaceTextField.dispatchKeyEvent(event);
 								dispatched = true;
-							} else {
-								if (replaceTextField != null && replaceTextField.hasFocus()) {
-									replaceTextField.dispatchKeyEvent(event);
-									dispatched = true;
-								}
 							}
 						}
 					}
-					
-					if (!dispatched) {
-						getSelectedCodeArea().dispatchKeyEvent(event);
-					}
-					
-					// Provide haptic feedback (if the user has vibrations enabled)
-					if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_vibrate", true))
-						((android.os.Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(10); //10 millis
 				}
-    		});
+				
+				if (!dispatched) {
+					getSelectedCodeArea().dispatchKeyEvent(event);
+				}
+				
+				// Provide haptic feedback (if the user has vibrations enabled)
+				if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_vibrate", true))
+					((Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(10); //10 millis
+			});
     	}
     }
 	
@@ -3211,6 +3263,10 @@ public class EditorActivity extends AppCompatActivity {
 		
 		return text;
 	}
+	
+	private boolean isOldBuild() {
+		return !getGlobalState().getPref("pref_build_modular_enable", true);
+	}
     
     /**
      * Builds and launches the current sketch
@@ -3255,14 +3311,12 @@ public class EditorActivity extends AppCompatActivity {
     	// Clear the console
     	((TextView) findViewById(R.id.console)).setText("");
     	
-    	boolean oldBuild = !getGlobalState().getPref("pref_build_modular_enable", true);
-    	
-    	if (oldBuild) {
+    	if (isOldBuild()) {
     		final BuildContext context = BuildContext.create(getGlobalState());
 			final Build builder = new Build(getGlobalState(), context);
 	
 			//Build the sketch in a separate thread
-			Thread buildThread = new Thread(() -> {
+			Runnable task = () -> {
 				building = true;
 				changeRunStopIcon(true);
 				
@@ -3280,8 +3334,10 @@ public class EditorActivity extends AppCompatActivity {
 				
 				changeRunStopIcon(false);
 				building = false;
-			});
-			buildThread.start();
+			};
+		
+			cancelAutoCompile();
+			autoCompileTask = autoCompileTimer.schedule(task, 0, TimeUnit.SECONDS);
 		} else {
 			building = true;
 			changeRunStopIcon(true);
@@ -3607,6 +3663,19 @@ public class EditorActivity extends AppCompatActivity {
 			setViewLayoutParams(toggleProblemOverview, singleLineHeight, message);
 			//noinspection SuspiciousNameCombination
 			setViewLayoutParams(findViewById(R.id.toggle_wrapper), singleLineHeight, message);
+			
+			if (charInserts) {
+				// Correct height of all of the char insert buttons
+				findViewById(R.id.char_insert_tray).getLayoutParams().height = message;
+				LinearLayout charInsertContainer = findViewById(R.id.char_insert_tray_list);
+				charInsertContainer.getLayoutParams().height = message;
+				for (int i = 0; i < charInsertContainer.getChildCount(); i++) {
+					View view = charInsertContainer.getChildAt(i);
+					LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) view.getLayoutParams();
+					params.height = message;
+					view.setLayoutParams(params);
+				}
+			}
 		
 			buffer.requestLayout();
 		});
@@ -3809,6 +3878,11 @@ public class EditorActivity extends AppCompatActivity {
 				// We have at least one warning
 				warningExt(compilerProblems.get(0).getMessage());
 			}
+		}
+    	
+    	if (compilerProblems.isEmpty() && messageType != MessageType.MESSAGE) {
+    		// Clear the previous error/warning
+    		messageExt("");
 		}
 		
 		runOnUiThread(() -> {
@@ -4369,20 +4443,14 @@ public class EditorActivity extends AppCompatActivity {
 		
 		//Fancy stuff...
 		//StackOverflow: http://stackoverflow.com/questions/2620444/how-to-prevent-a-dialog-from-closing-when-a-button-is-clicked
-		dialog.setOnShowListener(new DialogInterface.OnShowListener() {
-			@Override
-			public void onShow(final DialogInterface dialog) {
-				Button b = ((AlertDialog) dialog).getButton(AlertDialog.BUTTON_NEUTRAL);
-				b.setOnClickListener(new View.OnClickListener() {
-					@Override
-					public void onClick(View view) {
-						launchManageLibraries();
-						//It would be better if the dialog didn't fade out when we pressed the button... but this will have to do
-						//...it's better than having it reappear when we back out of the library manager
-						dialog.dismiss();
-					}
-				});
-			}
+		dialog.setOnShowListener(dialog1 -> {
+			Button b = ((AlertDialog) dialog1).getButton(AlertDialog.BUTTON_NEUTRAL);
+			b.setOnClickListener(view -> {
+				launchManageLibraries();
+				//It would be better if the dialog didn't fade out when we pressed the button... but this will have to do
+				//...it's better than having it reappear when we back out of the library manager
+				dialog1.dismiss();
+			});
 		});
 		
 		dialog.setCanceledOnTouchOutside(true);
@@ -4504,30 +4572,27 @@ public class EditorActivity extends AppCompatActivity {
 			return;
 		}
 		
-		final TextView tv = (TextView) findViewById(R.id.console);
+		final TextView tv = findViewById(R.id.console);
 		
 		// Add the text
 		tv.append(msg);
 		
-		final ScrollView scroll = ((ScrollView) findViewById(R.id.console_scroller));
-		final HorizontalScrollView scrollX = ((HorizontalScrollView) findViewById(R.id.console_scroller_x));
+		final ScrollView scroll = findViewById(R.id.console_scroller);
+		final HorizontalScrollView scrollX = findViewById(R.id.console_scroller_x);
 		
 		// Scroll to the bottom (if the user has this feature enabled)
 		if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("pref_scroll_lock", true))
-			scroll.post(new Runnable() {
-				@Override
-				public void run() {
-					// Scroll to the bottom
-					scroll.fullScroll(ScrollView.FOCUS_DOWN);
-					
-					scrollX.post(new Runnable() {
-						public void run() {
-							// Don't scroll horizontally at all...
-							// TODO This doesn't really work
-							scrollX.scrollTo(0, 0);
-						}
-					});
-			}});
+			scroll.post(() -> {
+				// Scroll to the bottom
+				//scroll.fullScroll(ScrollView.FOCUS_DOWN);
+				scroll.scrollTo(0, scroll.getHeight());
+				
+				scrollX.post(() -> {
+					// Don't scroll horizontally at all...
+					// TODO This doesn't really work
+					scrollX.scrollTo(0, 0);
+				});
+		});
 	}
 	
 	// Listener class for managing message area drag events

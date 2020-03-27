@@ -191,7 +191,8 @@ public class ModularBuild {
 		// STUFF
 		
 		BuildTask reloadLibraries = new LambdaBuildTask(context -> {
-			context.reloadLibraries(); return true;
+			context.reloadLibraries();
+			return true;
 		}, "Reload libraries", sketchbookLibrariesFolder).setName("reload libraries");
 		
 		BuildTask generateManifest = new GenerateManifestBuildTask(MANIFEST, sketchName, sketchProperties, init).setName("generate manifest");
@@ -718,9 +719,9 @@ public class ModularBuild {
 		runner.addOnCompleteListener(success -> {
 			Logger.writeLog(String.format(Locale.US, "Finished in %1$dms", System.currentTimeMillis() - start));
 			// Make some space in the console
-			for (int i = 0; i < 10; i++) {
-				System.out.println();
-			}
+//			for (int i = 0; i < 10; i++) {
+//				System.out.println();
+//			}
 			BUILD_LOCK.set(false);
 			return true;
 		});

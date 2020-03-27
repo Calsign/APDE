@@ -344,6 +344,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		bindPreferenceSummaryToValue(frag.findPreference("pref_sketchbook_location"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_key_autosave_timeout"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_key_undo_redo_keep"));
+		bindPreferenceSummaryToValue(frag.findPreference("pref_key_build_compile_timeout"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_build_modular_log_level"));
 		bindPreferenceSummaryToValue(frag.findPreference("pref_vr_default_renderer"));
 	}

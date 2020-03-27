@@ -265,6 +265,7 @@ public class CodeEditText extends AppCompatEditText {
 					
 					editor.correctUndoRedoEnabled();
 					editor.scheduleAutoSave();
+					editor.scheduleAutoCompile();
 				}
 				
 				@Override
