@@ -3265,7 +3265,9 @@ public class EditorActivity extends AppCompatActivity {
 	}
 	
 	private boolean isOldBuild() {
-		return !getGlobalState().getPref("pref_build_modular_enable", true);
+		// TODO modular build is fully disabled for now
+		//return !getGlobalState().getPref("pref_build_modular_enable", true);
+		return true;
 	}
     
     /**
