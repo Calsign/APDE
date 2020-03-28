@@ -175,6 +175,7 @@
 	<string name="pref_problem_overview_enable_desc">Extract problems from compiler</string>
 	<string name="pref_build_compile_timeout">Auto-compile Timeout</string>
 	<string-array name="pref_build_compile_timeout_entries">
+		<item>Immediate</item>
 		<item>1 second</item>
 		<item>2 seconds</item>
 		<item>3 seconds</item>
@@ -186,6 +187,7 @@
 		<item>Never</item>
 	</string-array>
 	<string-array name="pref_build_compile_timeout_values">
+		<item>0</item>
 		<item>1</item>
 		<item>2</item>
 		<item>3</item>

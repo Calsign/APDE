@@ -76,6 +76,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -257,6 +258,7 @@ public class EditorActivity extends AppCompatActivity {
 	
 	private boolean FLAG_SCREEN_OVERLAY_INSTALL_ANYWAY = false;
 	private boolean FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = false;
+	private boolean FLAG_FIRST_AUTO_COMPILE = true;
 	
     @SuppressLint("NewApi")
 	@Override
@@ -637,6 +639,7 @@ public class EditorActivity extends AppCompatActivity {
 						TextView messageArea = findViewById(R.id.message);
 						View console = findViewById(R.id.console_wrapper);
 						View content = findViewById(R.id.content);
+						FrameLayout autoCompileProgress = findViewById(R.id.auto_compile_progress_wrapper);
 						
 						if (message == -1) {
 							message = buffer.getHeight();
@@ -648,7 +651,7 @@ public class EditorActivity extends AppCompatActivity {
 							oldCodeHeight = codePager.getHeight();
 						}
 						
-						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
+						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight();
 						
 						if (totalHeight > oldCodeHeight) {
 							codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, totalHeight));
@@ -706,12 +709,13 @@ public class EditorActivity extends AppCompatActivity {
 				} else {
 					View consoleArea = findViewById(R.id.console_wrapper);
 					ViewGroup content = findViewById(R.id.content);
+					FrameLayout autoCompileProgress = findViewById(R.id.auto_compile_progress_wrapper);
 					
 					if (keyboardVisible) {
 						//Configure the layout for the absence of the keyboard
 						// Configure the layout for the absence of the keyboard
 						
-						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
+						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight();
 						
 						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight, false));
 						consoleArea.startAnimation(new ResizeAnimation<LinearLayout>(consoleArea, ResizeAnimation.DEFAULT, totalHeight - codePager.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight, false));
@@ -736,7 +740,7 @@ public class EditorActivity extends AppCompatActivity {
 					} else if (!firstResize) {
 						// Fix console height
 						// This is necessary when toggling between fullscreen and non-fullscreen
-						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
+						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight();
 						consoleArea.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, totalHeight - codePager.getHeight()));
 					}
 				}
@@ -968,6 +972,8 @@ public class EditorActivity extends AppCompatActivity {
 			setComponentTarget(ComponentTarget.PREVIEW);
 			FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = false;
 		}
+		
+		toggleAutoCompileIndicator(false);
     }
 	
 	@Override
@@ -1023,7 +1029,9 @@ public class EditorActivity extends AppCompatActivity {
 	public void setComponentTarget(ComponentTarget componentTarget) {
 		this.componentTarget = componentTarget;
 		invalidateOptionsMenu();
-		scheduleAutoCompile();
+		if (!FLAG_FIRST_AUTO_COMPILE) {
+			scheduleAutoCompile(true);
+		}
 	}
 	
 	public int getSelectedCodeIndex() {
@@ -1359,7 +1367,10 @@ public class EditorActivity extends AppCompatActivity {
         
         correctUndoRedoEnabled();
         
-        scheduleAutoCompile();
+        scheduleAutoCompile(true);
+        // We schedule three times when we start up (loading the sketch, changing component target,
+		// and here). So this flag makes it only happen once.
+        FLAG_FIRST_AUTO_COMPILE = false;
 	}
 	
 	public void correctUndoRedoEnabled() {
@@ -2008,45 +2019,63 @@ public class EditorActivity extends AppCompatActivity {
 	
 	public void cancelAutoCompile() {
 		if (autoCompileTask != null && !autoCompileTask.isDone() && !autoCompileTask.isCancelled()) {
-			autoCompileTask.cancel(false);
+			autoCompileTask.cancel(true);
 		}
 	}
 	
-	public void scheduleAutoCompile() {
+	public void scheduleAutoCompile(boolean immediate) {
 		cancelAutoCompile();
 		
-		long timeout = Long.parseLong(getGlobalState().getPref("pref_key_build_modular_compile_timeout", getGlobalState().getString(R.string.pref_build_compile_timeout)));
-				
+		long timeout = Long.parseLong(getGlobalState().getPref("pref_key_build_compile_timeout", getGlobalState().getString(R.string.pref_build_compile_timeout)));
+		
 		if (timeout != -1L) {
-			autoCompileTask = autoCompileTimer.schedule(autoCompileAction, timeout, TimeUnit.SECONDS);
+			findViewById(R.id.auto_compile_placeholder).setBackgroundColor(getResources().getColor(R.color.bar_overlay));
+			autoCompileTask = autoCompileTimer.schedule(autoCompileAction, immediate ? 0 : timeout, TimeUnit.SECONDS);
 		}
 	}
 	
 	public void autoCompile() {
-		if (isOldBuild()) {
-			runOnUiThread(() -> {
+		runOnUiThread(() -> {
+			if (isOldBuild()) {
 				final BuildContext context = BuildContext.create(getGlobalState());
 				final Build builder = new Build(getGlobalState(), context);
 				
 				autoCompileTimer.schedule(() -> {
-							long start = System.currentTimeMillis();
-							
-							builder.build("debug", getComponentTarget(), true);
-							
-							if (getGlobalState().getPref("build_output_verbose", false)) {
-								System.out.println(String.format(Locale.US, "Finished in %1$dms",
-										System.currentTimeMillis() - start));
-							}
-						}, 0, TimeUnit.SECONDS);
-				
-				cancelAutoCompile();
-			});
-		} else {
-			runOnUiThread(() -> {
+					long start = System.currentTimeMillis();
+					
+					toggleAutoCompileIndicator(true);
+					
+					findViewById(R.id.auto_compile_placeholder).setBackgroundColor(getResources().getColor(R.color.message_back));
+					builder.build("debug", getComponentTarget(), true);
+					
+					toggleAutoCompileIndicator(false);
+					
+					if (getGlobalState().getPref("build_output_verbose", false)) {
+						System.out.println(String.format(Locale.US, "Finished in %1$dms",
+								System.currentTimeMillis() - start));
+					}
+				}, 0, TimeUnit.SECONDS);
+			} else {
 				getGlobalState().getModularBuild().compile();
-				cancelAutoCompile();
-			});
-		}
+			}
+			
+			cancelAutoCompile();
+		});
+	}
+	
+	public void toggleAutoCompileIndicator(boolean enable) {
+		runOnUiThread(() -> {
+			ProgressBar progress = findViewById(R.id.auto_compile_progress);
+			FrameLayout placeholder = findViewById(R.id.auto_compile_placeholder);
+			
+			progress.setVisibility(enable ? View.VISIBLE : View.GONE);
+			placeholder.setVisibility(enable ? View.GONE : View.VISIBLE);
+			
+			if (android.os.Build.VERSION.SDK_INT >= 21) {
+				progress.setProgressBackgroundTintList(ColorStateList.valueOf(getResources().getColor(android.R.color.transparent)));
+				progress.setIndeterminateTintList(ColorStateList.valueOf(getResources().getColor(R.color.bar_overlay)));
+			}
+		});
 	}
 	
 	/**
@@ -2213,7 +2242,9 @@ public class EditorActivity extends AppCompatActivity {
     		//Add this to the recent sketches
     		getGlobalState().putRecentSketch(sketchLocation, sketchPath);
     		
-    		scheduleAutoCompile();
+    		if (!FLAG_FIRST_AUTO_COMPILE) {
+				scheduleAutoCompile(true);
+			}
     	}
 		
 		getGlobalState().writeCodeDeletionDebugStatus("after loadSketch()");
@@ -3324,7 +3355,11 @@ public class EditorActivity extends AppCompatActivity {
 				
 				long start = System.currentTimeMillis();
 				
+				toggleAutoCompileIndicator(true);
+				
 				builder.build("debug", getComponentTarget());
+				
+				toggleAutoCompileIndicator(false);
 				
 				System.out.println(String.format(Locale.US, "Finished in %1$dms",
 						System.currentTimeMillis() - start));
@@ -3635,20 +3670,21 @@ public class EditorActivity extends AppCompatActivity {
 			// Obtain some references
 			View console = findViewById(R.id.console_wrapper);
 			View content = findViewById(R.id.content);
+			FrameLayout autoCompileProgress = findViewById(R.id.auto_compile_progress_wrapper);
 			
 			if (isSelectedCodeAreaInitialized()) {
-				int consoleCodeHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0)  - tabBarContainer.getHeight();
+				int consoleCodeHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight();
 				int consoleHeight = consoleCodeHeight - codePager.getHeight();
 				
 				// We can't shrink the console if it's hidden (like when the keyboard is visible)...
 				// ...so shrink the code area instead
 				if (consoleHeight < 0 || keyboardVisible) {
 					codePager.setLayoutParams(new LinearLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-							content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
+							content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight()));
 					console.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0));
 				} else {
 					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-							content.getHeight() - codePager.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
+							content.getHeight() - codePager.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight()));
 				}
 			}
 			
@@ -3706,6 +3742,7 @@ public class EditorActivity extends AppCompatActivity {
 		final View console = findViewById(R.id.console_wrapper);
 		final View code = getSelectedCodeAreaScroller();
 		final TextView messageArea = (TextView) findViewById(R.id.message);
+		final FrameLayout autoCompileProgress = findViewById(R.id.auto_compile_progress_wrapper);
 		
 		if (firstResize) {
 			//Use some better layout parameters - this switches from fractions/layout weights to absolute values
@@ -3722,14 +3759,14 @@ public class EditorActivity extends AppCompatActivity {
 			//This is the DESIRED height, not the ACTUAL height
 			message = getTextViewHeight(getApplicationContext(), messageArea.getText().toString(), messageArea.getTextSize(), findViewById(R.id.message_char_insert_wrapper).getWidth(), messageArea.getPaddingTop());
 
-			int consoleSize = content.getHeight() - code.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
+			int consoleSize = content.getHeight() - code.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight();
 
 			//We can't shrink the console if it's hidden (like when the keyboard is visible)...
 			//...so shrink the code area instead
 			if (consoleSize < 0 || consoleWasHidden || keyboardVisible) {
 				console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
 				code.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-						content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight()));
+						content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight()));
 
 				consoleWasHidden = true;
 			} else {
@@ -4633,12 +4670,14 @@ public class EditorActivity extends AppCompatActivity {
 						message = findViewById(R.id.buffer).getHeight();
 					}
 					
+					FrameLayout autoCompileProgress = findViewById(R.id.auto_compile_progress_wrapper);
+					
 					// An important note for understanding the following code:
 					// The tab bar is actually inside the code area pager, so the height of "code"
 					// includes the height of the tab bar
 					
 					// Calculate maximum possible code view height
-					int maxCode = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight();
+					int maxCode = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight();
 					
 					// Find relative movement for this event
 					int y = (int) event.getY() - touchOff;

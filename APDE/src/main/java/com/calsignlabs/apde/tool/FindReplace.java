@@ -256,8 +256,6 @@ public class FindReplace implements Tool {
 					findReplaceToolbar.getLayoutParams().height = 0; // We want to animate in
 					context.getEditor().setExtraHeaderView(findReplaceToolbar);
 					
-					TabLayout codeTabStrip = context.getEditor().getCodeTabStrip();
-					
 					float height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40, context.getResources().getDisplayMetrics());
 					
 					ViewPager codePager = context.getEditor().getCodePager();

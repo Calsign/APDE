@@ -165,6 +165,29 @@
 				</FrameLayout>
 			</LinearLayout>
 			
+			<FrameLayout
+				android:id="@+id/auto_compile_progress_wrapper"
+				android:layout_width="match_parent"
+				android:layout_height="2dp">
+				
+				<ProgressBar
+					android:id="@+id/auto_compile_progress"
+					android:indeterminate="true"
+					android:indeterminateOnly="true"
+					style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+					android:background="@color/message_back"
+					android:layout_width="match_parent"
+					android:layout_height="32dp"
+					android:layout_gravity="center_vertical" />
+				
+				<FrameLayout
+					android:id="@+id/auto_compile_placeholder"
+					android:visibility="gone"
+					android:background="@color/message_back"
+					android:layout_width="match_parent"
+					android:layout_height="match_parent" />
+			</FrameLayout>
+			
 			<LinearLayout
 				android:id="@+id/console_wrapper"
 				android:layout_width="match_parent"
