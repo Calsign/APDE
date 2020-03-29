@@ -1,84 +1,58 @@
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <PreferenceCategory
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <androidx.preference.PreferenceCategory
         android:title="@string/prop_manifest"
         android:key="prop_manifest" >
         
-        <EditTextPreference android:key="prop_pretty_name"
+        <com.takisoft.preferencex.EditTextPreference android:key="prop_pretty_name"
             android:title="@string/prop_pretty_name"
-            android:defaultValue=""
-            android:maxLines="1"
-	        android:selectAllOnFocus="true"
-	        android:singleLine="true"
-	        android:inputType="text" />
+            android:defaultValue="" />
 		
-		<EditTextPreference android:key="prop_package_name"
-			android:title="@string/prop_package_name"
-			android:maxLines="1"
-			android:selectAllOnFocus="true"
-			android:singleLine="true"
-			android:inputType="text" />
+		<com.takisoft.preferencex.EditTextPreference android:key="prop_package_name"
+			android:title="@string/prop_package_name" />
         
-        <EditTextPreference android:key="prop_version_code"
+        <com.takisoft.preferencex.EditTextPreference android:key="prop_version_code"
             android:title="@string/prop_version_code"
-            android:defaultValue="@string/prop_version_code_default"
-            android:maxLines="1"
-	        android:selectAllOnFocus="true"
-	        android:singleLine="true"
-	        android:inputType="number" />
+            android:defaultValue="@string/prop_version_code_default" />
         
-        <EditTextPreference android:key="prop_pretty_version"
+        <com.takisoft.preferencex.EditTextPreference android:key="prop_pretty_version"
             android:title="@string/prop_pretty_version"
-            android:defaultValue="@string/prop_pretty_version_default"
-            android:maxLines="1"
-	        android:selectAllOnFocus="true"
-	        android:singleLine="true"
-	        android:inputType="text" />
+            android:defaultValue="@string/prop_pretty_version_default" />
         
-        <Preference android:key="prop_permissions"
+        <androidx.preference.Preference android:key="prop_permissions"
             android:dialogTitle="@string/prop_permissions"
         	android:summary="@string/prop_permissions_desc"        
         	android:title="@string/prop_permissions" />
         
-        <EditTextPreference android:key="prop_target_sdk"
+        <com.takisoft.preferencex.EditTextPreference android:key="prop_target_sdk"
             android:title="@string/prop_target_sdk"
-            android:defaultValue="@string/prop_target_sdk_default"
-            android:maxLines="1"
-	        android:selectAllOnFocus="true"
-	        android:singleLine="true"
-	        android:maxLength="2"
-	        android:inputType="number" />
+            android:defaultValue="@string/prop_target_sdk_default" />
 		
-		<EditTextPreference android:key="prop_min_sdk"
+		<com.takisoft.preferencex.EditTextPreference android:key="prop_min_sdk"
 			android:title="@string/prop_min_sdk"
-			android:defaultValue="@string/prop_min_sdk_default"
-			android:maxLines="1"
-			android:selectAllOnFocus="true"
-			android:singleLine="true"
-			android:maxLength="2"
-			android:inputType="number" />
+			android:defaultValue="@string/prop_min_sdk_default" />
         
-        <ListPreference android:key="prop_orientation"
+        <androidx.preference.ListPreference android:key="prop_orientation"
 	        android:title="@string/prop_orientation"
 	        android:entries="@array/prop_orientation_orientations"
 	        android:entryValues="@array/prop_orientation_orientation_values"
 	        android:defaultValue="@string/prop_orientation_default" />
-	</PreferenceCategory>
+	</androidx.preference.PreferenceCategory>
 	
-    <PreferenceCategory
+    <androidx.preference.PreferenceCategory
         android:title="@string/prop_sketch_folder"
         android:key="prop_sketch_folder">
         
-        <Preference android:key="prop_show_sketch_folder"
+        <androidx.preference.Preference android:key="prop_show_sketch_folder"
             android:dialogTitle="@string/prop_show_sketch_folder"
         	android:title="@string/prop_show_sketch_folder" />
         
-    	<Preference android:key="prop_add_file"
+    	<androidx.preference.Preference android:key="prop_add_file"
             android:dialogTitle="@string/prop_add_file"
         	android:summary="@string/prop_add_file_desc"
         	android:title="@string/prop_add_file" />
     	
-    	<Preference android:key="prop_change_icon"
+    	<androidx.preference.Preference android:key="prop_change_icon"
             android:dialogTitle="@string/prop_change_icon"
         	android:title="@string/prop_change_icon" />
-    </PreferenceCategory>
-</PreferenceScreen>
+    </androidx.preference.PreferenceCategory>
+</androidx.preference.PreferenceScreen>

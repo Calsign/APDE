@@ -114,14 +114,11 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
 		
-		((Toolbar) findViewById(R.id.toolbar)).setNavigationOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
-					getSupportFragmentManager().popBackStack();
-				} else {
-					finish();
-				}
+		((Toolbar) findViewById(R.id.toolbar)).setNavigationOnClickListener(v -> {
+			if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+				getSupportFragmentManager().popBackStack();
+			} else {
+				finish();
 			}
 		});
 		
