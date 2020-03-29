@@ -15,45 +15,40 @@
         <!-- Unfortunately, this also affects the regular action overflow menu. -->
         <item name="android:layout_marginStart">4dp</item>
     </style>
-	
+    
     <style name="FullscreenTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:actionBarStyle">@style/FullscreenActionBarStyle</item>
+        <item name="android:windowActionBarOverlay">false</item>
         <item name="android:windowBackground">@color/activity_background</item>
-        <item name="buttonBarStyle">@style/ButtonBar</item>
-        <item name="buttonBarButtonStyle">@style/ButtonBarButton</item>
+        <item name="buttonBarStyle">?android:attr/buttonBarStyle</item>
+        <item name="buttonBarButtonStyle">?android:attr/buttonBarButtonStyle</item>
         <item name="colorPrimary">@color/bar_overlay</item>
         <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
         <item name="windowActionModeOverlay">true</item>
         <item name="alertDialogTheme">@style/Theme.AppCompat.Dialog.Alert</item>
     </style>
     
-    <style name="PreferencesTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowContentOverlay">@null</item>
+    <style name="FullscreenActionBarStyle" parent="Widget.AppCompat.ActionBar">
+        <item name="android:background">@color/bar_overlay</item>
+        <item name="background">@color/bar_overlay</item>
+        <item name="backgroundStacked">@color/bar_overlay</item>
+    </style>
+    
+    <style name="PreferencesTheme" parent="Theme.AppCompat.NoActionBar" >
+        <item name="android:actionBarStyle">@style/PreferencesActionBarStyle</item>
         <item name="android:windowBackground">@color/activity_background</item>
-        <item name="buttonBarStyle">@style/ButtonBar</item>
-        <item name="buttonBarButtonStyle">@style/ButtonBarButton</item>
         <item name="colorPrimary">@color/bar_overlay</item>
         <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
         <item name="windowActionModeOverlay">true</item>
-		<item name="preferenceTheme">@style/CustomPreferenceThemeOverlay</item>
+        <item name="preferenceTheme">@style/CustomPreferenceThemeOverlay</item>
     </style>
     
-    <style name="ButtonBar">
-        <item name="android:paddingLeft">2dp</item>
-        <item name="android:paddingTop">5dp</item>
-        <item name="android:paddingRight">2dp</item>
-        <item name="android:paddingBottom">0dp</item>
-    </style>
-    
-    <style name="ButtonBarButton"></style>
-    
-    <!-- http://stackoverflow.com/a/31309996 -->
-    <style name="CodeTabStrip" parent="Widget.Design.TabLayout">
-        <item name="tabTextAppearance">@style/CodeTabStripTextAppearance</item>
-    </style>
-    
-    <style name="CodeTabStripTextAppearance" parent="TextAppearance.Design.Tab">
-        <item name="textAllCaps">false</item>
+    <style name="PreferencesActionBarStyle" parent="android:style/Widget.Holo.ActionBar">
+        <item name="android:background">@color/bar_overlay</item>
+        <item name="android:displayOptions">showHome|homeAsUp|showTitle</item>
+        <item name="colorPrimary">@color/bar_overlay</item>
     </style>
     
     <style name="CustomPreferenceThemeOverlay" parent="PreferenceThemeOverlay">
@@ -64,5 +59,16 @@
     
     <style name="CustomPreferenceFragment" parent="PreferenceFragment.Material">
         <item name="android:divider">@null</item>
+    </style>
+    
+    <!-- http://stackoverflow.com/a/31309996 -->
+    <style name="CodeTabStrip" parent="Widget.Design.TabLayout">
+        <item name="tabTextAppearance">@style/CodeTabStripTextAppearance</item>
+    </style>
+    
+    <!-- http://stackoverflow.com/a/31309996 -->
+    <style name="CodeTabStripTextAppearance" parent="TextAppearance.Design.Tab">
+        <item name="android:textAllCaps">false</item>
+        <item name="textAllCaps">false</item>
     </style>
 </resources>
