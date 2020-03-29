@@ -9,12 +9,14 @@ android {
         targetSdkVersion 28
         versionCode 31
         versionName "0.5.1"
+        multiDexEnabled true
     }
 
     buildTypes {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-project.txt'
+            multiDexKeepProguard file('multidex-config.pro')
 
             lintOptions {
                 disable 'MissingTranslation'
@@ -24,6 +26,7 @@ android {
         debug {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-project.txt'
+            multiDexKeepProguard file('multidex-config.pro')
         }
     }
 
@@ -42,12 +45,21 @@ android {
 
 dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    implementation 'com.android.support:multidex:1.0.3'
     implementation project(':aFileChooser')
     implementation files('libs/android-core.jar')
     implementation files('libs/antlr.jar')
     implementation files('libs/core-1.51.0.0.jar')
     implementation files('libs/dx.jar')
-    implementation files('libs/ecj.jar')
+    implementation files('libs/org.eclipse.jdt.core.jar')
+    implementation files('libs/org.eclipse.core.runtime.jar')
+    implementation files('libs/org.eclipse.osgi.jar')
+    implementation files('libs/org.eclipse.equinox.common.jar')
+    implementation files('libs/org.eclipse.core.resources.jar')
+    implementation files('libs/org.eclipse.core.contenttype.jar')
+    implementation files('libs/org.eclipse.equinox.preferences.jar')
+    implementation files('libs/org.eclipse.core.jobs.jar')
+    implementation files('libs/jdi.jar')
     implementation files('libs/JavaMode.jar')
     implementation files('libs/jsch-0.1.51.jar')
     implementation files('libs/kellinwood-logging-android-1.4.jar')

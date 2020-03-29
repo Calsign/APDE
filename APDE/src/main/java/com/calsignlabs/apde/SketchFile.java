@@ -8,6 +8,8 @@ import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 
+import com.calsignlabs.apde.build.CompilerProblem;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -20,14 +22,16 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 
 /*
  * Utility class for storing information about files
  * This started out as a meta... but is has grown to incorporate far more information than that
  */
-public class SketchFile implements Parcelable {
+public class SketchFile extends BareSketchFile implements Parcelable {
 	//Filename meta
 	private String title;
 	private String suffix;
@@ -42,9 +46,6 @@ public class SketchFile implements Parcelable {
 	//Whether or not we should save this (because we need this for some reason...?)
 	private boolean enabled;
 	
-	//The offset of this file into the pre-processed, combined JAVA file
-	private int preprocOffset;
-	
 	//Current text
 	protected String text;
 	
@@ -57,8 +58,16 @@ public class SketchFile implements Parcelable {
 	protected int scrollY;
 	
 	protected CodeAreaFragment fragment;
-
+	
 	protected boolean isExample;
+	
+	private List<CompilerProblem> compilerProblems;
+	
+	/**
+	 * Used only for java files, the number of characters added to the start of the file for the
+	 * import statement.
+	 */
+	public int javaImportHeaderOffset = 0;
 	
 	public static class FileChange implements Parcelable {
 		public int changeIndex;
@@ -68,14 +77,14 @@ public class SketchFile implements Parcelable {
 		//Current selection
 		public int beforeSelectionStart;
 		public int beforeSelectionEnd;
-
+		
 		public int afterSelectionStart;
 		public int afterSelectionEnd;
 		
 		//Current scroll position;
 		public int beforeScrollX;
 		public int beforeScrollY;
-
+		
 		public int afterScrollX;
 		public int afterScrollY;
 		
@@ -182,19 +191,8 @@ public class SketchFile implements Parcelable {
 		setTitle(title);
 		setSuffix(".pde");
 		
-		undo = new LinkedList<FileChange>();
-		redo = new LinkedList<FileChange>();
-		
-//		FileChange state = new FileChange();
-//		state.changeIndex = 0;
-//		state.beforeText = "";
-//		state.afterText = "";
-//		state.selectionStart = 0;
-//		state.selectionEnd = 0;
-//		state.scrollX = 0;
-//		state.scrollY = 0;
-//		
-//		undo.push(state);
+		undo = new LinkedList<>();
+		redo = new LinkedList<>();
 		
 		text = "";
 		selectionStart = 0;
@@ -203,41 +201,8 @@ public class SketchFile implements Parcelable {
 		scrollY = 0;
 		
 		enabled = true;
-	}
-	
-	public SketchFile(String title, EditorActivity context) {
-		initFragment();
 		
-		EditText code = fragment.getCodeEditText();
-		HorizontalScrollView scrollerX = fragment.getCodeScrollerX();
-		ScrollView scrollerY = fragment.getCodeScroller();
-		
-		setTitle(title);
-		setSuffix(".pde");
-		
-		undo = new LinkedList<FileChange>();
-		redo = new LinkedList<FileChange>();
-		
-//		FileChange state = new FileChange();
-//		state.changeIndex = 0;
-//		state.beforeText = code.getText().toString();
-//		state.afterText = code.getText().toString();
-//		state.selectionStart = code.getSelectionStart();
-//		state.selectionEnd = code.getSelectionEnd();
-//		state.scrollX = scrollerX.getScrollX();
-//		state.scrollY = scrollerY.getScrollY();
-//		
-//		undo.push(state);
-		
-		text = code.getText().toString();
-		selectionStart = code.getSelectionStart();
-		selectionEnd = code.getSelectionEnd();
-		scrollX = scrollerX.getScrollX();
-		scrollY = scrollerY.getScrollY();
-		
-		enabled = true;
-		
-//		System.out.println("setting tab " + title + ", scrollX: " + scrollX + ", scrollY: " + scrollY);
+		compilerProblems = new ArrayList<>();
 	}
 	
 	public SketchFile(String title, String text, int selectionStart, int selectionEnd, int scrollX, int scrollY) {
@@ -246,19 +211,8 @@ public class SketchFile implements Parcelable {
 		setTitle(title);
 		setSuffix(".pde");
 		
-		undo = new LinkedList<FileChange>();
-		redo = new LinkedList<FileChange>();
-		
-//		FileChange state = new FileChange();
-//		state.changeIndex = 0;
-//		state.beforeText = text;
-//		state.afterText = text;
-//		state.selectionStart = selectionStart;
-//		state.selectionEnd = selectionEnd;
-//		state.scrollX = scrollX;
-//		state.scrollY = scrollY;
-//		
-//		undo.push(state);
+		undo = new LinkedList<>();
+		redo = new LinkedList<>();
 		
 		this.text = text;
 		this.selectionStart = selectionStart;
@@ -267,6 +221,8 @@ public class SketchFile implements Parcelable {
 		this.scrollY = scrollY;
 		
 		enabled = true;
+		
+		compilerProblems = new ArrayList<>();
 	}
 	
 	public static void getTextChange(FileChange change, String oldText, String newText) {
@@ -280,13 +236,13 @@ public class SketchFile implements Parcelable {
 		
 		while (changeStart < oldText.length() && changeStart < newText.length()
 				&& oldText.charAt(changeStart) == newText.charAt(changeStart)) {
-			changeStart ++;
+			changeStart++;
 		}
 		
 		while (changeEnd < oldText.length() && changeEnd < newText.length()
 				&& minLength - changeEnd > changeStart
 				&& oldText.charAt(oldText.length() - changeEnd - 1) == newText.charAt(newText.length() - changeEnd - 1)) {
-			changeEnd ++;
+			changeEnd++;
 		}
 		
 		int beforeEnd = oldText.length() - changeEnd;
@@ -476,19 +432,15 @@ public class SketchFile implements Parcelable {
 		return enabled;
 	}
 	
-	/**
-	 * @return the filename as it is saved (name + suffix)
-	 */
-	public String getFilename() {
-		return title + suffix;
+	@Override
+	public String getTitle() {
+		// If this isn't a PDE file, add the custom suffix to the title
+		return suffix.equals(".pde") ? title : title + suffix;
 	}
 	
-	/**
-	 * @return the tab name as it is displayed in the GUI
-	 */
-	public String getTitle() {
-		//If this isn't a PDE file, add the custom suffix to the title
-		return suffix.equals(".pde") ? title : title + suffix;
+	@Override
+	public String getRawTitle() {
+		return title;
 	}
 	
 	/**
@@ -498,9 +450,7 @@ public class SketchFile implements Parcelable {
 		this.title = title;
 	}
 	
-	/**
-	 * @return
-	 */
+	@Override
 	public String getSuffix() {
 		return suffix;
 	}
@@ -512,9 +462,7 @@ public class SketchFile implements Parcelable {
 		this.suffix = suffix;
 	}
 	
-	/**
-	 * @return
-	 */
+	@Override
 	public String getText() {
 		return text;
 	}
@@ -572,23 +520,11 @@ public class SketchFile implements Parcelable {
 		//Update the code area selection
 		code.setSelection(getSelectionStart(), getSelectionEnd());
 		
-		code.post(new Runnable() {
-			public void run() {
-				code.updateBracketMatch();
-			}
-		});
+		code.post(code::updateBracketMatch);
 		
-		scrollerX.post(new Runnable() {
-			public void run() {
-				scrollerX.scrollTo(getScrollX(), 0);
-			}
-		});
+		scrollerX.post(() -> scrollerX.scrollTo(getScrollX(), 0));
 		
-		scrollerY.post(new Runnable() {
-			public void run() {
-				scrollerY.scrollTo(0, getScrollY());
-			}
-		});
+		scrollerY.post(() -> scrollerY.scrollTo(0, getScrollY()));
 		
 		context.supportInvalidateOptionsMenu();
 	}
@@ -607,23 +543,6 @@ public class SketchFile implements Parcelable {
 		return selectionEnd;
 	}
 	
-//	/**
-//	 * @param selection
-//	 */
-//	private void setSelection(int selection) {
-//		selectionStart = selection;
-//		selectionEnd = selection;
-//	}
-//	
-//	/**
-//	 * @param selectionStart
-//	 * @param selectionEnd
-//	 */
-//	private void setSelection(int selectionStart, int selectionEnd) {
-//		this.selectionStart = selectionStart;
-//		this.selectionEnd = selectionEnd;
-//	}
-	
 	/**
 	 * @return
 	 */
@@ -637,15 +556,6 @@ public class SketchFile implements Parcelable {
 	public int getScrollY() {
 		return scrollY;
 	}
-	
-//	/**
-//	 * @param scrollX
-//	 * @param scrollY
-//	 * /
-//	public void setScroll(int scrollX, int scrollY) {
-//		this.scrollX = scrollX;
-//		this.scrollY = scrollY;
-//	}
 	
 	/**
 	 * Writes this file in the directory specified by the path
@@ -672,7 +582,7 @@ public class SketchFile implements Parcelable {
 			
 		} finally {
 			//Close the output stream
-			if(outputStream != null) {
+			if (outputStream != null) {
 				try {
 					outputStream.close();
 				} catch (IOException e) {
@@ -693,9 +603,9 @@ public class SketchFile implements Parcelable {
 	public boolean readData(String filename) {
 		//Create the input stream
 		BufferedInputStream inputStream = null;
-    	String output = "";
-    	boolean success;
-    	
+		StringBuilder output = new StringBuilder();
+		boolean success;
+		
 		try {
 			//Read the data
 			
@@ -704,21 +614,22 @@ public class SketchFile implements Parcelable {
 			byte[] contents = new byte[1024];
 			int bytesRead = 0;
 			
-			while((bytesRead = inputStream.read(contents)) != -1)
-				output += new String(contents, 0, bytesRead);
+			while ((bytesRead = inputStream.read(contents)) != -1) {
+				output.append(new String(contents, 0, bytesRead));
+			}
 			
 			//Set the data
-			text = output;
+			text = handleBadChars(output.toString());
 			
 			success = true;
-		} catch(Exception e) { //Errors
+		} catch (Exception e) { //Errors
 			e.printStackTrace();
 			
 			success = false;
 		} finally {
 			//Close the input stream
 			try {
-				if(inputStream != null)
+				if (inputStream != null)
 					inputStream.close();
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -728,25 +639,9 @@ public class SketchFile implements Parcelable {
 		return success;
 	}
 	
-	/**
-	 * @return
-	 */
-	public int getPreprocOffset() {
-		return preprocOffset;
-	}
-	
-	/**
-	 * @param preprocOffset
-	 */
-	public void setPreprocOffset(int preprocOffset) {
-		this.preprocOffset = preprocOffset;
-	}
-	
-	/**
-	 * @param extra
-	 */
-	public void addPreprocOffset(int extra) {
-		preprocOffset += extra;
+	private static String handleBadChars(String string) {
+		// Convert all newlines to something we know how to deal with
+		return string.replaceAll("\\R", "\n");
 	}
 	
 	private void initFragment() {
@@ -786,7 +681,7 @@ public class SketchFile implements Parcelable {
 	}
 	
 	//Only used when converting to a parcel
-	public int tabNum = -1;
+	protected int tabNum = -1;
 	
 	@Override
 	public int describeContents() {
@@ -802,8 +697,6 @@ public class SketchFile implements Parcelable {
 		dest.writeList(redo);
 		
 		dest.writeByte((byte) (enabled ? 1 : 0));
-		
-		dest.writeInt(preprocOffset);
 		
 		dest.writeInt(tabNum);
 		
@@ -822,15 +715,13 @@ public class SketchFile implements Parcelable {
 		title = source.readString();
 		suffix = source.readString();
 		
-		undo = new LinkedList<FileChange>();
-		redo = new LinkedList<FileChange>();
+		undo = new LinkedList<>();
+		redo = new LinkedList<>();
 		
 		source.readList(undo, getClass().getClassLoader());
 		source.readList(redo, getClass().getClassLoader());
 		
 		enabled = source.readByte() != 0;
-		
-		preprocOffset = source.readInt();
 		
 		tabNum = source.readInt();
 		
@@ -841,6 +732,8 @@ public class SketchFile implements Parcelable {
 		
 		scrollX = source.readInt();
 		scrollY = source.readInt();
+		
+		compilerProblems = new ArrayList<>();
 	}
 	
 	public static final Parcelable.Creator<SketchFile> CREATOR = new Parcelable.Creator<SketchFile>() {
@@ -901,9 +794,13 @@ public class SketchFile implements Parcelable {
 		}
 		
 		JSONArray undoArray = history.getJSONArray("undo");
-		for (int i = 0; i < undoArray.length(); i ++) undo.push(new FileChange(undoArray.getJSONObject(i)));
+		for (int i = 0; i < undoArray.length(); i++) {
+			undo.push(new FileChange(undoArray.getJSONObject(i)));
+		}
 		JSONArray redoArray = history.getJSONArray("redo");
-		for (int i = 0; i < redoArray.length(); i ++) redo.push(new FileChange(redoArray.getJSONObject(i)));
+		for (int i = 0; i < redoArray.length(); i++) {
+			redo.push(new FileChange(redoArray.getJSONObject(i)));
+		}
 	}
 	
 	/**
@@ -917,5 +814,24 @@ public class SketchFile implements Parcelable {
 		MessageDigest hasher = MessageDigest.getInstance("MD5");
 		hasher.update(text.getBytes());
 		return (new BigInteger(1, hasher.digest())).toString(16);
+	}
+	
+	/**
+	 * Process a list of compiler problems: determine which ones belong in this tab and then update
+	 * their information in accordance with the text of this tab.
+	 *
+	 * @param problems
+	 */
+	public void setCompilerProblems(List<CompilerProblem> problems, int i) {
+		compilerProblems.clear();
+		for (CompilerProblem problem : problems) {
+			if (problem.sketchFile.getIndex() == i) {
+				compilerProblems.add(problem);
+			}
+		}
+	}
+	
+	public List<CompilerProblem> getCompilerProblems() {
+		return compilerProblems;
 	}
 }

@@ -6,6 +6,8 @@
     <color name="error_back">#89440F</color>
     <color name="message_text">#000000</color>
     <color name="error_text">#FFFFFF</color>
+    <color name="warning_back">#b1a525</color>
+    <color name="warning_text">#FFFFFF</color>
     <color name="drawer_default_color">#EEEEEE</color>
     <color name="holo_select">#ff33b5e5</color>
     <color name="holo_select_light">#7733b5e5</color>

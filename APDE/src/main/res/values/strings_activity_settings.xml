@@ -108,6 +108,34 @@
 	<string name="pref_build_check_screen_overlay">Enable Screen Overlay Check</string>
 	<string name="pref_build_check_screen_overlay_desc">Check for screen overlay apps that prevent installation before build</string>
 	
+	<string name="pref_build_modular">Modular Build</string>
+	<string name="pref_build_modular_enable">Enable Modular Build</string>
+	
+	<string name="pref_build_modular_clean">Clean Build</string>
+	<string name="pref_build_modular_clean_desc">Remove all build files</string>
+	<string name="pref_build_modular_parallel">Parallel Build</string>
+	<string name="pref_build_modular_parallel_desc">Use multiple cores, if available; requires app restart</string>
+	<string name="pref_build_modular_log_level">Log Level</string>
+	<string-array name="pref_build_modular_log_level_entries">
+		<item>Off</item>
+		<item>Normal</item>
+		<item>Debug 1</item>
+		<item>Debug 2</item>
+		<item>Debug 3</item>
+		<item>Debug 4</item>
+		<item>Debug 5</item>
+	</string-array>
+	<string-array name="pref_build_modular_log_level_values">
+		<item>-1</item>
+		<item>0</item>
+		<item>1</item>
+		<item>2</item>
+		<item>3</item>
+		<item>4</item>
+		<item>5</item>
+	</string-array>
+	<string name="pref_build_modular_log_level_default_value">0</string>
+	
 	<string name="pref_build_preview">Preview Mode</string>
 	<string name="pref_build_preview_permissions">Change Previewer Permissions</string>
 	<string name="pref_build_preview_permissions_reinstall_dialog_title">Reinstall Sketch Previewer</string>
@@ -141,6 +169,38 @@
 	<string name="pref_auto_indent">Auto Indentation</string>
 	<string name="pref_curly_brace_insertion">Close Code Blocks</string>
 	<string name="pref_curly_brace_insertion_desc">Assist in placement of curly braces</string>
+	
+	<string name="pref_problem_overview">Problem Overview</string>
+	<string name="pref_problem_overview_enable">Enable Problem Overview</string>
+	<string name="pref_problem_overview_enable_desc">Extract problems from compiler</string>
+	<string name="pref_build_compile_timeout">Auto-compile Timeout</string>
+	<string-array name="pref_build_compile_timeout_entries">
+		<item>Immediate</item>
+		<item>1 second</item>
+		<item>2 seconds</item>
+		<item>3 seconds</item>
+		<item>5 seconds</item>
+		<item>10 seconds</item>
+		<item>15 seconds</item>
+		<item>20 seconds</item>
+		<item>30 seconds</item>
+		<item>Never</item>
+	</string-array>
+	<string-array name="pref_build_compile_timeout_values">
+		<item>0</item>
+		<item>1</item>
+		<item>2</item>
+		<item>3</item>
+		<item>5</item>
+		<item>10</item>
+		<item>15</item>
+		<item>20</item>
+		<item>30</item>
+		<item>-1</item>
+	</string-array>
+	<string name="pref_build_compile_timeout_default_value">2</string>
+	<string name="pref_problem_overview_highlight">Highlight Problems</string>
+	<string name="pref_problem_overview_highlight_desc">Errors and warnings underlined in code</string>
 	
 	<!-- About -->
 	

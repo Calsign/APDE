@@ -22,6 +22,7 @@ import android.view.View;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 
+import com.calsignlabs.apde.build.CompilerProblem;
 import com.calsignlabs.apde.tool.Tool;
 
 import org.xml.sax.SAXException;
@@ -40,6 +41,8 @@ import processing.data.XML;
  * Custom EditText for syntax highlighting, auto-indent, etc.
  */
 public class CodeEditText extends AppCompatEditText {
+	protected SketchFile sketchFile;
+	
 	private Context context;
 	private float textSize = 14;
 	
@@ -48,6 +51,10 @@ public class CodeEditText extends AppCompatEditText {
 	private static Paint bracketMatch;
 	private static Paint blackPaint;
 	private static Paint whitePaint;
+	
+	// Compiler problem paints
+	private static Paint compilerErrorPaint;
+	private static Paint compilerWarningPaint;
 	
 	// Lists of styles
 	public static HashMap<String, TextPaint> styles;
@@ -79,6 +86,10 @@ public class CodeEditText extends AppCompatEditText {
 			this.len = len;
 			this.paint = paint;
 		}
+	}
+	
+	public void setSketchFile(SketchFile sketchFile) {
+		this.sketchFile = sketchFile;
 	}
 	
 	private enum EditType {
@@ -155,6 +166,19 @@ public class CodeEditText extends AppCompatEditText {
 		whitePaint.setStyle(Paint.Style.FILL);
 		whitePaint.setColor(0xFFFFFFFF);
 		
+		float problemUnderlineSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1.5f, getResources().getDisplayMetrics());
+		
+		// TODO maybe define these compiler problem paints in the syntax highlighting file?
+		compilerErrorPaint = new Paint();
+		compilerErrorPaint.setStyle(Paint.Style.STROKE);
+		compilerErrorPaint.setStrokeWidth(problemUnderlineSize);
+		compilerErrorPaint.setColor(0xFFBD1515);
+		
+		compilerWarningPaint = new Paint();
+		compilerWarningPaint.setStyle(Paint.Style.STROKE);
+		compilerWarningPaint.setStrokeWidth(problemUnderlineSize);
+		compilerWarningPaint.setColor(0xFFEAD61B);
+		
 		//Initialize the list of styles
 		styles = new HashMap<String, TextPaint>();
 		
@@ -198,11 +222,10 @@ public class CodeEditText extends AppCompatEditText {
 					}
 					
 					EditorActivity editor = ((APDE) context.getApplicationContext()).getEditor();
-					SketchFile meta = editor.getSelectedSketchFile();
 					
 					if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("pref_key_undo_redo", true)) {
 						if (!FLAG_NO_UNDO_SNAPSHOT) {
-							meta.clearRedo();
+							sketchFile.clearRedo();
 							
 							EditType editType;
 							
@@ -220,12 +243,12 @@ public class CodeEditText extends AppCompatEditText {
 									break;
 							}
 							
-							meta.update(editor, true);
+							sketchFile.update(editor, true);
 							
 							if (editType.equals(lastEditType) && SystemClock.uptimeMillis() - lastUpdate < UNDO_UPDATE_TIME) {
 								//If this is the same edit type (and not too much time has passed), merge it with the last
 								//We have to use .uptimeMillis() because .threadTimeMillis() doesn't run continuously - the thread pauses...
-								meta.mergeTop();
+								sketchFile.mergeTop();
 							}
 							
 							lastUpdate = SystemClock.uptimeMillis();
@@ -236,12 +259,13 @@ public class CodeEditText extends AppCompatEditText {
 						}
 					} else {
 						if (!FLAG_NO_UNDO_SNAPSHOT) {
-							meta.update(editor, false);
+							sketchFile.update(editor, false);
 						}
 					}
 					
 					editor.correctUndoRedoEnabled();
 					editor.scheduleAutoSave();
+					editor.scheduleAutoCompile(false);
 				}
 				
 				@Override
@@ -563,6 +587,7 @@ public class CodeEditText extends AppCompatEditText {
 	@Override 
 	protected void onSelectionChanged(int selStart, int selEnd) {
 		updateBracketMatch();
+		updateCursorCompilerProblem();
 	}
 	
 	public void updateBracketMatch() {
@@ -634,6 +659,38 @@ public class CodeEditText extends AppCompatEditText {
 		}
 	}
 	
+	/**
+	 * Display a compiler problem (error or warning) message when the user places the cursor
+	 * over the underlined text corresponding to that problem.
+	 */
+	public void updateCursorCompilerProblem() {
+		// Don't do this at all for text selection, only cursor movement
+		if (getSelectionStart() == getSelectionEnd() && sketchFile != null && sketchFile.getCompilerProblems() != null) {
+			int line = getCurrentLine();
+			
+			// Find the cursor position into the line by searching left for the first newline
+			int newlinePos = getSelectionStart() - 1;
+			while (newlinePos > 0 && getText().charAt(newlinePos) != '\n') {
+				newlinePos --;
+			}
+			int cursorInLine = getSelectionStart() - newlinePos;
+			
+			for (CompilerProblem problem : sketchFile.getCompilerProblems()) {
+				if (line == problem.line && cursorInLine > problem.start && cursorInLine <= problem.start + problem.length + 1) {
+					EditorActivity editor = ((APDE) context.getApplicationContext()).getEditor();
+					
+					if (problem.isError()) {
+						editor.errorExt(problem.getMessage());
+					} else {
+						editor.warningExt(problem.getMessage());
+					}
+					
+					break;
+				}
+			}
+		}
+	}
+	
 	public void addHighlight(int pos, int len, Paint paint) {
 		highlights.add(new Highlight(pos, len, paint));
 	}
@@ -657,10 +714,15 @@ public class CodeEditText extends AppCompatEditText {
 	 * @return the number of the currently selected line
 	 */
 	public int getCurrentLine() {
-		if(getSelectionStart() > -1)
+		if (getLayout() != null && getSelectionStart() > -1) {
 			return getLayout().getLineForOffset(getSelectionStart());
+		}
 		
 		return -1;
+	}
+	
+	public int offsetForLine(int line) {
+		return offsetForLine(getText().toString(), line);
 	}
 	
 	/**
@@ -670,9 +732,9 @@ public class CodeEditText extends AppCompatEditText {
 	 * @param line
 	 * @return
 	 */
-	public int offsetForLine(int line) {
+	public static int offsetForLine(String text, int line) {
 		//Get a list of lines
-		String[] lines = getText().toString().split("\n");
+		String[] lines = text.split("\n");
 		
 		//Count up to the specified line
 		int off = 0;
@@ -681,9 +743,9 @@ public class CodeEditText extends AppCompatEditText {
 			off += lines[i].length() + 1;
 		
 		//We don't want to return values that are too big...
-		if(off > getText().length())
-			off = getText().length();
-		//...or to small
+		if(off > text.length())
+			off = text.length();
+		//...or too small
 		if(off < 0)
 			off = 0;
 		
@@ -710,7 +772,7 @@ public class CodeEditText extends AppCompatEditText {
 		//We don't want to return values that are too big
 		if(off > getText().length())
 			off = getText().length();
-		//...or to small
+		//...or too small
 		if(off < 0)
 			off = 0;
 		
@@ -718,8 +780,12 @@ public class CodeEditText extends AppCompatEditText {
 	}
 	
 	public int lineForOffset(int offset) {
+		return lineForOffset(getText().toString(), offset);
+	}
+	
+	public static int lineForOffset(String text, int offset) {
 		//Get a list of lines
-		String[] lines = getText().toString().split("\n");
+		String[] lines = text.split("\n");
 		
 		int off = 0;
 		for(int i = 0; i < lines.length; i ++) {
@@ -766,6 +832,15 @@ public class CodeEditText extends AppCompatEditText {
 					tokens[i].display(canvas);
 				else if(tokens[i].lineNum > bottomVis)
 					break;
+			}
+			
+			if (sketchFile.getCompilerProblems() != null
+					&& PreferenceManager.getDefaultSharedPreferences(getContext()).getBoolean("pref_problem_overview_highlight", true)) {
+				for (CompilerProblem problem : sketchFile.getCompilerProblems()) {
+					if (problem.line >= topVis && problem.line <= bottomVis) {
+						displayCompilerProblem(problem, canvas);
+					}
+				}
 			}
 			
 			//"{}", "()", "[]" open / close matching
@@ -1044,7 +1119,7 @@ public class CodeEditText extends AppCompatEditText {
 		
 		protected void updatePaint(String nextNonSpace) {
 			Keyword keyword = getKeyword(text, nextNonSpace.equals("("));
-			if(keyword != null) {
+			if (keyword != null) {
 				paint = keyword.paint();
 				isCustomPaint = true;
 			} else
@@ -1076,12 +1151,33 @@ public class CodeEditText extends AppCompatEditText {
 			float charWidth = getPaint().measureText("m");
 			
 			//Calculate coordinates
-			float x = (xOffset + offset * charWidth);
+			float x = xOffset + offset * charWidth;
 			float y = lineOffset + lineHeight * (lineNum + 1);
 			
 			//Draw highlighted text
 			canvas.drawText(text, x, y, customPaint);
 		}
+	}
+	
+	protected void displayCompilerProblem(CompilerProblem problem, Canvas canvas) {
+		float lineHeight = getLineHeight();
+		float lineOffset = -getLayout().getLineDescent(0);
+		float xOffset = getCompoundPaddingLeft();
+		float charWidth = getPaint().measureText("m");
+		
+		float xStart = xOffset + problem.start * charWidth;
+		float xEnd = xOffset + (problem.start + problem.length) * charWidth;
+		float y = lineOffset + lineHeight * (problem.line + 1.2f);
+		
+		// TODO this is currently a line. Do we want to make it squiggly like in most IDEs?
+		canvas.drawLine(xStart, y, xEnd, y, problem.error ? compilerErrorPaint : compilerWarningPaint);
+	}
+	
+	public int getYOffsetForLine(int line) {
+		float lineHeight = getLineHeight();
+		float lineOffset = -getLayout().getLineDescent(0);
+		
+		return (int) (lineOffset + lineHeight * line);
 	}
 	
 	public void refreshTextSize() {

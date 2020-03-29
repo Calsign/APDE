@@ -100,7 +100,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 					if(file.exists()) {
 						if(isZipExtension(FileUtils.getExtension(path))) {
 							//Make sure that this library doesn't already exist...
-							if(new Library(ContributionManager.detectLibraryName(file)).getLibraryFolder((APDE) getApplicationContext()).exists()) {
+							if(new Library(ContributionManager.detectLibraryName(file)).getLibraryFolder(((APDE) getApplicationContext()).getLibrariesFolder()).exists()) {
 								alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_already_installed));
 							} else {
 								addZipLibrary(file);
@@ -459,8 +459,8 @@ public class LibraryManagerActivity extends AppCompatActivity {
 				title.setText(Html.fromHtml(toHtmlLinks(lib.getName())));
 				author.setText(Html.fromHtml(toHtmlLinks(
 						String.format(getApplication().getString(R.string.library_manager_library_author_by),
-						lib.getAuthorList((APDE) getApplicationContext())))));
-				desc.setText(Html.fromHtml(toHtmlLinks(lib.getSentence((APDE) getApplicationContext()))));
+						lib.getAuthorList(((APDE) getApplicationContext()).getLibrariesFolder())))));
+				desc.setText(Html.fromHtml(toHtmlLinks(lib.getSentence(((APDE) getApplicationContext()).getLibrariesFolder()))));
 				
 				title.setMovementMethod(LinkMovementMethod.getInstance());
 				author.setMovementMethod(LinkMovementMethod.getInstance());

@@ -16,6 +16,7 @@ public class ResizeAnimation<T extends ViewGroup> extends Animation {
 	private float mFromWidth;
 	
 	private boolean allowGone;
+	private boolean preserveMatchParent;
 	
 	public static final int DEFAULT = -42;
 	
@@ -43,6 +44,20 @@ public class ResizeAnimation<T extends ViewGroup> extends Animation {
 	 * @param allowGone
 	 */
 	public ResizeAnimation(View v, float fromWidth, float fromHeight, float toWidth, float toHeight, boolean allowGone) {
+		this(v, fromWidth, fromHeight, toWidth, toHeight, allowGone, true);
+	}
+	
+	/**
+	 * Specify DEFAULT for any value to use defaults.
+	 *
+	 * @param v
+	 * @param fromWidth
+	 * @param fromHeight
+	 * @param toWidth
+	 * @param toHeight
+	 * @param allowGone
+	 */
+	public ResizeAnimation(View v, float fromWidth, float fromHeight, float toWidth, float toHeight, boolean allowGone, boolean preserveMatchParent) {
 		mToHeight = toHeight;
 		mToWidth = toWidth;
 		mFromHeight = fromHeight;
@@ -50,14 +65,15 @@ public class ResizeAnimation<T extends ViewGroup> extends Animation {
 		mView = v;
 		
 		this.allowGone = allowGone;
+		this.preserveMatchParent = preserveMatchParent;
 		
 		setDuration(200);
 		
-		// Load defaults
-		if (mToHeight == DEFAULT) mToHeight = v.getHeight();
-		if (mToWidth == DEFAULT) mToWidth = v.getWidth();
-		if (mFromHeight == DEFAULT) mFromHeight = v.getHeight();
-		if (mFromWidth == DEFAULT) mFromWidth = v.getWidth();
+		// Load defaults, but preserve MATCH_PARENT if necessary
+		if (mToHeight == DEFAULT) mToHeight = preserveMatchParent && v.getLayoutParams().height == -1 ? -1 : v.getHeight();
+		if (mToWidth == DEFAULT) mToWidth = preserveMatchParent && v.getLayoutParams().width == -1 ? -1 : v.getWidth();
+		if (mFromHeight == DEFAULT) mFromHeight = preserveMatchParent && v.getLayoutParams().height == -1 ? -1 : v.getHeight();
+		if (mFromWidth == DEFAULT) mFromWidth = preserveMatchParent && v.getLayoutParams().width == -1 ? -1 : v.getWidth();
 	}
 	
 	@Override

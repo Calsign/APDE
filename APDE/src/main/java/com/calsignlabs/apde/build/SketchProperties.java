@@ -1,8 +1,6 @@
 package com.calsignlabs.apde.build;
-
-import android.content.Context;
-
 import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.build.dag.BuildContext;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -18,7 +16,7 @@ import java.util.Properties;
 
 public class SketchProperties {
 	protected Properties properties;
-	protected Context context;
+	protected BuildContext context;
 	
 	public static final String KEY_PACKAGE_NAME = "manifest.package";
 	public static final String KEY_DISPLAY_NAME = "manifest.label";
@@ -29,11 +27,7 @@ public class SketchProperties {
 	public static final String KEY_ORIENTATION = "manifest.orientation";
 	public static final String KEY_PERMISSIONS = "manifest.permissions";
 	
-	public SketchProperties(Context context) {
-		this(context, null);
-	}
-	
-	public SketchProperties(Context context, File propertiesFile) {
+	public SketchProperties(BuildContext context, File propertiesFile) {
 		this.context = context;
 		try {
 			if (propertiesFile != null && propertiesFile.exists()) {
@@ -51,7 +45,7 @@ public class SketchProperties {
 	
 	protected Properties getDefaults() throws IOException {
 		Properties defaults = new Properties();
-		loadProperties(defaults, context.getAssets().open("sketch.properties.default"));
+		loadProperties(defaults, context.getResources().getAssets().open("sketch.properties.default"));
 		return defaults;
 	}
 	

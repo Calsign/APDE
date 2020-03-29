@@ -7,10 +7,14 @@ import android.view.View;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.build.dag.BuildContext;
+import com.calsignlabs.apde.build.dag.ModularBuild;
 import com.calsignlabs.apde.support.CustomProgressDialog;
 
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class TaskManager {
 	private APDE context;
@@ -18,11 +22,19 @@ public class TaskManager {
 	private HashMap<String, Task> tasks;
 	private HashMap<Task, Thread> taskThreads;
 	
+	private ExecutorService threadPool;
+	
 	public TaskManager(APDE context) {
 		this.context = context;
 		
 		tasks = new HashMap<>();
 		taskThreads = new HashMap<>();
+		
+		if (context.getPref("pref_build_modular_parallel", true)) {
+			threadPool = Executors.newFixedThreadPool(BuildContext.getNumCores());
+		} else {
+			threadPool = Executors.newFixedThreadPool(1);
+		}
 	}
 	
 	/**
@@ -92,10 +104,20 @@ public class TaskManager {
 	
 	public void startBackgroundTask(String tag) {
 		final Task task = getTask(tag);
-
+		
 		if (task.isRunning()) {
-			//That's a no-no
+			// That's a no-no
 			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.task_start_fail_already_running_tag), tag));
+			return;
+		}
+		
+		startBackgroundTask(task);
+	}
+	
+	public void startBackgroundTask(final Task task) {
+		if (task.isRunning()) {
+			// That's a no-no
+			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.task_start_fail_already_running_tag), task.getTitle()));
 			return;
 		}
 
@@ -107,7 +129,7 @@ public class TaskManager {
 		final Task task = getTask(tag);
 		
 		if (task.isRunning()) {
-			//That's a no-no
+			// That's a no-no
 			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.task_start_fail_already_running_tag), tag));
 			return;
 		}
@@ -123,33 +145,31 @@ public class TaskManager {
 			return;
 		}
 		
-		task.setContext(context);
-		
-		Thread taskThread = new Thread(new Runnable() {
-			@Override
-			public void run() {
+		Runnable runnable = () -> {
+			taskThreads.put(task, Thread.currentThread());
+			task.setContext(context);
+			
+			try {
+				task.start();
+				long start = System.currentTimeMillis();
+				task.run();
+				task.setDuration(System.currentTimeMillis() - start);
+				task.stop();
+			} catch (InterruptedException e) {
+				// Do nothing
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				// Try to close resources...
 				try {
-					task.start();
-					task.run();
 					task.stop();
-				} catch (InterruptedException e) {
-					// Do nothing
-				} catch (Exception e) {
-					e.printStackTrace();
-				} finally {
-					//Try to close resources...
-					try {
-						task.stop();
-					} catch (Exception e2) {
-						e2.printStackTrace();
-					}
+				} catch (Exception e2) {
+					e2.printStackTrace();
 				}
 			}
-		});
+		};
 		
-		taskThreads.put(task, taskThread);
-		
-		taskThread.start();
+		threadPool.submit(runnable);
 	}
 	
 	public void moveToBackground(final Task task) {

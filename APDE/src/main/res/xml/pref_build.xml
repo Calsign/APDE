@@ -21,6 +21,14 @@
 			android:key="pref_build_check_screen_overlay"
 			android:title="@string/pref_build_check_screen_overlay"
 			android:summary="@string/pref_build_check_screen_overlay_desc" />
+	
+		<!-- TODO modular build is fully disabled for now -->
+<!--		<androidx.preference.Preference-->
+<!--			android:title="@string/pref_build_modular"-->
+<!--			android:fragment="com.calsignlabs.apde.support.StockPreferenceFragment" >-->
+<!--		-->
+<!--			<extra android:name="resource" android:value="pref_build_modular" />-->
+<!--		</androidx.preference.Preference>-->
     </androidx.preference.PreferenceCategory>
 	
 	<androidx.preference.PreferenceCategory

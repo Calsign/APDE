@@ -29,6 +29,7 @@ import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.ComponentTarget;
+import com.calsignlabs.apde.build.dag.BuildContext;
 import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import org.spongycastle.asn1.x509.X509Name;
@@ -1285,15 +1286,13 @@ public class ExportSignedPackage implements Tool {
 		//Clear the console
     	((TextView) context.getEditor().findViewById(R.id.console)).setText("");
 		
-		builder = new Build(context);
+		builder = new Build(context, BuildContext.create(context));
 		builder.setKey(keystoreFile.getText().toString(), keystorePassword.getText().toString().toCharArray(), (String) alias.getSelectedItem(), aliasPassword.getText().toString().toCharArray());
 		
-		new Thread(new Runnable() {
-			public void run() {
-				exporting = true;
-				builder.build("release", ComponentTarget.deserialize(componentTarget.getSelectedItemPosition()));
-				exporting = false;
-			}
+		new Thread(() -> {
+			exporting = true;
+			builder.build("release", ComponentTarget.deserialize(componentTarget.getSelectedItemPosition()));
+			exporting = false;
 		}).start();
 	}
 	

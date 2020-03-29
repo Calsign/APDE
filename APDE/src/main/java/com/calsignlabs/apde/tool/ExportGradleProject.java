@@ -7,6 +7,7 @@ import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.build.Build;
+import com.calsignlabs.apde.build.dag.BuildContext;
 
 import java.io.File;
 
@@ -61,15 +62,13 @@ public class ExportGradleProject implements Tool {
 		//Clear the console
     	((TextView) context.getEditor().findViewById(R.id.console)).setText("");
 		
-		final Build builder = new Build(context);
+		final Build builder = new Build(context, BuildContext.create(context));
 		
-		new Thread(new Runnable() {
-			public void run() {
-				exporting = true;
-				// TODO
-				System.out.println("not yet implemented");
-				exporting = false;
-			}
+		new Thread(() -> {
+			exporting = true;
+			// TODO
+			System.out.println("not yet implemented");
+			exporting = false;
 		}).start();
 	}
 	

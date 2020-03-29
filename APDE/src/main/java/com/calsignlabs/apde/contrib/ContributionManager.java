@@ -37,7 +37,7 @@ public class ContributionManager {
 		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
 		
 		//Copy to the libraries folder
-		if (!copyFile(libraryDir, library.getLibraryFolder(context))) {
+		if (!copyFile(libraryDir, library.getLibraryFolder(context.getLibrariesFolder()))) {
 			System.err.println(context.getResources().getString(R.string.install_dir_library_failure_unexpected_error));
 			return false;
 		}
@@ -48,11 +48,11 @@ public class ContributionManager {
 		//We dex during the install to save build time
 		
 		//Make sure that we have a dexed library directory
-		library.getLibraryJarDexFolder(context).mkdir();
+		library.getLibraryJarDexFolder(context.getLibrariesFolder()).mkdir();
 		
 		try {
-			File[] jars = library.getLibraryJars(context);
-			File[] dexJars = library.getLibraryDexJars(context);
+			File[] jars = library.getLibraryJars(context.getLibrariesFolder());
+			File[] dexJars = library.getLibraryDexJars(context.getLibrariesFolder());
 			
 			//Dex all of the files...
 			for(int i = 0; i < jars.length; i ++) {
@@ -60,7 +60,9 @@ public class ContributionManager {
 			}
 		} catch (NullPointerException e) {
 			//If we can't find the JARs
-			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.install_library_failure_poor_structure), library.getLibraryJarFolder(context)));
+			System.err.println(String.format(Locale.US,
+					context.getResources().getString(R.string.install_library_failure_poor_structure),
+					library.getLibraryJarFolder(context.getLibrariesFolder())));
 			e.printStackTrace();
 			return false;
 		}
@@ -82,7 +84,7 @@ public class ContributionManager {
 		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
 		
 		//Extract to the libraries folder
-		if(!extractFile(libraryZip, library.getLibraryFolder(context))) {
+		if(!extractFile(libraryZip, library.getLibraryFolder(context.getLibrariesFolder()))) {
 			System.err.println(context.getResources().getString(R.string.install_zip_library_failure_unexpected_error));
 			return false;
 		}
@@ -93,11 +95,11 @@ public class ContributionManager {
 		//We dex during the install to save build time
 		
 		//Make sure that we have a dexed library directory
-		library.getLibraryJarDexFolder(context).mkdir();
+		library.getLibraryJarDexFolder(context.getLibrariesFolder()).mkdir();
 		
 		try {
-			File[] jars = library.getLibraryJars(context);
-			File[] dexJars = library.getLibraryDexJars(context);
+			File[] jars = library.getLibraryJars(context.getLibrariesFolder());
+			File[] dexJars = library.getLibraryDexJars(context.getLibrariesFolder());
 			
 			//Dex all of the files...
 			for(int i = 0; i < jars.length; i ++) {
@@ -105,7 +107,9 @@ public class ContributionManager {
 			}
 		} catch (NullPointerException e) {
 			//If we can't find the JARs
-			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.install_library_failure_poor_structure), library.getLibraryJarFolder(context)));
+			System.err.println(String.format(Locale.US,
+					context.getResources().getString(R.string.install_library_failure_poor_structure),
+					library.getLibraryJarFolder(context.getLibrariesFolder())));
 			e.printStackTrace();
 			return false;
 		}
@@ -335,7 +339,7 @@ public class ContributionManager {
 	 * @param library
 	 */
 	public static void uninstallLibrary(Library library, APDE context) {
-		deleteFile(library.getLibraryFolder(context), context);
+		deleteFile(library.getLibraryFolder(context.getLibrariesFolder()), context);
 	}
 	
 	/**

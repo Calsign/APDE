@@ -138,6 +138,7 @@
 	
 	<!-- Character insert tray. -->
 	<string name="toggle_char_inserts_accessibility_text">Toggle Character Tray</string>
+	<string name="toggle_problem_overview_accessibility_text">Toggle Problem Overview</string>
 	
 	<!-- Note; this settings activity is not currently used. -->
 	<string name="title_activity_character_tray_settings">Special Character Tray</string>
@@ -404,4 +405,13 @@
 	<string name="preview_sketch_previewer_install_dialog_message">Install sketch previewer APK once to preview sketches without installing forever.\n\nNote: Must re-install to grant previewer new permissions.</string>
 	<string name="preview_sketch_previewer_install_dialog_install_button">Install</string>
 	<string name="task_install_sketch_previewer">Install Sketch Previewer</string>
+	
+	<!-- Problem overview -->
+	<string name="problem_overview_list_empty_message">No problems found</string>
+	<!-- This is the tag for the clipboard data -->
+	<string name="problem_overview_list_copy_description">APDE Problem</string>
+	<string name="problem_overview_list_copy_toast_message">Copied to clipboard</string>
+	
+	<!-- Build misc. -->
+	<string name="build_copying">Copying…</string>
 </resources>

@@ -28,9 +28,10 @@ import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
+import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.contrib.Library;
 
-import org.eclipse.jdt.internal.compiler.batch.Main;
+import org.eclipse.jdt.core.compiler.IProblem;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.BufferedInputStream;
@@ -39,10 +40,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -59,7 +57,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -68,20 +65,12 @@ import java.util.zip.ZipOutputStream;
 
 import kellinwood.security.zipsigner.ZipSigner;
 import kellinwood.security.zipsigner.optional.CustomKeySigner;
-import processing.app.Preferences;
 import processing.core.PApplet;
-import processing.data.StringList;
-import processing.mode.java.preproc.PdePreprocessor;
-import processing.mode.java.preproc.PreprocessorResult;
-import processing.mode.java.preproc.SurfaceInfo;
 
 public class Build {
-	public static final String PACKAGE_REGEX ="(?:^|\\s|;)package\\s+(\\S+)\\;";
-	
 	protected EditorActivity editor;
 	
 	public String sketchName;
-	private SketchFile[] tabs;
 	
 	private File buildFolder;
 	private File srcFolder;
@@ -92,12 +81,10 @@ public class Build {
 	private File tmpFolder;
 	private File dexedLibsFolder;
 	
-	private ArrayList<Library> importedLibraries;
+	private List<Library> importedLibraries;
 	
 	protected String classPath;
 	protected String javaLibraryPath;
-	
-	protected boolean foundMain;
 	
 	// Additional resources
 	static private final String LAYOUT_ACTIVITY_TEMPLATE = "LayoutActivity.xml.tmpl";
@@ -133,16 +120,23 @@ public class Build {
 	
 	private ComponentTarget appComponent;
 	
-	public Build(APDE global) {
+	protected List<CompilerProblem> compilerProblems;
+	
+	protected BuildContext buildContext;
+	
+	public Build(APDE global, BuildContext buildContext) {
 		this.editor = global.getEditor();
 		
 		sketchName = global.getSketchName();
-		tabs = editor.getTabMetas();
 		
 		running = new AtomicBoolean(true);
 		
 		injectLogBroadcaster = PreferenceManager.getDefaultSharedPreferences(global).getBoolean("inject_log_broadcaster", true);
 		verbose = PreferenceManager.getDefaultSharedPreferences(global).getBoolean("build_output_verbose", false);
+		
+		compilerProblems = new ArrayList<>();
+		
+		this.buildContext = buildContext;
 	}
 	
 	public ComponentTarget getAppComponent() {
@@ -183,7 +177,7 @@ public class Build {
 	public static void cleanUpPostLaunch(EditorActivity editor) {
 		if(!PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_folder_keep", true)) {
 			//Delete the build folder
-			if (!deleteFile((new Build(((APDE) editor.getApplicationContext())).getBuildFolder()), editor)) {
+			if (!deleteFile(getBuildFolder(editor), editor)) {
 				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_failed));
 			} else if (verbose) {
 				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_success));
@@ -248,17 +242,17 @@ public class Build {
 				deleteFile(c, context);
 			}
 		}
-	
+		
 		//Renaming solution for the file system lock with EBUSY errors
 		//StackOverflow: http://stackoverflow.com/questions/11539657/open-failed-ebusy-device-or-resource-busy
 		final File to = new File(f.getAbsolutePath() + System.currentTimeMillis());
 		f.renameTo(to);
-	
+		
 		if (!to.delete()) {
 			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failure), f.getAbsolutePath()));
 			return false;
 		}
-	
+		
 		return true;
 	}
 	
@@ -287,27 +281,38 @@ public class Build {
 		}
 	}
 	
+	public void build(String target, ComponentTarget comp) {
+		build(target, comp, false);
+	}
+	
 	/**
 	 * @param target either "release" or "debug"
 	 */
 	@SuppressLint("WorldReadableFiles")
 	@SuppressWarnings("deprecation")
-	public void build(String target, ComponentTarget comp) {
+	public void build(String target, ComponentTarget comp, boolean stopAfterCompile) {
 		boolean debug = target.equals("debug");
 		appComponent = comp;
 		
 		running.set(true);
 		
+		// Reset compiler problems
+		compilerProblems.clear();
+		
 		//Throughout this function, perform periodic checks to see if the user has cancelled the build
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_begin));
-		System.out.println(editor.getResources().getString(R.string.build_initializing));
+		if (!stopAfterCompile) {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_begin));
+		}
+		if (!stopAfterCompile || verbose) {
+			System.out.println(editor.getResources().getString(R.string.build_initializing));
+		}
 		
 		if (verbose) {
 			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_target_release_debug), target));
 		}
 		
-		if (debug && getAppComponent() == ComponentTarget.WATCHFACE) {
+		if (debug && getAppComponent() == ComponentTarget.WATCHFACE && !stopAfterCompile) {
 			// We want to test to make sure that a watch is available
 			// If it is, then all good
 			// If not, then stop the build and tell the user that something is wrong
@@ -369,7 +374,9 @@ public class Build {
 		//Wipe the old build folder
 		if(buildFolder.exists()) {
 			if (deleteFile(buildFolder, editor)) {
-				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_success));
+				if (!stopAfterCompile || verbose) {
+					System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_success));
+				}
 			} else if (verbose) {
 				System.out.println(editor.getResources().getString(R.string.build_delete_old_build_folder_failed));
 			}
@@ -392,28 +399,29 @@ public class Build {
 		Manifest manifest = null;
 		String sketchClassName = null;
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_gen_project));
+		if (!stopAfterCompile) {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_gen_project));
+		}
 		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
 			return;
 		}
 		
-		//Used to determine whether or not to build with ALL of the OpenGL libraries...
-		//...it takes a lot longer to run DEX if they're included
-//		boolean isOpenGL = false;
-		//File glLibLoc = new File(binFolder, "libs.dex");
-		
 		File androidJarLoc = getAndroidJarLoc(editor);
+		
+		boolean customProblems = PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_problem_overview_enable", true);
+		
+		Preprocessor preprocessor = null;
 		
 		try {
 			// Generate a new manifest and populate it with sketch properties
-			manifest = new Manifest(this);
+			manifest = new Manifest(buildContext);
 			manifest.initBlank();
-			manifest.loadProperties(editor.getGlobalState().getProperties(), sketchName); // unsure whether to use sketchName or sketchClassName here
+			manifest.loadProperties(editor.getGlobalState().getProperties(buildContext), sketchName); // unsure whether to use sketchName or sketchClassName here
 			
 			// We need to do this after we load the manifest because it depends on permissions
-			if (getAppComponent() == ComponentTarget.PREVIEW) {
+			if (getAppComponent() == ComponentTarget.PREVIEW && !stopAfterCompile) {
 				// Make sure that the sketch previewer is installed
 				
 				Intent intent = new Intent("com.calsignlabs.apde.RUN_SKETCH_PREVIEW");
@@ -427,37 +435,34 @@ public class Build {
 				if (intent.resolveActivity(editor.getPackageManager()) == null || additionalPermissions.size() > 0) {
 					// Need to install or add permissions
 					
-					editor.runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-							AlertDialog.Builder builder = new AlertDialog.Builder(editor);
-							
-							StringBuilder message = new StringBuilder(editor.getResources().getString(R.string.preview_sketch_previewer_install_dialog_message));
-							if (additionalPermissions.size() > 0) {
-								// Tell the user which new permissions are being installed
-								message.append("\n\n");
-								for (String permission : additionalPermissions) {
-									message.append(permission);
-									message.append("\n");
-								}
+					editor.runOnUiThread(() -> {
+						AlertDialog.Builder builder = new AlertDialog.Builder(editor);
+						
+						StringBuilder message = new StringBuilder(editor.getResources().getString(R.string.preview_sketch_previewer_install_dialog_message));
+						if (additionalPermissions.size() > 0) {
+							// Tell the user which new permissions are being installed
+							message.append("\n\n");
+							for (String permission : additionalPermissions) {
+								message.append(permission);
+								message.append("\n");
 							}
-							
-							builder.setTitle(R.string.preview_sketch_previewer_install_dialog_title);
-							builder.setMessage(message.toString());
-							
-							builder.setPositiveButton(R.string.preview_sketch_previewer_install_dialog_install_button, new DialogInterface.OnClickListener() {
-								@Override
-								public void onClick(DialogInterface dialogInterface, int i) {
-									editor.getGlobalState().getTaskManager().launchTask("sketchPreviewBuild", false,null, false, new SketchPreviewerBuilder(editor, sketchPermissions, true, false));
-								}
-							});
-							builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-								@Override
-								public void onClick(DialogInterface dialogInterface, int i) {}
-							});
-							
-							builder.show();
 						}
+						
+						builder.setTitle(R.string.preview_sketch_previewer_install_dialog_title);
+						builder.setMessage(message.toString());
+						
+						builder.setPositiveButton(R.string.preview_sketch_previewer_install_dialog_install_button, new DialogInterface.OnClickListener() {
+							@Override
+							public void onClick(DialogInterface dialogInterface, int i) {
+								editor.getGlobalState().getTaskManager().launchTask("sketchPreviewBuild", false,null, false, new SketchPreviewerBuilder(editor, sketchPermissions, true, false));
+							}
+						});
+						builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+							@Override
+							public void onClick(DialogInterface dialogInterface, int i) {}
+						});
+						
+						builder.show();
 					});
 					
 					cleanUpHalt();
@@ -472,267 +477,223 @@ public class Build {
 				return;
 			}
 			
-			Preferences.setInteger("editor.tabs.size", 2); //TODO this is the default... so a tab adds two spaces
-			
-			//Enable all of the fancy preprocessor stuff
-			Preferences.setBoolean("preproc.enhanced_casting", true);
-			Preferences.setBoolean("preproc.web_colors", true);
-			Preferences.setBoolean("preproc.color_datatype", true);
-			Preferences.setBoolean("preproc.substitute_floats", true);
-			Preferences.setBoolean("preproc.substitute_unicode", true);
-			
 			if (verbose) {
 				System.out.println(editor.getResources().getString(R.string.build_preprocessing));
 			}
 			
-			Preproc preproc = new Preproc(sketchName, packageName);
+			preprocessor = new Preprocessor(buildContext, this, packageName, sketchName, getCodeFolderPackages());
+			preprocessor.preprocess();
+			sketchClassName = sketchName; // stupid holdover, get rid of in the future
+			importedLibraries = preprocessor.getImportedLibraries();
 			
-			//Combine all of the tabs to check for size
-			String combinedText = "";
-			for(SketchFile tab : tabs)
-				combinedText += tab.getText();
-			SurfaceInfo surfaceInfo = preproc.initSketchSize(combinedText, editor, getAppComponent());
-			preproc.initSketchSmooth(combinedText, editor);
-			sketchClassName = preprocess(srcFolder, packageName, preproc, false);
+			// We have this disabled because we want to show the problems all at once
+			// This technically lets us show preprocessor problems faster, but we will be moving to
+			// synchronous build anyway, which makes that a moot point
 			
-			//Detect if the renderer is one of the OpenGL renderers
-			//XTODO support custom renderers that require OpenGL or... other problems that may arise
-//			String sketchRenderer = preproc.getSketchRenderer();
-//			if(sketchRenderer != null)
-//				isOpenGL = sketchRenderer.equals("OPENGL") || sketchRenderer.equals("P3D") || sketchRenderer.equals("P2D");
-//			else
-//				isOpenGL = false;
+//			// This will update with preprocessor problems
+//			editor.showProblems();
 			
-			//This OpenGL-checking isn't really useful anymore...
-			
-//			if(isOpenGL)
-//				System.out.println("Detected renderer " + sketchRenderer + "; including OpenGL libraries");
-//			else
-//				System.out.println("Detected renderer " + sketchRenderer + "; leaving out OpenGL libraries");
+			writePreprocessedFiles(editor.getSketchFiles(), preprocessor.getPreprocessedText(), packageName);
 			
 			if(!running.get()) { //CHECK
 				cleanUpHalt();
 				return;
 			}
 			
-			if(sketchClassName != null) {
+			if (verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_writing_manifest));
+			}
+			
+			File tempManifest = new File(buildFolder, "AndroidManifest.xml");
+			manifest.writeCopy(tempManifest, sketchClassName, getAppComponent());
+			
+			if(!running.get()) { //CHECK
+				cleanUpHalt();
+				return;
+			}
+			
+			if (verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_writing_resources));
+			}
+			
+			final File resFolder = new File(buildFolder, "res");
+			writeRes(resFolder, sketchClassName);
+			
+			writeMainClass(srcFolder, preprocessor.isOpenGL(), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
+			
+			final File libsFolder = mkdirs(buildFolder, "libs", editor);
+			final File assetsFolder = mkdirs(buildFolder, "assets", editor);
+			
+			AssetManager am = editor.getAssets();
+			
+			// Copy AppCompat res files
+			
+			File supportResFolder = new File(buildFolder, "support-res");
+			resFolder.mkdir();
+			createFolderFromZippedAssets(editor.getAssets(), "support-res.zip", supportResFolder);
+			
+			// We want to make these directories whether or not we're actually building for that target
+			// If we don't make the directory then AAPT yells at us
+			File wearableResFolder = new File(buildFolder, "support-wearable-res");
+			wearableResFolder.mkdir();
+			File vrResFolder = new File(buildFolder, "vr-res");
+			vrResFolder.mkdir();
+			
+			if (getAppComponent() == ComponentTarget.WATCHFACE) {
+				// Copy support-wearable res files
+				createFolderFromZippedAssets(editor.getAssets(), "support-wearable-res.zip", wearableResFolder);
+			}
+			
+			if (getAppComponent() == ComponentTarget.VR) {
+				// Copy GVR res files
+				createFolderFromZippedAssets(editor.getAssets(), "vr-res.zip", vrResFolder);
+				
+				// Copy GVR binaries
+				File gvrBinaryZip = new File(buildFolder, "vr-lib.zip");
+				InputStream inputStream = am.open("vr-lib.zip");
+				createFileFromInputStream(inputStream, gvrBinaryZip);
+			}
+			
+			// Copy android.jar if it hasn't been done yet
+			if (!androidJarLoc.exists()) {
 				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_writing_manifest));
+					System.out.println(editor.getResources().getString(R.string.build_copying_android_jar));
 				}
 				
-				File tempManifest = new File(buildFolder, "AndroidManifest.xml");
-				manifest.writeCopy(tempManifest, sketchClassName, getAppComponent());
-				
-				if(!running.get()) { //CHECK
-					cleanUpHalt();
-					return;
-				}
-				
+				copyAndroidJar(editor);
+			}
+			
+			//Copy native libraries
+			
+			if (verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_copying_processing_libraries));
+			}
+			
+			String[] libsToCopy = {
+					"processing-core", "support-core-utils", "support-compat",
+					"appcompat", "support-fragment",
+					getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable" : "",
+					getAppComponent() == ComponentTarget.WATCHFACE ? "percent" : "",
+					getAppComponent() == ComponentTarget.VR ? "gvr" : "",
+					getAppComponent() == ComponentTarget.VR ? "vr" : ""
+			};//, "support-vector-drawable"};
+			String prefix = "libs/";
+			String suffix = ".jar";
+			
+			//Copy for the compiler
+			for(String lib : libsToCopy) {
+				if (lib.equals("")) continue; // pass through, lets us use ternary if in the array
+				InputStream inputStream = am.open(prefix + lib + suffix);
+				createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
+				inputStream.close();
+			}
+			
+			//Copy dexed versions to speed up the DEX process
+			
+			if (verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_copying_dexed_processing_libraries));
+			}
+			
+			String[] dexLibsToCopy = {
+					"all-lib-dex",
+					/*
+					 * Part of bugfix for #43. 2018-06-03.
+					 *
+					 * Android mode classes reference the wearable support library. This means
+					 * that we get a VerifyError on 4.4 (API level 19) because that platform
+					 * does not have the wearable library classes, even though these classes are
+					 * never touched. So we add the dexed support library on 4.4 and below so
+					 * that Android can see the classes and stop complaining.
+					 *
+					 * API level 20 is 4.4W (W for Wear) - uncertain whether or not these
+					 * classes are present. It doesn't hurt too much to include them, so that's
+					 * what we're doing.
+					 */
+					getAppComponent() == ComponentTarget.WATCHFACE || android.os.Build.VERSION.SDK_INT <= 20 ? "support-wearable-dex" : "",
+					getAppComponent() == ComponentTarget.VR ? "vr-dex" : ""
+			};
+			String dexPrefix = "libs-dex/";
+			String dexSuffix = ".jar";
+			
+			//Copy for the dexer
+			for(String lib : dexLibsToCopy) {
+				if (lib.equals("")) continue; // pass through, lets us use ternary if in the array
+				InputStream inputStream = am.open(dexPrefix + lib + dexSuffix);
+				createFileFromInputStream(inputStream, new File(dexedLibsFolder, lib + dexSuffix));
+				inputStream.close();
+			}
+			
+			if (verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_copying_contributed_libraries));
+			}
+			
+			// Copy any imported libraries (their libs and assets),
+			// and anything in the code folder contents to the project.
+			copyLibraries(libsFolder, dexedLibsFolder, assetsFolder);
+			copyCodeFolder(libsFolder);
+			
+			// Copy the dexed JARs from the code-dex folder
+			copyCodeDexFolder(dexedLibsFolder);
+			
+			// Copy the data folder (if one exists) to the project's 'assets' folder
+			final File sketchDataFolder = getSketchDataFolder();
+			if(sketchDataFolder.exists()) {
 				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_writing_resources));
+					System.out.println(editor.getResources().getString(R.string.build_copying_data_folder));
 				}
 				
-				final File resFolder = new File(buildFolder, "res");
-				writeRes(resFolder, sketchClassName);
-				
-				writeMainClass(srcFolder, Preproc.getRenderer(surfaceInfo), sketchClassName, manifest.getPackageName(), false, debug && injectLogBroadcaster);
-				
-				final File libsFolder = mkdirs(buildFolder, "libs", editor);
-				final File assetsFolder = mkdirs(buildFolder, "assets", editor);
-				
-				AssetManager am = editor.getAssets();
-				
-				// Copy AppCompat res files
-				
-				File supportResFolder = new File(buildFolder, "support-res");
-				resFolder.mkdir();
-				createFolderFromZippedAssets(editor.getAssets(), "support-res.zip", supportResFolder);
-				
-				// We want to make these directories whether or not we're actually building for that target
-				// If we don't make the directory then AAPT yells at us
-				File wearableResFolder = new File(buildFolder, "support-wearable-res");
-				wearableResFolder.mkdir();
-				File vrResFolder = new File(buildFolder, "vr-res");
-				vrResFolder.mkdir();
-				
-				if (getAppComponent() == ComponentTarget.WATCHFACE) {
-					// Copy support-wearable res files
-					createFolderFromZippedAssets(editor.getAssets(), "support-wearable-res.zip", wearableResFolder);
-				}
-				
-				if (getAppComponent() == ComponentTarget.VR) {
-					// Copy GVR res files
-					createFolderFromZippedAssets(editor.getAssets(), "vr-res.zip", vrResFolder);
-					
-					// Copy GVR binaries
-					File gvrBinaryZip = new File(buildFolder, "vr-lib.zip");
-					InputStream inputStream = am.open("vr-lib.zip");
-					createFileFromInputStream(inputStream, gvrBinaryZip);
-				}
-				
-				// Copy android.jar if it hasn't been done yet
-				if (!androidJarLoc.exists()) {
-					if (verbose) {
-						System.out.println(editor.getResources().getString(R.string.build_copying_android_jar));
-					}
-					
-					copyAndroidJar(editor);
-				}
-				
-				//Copy native libraries
-				
+				copyDir(sketchDataFolder, assetsFolder);
+			}
+			
+			// Do the same for the 'res' folder.
+			// http://code.google.com/p/processing/issues/detail?id=767
+			final File sketchResFolder = new File(getSketchFolder(), "res");
+			if(sketchResFolder.exists()) {
 				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_copying_processing_libraries));
+					System.out.println(editor.getResources().getString(R.string.build_copying_res_folder));
 				}
 				
-				String[] libsToCopy = {
-						"processing-core", "support-core-utils", "support-compat",
-						"appcompat", "support-fragment",
-						getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable" : "",
-						getAppComponent() == ComponentTarget.WATCHFACE ? "percent" : "",
-						getAppComponent() == ComponentTarget.VR ? "gvr" : "",
-						getAppComponent() == ComponentTarget.VR ? "vr" : ""
-				};//, "support-vector-drawable"};
-				String prefix = "libs/";
-				String suffix = ".jar";
+				copyDir(sketchResFolder, resFolder);
+			}
+			
+			if(!running.get()) { //CHECK
+				cleanUpHalt();
+				return;
+			}
+			
+			// Watchfaces send logs differently
+			if (debug && injectLogBroadcaster && getAppComponent() != ComponentTarget.WATCHFACE) {
+				// TODO switch this to a template
 				
-				//Copy for the compiler
-				for(String lib : libsToCopy) {
-					if (lib.equals("")) continue; // pass through, lets us use ternary if in the array
-					InputStream inputStream = am.open(prefix + lib + suffix);
-					createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
-					inputStream.close();
-				}
+				// Add "LogBroadcasterInsert.java" and "APDEInternalLogBroadcasterUtil.java" to the code
+				// The insert goes directly in the code
+				// The util file contains the classes that are used by the insert
 				
-				//Copy dexed versions to speed up the DEX process
+				// Read the .java file
 				
-//				if(isOpenGL) {
-//					//For OpenGL sketches (includes P2D and P3D)
-////					InputStream inputStream = am.open("libs-dex/" + "libs.dex");
-////					createFileFromInputStream(inputStream, glLibLoc);
-//					InputStream inputStream = am.open("libs-dex/" + "libs.jar");
-//					createFileFromInputStream(inputStream, new File(dexedLibsFolder, "libs.jar"));
-//				} else {
-//					//For non-OpenGL sketches
-//					InputStream inputStream = am.open("libs-dex/" + "processing-core-dex.jar");
-//					createFileFromInputStream(inputStream, new File(dexedLibsFolder, "processing-core-dex.jar"));
-//				}
+				InputStream stream = am.open("log-broadcaster/APDEInternalLogBroadcasterUtil.java");
 				
-				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_copying_dexed_processing_libraries));
-				}
+				int size = stream.available();
+				byte[] buffer = new byte[size];
 				
-				String[] dexLibsToCopy = {
-						"all-lib-dex",
-						/*
-						 * Part of bugfix for #43. 2018-06-03.
-						 *
-						 * Android mode classes reference the wearable support library. This means
-						 * that we get a VerifyError on 4.4 (API level 19) because that platform
-						 * does not have the wearable library classes, even though these classes are
-						 * never touched. So we add the dexed support library on 4.4 and below so
-						 * that Android can see the classes and stop complaining.
-						 *
-						 * API level 20 is 4.4W (W for Wear) - uncertain whether or not these
-						 * classes are present. It doesn't hurt too much to include them, so that's
-						 * what we're doing.
-						 */
-						getAppComponent() == ComponentTarget.WATCHFACE || android.os.Build.VERSION.SDK_INT <= 20 ? "support-wearable-dex" : "",
-						getAppComponent() == ComponentTarget.VR ? "vr-dex" : ""
-				};
-				String dexPrefix = "libs-dex/";
-				String dexSuffix = ".jar";
+				stream.read(buffer);
+				stream.close();
 				
-//				InputStream inputStream = am.open("libs-dex/" + "processing-core-dex.jar");
-//				createFileFromInputStream(inputStream, new File(dexedLibsFolder, "processing-core-dex.jar"));
+				String text = new String(buffer);
 				
-				//Copy for the dexer
-				for(String lib : dexLibsToCopy) {
-					if (lib.equals("")) continue; // pass through, lets us use ternary if in the array
-					InputStream inputStream = am.open(dexPrefix + lib + dexSuffix);
-					createFileFromInputStream(inputStream, new File(dexedLibsFolder, lib + dexSuffix));
-					inputStream.close();
-				}
+				// Add the package declaration
+				text = "package " + manifest.getPackageName() + ";\n\n" + text;
 				
-				if (verbose) {
-					System.out.println(editor.getResources().getString(R.string.build_copying_contributed_libraries));
-				}
-				
-				// Copy any imported libraries (their libs and assets),
-				// and anything in the code folder contents to the project.
-				copyLibraries(libsFolder, dexedLibsFolder, assetsFolder);
-				copyCodeFolder(libsFolder);
-				
-				// Copy the dexed JARs from the code-dex folder
-				copyCodeDexFolder(dexedLibsFolder);
-				
-				// Copy the data folder (if one exists) to the project's 'assets' folder
-				final File sketchDataFolder = getSketchDataFolder();
-				if(sketchDataFolder.exists()) {
-					if (verbose) {
-						System.out.println(editor.getResources().getString(R.string.build_copying_data_folder));
-					}
-					
-					copyDir(sketchDataFolder, assetsFolder);
-				}
-				
-				// Do the same for the 'res' folder.
-				// http://code.google.com/p/processing/issues/detail?id=767
-				final File sketchResFolder = new File(getSketchFolder(), "res");
-				if(sketchResFolder.exists()) {
-					if (verbose) {
-						System.out.println(editor.getResources().getString(R.string.build_copying_res_folder));
-					}
-					
-					copyDir(sketchResFolder, resFolder);
-				}
-				
-				if(!running.get()) { //CHECK
-					cleanUpHalt();
-					return;
-				}
-				
-				// Watchfaces send logs differently
-				if (debug && injectLogBroadcaster && getAppComponent() != ComponentTarget.WATCHFACE) {
-					// Add "LogBroadcasterInsert.java" and "APDEInternalLogBroadcasterUtil.java" to the code
-					// The insert goes directly in the code
-					// The util file contains the classes that are used by the insert
-					
-					// Read the .java file
-					
-					InputStream stream = am.open("log-broadcaster/APDEInternalLogBroadcasterUtil.java");
-					
-					int size = stream.available();
-					byte[] buffer = new byte[size];
-					
-					stream.read(buffer);
-					stream.close();
-					
-					String text = new String(buffer);
-					
-					// Add the package declaration
-					text = "package " + manifest.getPackageName() + ";\n\n" + text;
-					
-					// Save the .java file
-					saveFile(text, new File(srcFolder.getAbsolutePath(), manifest.getPackageName().replace('.', '/') + "/APDEInternalLogBroadcasterUtil.java"));
-				}
-				
-				if(!running.get()) { //CHECK
-					cleanUpHalt();
-					return;
-				}
+				// Save the .java file
+				saveFile(text, new File(srcFolder.getAbsolutePath(), manifest.getPackageName().replace('.', '/') + "/APDEInternalLogBroadcasterUtil.java"));
+			}
+			
+			if(!running.get()) { //CHECK
+				cleanUpHalt();
+				return;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch (SketchException e) {
-			e.printStackTrace();
-			
-			editor.errorExt(e.getMessage());
-			editor.highlightLineExt(e.getCodeIndex(), e.getCodeLine());
-			
-			//Bail out
-			cleanUp();
-			return;
 		} catch (RuntimeException e) {
 			e.printStackTrace();
 			
@@ -743,7 +704,9 @@ public class Build {
 			return;
 		}
 		
-		System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_detected_architecture), android.os.Build.CPU_ABI));
+		if (!stopAfterCompile || verbose) {
+			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_detected_architecture), android.os.Build.CPU_ABI));
+		}
 		
 		int numCores = getNumCores();
 		
@@ -796,7 +759,9 @@ public class Build {
 		// NOTE: make sure that all places where build folders are specfied
 		// (e.g. "buildFolder") it is followed by ".getAbsolutePath()"!!!!!
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_run_aapt));
+		if (!stopAfterCompile) {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_run_aapt));
+		}
 		
 		File glslFolder = null;
 		
@@ -828,11 +793,15 @@ public class Build {
 			return;
 		}
 		
-		System.out.println(); //Separator
+		if (!stopAfterCompile || verbose) {
+			System.out.println(); //Separator
+		}
 		
 		// Run AAPT
 		try {
-			System.out.println(editor.getResources().getString(R.string.build_packaging_aapt));
+			if (!stopAfterCompile || verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_packaging_aapt));
+			}
 			
 			// Create folder structure for R.java TODO why is this necessary?
 			(new File(genFolder.getAbsolutePath() + "/" + mainActivityLoc + "/")).mkdirs();
@@ -892,13 +861,18 @@ public class Build {
 			return;
 		}
 		
-		editor.messageExt(editor.getResources().getString(R.string.build_message_run_ecj));
+		if (!stopAfterCompile) {
+			editor.messageExt(editor.getResources().getString(R.string.build_message_run_ecj));
+		}
 		
 		//Run ECJ
 		{
-			System.out.println(editor.getResources().getString(R.string.build_compiling_ecj));
+			if (!stopAfterCompile || verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_compiling_ecj));
+			}
 			
-			Main main = new Main(new PrintWriter(System.out), new PrintWriter(System.err), false, null, null);
+			Compiler compiler = new Compiler(customProblems);
+			
 			String[] args = {
 				(verbose ? "-verbose"
 						: "-warn:-unusedImport"), // Disable warning for unused imports (the preprocessor gives us a lot of them, so this is just a lot of noise)
@@ -919,16 +893,44 @@ public class Build {
 				System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_compiling_file), srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java"));
 			}
 			
-			if(main.compile(args)) {
-				System.out.println();
+			boolean success = compiler.compile(args) && !preprocessor.hasSyntaxErrors();
+			
+			if (customProblems) {
+				try {
+					for (IProblem problem : compiler.getProblems()) {
+						compilerProblems.add(preprocessor.buildCompilerProblem(problem));
+					}
+				} catch (TextTransform.LockException e) {
+					e.printStackTrace();
+				}
+				
+				editor.showProblems(compilerProblems);
+			}
+			
+			if (success) {
+				if (!stopAfterCompile || verbose) {
+					System.out.println();
+				}
 			} else {
 				//We have some compilation errors
-				System.out.println();
-				System.out.println(editor.getResources().getString(R.string.build_ecj_failed));
+				if (!stopAfterCompile || verbose) {
+					System.out.println();
+					System.out.println(editor.getResources().getString(R.string.build_ecj_failed));
+				}
 				
-				cleanUpError();
+				if (customProblems) {
+					// Don't show the "build failed" message, show the ECJ error message
+					cleanUp();
+				} else {
+					cleanUpError();
+				}
 				return;
 			}
+		}
+		
+		if (stopAfterCompile) {
+			cleanUp();
+			return;
 		}
 		
 		if(!running.get()) { //CHECK
@@ -986,12 +988,7 @@ public class Build {
 			return;
 		}
 		
-		File[] dexedLibs = dexedLibsFolder.listFiles(new FilenameFilter() {
-			@Override
-			public boolean accept(File dir, String filename) {
-				return filename.endsWith("-dex.jar");
-			}
-		});
+		File[] dexedLibs = dexedLibsFolder.listFiles((dir, filename) -> filename.endsWith("-dex.jar"));
 		
 		// PREVIEW STOPS HERE
 		
@@ -1148,7 +1145,6 @@ public class Build {
 			System.out.println(editor.getResources().getString(R.string.build_installing_apk));
 		}
 		
-		
 		//Copy the APK file to a new (and hopefully readable) location
 		
 		String apkName = sketchName + ".apk";
@@ -1186,11 +1182,6 @@ public class Build {
 					if (verbose) {
 						System.out.println(editor.getResources().getString(R.string.watchface_push_success));
 					}
-					
-					// Make some space in the console
-					for (int i = 0; i < 10; i++) {
-						System.out.println("");
-					}
 				}
 				
 				@Override
@@ -1213,13 +1204,6 @@ public class Build {
 			
 			// Get result from installation so that we can launch the sketch afterward
 			promptInstall.putExtra(Intent.EXTRA_RETURN_RESULT, true);
-			
-			if (injectLogBroadcaster) {
-				// Make some space in the console
-				for (int i = 0; i < 10; i++) {
-					System.out.println("");
-				}
-			}
 			
 			// Hide the keyboard just before opening the installer dialog so that it doesn't
 			// obscure the "Install" button
@@ -1344,7 +1328,7 @@ public class Build {
 		intent.putExtra("SKETCH_DEX", dexUri.toString());
 		intent.putExtra("SKETCH_DATA_FOLDER", dataUri == null ? "" : dataUri.toString());
 		intent.putExtra("SKETCH_DEXED_LIBS", libUris);
-		intent.putExtra("SKETCH_ORIENTATION", manifest.getOrientation(editor));
+		intent.putExtra("SKETCH_ORIENTATION", manifest.getOrientation());
 		intent.putExtra("SKETCH_PACKAGE_NAME", manifest.getPackageName());
 		intent.putExtra("SKETCH_CLASS_NAME", sketchName);
 		
@@ -1356,11 +1340,6 @@ public class Build {
 		}
 		if (intent.resolveActivity(editor.getPackageManager()) != null) {
 			editor.startActivity(intent);
-		}
-		
-		// Make some space in the console
-		for (int i = 0; i < 10; i++) {
-			System.out.println("");
 		}
 	}
 	
@@ -1466,29 +1445,9 @@ public class Build {
 		}
 	}
 	
-	protected String removeSize(String code) {
-		final String left = "(?:^|\\s|;)";
-		final String right = "\\s*\\(([^\\)]*)\\)\\s*;";
-		String regexp = left + "size" + right;
-		Pattern p = Pattern.compile(regexp, Pattern.MULTILINE | Pattern.DOTALL);
-		Matcher m = p.matcher(code);
-		if (m.find()) {
-			return code.substring(0, m.start()) + code.substring(m.end());
-		} else {
-			return code;
-		}
-	}
-	
-	public String preprocess(File srcFolder, String packageName, PdePreprocessor preprocessor, boolean sizeWarning) throws SketchException {
-		if(getSketchFolder().exists());
-		
-		classPath = binFolder.getAbsolutePath();
-		javaLibraryPath = "";
-		
-		// figure out the contents of the code folder to see if there
-		// are files that need to be added to the imports
+	private String[] getCodeFolderPackages() {
 		String[] codeFolderPackages = null;
-		if(getSketchCodeFolder().exists()) {
+		if (getSketchCodeFolder().exists()) {
 			File codeFolder = getSketchCodeFolder();
 			javaLibraryPath = codeFolder.getAbsolutePath();
 			
@@ -1500,342 +1459,44 @@ public class Build {
 			// get list of packages found in those jars
 			codeFolderPackages = packageListFromClassPath(codeFolderClassPath, editor);
 		}
-		
-		// 1. concatenate all .pde files to the 'main' pde
-		// store line number for starting point of each code bit
-		
-		StringBuilder bigCode = new StringBuilder();
-		int bigCount = 0;
-		for(SketchFile meta : tabs) {
-			if(meta.getSuffix().equals(".pde")) {
-				meta.setPreprocOffset(bigCount);
-				bigCode.append(meta.getText());
-				bigCode.append("\n");
-				bigCount += numLines(meta.getText());
-			}
-		}
-		
-		String combinedCode = removeSize(bigCode.toString());
-		
-		PreprocessorResult result;
-		try {
-			File outputFolder = (packageName == null) ? srcFolder : new File(srcFolder, packageName.replace('.', '/'));
-			outputFolder.mkdirs();
-			final File java = new File(outputFolder, sketchName + ".java");
-			final PrintWriter stream = new PrintWriter(new FileWriter(java));
-			try {
-				result = preprocessor.write(stream, combinedCode, codeFolderPackages == null ? null : new StringList(codeFolderPackages));
-			} finally {
-				stream.close();
-			}
-		} catch (FileNotFoundException fnfe) {
-			fnfe.printStackTrace();
-			String msg = "Build folder disappeared or could not be written";
-			throw new SketchException(msg);
-			
-		} catch (antlr.RecognitionException re) {
-			// re also returns a column that we're not bothering with for now
-			// first assume that it's the main file
-			int errorLine = re.getLine() - 1;
-			
-			// then search through for anyone else whose preprocName is null,
-			// since they've also been combined into the main pde.
-			int errorFile = findErrorFile(errorLine);
-			errorLine -= tabs[errorFile].getPreprocOffset();
-			
-			String msg = re.getMessage();
-			
-			if (msg.contains("expecting RCURLY")) {
-				// This can be a problem since the error is sometimes listed as a line
-				// that's actually past the number of lines. For instance, it might
-				// report "line 15" of a 14 line program. Added code to highlightLine()
-				// inside Editor to deal with this situation (since that code is also
-				// useful for other similar situations).
-				throw new SketchException(editor.getResources().getString(R.string.preproc_mismatched_braces),
-						errorFile, errorLine, re.getColumn(), false);
-			}
-			
-			if (msg.contains("expecting LCURLY")) {
-				System.err.println(msg);
-				String[] m = PApplet.match(msg, "found ('.*')");
-				
-				throw new SketchException(m != null
-						? String.format(Locale.US, editor.getResources().getString(R.string.preproc_missing_left_brace_not), m[1])
-						: editor.getResources().getString(R.string.preproc_missing_left_brace),
-						errorFile, errorLine, re.getColumn(), false);
-			}
-			
-			if (msg.indexOf("expecting RBRACK") != -1) {
-				System.err.println(msg);
-				throw new SketchException(editor.getResources().getString(R.string.preproc_missing_right_bracket),
-						errorFile, errorLine, re.getColumn(), false);
-			}
-			
-			if (msg.indexOf("expecting SEMI") != -1) {
-				System.err.println(msg);
-				throw new SketchException(editor.getResources().getString(R.string.preproc_missing_semi),
-						errorFile, errorLine, re.getColumn(), false);
-			}
-			
-			if (msg.indexOf("expecting RPAREN") != -1) {
-				System.err.println(msg);
-				throw new SketchException(editor.getResources().getString(R.string.preproc_missing_right_paren),
-						errorFile, errorLine, re.getColumn(), false);
-			}
-			
-			if (msg.indexOf("preproc.web_colors") != -1) {
-				throw new SketchException(editor.getResources().getString(R.string.preproc_bad_web_color),
-						errorFile, errorLine, re.getColumn(), false);
-			}
-			
-			//System.out.println("msg is " + msg);
-			throw new SketchException(msg, errorFile,
-					errorLine, re.getColumn(), false);
-			
-		} catch (antlr.TokenStreamRecognitionException tsre) {
-			// while this seems to store line and column internally,
-			// there doesn't seem to be a method to grab it..
-			// so instead it's done using a regexp
-			
-			// TODO (P5) not tested since removing ORO matcher.. ^ could be a problem
-			String mess = "^line (\\d+):(\\d+):\\s";
-			
-			String[] matches = PApplet.match(tsre.toString(), mess);
-			if (matches != null) {
-				int errorLine = Integer.parseInt(matches[1]) - 1;
-				int errorColumn = Integer.parseInt(matches[2]);
-
-				int errorFile = 0;
-				for (int i = 1; i < tabs.length; i++) {
-					SketchFile meta = tabs[i];
-					if(meta.getSuffix().equals(".pde") && (meta.getPreprocOffset() < errorLine))
-						errorFile = i;
-				}
-				errorLine -= tabs[errorFile].getPreprocOffset();
-
-				throw new SketchException(tsre.getMessage(), errorFile, errorLine, errorColumn);
-				
-			} else {
-				// this is bad, defaults to the main class.. hrm.
-				String msg = tsre.toString();
-				throw new SketchException(msg, 0, -1, -1);
-			}
-		} catch (Exception ex) {
-			// TODO (P5) better method for handling this?
-			System.err.println(String.format(Locale.US, editor.getString(R.string.preproc_uncaught_exception), ex.getClass()));
-			ex.printStackTrace();
-			throw new SketchException(ex.toString());
-		}
-		
-		// grab the imports from the code just preproc'd
-		
-		importedLibraries = new ArrayList<Library>();
-//		Library core = mode.getCoreLibrary();
-//		if (core != null) {
-//			importedLibraries.add(core);
-//			classPath += core.getClassPath();
-//		}
-		
-		for(String item : result.extraImports) {
-			//Remove things up to the last dot
-			int dot = item.lastIndexOf('.');
-			//http://dev.processing.org/bugs/show_bug.cgi?id=1145
-			String entry = (dot == -1) ? item : item.substring(0, dot);
-			Library library = getLibrary(entry);
-			
-			if(library != null) {
-				if(!importedLibraries.contains(library)) {
-					importedLibraries.add(library);
-					classPath += library.getClassPath((APDE) editor.getApplicationContext());
-//					javaLibraryPath += File.pathSeparator + library.getNativePath();
-				}
-			} else {
-				boolean found = false;
-				//If someone insists on unnecessarily repeating the code folder
-				//import, don't show an error for it.
-				if(codeFolderPackages != null) {
-					String itemPkg = item.substring(0, item.lastIndexOf('.'));
-					for(String pkg : codeFolderPackages) {
-						if(pkg.equals(itemPkg)) {
-							found = true;
-							break;
-						}
-					}
-				}
-				if(ignorableImport(item, getAppComponent())) {
-					found = true;
-				}
-				if(!found) {
-					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_library_import_missing), entry));
-				}
-			}
-		}
-		
-		// Finally, add the regular Java CLASSPATH. This contains everything
-		// imported by the PDE itself (core.jar, pde.jar, quaqua.jar) which may
-		// in fact be more of a problem.
-		String javaClassPath = System.getProperty("java.class.path");
-		// Remove quotes if any.. A messy (and frequent) Windows problem
-		if (javaClassPath.startsWith("\"") && javaClassPath.endsWith("\"")) {
-			javaClassPath = javaClassPath.substring(1, javaClassPath.length() - 1);
-		}
-		classPath += File.pathSeparator + javaClassPath;
-		
-		// But make sure that there isn't anything in there that's missing,
-		// otherwise ECJ will complain and die. For instance, Java 1.7 (or maybe
-		// it's appbundler?) adds Java/Classes to the path, which kills us.
-		//String[] classPieces = PApplet.split(classPath, File.pathSeparator);
-		// Nah, nevermind... we'll just create the @!#$! folder until they fix it.
-
-
-		// 3. then loop over the code[] and save each .java file
-
-		for(SketchFile meta : tabs) {
-			if(meta.getSuffix().equals(".java")) {
-				// In most cases, no pre-processing services necessary for Java files.
-				// Just write the the contents of 'program' to a .java file
-				// into the build directory. However, if a default package is being
-				// used (as in Android), and no package is specified in the source,
-				// then we need to move this code to the same package as the sketch.
-				// Otherwise, the class may not be found, or at a minimum, the default
-				// access across the packages will mean that things behave incorrectly.
-				// For instance, desktop code that uses a .java file with no packages,
-				// will be fine with the default access, but since Android's PApplet
-				// requires a package, code from that (default) package (such as the
-				// PApplet itself) won't have access to methods/variables from the
-				// package-less .java file (unless they're all marked public).
-				String filename = meta.getFilename();
-				try {
-					String javaCode = meta.getText();
-					String[] packageMatch = PApplet.match(javaCode, PACKAGE_REGEX);
-					// if no package, and a default package is being used
-					// (i.e. on Android) we'll have to add one
-					
-					if(packageMatch == null && packageName == null) {
-						meta.writeData(srcFolder.getAbsolutePath() + File.separator + filename); //TODO does this actually do what we want?
-						//sc.copyTo(new File(srcFolder, filename));
-					} else {
-						if(packageMatch == null) {
-							// use the default package name, since mixing with package-less code will break
-							packageMatch = new String[] { packageName };
-							// add the package name to the source before writing it
-							javaCode = "package " + packageName + ";" + javaCode;
-						}
-						File packageFolder = new File(srcFolder, packageMatch[0].replace('.', '/'));
-						packageFolder.mkdirs();
-						saveFile(javaCode, new File(packageFolder, filename));
-					}
-
-				} catch (IOException e) {
-					e.printStackTrace();
-					throw new SketchException(String.format(Locale.US, editor.getResources().getString(R.string.preproc_problem_moving_file), filename));
-				}
-
-			} else if (meta.getSuffix().equals("pde")) {
-				// The compiler and runner will need this to have a proper offset
-				meta.addPreprocOffset(result.headerOffset);
-			}
-		}
-		foundMain = preprocessor.hasMethod("main");
-		return result.className;
+		return codeFolderPackages;
 	}
 	
-	//These RegExes are borrowed from Processing's preprocessor
-	
-	private static final Pattern PUBLIC_CLASS =
-			Pattern.compile("(^|;)\\s*public\\s+class\\s+\\S+\\s+extends\\s+PApplet", Pattern.MULTILINE);
-	
-	private static final Pattern FUNCTION_DECL =
-			Pattern.compile("(^|;)\\s*((public|private|protected|final|static)\\s+)*" +
-					"(void|int|float|double|String|char|byte)" +
-					"(\\s*\\[\\s*\\])?\\s+[a-zA-Z0-9]+\\s*\\(",
-					Pattern.MULTILINE);
-	
-	/**
-	 * Determine whether the code uses active or static mode.
-	 * 
-	 * @param code
-	 * @return
-	 */
-	private boolean active(CharSequence code) {
-		String uncomment = PdePreprocessor.scrubComments(code.toString());
+	@SuppressWarnings("ResultOfMethodCallIgnored")
+	private int writePreprocessedFile(String code, String filename, String packageName) throws IOException {
+		String packageMatch = Preprocessor.extractPackageName(code);
+		int added = 0;
+		if (packageMatch == null) {
+			String toInsert = "package " + packageName + ";\n";
+			code = toInsert + code;
+			packageMatch = packageName;
+			added = toInsert.length();
+		}
 		
-		return PUBLIC_CLASS.matcher(uncomment).find() || FUNCTION_DECL.matcher(uncomment).find();
+		File pkgFolder = new File(srcFolder, packageMatch.replace('.', '/'));
+		pkgFolder.mkdirs();
+		saveFile(code, new File(pkgFolder, filename));
+		
+		return added;
 	}
 	
-	private int numLines(String input) {
-		int count = 1;
+	private void writePreprocessedFiles(List<SketchFile> sketchFiles, CharSequence mainFile, String packageName) throws IOException {
+		// Write main .java file
+		writePreprocessedFile(mainFile.toString(), getSketchMainFilename(), packageName);
 		
-		for(int i = 0; i < input.length(); i ++)
-			if(input.charAt(i) == '\n')
-				count ++;
-		
-		return count;
-	}
-	
-	protected boolean ignorableImport(String pkg, ComponentTarget comp) {
-		if (pkg.startsWith("android.")) return true;
-		if (pkg.startsWith("java.")) return true;
-		if (pkg.startsWith("javax.")) return true;
-		if (pkg.startsWith("org.apache.http.")) return true;
-		if (pkg.startsWith("org.json.")) return true;
-		if (pkg.startsWith("org.w3c.dom.")) return true;
-		if (pkg.startsWith("org.xml.sax.")) return true;
-		
-		if (pkg.startsWith("processing.core.")) return true;
-		if (pkg.startsWith("processing.data.")) return true;
-		if (pkg.startsWith("processing.event.")) return true;
-		if (pkg.startsWith("processing.opengl.")) return true;
-		
-		// We import the VR library by default when using the VR target
-		if (pkg.startsWith("processing.vr.") && comp == ComponentTarget.VR) return true;
-		
-		return false;
-	}
-	
-	private Library getLibrary(String pkgName) throws SketchException {
-		ArrayList<Library> libraries = ((APDE) editor.getApplicationContext()).getImportToLibraryTable().get(pkgName);
-		if (libraries == null) {
-			return null;
-		} else if (libraries.size() > 1) { //This is if there are multiple libraries with the same package name... but when does this ever happen?
-//			String primary = "More than one library is competing for this sketch.\n";
-//			String secondary = "The import " + pkgName + " points to multiple libraries:\n";
-//			for (Library library : libraries) {
-//				String location = library.getLibraryFolder((APDE) editor.getApplicationContext()).getAbsolutePath();
-////				if (location.startsWith(getLibrariesFolder().getAbsolutePath())) { //Android mode has no core libraries - but we'll leave this just in case
-////					location = "part of Processing";
-////				}
-//				secondary += library.getName() + " (" + location + ")\n";
-//			}
-//			secondary += "Extra libraries need to be removed before this sketch can be used.";
-//			System.err.println("Duplicate Library Problem\n\n" + primary + secondary);
-//			throw new SketchException("Duplicate libraries found for " + pkgName + ".");
-			StringBuilder libraryConflicts = new StringBuilder();
-			for (Library library : libraries) {
-				libraryConflicts.append(library.getName());
-				libraryConflicts.append(" (");
-				libraryConflicts.append(library.getLibraryFolder((APDE) editor.getApplicationContext()).getAbsolutePath());
-				libraryConflicts.append(")\n");
+		// Write all .java files
+		for (SketchFile sketchFile : sketchFiles) {
+			if (sketchFile.isJava()) {
+				sketchFile.javaImportHeaderOffset = writePreprocessedFile(sketchFile.getText(), sketchFile.getFilename(), packageName);
 			}
-			System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_duplicate_libraries_message), pkgName, libraryConflicts.toString()));
-			throw new SketchException(String.format(Locale.US, editor.getResources().getString(R.string.build_duplicate_libraries), pkgName));
-		} else {
-			return libraries.get(0);
 		}
 	}
 	
-	protected int findErrorFile(int errorLine) {
-		for (int i = tabs.length - 1; i > 0; i --) {
-			SketchFile meta = tabs[i];
-			if (meta.getSuffix().equals(".pde") && (meta.getPreprocOffset() <= errorLine)) {
-				// keep looping until the errorLine is past the offset
-				return i;
-			}
-		}
-		return 0; // i give up
+	public String getSketchMainFilename() {
+		return sketchName + ".java";
 	}
 	
-	private void writeRes(File resFolder, String className) throws SketchException {
+	private void writeRes(File resFolder, String className) {
 		File layoutFolder = mkdirs(resFolder, "layout", editor);
 		writeResLayoutMainActivity(layoutFolder, className);
 		
@@ -1931,7 +1592,6 @@ public class Build {
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-				//throw new SketchException("Could not get Android icons");
 			}
 		} else {
 			// if at least one of the icons already exists, then use that across the board
@@ -2006,18 +1666,14 @@ public class Build {
 		}
 	}
 	
-	private static boolean isOpenGL(String renderer) {
-		return renderer != null && (renderer.equals("P2D") || renderer.equals("P3D") || renderer.equals("OPENGL"));
-	}
-	
-	private void writeMainClass(final File srcDirectory, String renderer, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
+	private void writeMainClass(final File srcDirectory, boolean isOpenGL, String sketchClassName, String packageName, boolean external, boolean injectLogBroadcaster) {
 		ComponentTarget comp = getAppComponent();
 		if (comp == ComponentTarget.APP || comp == ComponentTarget.PREVIEW) {
 			writeFragmentActivity(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 		} else if (comp == ComponentTarget.WALLPAPER) {
 			writeWallpaperService(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 		} else if (comp == ComponentTarget.WATCHFACE) {
-			if (isOpenGL(renderer)) {
+			if (isOpenGL) {
 				writeWatchFaceGLESService(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
 			} else {
 				writeWatchFaceCanvasService(srcDirectory, sketchClassName, packageName, external, injectLogBroadcaster);
@@ -2039,7 +1695,9 @@ public class Build {
 			
 			String out = new String(buffer);
 			
-			System.out.println(editor.getResources().getString(R.string.build_inject_log_broadcaster_success));
+			if (verbose) {
+				System.out.println(editor.getResources().getString(R.string.build_inject_log_broadcaster_success));
+			}
 			
 			return out;
 		} catch (IOException e) {
@@ -2150,58 +1808,10 @@ public class Build {
 		createFileFromTemplate(XML_WATCHFACE_TEMPLATE, xmlFile, null, editor);
 	}
 	
-	private String generatePermissionsString(final String[] permissions) {
-		String permissionsStr = "";
-		for (String p: permissions) {
-			permissionsStr += (0 < permissionsStr.length() ? "," : "");
-			if (p.indexOf("permission") == -1) {
-				permissionsStr += "Manifest.permission." + p;
-			} else if (p.indexOf("Manifest.permission") == 0) {
-				permissionsStr += p;
-			} else {
-				permissionsStr += "\"" + p + "\"";
-			}
-		}
-		permissionsStr = "{" + permissionsStr + "}";
-		return permissionsStr;
-	}
-	
-	private void copyLibraries(final File libsFolder, final File assetsFolder) throws IOException { //TODO support native library stuffs
-		for (Library library : importedLibraries) {
-			//Add each item from the library folder / export list to the output
-			for (File exportFile : library.getAndroidExports((APDE) editor.getApplicationContext())) {
-				String exportName = exportFile.getName();
-				if (!exportFile.exists()) {
-					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_export_library_file_missing), exportFile.getName()));
-				} else if (exportFile.isDirectory()) {
-					//Copy native library folders to the correct location
-					if (exportName.equals("armeabi") ||
-							exportName.equals("armeabi-v7a") ||
-							exportName.equals("x86")) {
-						copyDir(exportFile, new File(libsFolder, exportName));
-					} else {
-						//Copy any other directory to the assets folder
-						copyDir(exportFile, new File(assetsFolder, exportName));
-					}
-				} else if (exportName.toLowerCase(Locale.US).endsWith(".zip")) {
-					// As of r4 of the Android SDK, it looks like .zip files
-					// are ignored in the libs folder, so rename to .jar
-					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_library_zip), exportFile.getName()));
-					String jarName = exportName.substring(0, exportName.length() - 4) + ".jar";
-					copyFile(exportFile, new File(libsFolder, jarName));
-				} else if (exportName.toLowerCase(Locale.US).endsWith(".jar")) {
-					copyFile(exportFile, new File(libsFolder, exportName));
-				} else {
-					copyFile(exportFile, new File(assetsFolder, exportName));
-				}
-			}
-		}
-	}
-	
 	private void copyLibraries(final File libsFolder, final File dexedLibsFolder, final File assetsFolder) throws IOException { //TODO support native library stuffs
 		for (Library library : importedLibraries) {
 			//Add each item from the library folder / export list to the output
-			for (File exportFile : library.getAndroidExports((APDE) editor.getApplicationContext())) {
+			for (File exportFile : library.getAndroidExports(((APDE) editor.getApplicationContext()).getLibrariesFolder())) {
 				String exportName = exportFile.getName();
 				if (!exportFile.exists()) {
 					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_export_library_file_missing), exportFile.getName()));
@@ -2267,31 +1877,6 @@ public class Build {
 		}
 	}
 	
-	// https://gist.github.com/tylerchesley/6198074
-	private static File createFolderFromAssets(AssetManager am, String folder, File destFile) {
-		String[] assets = null;
-		try {
-			assets = am.list(folder);
-			if (assets.length == 0) {
-				createFileFromInputStream(am.open(folder), destFile);
-			} else {
-				if (!destFile.exists()) {
-					destFile.mkdir();
-				}
-				
-				for (String asset : assets) {
-					createFolderFromAssets(am, folder + "/" + asset, new File(destFile, asset));
-				}
-			}
-			
-			return destFile;
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		return null;
-	}
-	
 	private static File createFolderFromZippedAssets(AssetManager am, String zipFile, File destFile) {
 		try {
 			ZipInputStream inputStream = new ZipInputStream(am.open(zipFile));
@@ -2352,8 +1937,7 @@ public class Build {
 	static public File mkdirs(final File parent, final String name, Context context) {
 		final File result = new File(parent, name);
 		if(!(result.exists() || result.mkdirs())) {
-			//throw new SketchException("Could not create " + result);
-			System.out.println(String.format(Locale.US, context.getResources().getString(R.string.build_dir_create_failed), result.getAbsolutePath())); //TODO changed this around to avoid SketchException for Build Path reasons
+			System.out.println(String.format(Locale.US, context.getResources().getString(R.string.build_dir_create_failed), result.getAbsolutePath()));
 			return null;
 		}
 		return result;
@@ -2541,12 +2125,16 @@ public class Build {
 		}
 	}
 	
-	public File getBuildFolder() {
+	public static File getBuildFolder(Context context) {
 		//Let the user pick where to build
-		if(PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_build_internal_storage", true))
-			return editor.getDir("build", 0);
+		if(PreferenceManager.getDefaultSharedPreferences(context).getBoolean("pref_build_internal_storage", true))
+			return context.getDir("build", 0);
 		else
 			return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile(), "build");
+	}
+	
+	public File getBuildFolder() {
+		return getBuildFolder(editor);
 	}
 	
 	public static File getTempFolder(Context context) {
@@ -2585,8 +2173,8 @@ public class Build {
 				os.write(buf, 0, len);
 				total += len;
 			}
-		} catch (IOException ioe) {
-			throw new RuntimeException("error reading stream", ioe);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		return total;
 	}

@@ -29,9 +29,11 @@ public class BackgroundTaskRelay implements TaskStatusRelay {
 	@Override
 	public void setStatusHistory(ArrayList<CharSequence> statusHistory) {
 		this.statusHistory = statusHistory;
-		postStatus(statusHistory.get(statusHistory.size() - 1));
+		if (!statusHistory.isEmpty()) {
+			postStatus(statusHistory.get(statusHistory.size() - 1));
+		}
 	}
-
+	
 	@Override
 	public void close() {
 		//Nothing to do here...

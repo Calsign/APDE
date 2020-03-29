@@ -251,23 +251,21 @@ public class FindReplace implements Tool {
 					findReplaceToolbar.getLayoutParams().height = 0; // We want to animate in
 					context.getEditor().setExtraHeaderView(findReplaceToolbar);
 					
-					TabLayout codeTabStrip = context.getEditor().getCodeTabStrip();
-					
 					float height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40, context.getResources().getDisplayMetrics());
 					
 					ViewPager codePager = context.getEditor().getCodePager();
-					ScrollView console = context.getEditor().getConsoleScroller();
+					View console = context.getEditor().getConsoleWrapper();
 					
 					findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, 0, LinearLayout.LayoutParams.MATCH_PARENT, height));
 					
 					ResizeAnimation<LinearLayout> resizeCode;
 					ResizeAnimation<LinearLayout> resizeConsole;
 					if (codePager.getHeight() >= height) {
-						resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight(), LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
+						resizeCode = new ResizeAnimation<>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight(), LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
 						resizeConsole = null;
 					} else {
-						resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0, false);
-						resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight()), false);
+						resizeCode = new ResizeAnimation<>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0, false);
+						resizeConsole = new ResizeAnimation<>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight()), false);
 					}
 					codePager.startAnimation(resizeCode);
 					if (resizeConsole != null) {
@@ -376,16 +374,16 @@ public class FindReplace implements Tool {
 							
 							findReplaceToolbar.startAnimation(new ResizeAnimation<LinearLayout>(findReplaceToolbar, LinearLayout.LayoutParams.MATCH_PARENT, height, LinearLayout.LayoutParams.MATCH_PARENT, height * 2));
 							
-							ScrollView console = context.getEditor().getConsoleScroller();
+							View console = context.getEditor().getConsoleWrapper();
 							
 							ResizeAnimation<LinearLayout> resizeCode;
 							ResizeAnimation<LinearLayout> resizeConsole;
 							if (codePager.getHeight() >= height) {
-								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
+								resizeCode = new ResizeAnimation<>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, codePager.getHeight() - height, false);
 								resizeConsole = null;
 							} else {
-								resizeCode = new ResizeAnimation<LinearLayout>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0, false);
-								resizeConsole = new ResizeAnimation<LinearLayout>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight()), false);
+								resizeCode = new ResizeAnimation<>(codePager, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, 0, false);
+								resizeConsole = new ResizeAnimation<>(console, LinearLayout.LayoutParams.MATCH_PARENT, ResizeAnimation.DEFAULT, LinearLayout.LayoutParams.MATCH_PARENT, console.getHeight() - (height - codePager.getHeight()), false);
 							}
 							codePager.startAnimation(resizeCode);
 							if (resizeConsole != null) {

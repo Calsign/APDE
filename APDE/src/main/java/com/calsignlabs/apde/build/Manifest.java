@@ -9,6 +9,8 @@ import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
 import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.build.dag.BuildContext;
+import com.calsignlabs.apde.build.dag.WriteTemplateBuildTask;
 
 import org.xml.sax.SAXException;
 
@@ -37,13 +39,13 @@ public class Manifest {
 	
 	public static ArrayList<Permission> permissions;
 	
-	private Build build;
+	private BuildContext context;
 	
 	/** the manifest data read from the file */
 	private XML xml;
 	
-	public Manifest(Build build) {
-		this.build = build;
+	public Manifest(BuildContext context) {
+		this.context = context;
 	}
 	
 	public static void loadPermissions(Context context) {
@@ -53,7 +55,7 @@ public class Manifest {
 		InputStream rawPermissionsStream = context.getResources().openRawResource(context.getResources().getIdentifier("raw/permissions_list", "raw", context.getPackageName()));
 		String[] rawPermissions = PApplet.loadStrings(rawPermissionsStream);
 		
-		permissions = new ArrayList<Permission>(rawPermissions.length);
+		permissions = new ArrayList<>(rawPermissions.length);
 		
 		//Add the permissions
 		for(int i = 0; i < rawPermissions.length; i ++) {
@@ -176,9 +178,9 @@ public class Manifest {
 	}
 	
 	public void initBlank() {
-		File buildManifest = new File(build.getBuildFolder(), MANIFEST_XML);
-		writeBlankManifest(buildManifest, build.getAppComponent());
-		load(buildManifest, build.getAppComponent());
+		File buildManifest = new File(context.getBuildFolder(), MANIFEST_XML);
+		writeBlankManifest(buildManifest, context.getComponentTarget());
+		load(buildManifest, context.getComponentTarget());
 	}
 	
 	private void writeBlankManifest(final File xmlFile, final ComponentTarget appComp) {
@@ -186,18 +188,22 @@ public class Manifest {
 		replaceMap.put("@@min_sdk@@", Integer.toString(appComp.getMinSdk()));
 		replaceMap.put("@@target_sdk@@", Integer.toString(getDefaultTargetSdk()));
 		
-		Build.createFileFromTemplate(appComp.getManifestTemplate(), xmlFile, replaceMap, build.editor);
+		WriteTemplateBuildTask.createFileFromTemplate(appComp.getManifestTemplate(), xmlFile, replaceMap, context);
 	}
 	
 	private int getDefaultTargetSdk() {
-		return Integer.parseInt(build.editor.getGlobalState().getString(R.string.prop_target_sdk_default));
+		return Integer.parseInt(context.getResources().getString(R.string.prop_target_sdk_default));
+	}
+	
+	public void writeCopy(File file) {
+		writeCopy(file, context.getSketchName(), context.getComponentTarget());
 	}
 	
 	/**
 	 * Save a new version of the manifest info to the build location.
 	 * Also fill in any missing attributes that aren't yet set properly.
 	 */
-	protected void writeCopy(File file, String className, ComponentTarget appComp) throws IOException {
+	protected void writeCopy(File file, String className, ComponentTarget appComp) {
 		// write a copy to the build location
 		save(file);
 		
@@ -208,7 +214,7 @@ public class Manifest {
 			// package name, or default
 			String p = mf.getString("package").trim();
 			if (p.length() == 0) {
-				mf.setString("package", SketchProperties.defaultPackageName(build.sketchName));
+				mf.setString("package", SketchProperties.defaultPackageName(context.getSketchName()));
 			}
 			
 			// app name and label, or the class name
@@ -239,7 +245,7 @@ public class Manifest {
 	 */
 	public void setPrettyName(String prettyName) {
 		xml.getChild("application").setString("android:label", prettyName);
-		if (build.getAppComponent() == ComponentTarget.WALLPAPER) {
+		if (context.getComponentTarget() == ComponentTarget.WALLPAPER) {
 			xml.getChild("application").getChild("service").setString("android:label", prettyName);
 		}
 	}
@@ -258,11 +264,7 @@ public class Manifest {
 		xml.setInt("android:versionCode", versionCode);
 	}
 	
-	/**
-	 * @param context
-	 * @return
-	 */
-	public int getVersionCode(Context context) {
+	public int getVersionCode() {
 		return xml.getInt("android:versionCode", context.getResources().getInteger(R.integer.prop_version_code_default));
 	}
 	
@@ -273,11 +275,7 @@ public class Manifest {
 		xml.setString("android:versionName", prettyVersion);
 	}
 	
-	/**
-	 * @param context
-	 * @return
-	 */
-	public String getPrettyVersion(Context context) {
+	public String getPrettyVersion() {
 		return xml.getString("android:versionName", context.getResources().getString(R.string.prop_pretty_version_default));
 	}
 	
@@ -292,15 +290,11 @@ public class Manifest {
 		xml.getChild("uses-sdk").setInt("android:minSdkVersion", minSdk);
 	}
 	
-	/**
-	 * @param context
-	 * @return
-	 */
-	public int getTargetSdk(Context context) {
+	public int getTargetSdk() {
 		return xml.getChild("uses-sdk").getInt("android:targetSdkVersion", context.getResources().getInteger(R.integer.prop_target_sdk_default));
 	}
 	
-	public int getMinSdk(Context context) {
+	public int getMinSdk() {
 		return xml.getChild("uses-sdk").getInt("android:minSdkVersion", context.getResources().getInteger(R.integer.prop_min_sdk_default));
 	}
 	
@@ -316,7 +310,7 @@ public class Manifest {
 		}
 	}
 	
-	public String getOrientation(Context context) {
+	public String getOrientation() {
 		return xml.getChild("application").getChild("activity").getString("android:screenOrientation", context.getResources().getString(R.string.prop_orientation_default));
 	}
 	
@@ -362,7 +356,7 @@ public class Manifest {
 					xml.getChild("application").setString("android:label", prettyName);
 				}
 			} catch (FileNotFoundException e) {
-				System.err.println(String.format(Locale.US, build.editor.getResources().getString(R.string.manifest_read_failed), manifestFile.getAbsolutePath()));
+				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.manifest_read_failed), manifestFile.getAbsolutePath()));
 				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -372,13 +366,13 @@ public class Manifest {
 				e.printStackTrace();
 			} catch (RuntimeException e) {
 				// Hopefully this solves some crashes from users doing things that they shouldn't be...
-				System.err.println(String.format(Locale.US, build.editor.getResources().getString(R.string.manifest_read_failed_corrupted), manifestFile.getAbsolutePath()));
+				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.manifest_read_failed_corrupted), manifestFile.getAbsolutePath()));
 				e.printStackTrace();
 			}
 		}
 		if (xml == null) {
 			System.err.println();
-			System.err.println(build.editor.getResources().getString(R.string.manifest_world_of_hurt));
+			System.err.println(context.getResources().getString(R.string.manifest_world_of_hurt));
 			System.err.println();
 		}
 	}
@@ -419,27 +413,31 @@ public class Manifest {
 		}
 	}
 	
+	public void loadProperties() {
+		loadProperties(context.getSketchProperties(), context.getSketchName());
+	}
+	
 	public void loadProperties(SketchProperties properties, String sketchName) {
 		setPackageName(properties.getPackageName(sketchName));
 		setPrettyName(properties.getDisplayName(sketchName));
 		setVersionCode(properties.getVersionCode());
 		setPrettyVersion(properties.getVersionName());
 		// Make sure min and target sdks are appropriate
-		setMinSdk(Math.max(properties.getMinSdk(), build.getAppComponent().getMinSdk()));
-		setTargetSdk(Math.max(properties.getTargetSdk(), getMinSdk(build.editor)));
+		setMinSdk(Math.max(properties.getMinSdk(), context.getComponentTarget().getMinSdk()));
+		setTargetSdk(Math.max(properties.getTargetSdk(), getMinSdk()));
 		setOrientation(properties.getOrientation());
 		setPermissions(properties.getPermissions());
 	}
 	
 	public SketchProperties copyToProperties() {
-		SketchProperties properties = new SketchProperties(build.editor, null);
+		SketchProperties properties = new SketchProperties(context, null);
 		properties.setPackageName(getPackageName());
 		properties.setDisplayName(getPrettyName());
-		properties.setVersionCode(getVersionCode(build.editor));
-		properties.setVersionName(getPrettyVersion(build.editor));
-		properties.setMinSdk(getMinSdk(build.editor));
-		properties.setTargetSdk(getTargetSdk(build.editor));
-		properties.setOrientation(getOrientation(build.editor));
+		properties.setVersionCode(getVersionCode());
+		properties.setVersionName(getPrettyVersion());
+		properties.setMinSdk(getMinSdk());
+		properties.setTargetSdk(getTargetSdk());
+		properties.setOrientation(getOrientation());
 		try {
 			properties.addPermissions(getPermissions());
 		} catch (SketchProperties.BadPermissionNameException e) {
