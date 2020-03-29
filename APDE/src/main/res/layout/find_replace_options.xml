@@ -86,7 +86,7 @@
             android:layout_height="wrap_content"
 			android:orientation="horizontal">
 			
-            <android.support.v7.widget.SwitchCompat
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/find_replace_options_highlight_all"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -105,7 +105,7 @@
 			android:layout_height="wrap_content"
 			android:orientation="horizontal">
 			
-			<android.support.v7.widget.SwitchCompat
+			<androidx.appcompat.widget.SwitchCompat
 				android:id="@+id/find_replace_options_wrap_around"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
@@ -125,7 +125,7 @@
 			android:layout_height="wrap_content"
 			android:orientation="horizontal">
 			
-			<android.support.v7.widget.SwitchCompat
+			<androidx.appcompat.widget.SwitchCompat
 				android:id="@+id/find_replace_options_case_sensitive"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
@@ -145,7 +145,7 @@
 			android:orientation="horizontal"
 			android:id="@+id/find_replace_options_reg_exp_container">
 			
-			<android.support.v7.widget.SwitchCompat
+			<androidx.appcompat.widget.SwitchCompat
 				android:id="@+id/find_replace_options_reg_exp"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"

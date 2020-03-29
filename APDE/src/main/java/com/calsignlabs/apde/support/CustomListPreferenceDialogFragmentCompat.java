@@ -2,8 +2,8 @@ package com.calsignlabs.apde.support;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.preference.ListPreferenceDialogFragmentCompat;
+import androidx.appcompat.app.AlertDialog;
+import androidx.preference.ListPreferenceDialogFragmentCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;

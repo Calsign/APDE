@@ -1,28 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--
-        Base application theme, dependent on API level. This theme is replaced
-        by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
-
-    -->
-    
-    <style name="AppBaseTheme" parent="Theme.AppCompat">
-        <!--
-            Theme customizations available in newer API levels can go in
-            res/values-vXX/styles.xml, while customizations related to
-            backward-compatibility can go here.
-        -->
-    </style>
-    
-    <!-- Application theme. -->
-    <style name="AppTheme" parent="AppBaseTheme">
-        <!-- All customizations that are NOT specific to a particular API-level can go here. -->
-    </style>
+    <style name="AppTheme" parent="Theme.AppCompat"></style>
     
     <style name="ActionBar.Style" parent="@style/Widget.AppCompat.ActionBar.Solid">
 	    <item name="background">@color/bar_overlay</item>
 	    <item name="backgroundStacked">@color/bar_overlay</item>
+        <item name="actionBarPopupTheme">@style/ToolbarPopupStyle</item>
 	</style>
+    
+    <style name="ToolbarPopupStyle" parent="Theme.AppCompat">
+        <!-- Padding around icons in toolbar popup menu, i.e. component target selection. -->
+        <!-- I don't think this actually works the way it is supposed to, but it does
+             make the spacing look correct by accident. -->
+        <!-- Unfortunately, this also affects the regular action overflow menu. -->
+        <item name="android:layout_marginStart">4dp</item>
+    </style>
 	
     <style name="FullscreenTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowContentOverlay">@null</item>
@@ -35,7 +27,7 @@
         <item name="alertDialogTheme">@style/Theme.AppCompat.Dialog.Alert</item>
     </style>
     
-    <style name="PreferencesTheme" parent="@style/PreferenceFixTheme.NoActionBar">
+    <style name="PreferencesTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowBackground">@color/activity_background</item>
         <item name="buttonBarStyle">@style/ButtonBar</item>
@@ -43,7 +35,7 @@
         <item name="colorPrimary">@color/bar_overlay</item>
         <item name="android:windowNoTitle">true</item>
         <item name="windowActionModeOverlay">true</item>
-		<item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+		<item name="preferenceTheme">@style/CustomPreferenceThemeOverlay</item>
     </style>
     
     <style name="ButtonBar">
@@ -64,16 +56,13 @@
         <item name="textAllCaps">false</item>
     </style>
     
-    <style name="PreferenceThemeOverlay">
-        <item name="preferenceScreenStyle">@style/Preference.PreferenceScreen</item>
-        <item name="preferenceFragmentStyle">@style/PreferenceFragment</item>
-        <item name="preferenceCategoryStyle">@style/Preference.Category</item>
-        <item name="preferenceStyle">@style/Preference</item>
-        <item name="preferenceInformationStyle">@style/Preference.Information</item>
-        <item name="checkBoxPreferenceStyle">@style/Preference.CheckBoxPreference</item>
-        <item name="switchPreferenceCompatStyle">@style/Preference.SwitchPreferenceCompat</item>
-        <item name="dialogPreferenceStyle">@style/Preference.DialogPreference</item>
-        <item name="editTextPreferenceStyle">@style/Preference.DialogPreference.EditTextPreference</item>
-        <item name="preferenceFragmentListStyle">@style/PreferenceFragmentList</item>
+    <style name="CustomPreferenceThemeOverlay" parent="PreferenceThemeOverlay">
+        <!-- remove dividers -->
+        <item name="preferenceFragmentStyle">@style/CustomPreferenceFragment</item>
+        <item name="preferenceFragmentCompatStyle">@style/CustomPreferenceFragment</item>
+    </style>
+    
+    <style name="CustomPreferenceFragment" parent="PreferenceFragment.Material">
+        <item name="android:divider">@null</item>
     </style>
 </resources>

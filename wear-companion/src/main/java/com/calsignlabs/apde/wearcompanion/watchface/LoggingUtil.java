@@ -3,7 +3,7 @@ package com.calsignlabs.apde.wearcompanion.watchface;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.Log;
 
 import com.google.android.gms.tasks.Tasks;
@@ -12,11 +12,9 @@ import com.google.android.gms.wearable.CapabilityInfo;
 import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.OutputStream;
-import java.util.concurrent.ExecutionException;
 
 /*
  * Note: This file should be kept in sync with APDE/src/assets/log-broadcaster/APDEInternalLogBroadcasterUtil.java.

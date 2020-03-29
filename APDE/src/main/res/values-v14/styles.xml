@@ -1,23 +1,12 @@
 <resources>
-    <!--
-        Base application theme for API 14+. This theme completely replaces
-        AppBaseTheme from BOTH res/values/styles.xml and
-        res/values-v11/styles.xml on API 14+ devices.
-
-    -->
-    
-    <style name="AppBaseTheme" parent="android:Theme.Holo">
-        <!-- API 14 theme customizations can go here. -->
-    </style>
-    
-    <style name="PreferencesTheme" parent="@style/PreferenceFixTheme.NoActionBar" >
+    <style name="PreferencesTheme" parent="Theme.AppCompat.NoActionBar" >
         <item name="android:actionBarStyle">@style/PreferencesActionBarStyle</item>
         <item name="android:windowBackground">@color/activity_background</item>
         <item name="colorPrimary">@color/bar_overlay</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         <item name="windowActionModeOverlay">true</item>
-        <item name="preferenceTheme">@style/PreferenceThemeOverlay.v14.Material</item>
+        <item name="preferenceTheme">@style/CustomPreferenceThemeOverlay</item>
     </style>
     
     <style name="PreferencesActionBarStyle" parent="android:style/Widget.Holo.ActionBar">

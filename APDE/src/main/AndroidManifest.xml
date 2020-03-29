@@ -16,7 +16,8 @@
 		android:allowBackup="true"
 		android:icon="@drawable/ic_launcher"
 		android:label="@string/apde_app_title"
-		android:theme="@style/AppTheme">
+		android:theme="@style/AppTheme"
+		android:usesCleartextTraffic="true">
 		
 		<activity
 			android:name=".EditorActivity"
@@ -108,7 +109,7 @@
 			android:theme="@style/FullscreenTheme"/>
 		<!-- Lets us share APKs and other files with other applications -->
 		<provider
-			android:name="android.support.v4.content.FileProvider"
+			android:name="androidx.core.content.FileProvider"
 			android:authorities="com.calsignlabs.apde.fileprovider"
 			android:exported="false"
 			android:grantUriPermissions="true">

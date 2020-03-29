@@ -1,18 +1,18 @@
-<android.support.v7.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <android.support.v7.preference.PreferenceCategory
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <androidx.preference.PreferenceCategory
         android:key="pref_code_assistance_settings"
         android:title="@string/pref_code_assistance" >
         
-        <android.support.v14.preference.SwitchPreference
+        <androidx.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="auto_indent"
             android:title="@string/pref_auto_indent" />
         
-        <android.support.v14.preference.SwitchPreference
+        <androidx.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:dependency="auto_indent"
             android:key="curly_brace_insertion"
             android:summary="@string/pref_curly_brace_insertion_desc"
             android:title="@string/pref_curly_brace_insertion" />
-    </android.support.v7.preference.PreferenceCategory>
-</android.support.v7.preference.PreferenceScreen>
+    </androidx.preference.PreferenceCategory>
+</androidx.preference.PreferenceScreen>

@@ -42,7 +42,7 @@
 		</service>
 		
 		<provider
-			android:name="android.support.v4.content.FileProvider"
+			android:name="androidx.core.content.FileProvider"
 			android:authorities="com.calsignlabs.apde.wearcompanion.fileprovider"
 			android:exported="false"
 			android:grantUriPermissions="true">

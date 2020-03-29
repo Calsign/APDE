@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+	<!-- remove stupid reserved icon space in preferences -->
+	<!-- https://stackoverflow.com/a/52960668 -->
+	<bool name="config_materialPreferenceIconSpaceReserved" tools:ignore="MissingDefaultResource,PrivateResource">false</bool>
+</resources>

@@ -12,7 +12,7 @@ import android.graphics.Paint.Style;
 import android.graphics.PorterDuff;
 import android.graphics.Shader;
 import android.graphics.drawable.GradientDrawable;
-import android.support.v7.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;

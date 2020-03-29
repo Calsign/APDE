@@ -9,19 +9,23 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.support.v14.preference.SwitchPreference;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.preference.CheckBoxPreference;
-import android.support.v7.preference.ListPreference;
-import android.support.v7.preference.Preference;
-import android.support.v7.preference.PreferenceCategory;
-import android.support.v7.preference.PreferenceManager;
-import android.support.v7.preference.PreferenceScreen;
-import android.support.v7.widget.Toolbar;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.EditTextPreference;
+import androidx.preference.ListPreference;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceCategory;
+import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceManager;
+import androidx.preference.PreferenceScreen;
+import androidx.appcompat.widget.Toolbar;
+import androidx.preference.SwitchPreferenceCompat;
+
+import android.text.InputFilter;
+import android.text.InputType;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -42,7 +46,6 @@ import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.support.CustomListPreference;
 import com.calsignlabs.apde.support.StockPreferenceFragment;
-import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompat;
 
 import java.util.ArrayList;
 import java.util.Stack;
@@ -131,19 +134,16 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 	
 	@SuppressLint("NewApi")
 	public void checkPreferences(PreferenceFragmentCompat frag) {
-		SwitchPreference hardwareKeyboard = ((SwitchPreference) frag.findPreference("use_hardware_keyboard"));
+		SwitchPreferenceCompat hardwareKeyboard = frag.findPreference("use_hardware_keyboard");
 		
 		if(hardwareKeyboard != null) {
-			hardwareKeyboard.setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
-				@Override
-				public boolean onPreferenceChange(Preference preference, Object newValue) {
-					if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-						getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-					else
-						getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
+			hardwareKeyboard.setOnPreferenceChangeListener((preference, newValue) -> {
+				if(PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+					getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+				else
+					getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
 
-					return true;
-				}
+				return true;
 			});
 		}
 		
@@ -156,19 +156,16 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 				((PreferenceCategory) frag.findPreference("pref_general_settings")).removePreference(vibrator);
 		}
 		
-		final SwitchPreference enableUndoRedo = (SwitchPreference) frag.findPreference("pref_key_undo_redo");
+		final SwitchPreferenceCompat enableUndoRedo = frag.findPreference("pref_key_undo_redo");
 		
 		if (enableUndoRedo != null) {
-			enableUndoRedo.setOnPreferenceChangeListener(new CheckBoxPreference.OnPreferenceChangeListener() {
-				@Override
-				public boolean onPreferenceChange(Preference preference, Object newValue) {
-					if (!enableUndoRedo.isChecked()) {
-						//If the user disabled undo / redo, clear the undo history to prevent problems
-						((APDE) getApplicationContext()).getEditor().clearUndoRedoHistory();
-					}
-					
-					return true;
+			enableUndoRedo.setOnPreferenceChangeListener((preference, newValue) -> {
+				if (!enableUndoRedo.isChecked()) {
+					//If the user disabled undo / redo, clear the undo history to prevent problems
+					((APDE) getApplicationContext()).getEditor().clearUndoRedoHistory();
 				}
+				
+				return true;
 			});
 		}
 		
@@ -353,25 +350,47 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 			
 			sketchbookDrive.setValue(PreferenceManager.getDefaultSharedPreferences(SettingsActivity.this).getString("pref_sketchbook_drive", ""));
 			
-			sketchbookDrive.init(R.layout.pref_sketchbook_drive_list_item, new CustomListPreference.Populator() {
-				@Override
-				public void populate(View view, int position, CharSequence[] entries) {
-					LinearLayout layout = (LinearLayout) view;
-					
-					APDE.StorageDrive drive = drives.get(position);
-					
-					((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_type)).setText(drive.type.title);
-					((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_space)).setText(drive.space);
-					((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_root)).setText(drive.root.getAbsolutePath());
-				}
-			}, new Runnable() {
-				@Override
-				public void run() {
-					updateSketchbookDrivePref(sketchbookDrive, sketchbookLocation, drives);
-				}
-			});
+			sketchbookDrive.init(R.layout.pref_sketchbook_drive_list_item, (view, position, entries) -> {
+				LinearLayout layout = (LinearLayout) view;
+				
+				APDE.StorageDrive drive = drives.get(position);
+				
+				((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_type)).setText(drive.type.title);
+				((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_space)).setText(drive.space);
+				((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_root)).setText(drive.root.getAbsolutePath());
+			}, () -> updateSketchbookDrivePref(sketchbookDrive, sketchbookLocation, drives));
 			
 			updateSketchbookDrivePref(sketchbookDrive, sketchbookLocation, drives);
+		}
+		
+		EditTextPreference codeTextSize = frag.findPreference("textsize");
+		EditTextPreference consoleTextSize = frag.findPreference("textsize_console");
+		EditTextPreference sketchbookLocation = frag.findPreference("pref_sketchbook_location");
+		
+		if (codeTextSize != null) {
+			codeTextSize.setOnBindEditTextListener(editText -> {
+				editText.setInputType(InputType.TYPE_CLASS_NUMBER);
+				editText.setMaxLines(1);
+				editText.setSingleLine();
+				editText.setSelectAllOnFocus(true);
+				editText.setFilters(new InputFilter[] {new InputFilter.LengthFilter(2)});
+			});
+		}
+		if (consoleTextSize != null) {
+			consoleTextSize.setOnBindEditTextListener(editText -> {
+				editText.setInputType(InputType.TYPE_CLASS_NUMBER);
+				editText.setMaxLines(1);
+				editText.setSingleLine();
+				editText.setSelectAllOnFocus(true);
+				editText.setFilters(new InputFilter[] {new InputFilter.LengthFilter(2)});
+			});
+		}
+		if (sketchbookLocation != null) {
+			sketchbookLocation.setOnBindEditTextListener(editText -> {
+				editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+				editText.setMaxLines(1);
+				editText.setSingleLine();
+			});
 		}
 		
 		bindPreferenceSummaryToValue(frag.findPreference("textsize"));
@@ -405,6 +424,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 			if (permissions != null) {
 				previewReinstall(permissions, true, true);
 			}
+		} else {
+			super.onActivityResult(requestCode, resultCode, data);
 		}
 	}
 	
@@ -596,7 +617,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 	}
 	
 	@Override
-	public boolean onPreferenceStartFragment(android.support.v7.preference.PreferenceFragmentCompat preferenceFragmentCompat, Preference preference) {
+	public boolean onPreferenceStartFragment(androidx.preference.PreferenceFragmentCompat preferenceFragmentCompat, Preference preference) {
 		// This is only ever called from a settings screen, not from the headers fragment
 		
 		StockPreferenceFragment newFragment = new StockPreferenceFragment();
@@ -636,7 +657,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 	}
 	
 	@Override
-	public boolean onPreferenceStartScreen(android.support.v7.preference.PreferenceFragmentCompat preferenceFragmentCompat, PreferenceScreen preferenceScreen) {
+	public boolean onPreferenceStartScreen(androidx.preference.PreferenceFragmentCompat preferenceFragmentCompat, PreferenceScreen preferenceScreen) {
 		return false;
 	}
 	

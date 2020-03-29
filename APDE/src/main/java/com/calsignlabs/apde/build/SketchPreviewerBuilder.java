@@ -6,7 +6,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
-import android.support.v4.content.FileProvider;
+import androidx.core.content.FileProvider;
 import android.view.inputmethod.InputMethodManager;
 
 import com.calsignlabs.apde.APDE;

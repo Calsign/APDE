@@ -1,14 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--
-        Base application theme for API 11+. This theme completely replaces
-        AppBaseTheme from res/values/styles.xml on API 11+ devices.
-
-    -->
-    <style name="AppBaseTheme" parent="Theme.AppCompat">
-        <!-- API 11 theme customizations can go here. -->
-    </style>
-    
     <style name="FullscreenTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="android:actionBarStyle">@style/FullscreenActionBarStyle</item>
         <item name="android:windowActionBarOverlay">false</item>
@@ -22,7 +13,7 @@
         <item name="alertDialogTheme">@style/Theme.AppCompat.Dialog.Alert</item>
     </style>
     
-    <style name="PreferencesTheme" parent="@style/PreferenceFixTheme.NoActionBar">
+    <style name="PreferencesTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowBackground">@color/activity_background</item>
         <item name="android:actionBarStyle">@style/PreferencesActionBarStyle</item>
@@ -30,7 +21,7 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         <item name="windowActionModeOverlay">true</item>
-        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+        <item name="preferenceTheme">@style/CustomPreferenceThemeOverlay</item>
     </style>
     
     <style name="FullscreenActionBarStyle" parent="Widget.AppCompat.ActionBar">

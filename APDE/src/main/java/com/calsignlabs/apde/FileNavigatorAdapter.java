@@ -12,7 +12,7 @@ import android.graphics.Canvas;
 import android.graphics.Point;
 import android.os.Handler;
 import android.preference.PreferenceManager;
-import android.support.v7.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.LayoutInflater;

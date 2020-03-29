@@ -1,75 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.v7.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <android.support.v7.preference.PreferenceCategory
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <androidx.preference.PreferenceCategory
         android:key="pref_build"
         android:title="@string/pref_build" >
         
-        <android.support.v14.preference.SwitchPreference
+        <androidx.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="pref_build_internal_storage"
             android:title="@string/pref_build_internal_storage"
             android:summary="@string/pref_build_internal_storage_desc" />
         
-        <android.support.v14.preference.SwitchPreference
+        <androidx.preference.SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="inject_log_broadcaster"
             android:title="@string/pref_inject_log_broadcaster"
             android:summary="@string/pref_inject_log_broadcaster_desc" />
 	
-		<android.support.v14.preference.SwitchPreference
+		<androidx.preference.SwitchPreferenceCompat
 			android:defaultValue="true"
 			android:key="pref_build_check_screen_overlay"
 			android:title="@string/pref_build_check_screen_overlay"
 			android:summary="@string/pref_build_check_screen_overlay_desc" />
-    </android.support.v7.preference.PreferenceCategory>
+    </androidx.preference.PreferenceCategory>
 	
-	<android.support.v7.preference.PreferenceCategory
+	<androidx.preference.PreferenceCategory
 		android:key="pref_build_preview"
 		android:title="@string/pref_build_preview" >
 		
-		<android.support.v7.preference.Preference
+		<androidx.preference.Preference
 			android:key="pref_build_preview_permissions"
 			android:title="@string/pref_build_preview_permissions" />
 		
-		<android.support.v7.preference.Preference
+		<androidx.preference.Preference
 			android:key="pref_build_preview_reinstall"
 			android:title="@string/pref_build_preview_reinstall" />
 		
-		<android.support.v7.preference.Preference
+		<androidx.preference.Preference
 			android:key="pref_build_preview_uninstall"
 			android:title="@string/pref_build_preview_uninstall" />
-	</android.support.v7.preference.PreferenceCategory>
+	</androidx.preference.PreferenceCategory>
 	
-	<android.support.v7.preference.PreferenceCategory
+	<androidx.preference.PreferenceCategory
 		android:key="pref_vr"
 		android:title="@string/pref_vr" >
 		
-		<android.support.v7.preference.ListPreference
+		<androidx.preference.ListPreference
 			android:key="pref_vr_default_renderer"
 			android:title="@string/pref_vr_default_renderer"
 			android:entries="@array/pref_vr_default_renderer_entries"
 			android:entryValues="@array/pref_vr_default_renderer_entry_values"
 			android:defaultValue="@string/pref_vr_default_renderer_default_value" />
-	</android.support.v7.preference.PreferenceCategory>
+	</androidx.preference.PreferenceCategory>
 	
-    <android.support.v7.preference.PreferenceCategory
+    <androidx.preference.PreferenceCategory
         android:key="pref_build_debug"
         android:title="@string/pref_debug" >
     
-        <android.support.v14.preference.SwitchPreference
+        <androidx.preference.SwitchPreferenceCompat
             android:defaultValue="false"
             android:key="build_output_verbose"
             android:title="@string/pref_build_output_verbose" />
         
-        <android.support.v14.preference.SwitchPreference
+        <androidx.preference.SwitchPreferenceCompat
             android:defaultValue="false"
             android:key="pref_build_folder_keep"
             android:title="@string/pref_build_folder_keep" />
 		
 		<!-- Deleted preference: pref_build_aapt_binary (pre-v0.3.3 AAPT binary) -->
 	
-		<android.support.v7.preference.Preference
+		<androidx.preference.Preference
 			android:key="pref_build_recopy_android_jar"
 			android:title="@string/pref_build_recopy_android_jar" />
-    </android.support.v7.preference.PreferenceCategory>
-</android.support.v7.preference.PreferenceScreen>
+    </androidx.preference.PreferenceCategory>
+</androidx.preference.PreferenceScreen>

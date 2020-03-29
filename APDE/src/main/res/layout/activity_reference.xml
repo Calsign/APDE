@@ -7,7 +7,7 @@
 	tools:context="com.calsignlabs.apde.ReferenceActivity"
 	android:orientation="vertical">
 	
-	<android.support.v7.widget.Toolbar
+	<androidx.appcompat.widget.Toolbar
 		android:id="@+id/toolbar"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content">
@@ -16,7 +16,7 @@
 			android:id="@+id/reference_source_spinner"
 			android:layout_width="wrap_content"
 			android:layout_height="match_parent" />
-	</android.support.v7.widget.Toolbar>
+	</androidx.appcompat.widget.Toolbar>
 	
 	<WebView
 		android:id="@+id/reference_webview"

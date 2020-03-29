@@ -23,10 +23,10 @@ dependencies {
 
     implementation 'com.google.android.support:wearable:2.3.0'
     implementation 'com.google.android.gms:play-services-wearable:15.0.1'
-    implementation 'com.android.support:percent:27.1.1'
-    implementation 'com.android.support:support-v4:27.1.1'
-    implementation 'com.android.support:recyclerview-v7:27.1.1'
-    implementation 'com.android.support:wear:27.1.1'
+    implementation 'androidx.percentlayout:percentlayout:1.0.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.0.0'
+    implementation 'androidx.wear:wear:1.0.0'
     implementation 'com.google.android.wearable:wearable:2.3.0'
 
     implementation files('libs/processing-core.jar')

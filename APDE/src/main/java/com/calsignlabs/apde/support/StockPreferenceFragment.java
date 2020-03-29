@@ -16,11 +16,11 @@ package com.calsignlabs.apde.support;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.support.v4.app.DialogFragment;
-import android.support.v7.preference.Preference;
+import androidx.fragment.app.DialogFragment;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceFragmentCompat;
 
 import com.calsignlabs.apde.SettingsActivity;
-import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompat;
 
 @SuppressLint("NewApi")
 public class StockPreferenceFragment extends PreferenceFragmentCompat {
@@ -30,7 +30,7 @@ public class StockPreferenceFragment extends PreferenceFragmentCompat {
 	}
 	
 	@Override
-	public void onCreatePreferencesFix(Bundle bundle, String s) {
+	public void onCreatePreferences(Bundle bundle, String s) {
 		String resName = getArguments().getString("resource");
 		int res = getActivity().getResources().getIdentifier(resName, "xml", getActivity().getPackageName());
 		addPreferencesFromResource(res);

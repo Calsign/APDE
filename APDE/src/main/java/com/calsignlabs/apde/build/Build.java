@@ -20,7 +20,7 @@ import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
-import android.support.v4.content.FileProvider;
+import androidx.core.content.FileProvider;
 import android.view.inputmethod.InputMethodManager;
 
 import com.android.sdklib.build.ApkBuilder;
@@ -58,7 +58,6 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
