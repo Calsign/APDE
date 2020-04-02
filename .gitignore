@@ -14,6 +14,4 @@ gradle/
 *.log
 local.properties
 *.iml
-gradlew
-gradlew.bat
 APDE/src/main/gen
