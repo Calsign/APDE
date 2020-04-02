@@ -2,11 +2,10 @@ package com.calsignlabs.apde.tool;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.ParcelFileDescriptor;
 import android.preference.PreferenceManager;
-import androidx.appcompat.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.ContextThemeWrapper;
@@ -23,14 +22,15 @@ import android.widget.Spinner;
 import android.widget.TableLayout;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
+
 import com.calsignlabs.apde.APDE;
-import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.KeyBinding;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.dag.BuildContext;
-import com.ipaulpro.afilechooser.utils.FileUtils;
+import com.calsignlabs.apde.support.FileSelection;
 
 import org.spongycastle.asn1.x509.X509Name;
 import org.spongycastle.jce.X509Principal;
@@ -38,10 +38,10 @@ import org.spongycastle.jce.provider.BouncyCastleProvider;
 import org.spongycastle.x509.X509V3CertificateGenerator;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
@@ -66,8 +66,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.Vector;
 
 import javax.security.auth.x500.X500Principal;
@@ -76,7 +78,7 @@ import kellinwood.security.zipsigner.optional.JksKeyStore;
 import kellinwood.security.zipsigner.optional.LoadKeystoreException;
 
 /**
- * Exports the current sketch as an Eclipse-compatible Android project
+ * Exports the current sketch as an signed, installable APK.
  */
 @SuppressWarnings("deprecation")
 public class ExportSignedPackage implements Tool {
@@ -121,11 +123,42 @@ public class ExportSignedPackage implements Tool {
 	private Spinner componentTarget;
 	private ArrayAdapter<String> componentTargetAdapter;
 	
+	private static class TicketVendor {
+		private int newestTicket, lastTicket;
+		
+		public TicketVendor() {
+			newestTicket = 0;
+			lastTicket = 0;
+		}
+		
+		public int requestTicket() {
+			return ++ newestTicket;
+		}
+		
+		public boolean isNewestTicket(int ticket) {
+			// Technically this is succeptible to overflow but that shouldn't matter in practice
+			if (ticket > lastTicket) {
+				lastTicket = ticket;
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+	
+	private TicketVendor keystoreFileValidation;
+	private TicketVendor keystorePasswordValidation;
+	private TicketVendor aliasPasswordValidation;
+	
 	@Override
 	public void init(APDE context) {
 		ExportSignedPackage.context = context;
 		
 		exporting = false;
+		
+		keystoreFileValidation = new TicketVendor();
+		keystorePasswordValidation = new TicketVendor();
+		aliasPasswordValidation = new TicketVendor();
 	}
 	
 	@Override
@@ -154,6 +187,14 @@ public class ExportSignedPackage implements Tool {
 		promptSigningKey();
 	}
 	
+	protected Uri getKeystoreFileUri() {
+		return FileSelection.uriStringOrPathToUri(keystoreFile.getText().toString());
+	}
+	
+	protected Uri getCreateKeystoreFileUri() {
+		return FileSelection.uriStringOrPathToUri(createKeystoreFile.getText().toString());
+	}
+	
 	@SuppressLint("InlinedApi")
 	protected void promptSigningKey() {
 		AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
@@ -163,71 +204,52 @@ public class ExportSignedPackage implements Tool {
 
 		layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.export_signed_package, null);
 		
-		keystoreFile = (AutoCompleteTextView) layout.findViewById(R.id.keystore_file);
-		keystorePassword = (EditText) layout.findViewById(R.id.keystore_password);
-		keystoreFileSelect = (ImageButton) layout.findViewById(R.id.keystore_file_select);
-		keystoreNew = (ImageButton) layout.findViewById(R.id.keystore_new);
+		keystoreFile = layout.findViewById(R.id.keystore_file);
+		keystorePassword = layout.findViewById(R.id.keystore_password);
+		keystoreFileSelect = layout.findViewById(R.id.keystore_file_select);
+		keystoreNew = layout.findViewById(R.id.keystore_new);
 		
-		alias = (Spinner) layout.findViewById(R.id.alias);
-		aliasPassword = (EditText) layout.findViewById(R.id.alias_password);
-		aliasCertificateInfo = (ImageButton) layout.findViewById(R.id.alias_certificate_info);
-		aliasNew = (ImageButton) layout.findViewById(R.id.alias_new);
+		alias = layout.findViewById(R.id.alias);
+		aliasPassword = layout.findViewById(R.id.alias_password);
+		aliasCertificateInfo = layout.findViewById(R.id.alias_certificate_info);
+		aliasNew = layout.findViewById(R.id.alias_new);
 		
-		componentTarget = (Spinner) layout.findViewById(R.id.component_target);
+		componentTarget = layout.findViewById(R.id.component_target);
 		
-		exportMessage = (TextView) layout.findViewById(R.id.export_signed_package_message);
+		exportMessage = layout.findViewById(R.id.export_signed_package_message);
 		
 		builder.setView(layout);
 		
-		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {}
-		});
+		builder.setNegativeButton(R.string.cancel, (dialog, which) -> {});
 		
-		builder.setPositiveButton(R.string.export_signed_package_export, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				releaseBuild();
-			}
-		});
+		builder.setPositiveButton(R.string.export_signed_package_export, (dialog, which) -> releaseBuild());
 		
 		//Info button - this is mostly warnings and disclaimers
 		builder.setNeutralButton(R.string.export_signed_package_long_info_button, null);
 		
 		final AlertDialog dialog = builder.create();
 		
-		dialog.setOnShowListener(new DialogInterface.OnShowListener() {
-			@Override
-			public void onShow(DialogInterface d) {
-				dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(new View.OnClickListener() {
-					@SuppressLint("NewApi")
-					@Override
-					public void onClick(View v) {
-						AlertDialog.Builder infoBuilder = new AlertDialog.Builder(context.getEditor());
-						
-						infoBuilder.setTitle(R.string.export_signed_package_long_info_title);
-						infoBuilder.setMessage(R.string.export_signed_package_long_info_message);
-						
-						infoBuilder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int which) {}
-						});
-						
-						AlertDialog infoDialog = infoBuilder.create();
-						
-						infoDialog.show();
-						infoDialog.getWindow().getAttributes();
-						
-						TextView messageTextView = (TextView) infoDialog.findViewById(android.R.id.message);
-						messageTextView.setTextSize(12);
-						
-						messageTextView.setTextIsSelectable(true);
-						
-						//Don't dismiss the dialog!!
-					}
-				});
-			}
-		});
+		dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+			AlertDialog.Builder infoBuilder = new AlertDialog.Builder(context.getEditor());
+			
+			infoBuilder.setTitle(R.string.export_signed_package_long_info_title);
+			infoBuilder.setMessage(R.string.export_signed_package_long_info_message);
+			
+			infoBuilder.setPositiveButton(R.string.ok, (dialog12, which) -> {
+			});
+			
+			AlertDialog infoDialog = infoBuilder.create();
+			
+			infoDialog.show();
+			infoDialog.getWindow().getAttributes();
+			
+			TextView messageTextView = infoDialog.findViewById(android.R.id.message);
+			messageTextView.setTextSize(12);
+			
+			messageTextView.setTextIsSelectable(true);
+			
+			//Don't dismiss the dialog!!
+		}));
 		
 		dialog.show();
 		
@@ -247,11 +269,7 @@ public class ExportSignedPackage implements Tool {
 		loadRecentKeystores();
 		
 		keystorePassword.requestLayout();
-		keystorePassword.post(new Runnable() {
-			public void run() {
-				keystoreFile.setDropDownWidth(keystorePassword.getWidth());
-			}
-		});
+		keystorePassword.post(() -> keystoreFile.setDropDownWidth(keystorePassword.getWidth()));
 		
 		ArrayList<String> aliasList = new ArrayList<String>();
 		aliasList.add(context.getResources().getString(R.string.export_signed_package_no_aliases));
@@ -280,35 +298,19 @@ public class ExportSignedPackage implements Tool {
 		// Sanity check
 		componentTarget.setSelection(Math.min(Math.max(selectedTarget, 0), 3), false);
 		
-		keystoreFileSelect.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				context.getEditor().selectFile(R.string.export_signed_package_keystore_file_select, REQUEST_KEYSTORE_FILE, new EditorActivity.ActivityResultCallback() {
-					@Override
-					public void onActivityResult(int requestCode, int resultCode, Intent data) {
-						if (resultCode == Activity.RESULT_OK) {
-							final Uri uri = data.getData();
-							
-							//Get the File path from the Uri
-							String path = FileUtils.getPath(context, uri);
-							
-							if (path != null && FileUtils.isLocal(path)) {
-								if (new File(path).exists()) {
-									keystoreFile.setText(path);
-								}
-							}
-						}
+		keystoreFileSelect.setOnClickListener(view -> {
+			Intent intent = FileSelection.createFileSelectorIntent(false, null);
+			context.getEditor().selectFile(intent, REQUEST_KEYSTORE_FILE, (requestCode, resultCode, data) -> {
+				if (resultCode == Activity.RESULT_OK) {
+					Uri uri = FileSelection.getSelectedUri(data);
+					if (uri != null) {
+						keystoreFile.setText(uri.toString());
 					}
-				});
-			}
+				}
+			});
 		});
 		
-		keystoreNew.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				promptCreateKeystore();
-			}
-		});
+		keystoreNew.setOnClickListener(view -> promptCreateKeystore());
 		
 		keystoreFile.addTextChangedListener(new TextWatcher() {
 			@Override
@@ -323,17 +325,27 @@ public class ExportSignedPackage implements Tool {
 				aliasCertificateInfo.setEnabled(false);
 				aliasNew.setEnabled(false);
 				
-				ValidationResult result = validateKeystoreFile();
+				int ticket = keystoreFileValidation.requestTicket();
 				
-				if (result.resultCode() == 0) {
-					keystorePassword.setEnabled(true);
-					//Hide the dropdown
-					keystoreFile.dismissDropDown();
-					messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_password);
-				} else {
-					keystorePassword.setEnabled(false);
-					messageView(exportMessage, result);
-				}
+				// Do validation in background so that the UI doesn't freeze
+				(new Thread(() -> {
+					ValidationResult result = validateKeystoreFile();
+					
+					context.getEditor().runOnUiThread(() -> {
+						if (keystoreFileValidation.isNewestTicket(ticket)) {
+							
+							if (result.resultCode() == 0) {
+								keystorePassword.setEnabled(true);
+								// Hide the dropdown
+								keystoreFile.dismissDropDown();
+								messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_password);
+							} else {
+								keystorePassword.setEnabled(false);
+								messageView(exportMessage, result);
+							}
+						}
+					});
+				})).start();
 			}
 			
 			@Override
@@ -346,38 +358,44 @@ public class ExportSignedPackage implements Tool {
 		keystorePassword.addTextChangedListener(new TextWatcher() {
 			@SuppressWarnings("unchecked")
 			@Override
-			public void afterTextChanged(Editable arg0) {
+			public void afterTextChanged(Editable arg) {
+				aliasNew.setEnabled(false);
+				aliasPassword.setEnabled(false);
+				aliasCertificateInfo.setEnabled(false);
+				
+				int ticket = keystorePasswordValidation.requestTicket();
+				
+				// Run validation in background so that we don't freeze the UI thread
 				if (keystorePassword.getText().length() > 0) {
-					ValidationResult result = loadKeystore(new File(keystoreFile.getText().toString()), keystorePassword.getText().toString().toCharArray());
-					
-					if (result.resultCode() == 0) {
-						loadAliases((ArrayList<String>) result.extra());
+					(new Thread(() -> {
+						ValidationResult result = loadKeystore(keystoreFile.getText().toString(),
+								getKeystoreFileUri(), keystorePassword.getText().toString().toCharArray());
 						
-						if (alias.isEnabled()) {
-							messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_key_password);
-							aliasPassword.setEnabled(true);
-							aliasCertificateInfo.setEnabled(true);
-						} else {
-							messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_create_key);
-							aliasPassword.setEnabled(false);
-							aliasCertificateInfo.setEnabled(false);
-						}
-						
-						aliasNew.setEnabled(true);
-					} else {
-						messageView(exportMessage, result);
-						loadAliases(new ArrayList<String>());
-						
-						aliasNew.setEnabled(false);
-						aliasPassword.setEnabled(false);
-						aliasCertificateInfo.setEnabled(false);
-					}
+						context.getEditor().runOnUiThread(() -> {
+							if (keystorePasswordValidation.isNewestTicket(ticket)) {
+								if (result.resultCode() == 0) {
+									loadAliases((ArrayList<String>) result.extra());
+									
+									if (alias.isEnabled()) {
+										messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_key_password);
+										aliasPassword.setEnabled(true);
+										aliasCertificateInfo.setEnabled(true);
+									} else {
+										messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_create_key);
+									}
+									
+									aliasNew.setEnabled(true);
+								} else {
+									messageView(exportMessage, result);
+									loadAliases(new ArrayList<String>());
+								}
+							}
+						});
+					})).start();
 				} else {
-					messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_password);
-					
-					aliasNew.setEnabled(false);
-					aliasPassword.setEnabled(false);
-					aliasCertificateInfo.setEnabled(false);
+					if (keystorePasswordValidation.isNewestTicket(ticket)) {
+						messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_password);
+					}
 				}
 			}
 			
@@ -393,7 +411,7 @@ public class ExportSignedPackage implements Tool {
 			public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 				aliasPassword.setText("");
 				
-				loadCertificate(new File(keystoreFile.getText().toString()),
+				loadCertificate(keystoreFile.getText().toString(), getKeystoreFileUri(),
 						keystorePassword.getText().toString().toCharArray(),
 						aliasAdapter.getItem(alias.getSelectedItemPosition()));
 			}
@@ -402,119 +420,110 @@ public class ExportSignedPackage implements Tool {
 			public void onNothingSelected(AdapterView<?> parent) {}
 		});
 		
-		aliasCertificateInfo.setOnClickListener(new View.OnClickListener() {
-			@SuppressWarnings("rawtypes")
-			@Override
-			public void onClick(View v) {loadCertificate(new File(keystoreFile.getText().toString()),
-						keystorePassword.getText().toString().toCharArray(),
-						aliasAdapter.getItem(alias.getSelectedItemPosition()));
+		aliasCertificateInfo.setOnClickListener(v -> {
+			loadCertificate(keystoreFile.getText().toString(), getKeystoreFileUri(),
+					keystorePassword.getText().toString().toCharArray(),
+					aliasAdapter.getItem(alias.getSelectedItemPosition()));
+			
+			AlertDialog.Builder infoBuilder = new AlertDialog.Builder(context.getEditor());
+			
+			infoBuilder.setTitle(R.string.export_signed_package_certificate_info);
+			
+			TableLayout infoLayout;
+			
+			infoLayout = (TableLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.certificate_info, null);
+			
+			((TextView) infoLayout.findViewById(R.id.alias_name)).setText((String) alias.getSelectedItem());
+			((TextView) infoLayout.findViewById(R.id.certificate_expiration)).setText(new SimpleDateFormat(context.getResources().getString(R.string.export_signed_package_date_format), Locale.US).format(certificate.getNotAfter()));
+			
+			Principal principal = certificate.getSubjectDN();
+			
+			if (principal instanceof X500Principal) {
+				//This seems to work with keystores generated with the desktop keytool
 				
-				AlertDialog.Builder infoBuilder = new AlertDialog.Builder(context.getEditor());
+				X500Principal x500Principal = (X500Principal) principal;
+				X509Principal x509 = new X509Principal(x500Principal.getName()); //Because X509Principal parses the String for us
 				
-				infoBuilder.setTitle(R.string.export_signed_package_certificate_info);
+				((TextView) infoLayout.findViewById(R.id.alias_certificate_name)).setText((String) x509.getValues(X509Name.CN).get(0));
+				((TextView) infoLayout.findViewById(R.id.alias_certificate_organizational_unit)).setText((String) x509.getValues(X509Name.OU).get(0));
+				((TextView) infoLayout.findViewById(R.id.alias_certificate_organization)).setText((String) x509.getValues(X509Name.O).get(0));
+				((TextView) infoLayout.findViewById(R.id.alias_certificate_city)).setText((String) x509.getValues(X509Name.L).get(0));
+				((TextView) infoLayout.findViewById(R.id.alias_certificate_state)).setText((String) x509.getValues(X509Name.ST).get(0));
+				((TextView) infoLayout.findViewById(R.id.alias_certificate_country)).setText((String) x509.getValues(X509Name.C).get(0));
+			} else {
+				//This seems to work with keystores generated by APDE... does that make that our generator is broken?
 				
-				TableLayout infoLayout;
-				
-				infoLayout = (TableLayout) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.certificate_info, null);
-				
-				((TextView) infoLayout.findViewById(R.id.alias_name)).setText((String) alias.getSelectedItem());
-				((TextView) infoLayout.findViewById(R.id.certificate_expiration)).setText(new SimpleDateFormat(context.getResources().getString(R.string.export_signed_package_date_format), Locale.US).format(certificate.getNotAfter()));
-				
-				Principal principal = certificate.getSubjectDN();
-				
-				if (principal instanceof X500Principal) {
-					//This seems to work with keystores generated with the desktop keytool
+				//Yuck, reflection... but Android hides the BouncyCastle APIs that our certificate forces us to use
+				try {
+					Class<?> x509Principal = Class.forName("com.android.org.bouncycastle.jce.X509Principal");
+					Class<?> x509Name = Class.forName("com.android.org.bouncycastle.asn1.x509.X509Name");
+					Class<?> ans1Ident = Class.forName("com.android.org.bouncycastle.asn1.ASN1ObjectIdentifier");
+					Method getValues = x509Principal.getMethod("getValues", ans1Ident);
 					
-					X500Principal x500Principal = (X500Principal) principal;
-					X509Principal x509 = new X509Principal(x500Principal.getName()); //Because X509Principal parses the String for us
-					
-					((TextView) infoLayout.findViewById(R.id.alias_certificate_name)).setText((String) x509.getValues(X509Name.CN).get(0));
-					((TextView) infoLayout.findViewById(R.id.alias_certificate_organizational_unit)).setText((String) x509.getValues(X509Name.OU).get(0));
-					((TextView) infoLayout.findViewById(R.id.alias_certificate_organization)).setText((String) x509.getValues(X509Name.O).get(0));
-					((TextView) infoLayout.findViewById(R.id.alias_certificate_city)).setText((String) x509.getValues(X509Name.L).get(0));
-					((TextView) infoLayout.findViewById(R.id.alias_certificate_state)).setText((String) x509.getValues(X509Name.ST).get(0));
-					((TextView) infoLayout.findViewById(R.id.alias_certificate_country)).setText((String) x509.getValues(X509Name.C).get(0));
-				} else {
-					//This seems to work with keystores generated by APDE... does that make that our generator is broken?
-					
-					//Yuck, reflection... but Android hides the BouncyCastle APIs that our certificate forces us to use
-					try {
-						Class<?> x509Principal = Class.forName("com.android.org.bouncycastle.jce.X509Principal");
-						Class<?> x509Name = Class.forName("com.android.org.bouncycastle.asn1.x509.X509Name");
-						Class<?> ans1Ident = Class.forName("com.android.org.bouncycastle.asn1.ASN1ObjectIdentifier");
-						Method getValues = x509Principal.getMethod("getValues", ans1Ident);
-						
-						if (x509Principal.isInstance(principal)) {
-							((TextView) infoLayout.findViewById(R.id.alias_certificate_name)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("CN").get(null))).get(0));
-							((TextView) infoLayout.findViewById(R.id.alias_certificate_organizational_unit)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("OU").get(null))).get(0));
-							((TextView) infoLayout.findViewById(R.id.alias_certificate_organization)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("O").get(null))).get(0));
-							((TextView) infoLayout.findViewById(R.id.alias_certificate_city)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("L").get(null))).get(0));
-							((TextView) infoLayout.findViewById(R.id.alias_certificate_state)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("ST").get(null))).get(0));
-							((TextView) infoLayout.findViewById(R.id.alias_certificate_country)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("C").get(null))).get(0));
-						}
-					} catch(ClassNotFoundException e) {
-						e.printStackTrace();
-					} catch (NoSuchMethodException e) {
-						e.printStackTrace();
-					} catch (IllegalAccessException e) {
-						e.printStackTrace();
-					} catch (IllegalArgumentException e) {
-						e.printStackTrace();
-					} catch (InvocationTargetException e) {
-						e.printStackTrace();
-					} catch (NoSuchFieldException e) {
-						e.printStackTrace();
-					} catch (Exception e) {
-						//...
-						System.err.println(context.getResources().getString(R.string.export_signed_package_certificate_read_failed));
-						e.printStackTrace();
+					if (x509Principal.isInstance(principal)) {
+						((TextView) infoLayout.findViewById(R.id.alias_certificate_name)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("CN").get(null))).get(0));
+						((TextView) infoLayout.findViewById(R.id.alias_certificate_organizational_unit)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("OU").get(null))).get(0));
+						((TextView) infoLayout.findViewById(R.id.alias_certificate_organization)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("O").get(null))).get(0));
+						((TextView) infoLayout.findViewById(R.id.alias_certificate_city)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("L").get(null))).get(0));
+						((TextView) infoLayout.findViewById(R.id.alias_certificate_state)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("ST").get(null))).get(0));
+						((TextView) infoLayout.findViewById(R.id.alias_certificate_country)).setText((String) ((Vector) getValues.invoke(x509Principal.cast(principal), x509Name.getField("C").get(null))).get(0));
 					}
+				} catch(ClassNotFoundException | NoSuchMethodException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchFieldException e) {
+					e.printStackTrace();
+				} catch (Exception e) {
+					//...
+					System.err.println(context.getResources().getString(R.string.export_signed_package_certificate_read_failed));
+					e.printStackTrace();
 				}
-				
-				infoBuilder.setView(infoLayout);
-				
-				infoBuilder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {}
-				});
-				
-				infoBuilder.create().show();
 			}
+			
+			infoBuilder.setView(infoLayout);
+			
+			infoBuilder.setPositiveButton(R.string.ok, (dialog1, which) -> {
+			});
+			
+			infoBuilder.create().show();
 		});
 		
-		aliasNew.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				promptCreateKey();
-			}
-		});
+		aliasNew.setOnClickListener(view -> promptCreateKey());
 		
 		aliasPassword.addTextChangedListener(new TextWatcher() {
 			@Override
 			public void afterTextChanged(Editable s) {
+				int ticket = aliasPasswordValidation.requestTicket();
+				
 				if (aliasPassword.length() > 0) {
-					ValidationResult result = loadKey(new File(keystoreFile.getText().toString()),
-							keystorePassword.getText().toString().toCharArray(),
-							aliasAdapter.getItem(alias.getSelectedItemPosition()),
-							aliasPassword.getText().toString().toCharArray());
-					
-					if (result.resultCode() == 0) {
-						exportButton.setEnabled(true);
+					(new Thread(() -> {
+						ValidationResult result = loadKey(keystoreFile.getText().toString(),
+								getKeystoreFileUri(),
+								keystorePassword.getText().toString().toCharArray(),
+								aliasAdapter.getItem(alias.getSelectedItemPosition()),
+								aliasPassword.getText().toString().toCharArray());
 						
-						messageView(exportMessage, ValidationResult.MessageSeverity.INFO,
-								String.format(Locale.US, context.getResources().getString(R.string.export_signed_package_info_export_ready),
-										context.getSketchName(),
-										new SimpleDateFormat(context.getResources().getString(R.string.export_signed_package_date_format), Locale.US).format(certificate.getNotAfter())));
-					} else {
+						context.getEditor().runOnUiThread(() -> {
+							if (aliasPasswordValidation.isNewestTicket(ticket)) {
+								if (result.resultCode() == 0) {
+									exportButton.setEnabled(true);
+									
+									messageView(exportMessage, ValidationResult.MessageSeverity.INFO,
+											String.format(Locale.US, context.getResources().getString(R.string.export_signed_package_info_export_ready),
+													context.getSketchName(),
+													new SimpleDateFormat(context.getResources().getString(R.string.export_signed_package_date_format), Locale.US).format(certificate.getNotAfter())));
+								} else {
+									exportButton.setEnabled(false);
+									
+									messageView(exportMessage, result);
+								}
+							}
+						});
+					})).start();
+				} else {
+					if (aliasPasswordValidation.isNewestTicket(ticket)) {
 						exportButton.setEnabled(false);
 						
-						messageView(exportMessage, result);
-					}
-				} else {
-					exportButton.setEnabled(false);
-					
-					if (alias.isEnabled()) {
-						messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_key_password);
+						if (alias.isEnabled()) {
+							messageView(exportMessage, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_key_password);
+						}
 					}
 				}
 			}
@@ -544,28 +553,23 @@ public class ExportSignedPackage implements Tool {
 		
 		layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.create_keystore, null);
 		
-		createKeystoreFile = (EditText) layout.findViewById(R.id.create_keystore_file);
-		createKeystorePassword = (EditText) layout.findViewById(R.id.create_keystore_password);
-		createKeystorePasswordConfirm = (EditText) layout.findViewById(R.id.create_keystore_password_confirm);
-		createKeystoreFileSelect = (ImageButton) layout.findViewById(R.id.create_keystore_file_select);
+		createKeystoreFile = layout.findViewById(R.id.create_keystore_file);
+		createKeystorePassword = layout.findViewById(R.id.create_keystore_password);
+		createKeystorePasswordConfirm = layout.findViewById(R.id.create_keystore_password_confirm);
+		createKeystoreFileSelect = layout.findViewById(R.id.create_keystore_file_select);
 		
-		keystoreMessage = (TextView) layout.findViewById(R.id.create_keystore_message);
+		keystoreMessage = layout.findViewById(R.id.create_keystore_message);
 		
 		builder.setView(layout);
 		
-		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {}
-		});
+		builder.setNegativeButton(R.string.cancel, (dialog, which) -> {});
 		
-		builder.setPositiveButton(R.string.create, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				writeEmptyKeystore(new File(createKeystoreFile.getText().toString()), createKeystorePassword.getText().toString().toCharArray());
-				
-				keystoreFile.setText(createKeystoreFile.getText().toString());
-				keystorePassword.setText(createKeystorePassword.getText().toString());
-			}
+		builder.setPositiveButton(R.string.create, (dialog, which) -> {
+			writeEmptyKeystore(createKeystoreFile.getText().toString(),
+					getCreateKeystoreFileUri(), createKeystorePassword.getText().toString().toCharArray());
+			
+			keystoreFile.setText(createKeystoreFile.getText().toString());
+			keystorePassword.setText(createKeystorePassword.getText().toString());
 		});
 		
 		final AlertDialog dialog = builder.create();
@@ -575,27 +579,16 @@ public class ExportSignedPackage implements Tool {
 		
 		createButton.setEnabled(false);
 		
-		createKeystoreFileSelect.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				context.getEditor().selectFile(R.string.export_signed_package_keystore_file_select, REQUEST_KEYSTORE_FILE, new EditorActivity.ActivityResultCallback() {
-					@Override
-					public void onActivityResult(int requestCode, int resultCode, Intent data) {
-						if (resultCode == Activity.RESULT_OK) {
-							final Uri uri = data.getData();
-							
-							//Get the File path from the Uri
-							String path = FileUtils.getPath(context, uri);
-							
-							if (path != null && FileUtils.isLocal(path)) {
-								if (new File(path).exists()) {
-									createKeystoreFile.setText(path);
-								}
-							}
-						}
+		createKeystoreFileSelect.setOnClickListener(view -> {
+			Intent intent = FileSelection.createFileCreatorIntent("keystore.jks");
+			context.getEditor().selectFile(intent, REQUEST_KEYSTORE_FILE, (requestCode, resultCode, data) -> {
+				if (resultCode == Activity.RESULT_OK) {
+					Uri uri = FileSelection.getSelectedUri(data);
+					if (uri != null) {
+						createKeystoreFile.setText(uri.toString());
 					}
-				});
-			}
+				}
+			});
 		});
 		
 		TextWatcher createKeystoreValidator = new TextWatcher() {
@@ -605,11 +598,9 @@ public class ExportSignedPackage implements Tool {
 				if (createKeystoreFile.getText().length() > 0) {
 					if (createKeystorePassword.getText().length() > 0 && createKeystorePasswordConfirm.getText().length() > 0) {
 						if (createKeystorePasswordConfirm.getText().toString().equals(createKeystorePassword.getText().toString())) {
-							File keystoreFileLoc = new File(createKeystoreFile.getText().toString());
+							Uri keystoreUri = getKeystoreFileUri();
 							
-							if (keystoreFileLoc.exists()) {
-								messageView(keystoreMessage, ValidationResult.MessageSeverity.WARNING, R.string.export_signed_package_warning_keystore_exists);
-							} else if (createKeystorePassword.getText().length() < 8) {
+							if (createKeystorePassword.getText().length() < 8) {
 								//Trying to get users to use stronger passwords... is this a good idea?
 								//This won't stop them, it's just a warning...
 								//Is an 8-character password long enough?
@@ -620,7 +611,7 @@ public class ExportSignedPackage implements Tool {
 							} else {
 								messageView(keystoreMessage, ValidationResult.MessageSeverity.INFO,
 										String.format(Locale.US, context.getResources().getString(R.string.export_signed_package_info_create_keystore_ready),
-												context.getResources().getString(isBksKeystore(keystoreFileLoc) ? R.string.export_signed_package_keystore_type_bks : R.string.export_signed_package_keystore_type_jks)));
+												context.getResources().getString(isBksKeystore(keystoreUri) ? R.string.export_signed_package_keystore_type_bks : R.string.export_signed_package_keystore_type_jks)));
 							}
 							
 							createButton.setEnabled(true);
@@ -662,43 +653,36 @@ public class ExportSignedPackage implements Tool {
 		
 		layout = (ScrollView) View.inflate(new ContextThemeWrapper(context, R.style.Theme_AppCompat_Dialog), R.layout.create_alias, null);
 		
-		createAliasAlias = (EditText) layout.findViewById(R.id.create_alias_alias);
-		createAliasPassword = (EditText) layout.findViewById(R.id.create_alias_password);
-		createAliasPasswordConfirm = (EditText) layout.findViewById(R.id.create_alias_password_confirm);
+		createAliasAlias = layout.findViewById(R.id.create_alias_alias);
+		createAliasPassword = layout.findViewById(R.id.create_alias_password);
+		createAliasPasswordConfirm = layout.findViewById(R.id.create_alias_password_confirm);
 		
-		keyMessage = (TextView) layout.findViewById(R.id.create_key_message);
+		keyMessage = layout.findViewById(R.id.create_key_message);
 		
-		createAliasValidity = (EditText) layout.findViewById(R.id.create_alias_validity);
+		createAliasValidity = layout.findViewById(R.id.create_alias_validity);
 		
-		final EditText certificateName = (EditText) layout.findViewById(R.id.create_alias_certificate_name);
-		final EditText certificateOrganizationalUnit = (EditText) layout.findViewById(R.id.create_alias_certificate_organizational_unit);
-		final EditText certificateOrganization = (EditText) layout.findViewById(R.id.create_alias_certificate_organization);
-		final EditText certificateCity = (EditText) layout.findViewById(R.id.create_alias_certificate_city);
-		final EditText certificateState = (EditText) layout.findViewById(R.id.create_alias_certificate_state);
-		final EditText certificateCountry = (EditText) layout.findViewById(R.id.create_alias_certificate_country);
+		final EditText certificateName = layout.findViewById(R.id.create_alias_certificate_name);
+		final EditText certificateOrganizationalUnit = layout.findViewById(R.id.create_alias_certificate_organizational_unit);
+		final EditText certificateOrganization = layout.findViewById(R.id.create_alias_certificate_organization);
+		final EditText certificateCity = layout.findViewById(R.id.create_alias_certificate_city);
+		final EditText certificateState = layout.findViewById(R.id.create_alias_certificate_state);
+		final EditText certificateCountry = layout.findViewById(R.id.create_alias_certificate_country);
 		
 		builder.setView(layout);
 		
-		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {}
-		});
+		builder.setNegativeButton(R.string.cancel, (dialog, which) -> {});
 		
-		builder.setPositiveButton(R.string.create, new DialogInterface.OnClickListener() {
-			@SuppressWarnings("unchecked")
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				aliasCertificateInfo.setEnabled(true);
-				aliasPassword.setEnabled(true);
-				
-				writeKey(new File(keystoreFile.getText().toString()), keystorePassword.getText().toString().toCharArray(),
-						createAliasAlias.getText().toString(), createAliasPassword.getText().toString().toCharArray(), Integer.parseInt(createAliasValidity.getText().toString()),
-						certificateName.getText().toString(), certificateOrganizationalUnit.getText().toString(), certificateOrganization.getText().toString(),
-						certificateCity.getText().toString(), certificateState.getText().toString(), certificateCountry.getText().toString());
-				
-				alias.setSelection(((ArrayAdapter<String>) alias.getAdapter()).getPosition(createAliasAlias.getText().toString()));
-				aliasPassword.setText(new String(createAliasPassword.getText().toString()));
-			}
+		builder.setPositiveButton(R.string.create, (dialog, which) -> {
+			aliasCertificateInfo.setEnabled(true);
+			aliasPassword.setEnabled(true);
+			
+			writeKey(keystoreFile.getText().toString(), getKeystoreFileUri(), keystorePassword.getText().toString().toCharArray(),
+					createAliasAlias.getText().toString(), createAliasPassword.getText().toString().toCharArray(), Integer.parseInt(createAliasValidity.getText().toString()),
+					certificateName.getText().toString(), certificateOrganizationalUnit.getText().toString(), certificateOrganization.getText().toString(),
+					certificateCity.getText().toString(), certificateState.getText().toString(), certificateCountry.getText().toString());
+			
+			alias.setSelection(((ArrayAdapter<String>) alias.getAdapter()).getPosition(createAliasAlias.getText().toString()));
+			aliasPassword.setText(new String(createAliasPassword.getText().toString()));
 		});
 		
 		final AlertDialog dialog = builder.create();
@@ -798,29 +782,40 @@ public class ExportSignedPackage implements Tool {
 	}
 	
 	protected ValidationResult validateKeystoreFile() {
-		File file = new File(keystoreFile.getText().toString());
+		Uri keystoreUri = getKeystoreFileUri();
 		
-		if (file.exists() && file.isFile()) {
-			return new ValidationResult(0);
-		} else {
-			if (keystoreFile.getText().length() > 0) {
-				return new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_keystore_file_nonexistant);
+		ParcelFileDescriptor fd = FileSelection.openUri(context, keystoreUri, FileSelection.Mode.READ, true);
+		
+		try {
+			if (fd != null) {
+				return new ValidationResult(0);
 			} else {
-				return new ValidationResult(2, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_file);
+				if (keystoreFile.getText().length() > 0) {
+					return new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_keystore_file_nonexistant);
+				} else {
+					return new ValidationResult(2, ValidationResult.MessageSeverity.INFO, R.string.export_signed_package_info_enter_keystore_file);
+				}
 			}
+		} finally {
+			FileSelection.closeFd(fd);
 		}
 	}
 	
-	protected ValidationResult loadKeystore(File file, char[] password) {
+	protected ValidationResult loadKeystore(String uriPath, Uri uri, char[] password) {
 		ValidationResult result = new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_unexpected);
 		
-		FileInputStream in = null;
+		ParcelFileDescriptor fd = FileSelection.openUri(context, uri, FileSelection.Mode.READ, true);
+		InputStream in = null;
+		
+		if (fd == null) {
+			return result;
+		}
 		
 		//If no password is provided, it still gives us the list of aliases... but we can't use it
 		//Let's just side-step this altogether
 		if (password.length > 0) {
 			try {
-				in = new FileInputStream(file);
+				in = FileSelection.fdIn(fd);
 				
 				keystore = new JksKeyStore();
 				keystore.load(in, password);
@@ -828,7 +823,7 @@ public class ExportSignedPackage implements Tool {
 				List<String> aliases = new ArrayList<String>();
 				aliases = Collections.list(keystore.aliases());
 				
-				putRecentKeystore(file.getAbsolutePath());
+				putRecentKeystore(uriPath);
 				loadRecentKeystores();
 				
 				result = new ValidationResult(0, aliases);
@@ -837,15 +832,13 @@ public class ExportSignedPackage implements Tool {
 				result = new ValidationResult(2, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_keystore_not_recoverable);
 			} catch (FileNotFoundException e) {
 				result = new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_keystore_file_nonexistant);
-			} catch (NoSuchAlgorithmException e) {
-				e.printStackTrace();
-			} catch (CertificateException e) {
+			} catch (NoSuchAlgorithmException | CertificateException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
 				//Okay, let's try BKS...
 				
 				try {
-					in = new FileInputStream(file);
+					in = FileSelection.fdIn(fd);
 					
 					keystore = KeyStore.getInstance("bks");
 					keystore.load(in, password);
@@ -853,17 +846,13 @@ public class ExportSignedPackage implements Tool {
 					List<String> aliases = new ArrayList<String>();
 					aliases = Collections.list(keystore.aliases());
 					
-					putRecentKeystore(file.getAbsolutePath());
+					putRecentKeystore(uriPath);
 					loadRecentKeystores();
 					
 					result = new ValidationResult(0, aliases);
 				} catch (FileNotFoundException x) {
 					result = new ValidationResult(1, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_keystore_file_nonexistant);
-				} catch (KeyStoreException x) {
-					e.printStackTrace();
-				} catch (NoSuchAlgorithmException x) {
-					e.printStackTrace();
-				} catch (CertificateException x) {
+				} catch (KeyStoreException | NoSuchAlgorithmException | CertificateException x) {
 					e.printStackTrace();
 				} catch (IOException x) {
 					//So... it's neither JKS nor BKS...
@@ -929,12 +918,12 @@ public class ExportSignedPackage implements Tool {
 		}
 	}
 	
-	protected ValidationResult loadCertificate(File keystoreFile, char[] keystorePassword, String alias) {
+	protected ValidationResult loadCertificate(String keystoreUriPath, Uri keystoreUri, char[] keystorePassword, String alias) {
 		Security.addProvider(new BouncyCastleProvider());
 		
 		ValidationResult result = new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_unexpected);
 		
-		ValidationResult keystoreResult = loadKeystore(keystoreFile, keystorePassword);
+		ValidationResult keystoreResult = loadKeystore(keystoreUriPath, keystoreUri, keystorePassword);
 		
 		if (keystoreResult.resultCode() != 0) {
 			result = keystoreResult;
@@ -954,10 +943,10 @@ public class ExportSignedPackage implements Tool {
 		return result;
 	}
 	
-	protected ValidationResult loadKey(File keystoreFile, char[] keystorePassword, String alias, char[] password) {
+	protected ValidationResult loadKey(String keystoreUriPath, Uri keystoreUri, char[] keystorePassword, String alias, char[] password) {
 		ValidationResult result = new ValidationResult(13, ValidationResult.MessageSeverity.ERROR, R.string.export_signed_package_error_unexpected);
 		
-		ValidationResult keystoreResult = loadKeystore(keystoreFile, keystorePassword);
+		ValidationResult keystoreResult = loadKeystore(keystoreUriPath, keystoreUri, keystorePassword);
 		
 		if (keystoreResult.resultCode() != 0) {
 			result = keystoreResult;
@@ -995,11 +984,11 @@ public class ExportSignedPackage implements Tool {
 		return result;
 	}
 	
-	protected void writeEmptyKeystore(File file, char[] password) {
+	protected void writeEmptyKeystore(String uriPath, Uri uri, char[] password) {
 		try {
 			//Create a JKS keystore by default
 			//If the extension is ".bks", then make it a BKS keystore
-			if (isBksKeystore(file)) {
+			if (isBksKeystore(uri)) {
 				keystore = KeyStore.getInstance("bks");
 			} else {
 				keystore = new JksKeyStore();
@@ -1007,7 +996,7 @@ public class ExportSignedPackage implements Tool {
 			
 			keystore.load(null, password); //Initialize
 			
-			writeKeystore(file, password);
+			writeKeystore(uriPath, uri, password);
 		} catch (KeyStoreException e) {
 			e.printStackTrace();
 		} catch (NoSuchAlgorithmException e) {
@@ -1019,19 +1008,26 @@ public class ExportSignedPackage implements Tool {
 		}
 	}
 	
-	private boolean isBksKeystore(File file) {
-		return file.getAbsolutePath().endsWith(".bks");
+	private boolean isBksKeystore(Uri uri) {
+		String filename = FileSelection.uriToFilename(context, uri);
+		return filename != null && filename.endsWith(".bks");
 	}
 	
-	protected void writeKeystore(File file, char[] password) {
-		FileOutputStream out = null;
+	protected void writeKeystore(String uriPath, Uri uri, char[] password) {
+		ParcelFileDescriptor fd = FileSelection.openUri(context, uri, FileSelection.Mode.READ_WRITE, true);
+		if (fd == null) {
+			System.err.println("Failed to write keystore to Uri: " + uri.toString());
+			return;
+		}
+		
+		OutputStream out = null;
 		
 		try {
-			out = new FileOutputStream(file);
+			out = FileSelection.fdOut(fd);
 			
 			keystore.store(out, password);
 			
-			putRecentKeystore(file.getAbsolutePath());
+			putRecentKeystore(uriPath);
 			loadRecentKeystores();
 		} catch (KeyStoreException e) {
 			//Hmm...
@@ -1054,10 +1050,14 @@ public class ExportSignedPackage implements Tool {
 				e.printStackTrace();
 			}
 		}
+		
+		FileSelection.closeFd(fd);
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected void writeKey(File keystoreFile, char[] keystorePassword, String alias, char[] password, int validity, String name, String orgUnit, String org, String city, String state, String country) {
+	protected void writeKey(String keystoreUriPath, Uri keystoreUri, char[] keystorePassword,
+							String alias, char[] password, int validity, String name,
+							String orgUnit, String org, String city, String state, String country) {
 		try {
 			Security.addProvider(new BouncyCastleProvider());
 			
@@ -1086,19 +1086,11 @@ public class ExportSignedPackage implements Tool {
 			keystore.setKeyEntry(alias, pair.getPrivate(), password, new Certificate[] {pkCertificate});
 			
 			//Write the new key to the keystore
-			writeKeystore(keystoreFile, keystorePassword);
+			writeKeystore(keystoreUriPath, keystoreUri, keystorePassword);
 			
 			//Reload the keystore so that the new key will appear
-			loadAliases((ArrayList<String>) loadKeystore(keystoreFile, keystorePassword).extra());
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-		} catch (KeyStoreException e) {
-			e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			e.printStackTrace();
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		} catch (SignatureException e) {
+			loadAliases((ArrayList<String>) loadKeystore(keystoreUriPath, keystoreUri, keystorePassword).extra());
+		} catch (NoSuchAlgorithmException | KeyStoreException | InvalidKeyException | SecurityException | SignatureException e) {
 			e.printStackTrace();
 		}
 	}
@@ -1136,7 +1128,7 @@ public class ExportSignedPackage implements Tool {
 			data += keystores[i] + "\n";
 		}
 		
-		PreferenceManager.getDefaultSharedPreferences(context).edit().putString("recentKeystores", data).commit();
+		PreferenceManager.getDefaultSharedPreferences(context).edit().putString("recentKeystores", data).apply();
 	}
 	
 	public ArrayList<String> getRecentKeystores() {
@@ -1145,34 +1137,42 @@ public class ExportSignedPackage implements Tool {
 		
 		ArrayList<String> keystores = new ArrayList<String>(keystoreLines.length);
 		
-		//10 here is the number of keystores to keep in the recent list
-		//TODO maybe make this a preference?
+		Set<String> seenKeystores = new HashSet<>();
+		
+		// 10 here is the number of keystores to keep in the recent list
+		// TODO maybe make this a preference?
 		for (int i = Math.min(keystoreLines.length - 1, 10); i >= 0; i --) {
 			String keystorePath = keystoreLines[i];
 			
-			//Skip over bad data - this should only happen if the saved data is empty
+			// Skip over bad data - this should only happen if the saved data is empty
 			if (keystorePath.length() == 0) {
 				continue;
 			}
 			
-			File keystoreFileLoc = new File(keystorePath);
+			// Avoid duplicates
+			if (seenKeystores.contains(keystorePath)) {
+				continue;
+			} else {
+				seenKeystores.add(keystorePath);
+			}
 			
-			//Filter out bad keystores
-			if (!(keystoreFileLoc.exists() && keystoreFileLoc.isFile())) {
+			Uri keystoreUri = FileSelection.uriStringOrPathToUri(keystorePath);
+			if (keystoreUri == null) {
 				continue;
 			}
 			
-			//Avoid duplicates
-			for (int j = 0; j < keystores.size(); j ++) {
-				if (keystores.get(j).equals(keystorePath)) {
-					keystores.remove(j);
-				}
+			// Filter out bad keystores (perhaps deleted files?)
+			ParcelFileDescriptor fd = FileSelection.openUri(context, keystoreUri, FileSelection.Mode.READ, true);
+			if (fd == null) {
+				continue;
+			} else {
+				FileSelection.closeFd(fd);
 			}
 			
 			keystores.add(keystorePath);
 		}
 		
-		//Reverse the list...
+		// Reverse the list...
 		Collections.reverse(keystores);
 		
 		return keystores;
@@ -1287,7 +1287,7 @@ public class ExportSignedPackage implements Tool {
     	((TextView) context.getEditor().findViewById(R.id.console)).setText("");
 		
 		builder = new Build(context, BuildContext.create(context));
-		builder.setKey(keystoreFile.getText().toString(), keystorePassword.getText().toString().toCharArray(), (String) alias.getSelectedItem(), aliasPassword.getText().toString().toCharArray());
+		builder.setKey(getKeystoreFileUri(), keystorePassword.getText().toString().toCharArray(), (String) alias.getSelectedItem(), aliasPassword.getText().toString().toCharArray());
 		
 		new Thread(() -> {
 			exporting = true;

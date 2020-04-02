@@ -97,7 +97,6 @@ import com.calsignlabs.apde.tool.Tool;
 import com.google.android.gms.wearable.MessageClient;
 import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.Wearable;
-import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -1264,23 +1263,16 @@ public class EditorActivity extends AppCompatActivity {
     	super.onActivityResult(requestCode, resultCode, data);
     }
     
-    public void selectFile(int titleResId, int requestCode, ActivityResultCallback callback) {
-    	selectFile(getResources().getString(titleResId), requestCode, callback);
-    }
-    
-    public void selectFile(String title, int requestCode, ActivityResultCallback callback) {
+    public void selectFile(Intent intent, int requestCode, ActivityResultCallback callback) {
     	activityResultCodes.put(requestCode, callback);
-    	
-    	Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), title);
-	    startActivityForResult(intent, requestCode);
+		startActivityForResult(intent, requestCode);
     }
     
     public interface ActivityResultCallback {
     	void onActivityResult(int requestCode, int resultCode, Intent data);
     }
     
-    @SuppressWarnings("deprecation")
-	@SuppressLint("NewApi")
+    @SuppressLint("NewApi")
 	public void onResume() {
     	super.onResume();
 		

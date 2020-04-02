@@ -7,7 +7,9 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
@@ -30,7 +32,7 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 
 import com.calsignlabs.apde.build.SketchProperties;
-import com.ipaulpro.afilechooser.utils.FileUtils;
+import com.calsignlabs.apde.support.FileSelection;
 import com.takisoft.preferencex.EditTextPreference;
 
 import java.io.File;
@@ -255,10 +257,8 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 	}
 	
 	public void launchAddFile() {
-		//Launch file selection intent (includes AFileChooser's custom file chooser implementation)
-		
-		Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.select_file));
-		startActivityForResult(intent, SketchPropertiesActivity.REQUEST_CHOOSER);
+		Intent intent = FileSelection.createFileSelectorIntent(true, null);
+		getSketchPropertiesActivity().startActivityForResult(intent, SketchPropertiesActivity.REQUEST_CHOOSER);
 	}
 	
 	@SuppressLint({ "InlinedApi", "NewApi" })
@@ -292,15 +292,12 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 		
 		builder.setView(changeIconLayout);
 		
-		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {}
-		});
+		builder.setNegativeButton(R.string.cancel, (dialog, which) -> {});
 		
-		builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				Bitmap bitmap = BitmapFactory.decodeFile(iconFile.getText().toString());
+		builder.setPositiveButton(R.string.ok, (dialog, which) -> {
+			Bitmap bitmap = loadBitmap();
+			
+			if (bitmap != null) {
 				int minDim = Math.min(bitmap.getWidth(), bitmap.getHeight());
 				
 				int[] dims = {36, 48, 72, 96, 144, 192};
@@ -345,12 +342,9 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 		changeIconOK = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
 		changeIconOK.setEnabled(false);
 		
-		iconFileSelect.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.select_file));
-				startActivityForResult(intent, SketchPropertiesActivity.REQUEST_ICON_FILE);
-			}
+		iconFileSelect.setOnClickListener(view -> {
+			Intent intent = FileSelection.createFileSelectorIntent(false, new String[] {"image/*"});
+			getSketchPropertiesActivity().startActivityForResult(intent, SketchPropertiesActivity.REQUEST_ICON_FILE);
 		});
 		
 		iconFile.addTextChangedListener(new TextWatcher() {
@@ -369,6 +363,26 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 		rebuildIconChange();
 	}
 	
+	private Bitmap loadBitmap() {
+		ParcelFileDescriptor fd = FileSelection.openUri(getSketchPropertiesActivity(),
+				Uri.parse(iconFile.getText().toString()), FileSelection.Mode.READ, true);
+		
+		if (fd == null) {
+			// Let the user type in a path manually
+			fd = FileSelection.openUri(getSketchPropertiesActivity(),
+					FileSelection.pathToUri(iconFile.getText().toString()), FileSelection.Mode.READ, true);
+		}
+		
+		if (fd == null) {
+			return null;
+		}
+		
+		Bitmap bitmap = BitmapFactory.decodeFileDescriptor(fd.getFileDescriptor());
+		FileSelection.closeFd(fd);
+		
+		return bitmap;
+	}
+	
 	public void rebuildIconChange() {
 		//Original image
 		final ImageView bigIcon = changeIconLayout.findViewById(R.id.big_icon);
@@ -381,48 +395,43 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 		//Scale format radio group
 		final RadioGroup scaleFormat = changeIconLayout.findViewById(R.id.format_scale);
 		
-		String iconFilePath = iconFile.getText().toString();
-		File iconFileFile = new File(iconFilePath);
+		Bitmap bitmap = loadBitmap();
 		
-		if (iconFileFile.exists() && iconFileFile.isFile()) {
-			Bitmap bitmap = BitmapFactory.decodeFile(iconFilePath);
+		if (bitmap != null) {
+			int w = bitmap.getWidth();
+			int h = bitmap.getHeight();
 			
-			if (bitmap != null) {
-				int w = bitmap.getWidth();
-				int h = bitmap.getHeight();
+			int dim = changeIconLayout.getWidth();
+			
+			if (w > dim || h > dim) {
+				//Resize the bitmap to fit the dialog
 				
-				int dim = changeIconLayout.getWidth();
-				
-				if (w > dim || h > dim) {
-					//Resize the bitmap to fit the dialog
+				if (Math.min(w, h) == w) {
+					int scaleW = Math.round(w / (((float) h) / dim));
 					
-					if (Math.min(w, h) == w) {
-						int scaleW = Math.round(w / (((float) h) / dim));
-						
-						bigIcon.setImageBitmap(Bitmap.createScaledBitmap(bitmap, scaleW, dim, false));
-					} else {
-						int scaleH = Math.round(h / (((float) w) / dim));
-						
-						bigIcon.setImageBitmap(Bitmap.createScaledBitmap(bitmap, dim, scaleH, false));
-					}
+					bigIcon.setImageBitmap(Bitmap.createScaledBitmap(bitmap, scaleW, dim, false));
 				} else {
-					bigIcon.setImageBitmap(bitmap);
+					int scaleH = Math.round(h / (((float) w) / dim));
+					
+					bigIcon.setImageBitmap(Bitmap.createScaledBitmap(bitmap, dim, scaleH, false));
 				}
-				
-				int iconSize = Math.round(36 * getResources().getDisplayMetrics().density);
-				
-				smallIcon.setImageBitmap(formatIcon(bitmap, iconSize, getScaleFormat(scaleFormat)));
-				
-				bigIcon.setVisibility(View.VISIBLE);
-				bigIconAltText.setVisibility(View.GONE);
-				
-				changeIconOK.setEnabled(true);
-				for (int i = 0; i < scaleFormat.getChildCount(); i ++) {
-					((RadioButton) scaleFormat.getChildAt(i)).setEnabled(true);
-				}
-				
-				return;
+			} else {
+				bigIcon.setImageBitmap(bitmap);
 			}
+			
+			int iconSize = Math.round(36 * getResources().getDisplayMetrics().density);
+			
+			smallIcon.setImageBitmap(formatIcon(bitmap, iconSize, getScaleFormat(scaleFormat)));
+			
+			bigIcon.setVisibility(View.VISIBLE);
+			bigIconAltText.setVisibility(View.GONE);
+			
+			changeIconOK.setEnabled(true);
+			for (int i = 0; i < scaleFormat.getChildCount(); i++) {
+				((RadioButton) scaleFormat.getChildAt(i)).setEnabled(true);
+			}
+			
+			return;
 		}
 		
 		//If we were unable to load the image...

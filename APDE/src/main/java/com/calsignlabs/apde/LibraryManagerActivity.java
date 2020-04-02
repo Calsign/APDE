@@ -10,14 +10,19 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.Toolbar;
+
+import android.os.ParcelFileDescriptor;
 import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
+import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -37,7 +42,7 @@ import android.widget.TextView;
 import com.calsignlabs.apde.contrib.ContributionManager;
 import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.support.CustomProgressDialog;
-import com.ipaulpro.afilechooser.utils.FileUtils;
+import com.calsignlabs.apde.support.FileSelection;
 
 import java.io.File;
 import java.util.List;
@@ -90,63 +95,38 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		switch(requestCode) {
 		case REQUEST_CHOOSER:
 			if(resultCode == RESULT_OK) {
-				final Uri uri = data.getData();
-				
-				//Get the File path from the Uri
-				String path = FileUtils.getPath(this, uri);
-				
-				if(path != null && FileUtils.isLocal(path)) {
-					File file = new File(path);
-					if(file.exists()) {
-						if(isZipExtension(FileUtils.getExtension(path))) {
-							//Make sure that this library doesn't already exist...
-							if(new Library(ContributionManager.detectLibraryName(file)).getLibraryFolder(((APDE) getApplicationContext()).getLibrariesFolder()).exists()) {
-								alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_already_installed));
-							} else {
-								addZipLibrary(file);
-							}
-						} else {
-							alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_not_zip));
-						}
-					} else {
-						alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_nonexistant));
-					}
+				Uri uri = FileSelection.getSelectedUri(data);
+				String libraryName = ContributionManager.detectLibraryName(this, uri);
+				if (libraryName == null) {
+					alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), "Could not detect library name");
+				} else if (new Library(libraryName).getLibraryFolder(((APDE) getApplicationContext()).getLibrariesFolder()).exists()) {
+					alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_already_installed));
 				} else {
-					alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_nonexistant));
+					addZipLibrary(libraryName, uri);
 				}
 			}
 			break;
 		case DX_DEXER_SELECT_INPUT_FILE:
 			if(resultCode == RESULT_OK) {
-				final Uri uri = data.getData();
-				
-				//Get the File path from the Uri
-				String path = FileUtils.getPath(this, uri);
-				
-				if(path != null && FileUtils.isLocal(path)) {
-					File file = new File(path);
-					
-					dxDexerInputFile.setText(file.getAbsolutePath());
+				Uri uri = FileSelection.getSelectedUri(data);
+				if (uri != null) {
+					dxDexerInputFile.setText(uri.toString());
 				}
 			}
 			
 			break;
 		case DX_DEXER_SELECT_OUTPUT_FILE:
 			if(resultCode == RESULT_OK) {
-				final Uri uri = data.getData();
-				
-				//Get the File path from the Uri
-				String path = FileUtils.getPath(this, uri);
-				
-				if(path != null && FileUtils.isLocal(path)) {
-					File file = new File(path);
-
-					dxDexerOutputFile.setText(file.getAbsolutePath());
+				Uri uri = FileSelection.getSelectedUri(data);
+				if (uri != null) {
+					dxDexerOutputFile.setText(uri.toString());
 				}
 			}
 			
 			break;
 		}
+		
+		super.onActivityResult(requestCode, resultCode, data);
 	}
 	
 	private void alert(String title, String message) {
@@ -205,9 +185,8 @@ public class LibraryManagerActivity extends AppCompatActivity {
     }
 	
 	private void launchInstallZipLibrary() {
-		//Launch file selection intent (includes AFileChooser's custom file chooser implementation)
-		
-		Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.select_file));
+		Intent intent = FileSelection.createFileSelectorIntent(false,
+				new String[] {"application/zip", "application/octet-stream", "application/x-zip-compressed", "multipart/x-zip"});
 		startActivityForResult(intent, REQUEST_CHOOSER);
 	}
 	
@@ -230,40 +209,42 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		
 		layout = (ScrollView) View.inflate(new ContextThemeWrapper(this, R.style.Theme_AppCompat_Dialog), R.layout.dx_dexer_tool, null);
 		
-		dxDexerInputFile = (EditText) layout.findViewById(R.id.dx_dexer_input_file);
-		dxDexerOutputFile = (EditText) layout.findViewById(R.id.dx_dexer_output_file);
+		dxDexerInputFile = layout.findViewById(R.id.dx_dexer_input_file);
+		dxDexerOutputFile = layout.findViewById(R.id.dx_dexer_output_file);
 		
-		dxDexerErrorMessage = (TextView) layout.findViewById(R.id.dx_dexer_error_message);
+		dxDexerErrorMessage = layout.findViewById(R.id.dx_dexer_error_message);
 		
-		((ImageButton) layout.findViewById(R.id.dx_dexer_input_file_select)).setOnClickListener(new ImageButton.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.dx_dexer_select_input_file));
-			    startActivityForResult(intent, DX_DEXER_SELECT_INPUT_FILE);
-			}
+		layout.findViewById(R.id.dx_dexer_input_file_select).setOnClickListener(v -> {
+			Intent intent = FileSelection.createFileSelectorIntent(false,
+					new String[] {"application/java-archive"});
+			startActivityForResult(intent, DX_DEXER_SELECT_INPUT_FILE);
 		});
 		
-		((ImageButton) layout.findViewById(R.id.dx_dexer_output_file_select)).setOnClickListener(new ImageButton.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), getResources().getString(R.string.dx_dexer_select_output_file));
-			    startActivityForResult(intent, DX_DEXER_SELECT_OUTPUT_FILE);
+		layout.findViewById(R.id.dx_dexer_output_file_select).setOnClickListener(v -> {
+			String inputFilename = null;
+			Uri uri = FileSelection.uriStringOrPathToUri(dxDexerInputFile.getText().toString());
+			if (uri != null) {
+				inputFilename = FileSelection.uriToFilename(LibraryManagerActivity.this, uri);
 			}
+			if (inputFilename == null || inputFilename.equals("")) {
+				inputFilename = "output";
+			}
+			String outputFilename;
+			if (inputFilename.endsWith(".jar")) {
+				outputFilename = inputFilename.substring(0, inputFilename.length() - 4) + "-dex.jar";
+			} else {
+				outputFilename = inputFilename + "-dex.jar";
+			}
+			
+			Intent intent = FileSelection.createFileCreatorIntent(outputFilename);
+			startActivityForResult(intent, DX_DEXER_SELECT_OUTPUT_FILE);
 		});
 		
 		builder.setView(layout);
 		
-		builder.setPositiveButton(R.string.dx_dexer_dex_button, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				dxDexerRun();
-			}
-		});
+		builder.setPositiveButton(R.string.dx_dexer_dex_button, (dialog, which) -> dxDexerRun());
 		
-		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {}
-		});
+		builder.setNegativeButton(R.string.cancel, (dialog, which) -> {});
 		
 		final AlertDialog dialog = builder.create();
 		dialog.show();
@@ -314,47 +295,41 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		String inputPath = dxDexerInputFile.getText().toString();
 		String outputPath = dxDexerOutputFile.getText().toString();
 		
-		File input = new File(inputPath);
-		File output = new File(outputPath);
+		ParcelFileDescriptor inputFd = null;
 		
-		if (inputPath.length() == 0) {
-			dxDexerErrorMessage.setText(R.string.dx_dexer_error_enter_input_file);
-			return;
-		}
-		
-		if (!input.exists()) {
-			dxDexerErrorMessage.setText(R.string.dx_dexer_error_input_file_exist);
-			return;
-		}
-		
-		if (input.isDirectory()) {
-			dxDexerErrorMessage.setText(R.string.dx_dexer_error_input_file_directory);
-			return;
-		}
-		
-		if (!(inputPath.endsWith(".jar")
-				|| inputPath.endsWith(".zip")
-				|| inputPath.endsWith(".apk"))) {
-			dxDexerErrorMessage.setText(R.string.dx_dexer_error_input_extension);
-			return;
-		}
-		
-		if (outputPath.length() == 0) {
-			dxDexerErrorMessage.setText(R.string.dx_dexer_error_enter_output_file);
-			return;
-		}
-		
-		if (output.exists()) {
-			dxDexerErrorMessage.setText(R.string.dx_dexer_error_output_file_exist);
-			return;
-		}
-		
-		if (!(outputPath.endsWith(".jar")
-				|| outputPath.endsWith(".dex")
-				|| outputPath.endsWith(".zip")
-				|| outputPath.endsWith(".apk"))) {
-			dxDexerErrorMessage.setText(R.string.dx_dexer_error_output_extension);
-			return;
+		try {
+			if (inputPath.length() == 0) {
+				dxDexerErrorMessage.setText(R.string.dx_dexer_error_enter_input_file);
+				return;
+			}
+			
+			Uri inputUri = FileSelection.uriStringOrPathToUri(inputPath);
+			
+			if (inputUri == null) {
+				dxDexerErrorMessage.setText(R.string.dx_dexer_error_input_file_exist);
+				return;
+			}
+			
+			inputFd = FileSelection.openUri(this, inputUri, FileSelection.Mode.READ, true);
+			
+			if (inputFd == null) {
+				dxDexerErrorMessage.setText(R.string.dx_dexer_error_input_file_exist);
+				return;
+			}
+			
+			if (outputPath.length() == 0) {
+				dxDexerErrorMessage.setText(R.string.dx_dexer_error_enter_output_file);
+				return;
+			}
+			
+			Uri outputUri = FileSelection.uriStringOrPathToUri(outputPath);
+			
+			if (outputUri == null) {
+				dxDexerErrorMessage.setText(R.string.dx_dexer_error_output_file_exist);
+				return;
+			}
+		} finally {
+			FileSelection.closeFd(inputFd);
 		}
 		
 		dxDexerErrorMessage.setText(R.string.dx_dexer_info_ready);
@@ -363,44 +338,75 @@ public class LibraryManagerActivity extends AppCompatActivity {
 	}
 	
 	private void dxDexerRun() {
-		final File inputFile = new File(dxDexerInputFile.getText().toString());
-		final File outputFile = new File(dxDexerOutputFile.getText().toString());
+		final Uri inputUri = FileSelection.uriStringOrPathToUri(dxDexerInputFile.getText().toString());
+		final Uri outputUri = FileSelection.uriStringOrPathToUri(dxDexerOutputFile.getText().toString());
+		
+		if (inputUri == null || outputUri == null) {
+			return;
+		}
 		
 		final CustomProgressDialog dialog = new CustomProgressDialog(this, View.GONE, View.GONE);
 		
 		dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 		dialog.setIndeterminate(true);
-		dialog.setTitle(getResources().getString(R.string.dx_dexer_dialog_title) + " " + inputFile.getName());
+		dialog.setTitle(getResources().getString(R.string.dx_dexer_dialog_title) + " " + FileSelection.uriToFilename(this, inputUri));
 		dialog.setCanceledOnTouchOutside(false);
 		dialog.setCancelable(false);
 		
-		final Thread dexThread = new Thread(new Runnable() {
-			public void run() {
-				working = true;
-				ContributionManager.dexJar(inputFile, outputFile, LibraryManagerActivity.this);
-				working = false;
+		final Thread dexThread = new Thread(() -> {
+			working = true;
+			
+			ParcelFileDescriptor inputFd = null, outputFd = null;
+			
+			try {
+				// If the user has manually typed in a path, then we can't access it with the
+				// normal document-provider approach because it is not a resolvable content Uri.
+				// Instead, we can just write to it as a normal file.
+				boolean isOutputHardPath = "file".equals(outputUri.getScheme());
 				
-				dialog.dismiss();
+				inputFd = FileSelection.openUri(LibraryManagerActivity.this, inputUri, FileSelection.Mode.READ);
+				if (!isOutputHardPath) {
+					outputFd = FileSelection.openUri(LibraryManagerActivity.this, outputUri, FileSelection.Mode.READ_WRITE);
+				}
+				
+				if (inputFd != null && (outputFd != null || isOutputHardPath)) {
+					// We need to make some temporary files because DX Dex doesn't
+					// expose a stream interface directly
+					
+					File inputFile = new File(getCacheDir(), "dx_dexer.jar");
+					inputFile.deleteOnExit();
+					
+					File outputFile;
+					
+					if (isOutputHardPath) {
+						outputFile = new File(outputUri.getPath());
+					} else {
+						outputFile = new File(getCacheDir(), "dx_dexer-dex.jar");
+						outputFile.deleteOnExit();
+					}
+					
+					FileSelection.streamToFile(FileSelection.fdIn(inputFd), inputFile);
+					ContributionManager.dexJar(inputFile, outputFile, LibraryManagerActivity.this);
+					if (!isOutputHardPath) {
+						FileSelection.fileToStream(outputFile, FileSelection.fdOut(outputFd));
+					}
+				}
+			} finally {
+				FileSelection.closeFd(inputFd);
+				FileSelection.closeFd(outputFd);
 			}
+			
+			working = false;
+			
+			dialog.dismiss();
 		});
 		
-		dialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(R.string.cancel), new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				dialog.cancel();
-			}
-		});
+		dialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(R.string.cancel), (dialog1, which) -> dialog1.cancel());
 		
-		dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
-			@Override
-			public void onCancel(DialogInterface dialogInterface) {
-				//The user cancelled... hopefully this won't cause problems
-				dexThread.interrupt();
-				working = false;
-				
-				//Undo any progress
-				outputFile.delete();
-			}
+		dialog.setOnCancelListener(dialogInterface -> {
+			//The user cancelled... hopefully this won't cause problems
+			dexThread.interrupt();
+			working = false;
 		});
 		
 		dexThread.start();
@@ -614,15 +620,13 @@ public class LibraryManagerActivity extends AppCompatActivity {
 	//Make sure to initialize it with the UI thread...
 	private static LibraryUpdateHandler libraryUpdateHandler = new LibraryUpdateHandler();
 	
-	@SuppressLint("NewApi")
-	private void addZipLibrary(final File libraryZip) {
+	private void addZipLibrary(final String libraryName, final Uri uri) {
 		//Let's not do too many things at once...
 		if(working)
 			return;
 		
 		final APDE context = (APDE) getApplicationContext();
 		
-		String libraryName = ContributionManager.detectLibraryName(libraryZip);
 		final Library library = new Library(libraryName);
 		
 		//Initialize the progress dialog
@@ -634,31 +638,22 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		libraryUpdateHandler.context = this;
 		
 		//Install the archived / compressed library in a new thread
-		final Thread installThread = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				working = true;
-				boolean success = ContributionManager.installZipLibrary(library, libraryZip, libraryUpdateHandler, context);
-				working = false;
-				
-				if (!success) {
-					runOnUiThread(new Runnable() {
-						public void run() {
-							alert(R.string.library_install_failure_title, R.string.library_install_failure_message);
-						}
-					});
-				}
-				
-				findViewById(R.id.library_manager_list).post(new Runnable() {
-					public void run() {
-						context.rebuildLibraryList();
-						refreshLibraryList();
-						findViewById(R.id.library_manager_list).invalidate();
-						
-						dialog.dismiss();
-					}
-				});
+		final Thread installThread = new Thread(() -> {
+			working = true;
+			boolean success = ContributionManager.installZipLibrary(library, uri, libraryUpdateHandler, context);
+			working = false;
+			
+			if (!success) {
+				runOnUiThread(() -> alert(R.string.library_install_failure_title, R.string.library_install_failure_message));
 			}
+			
+			findViewById(R.id.library_manager_list).post(() -> {
+				context.rebuildLibraryList();
+				refreshLibraryList();
+				findViewById(R.id.library_manager_list).invalidate();
+				
+				dialog.dismiss();
+			});
 		});
 		
 		//Set up the progress dialog TODO It would be cool if this was a real progress bar, displaying percentage complete - 
@@ -672,23 +667,15 @@ public class LibraryManagerActivity extends AppCompatActivity {
 //		//Make this look like an indeterminate progress bar
 //		dialog.setProgressDrawable(getResources().getDrawable(R.drawable.progress_indeterminate_horizontal_holo));
 		
-		dialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(R.string.cancel), new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				dialog.cancel();
-			}
-		});
+		dialog.setButton(DialogInterface.BUTTON_NEGATIVE, getResources().getString(R.string.cancel), (dialog1, which) -> dialog1.cancel());
 		
-		dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
-			@Override
-			public void onCancel(DialogInterface dialogInterface) {
-				//The user cancelled... hopefully this won't cause problems
-				installThread.interrupt();
-				working = false;
-				
-				//Undo any progress thus far
-				uninstallLibrary(library);
-			}
+		dialog.setOnCancelListener(dialogInterface -> {
+			//The user cancelled... hopefully this won't cause problems
+			installThread.interrupt();
+			working = false;
+			
+			//Undo any progress thus far
+			uninstallLibrary(library);
 		});
 		
 		//Let's get things going

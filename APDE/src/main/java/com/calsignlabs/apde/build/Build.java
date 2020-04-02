@@ -19,6 +19,7 @@ import android.content.Intent;
 import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.preference.PreferenceManager;
 import androidx.core.content.FileProvider;
 import android.view.inputmethod.InputMethodManager;
@@ -30,6 +31,8 @@ import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.contrib.Library;
+import com.calsignlabs.apde.support.FileSelection;
+import com.calsignlabs.apde.support.InputStreamKeySigner;
 
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
@@ -46,7 +49,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.security.Security;
 import java.util.ArrayList;
@@ -64,7 +66,6 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import kellinwood.security.zipsigner.ZipSigner;
-import kellinwood.security.zipsigner.optional.CustomKeySigner;
 import processing.core.PApplet;
 
 public class Build {
@@ -109,7 +110,7 @@ public class Build {
 	
 	private static AtomicBoolean running;
 	
-	private String keystore;
+	private Uri keystore;
 	private char[] keystorePassword;
 	private String keyAlias;
 	private char[] keyAliasPassword;
@@ -143,8 +144,8 @@ public class Build {
 		return appComponent;
 	}
 	
-	public void setKey(String keystore, char[] keystorePassword, String keyAlias, char[] keyAliasPassword) {
-		this.keystore = keystore;
+	public void setKey(Uri keystoreUri, char[] keystorePassword, String keyAlias, char[] keyAliasPassword) {
+		this.keystore = keystoreUri;
 		this.keystorePassword = keystorePassword;
 		this.keyAlias = keyAlias;
 		this.keyAliasPassword = keyAliasPassword;
@@ -1403,9 +1404,22 @@ public class Build {
 		try {
 			signer = new ZipSigner();
 			
-//			signer.signZip(new URL("file://" + keystore), "bks", keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outFilename);
+			if (keystore == null) {
+				System.err.println("Got a bad keystore");
+				return;
+			}
+			
+			ParcelFileDescriptor fd = FileSelection.openUri(editor, keystore, FileSelection.Mode.READ);
+			if (fd == null) {
+				System.err.println("Could not open Uri: " + keystore.toString());
+				return;
+			}
+			
 			//Let's take advantage of ZipSigner's ability to load JKS keystores as well
-			CustomKeySigner.signZip(signer, keystore, keystorePassword, keyAlias, keyAliasPassword, "SHA1WITHRSA", inFilename, outputFilename);
+			InputStreamKeySigner.signZip(signer, FileSelection.fdIn(fd), keystorePassword, keyAlias, keyAliasPassword,
+					"SHA1WITHRSA", inFilename, outputFilename);
+			
+			FileSelection.closeFd(fd);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

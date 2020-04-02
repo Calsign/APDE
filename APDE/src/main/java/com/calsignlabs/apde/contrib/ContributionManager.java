@@ -1,17 +1,24 @@
 package com.calsignlabs.apde.contrib;
 
 import android.content.Context;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Parcel;
+import android.os.ParcelFileDescriptor;
+
+import androidx.annotation.Nullable;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.support.FileSelection;
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Properties;
@@ -79,39 +86,51 @@ public class ContributionManager {
 	 * @param libraryZip
 	 * @param context
 	 */
-	public static boolean installZipLibrary(Library library, File libraryZip, Handler handler, APDE context) {
+	public static boolean installZipLibrary(Library library, Uri libraryZip, Handler handler, APDE context) {
 		library.setStatus(Library.Status.EXTRACTING);
 		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
 		
-		//Extract to the libraries folder
-		if(!extractFile(libraryZip, library.getLibraryFolder(context.getLibrariesFolder()))) {
+		ParcelFileDescriptor fd = FileSelection.openUri(context, libraryZip, FileSelection.Mode.READ);
+		if (fd == null) {
 			System.err.println(context.getResources().getString(R.string.install_zip_library_failure_unexpected_error));
 			return false;
 		}
 		
-		library.setStatus(Library.Status.DEXING);
-		handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
-		
-		//We dex during the install to save build time
-		
-		//Make sure that we have a dexed library directory
-		library.getLibraryJarDexFolder(context.getLibrariesFolder()).mkdir();
+		FileInputStream inputStream = new FileInputStream(fd.getFileDescriptor());
 		
 		try {
-			File[] jars = library.getLibraryJars(context.getLibrariesFolder());
-			File[] dexJars = library.getLibraryDexJars(context.getLibrariesFolder());
-			
-			//Dex all of the files...
-			for(int i = 0; i < jars.length; i ++) {
-				dexJar(jars[i], dexJars[i], context);
+			//Extract to the libraries folder
+			if (!extractFile(inputStream, library.getLibraryFolder(context.getLibrariesFolder()))) {
+				System.err.println(context.getResources().getString(R.string.install_zip_library_failure_unexpected_error));
+				return false;
 			}
-		} catch (NullPointerException e) {
-			//If we can't find the JARs
-			System.err.println(String.format(Locale.US,
-					context.getResources().getString(R.string.install_library_failure_poor_structure),
-					library.getLibraryJarFolder(context.getLibrariesFolder())));
-			e.printStackTrace();
-			return false;
+			
+			library.setStatus(Library.Status.DEXING);
+			handler.sendMessage(Message.obtain(handler, LIBRARY_UPDATE, library.getStatus()));
+			
+			//We dex during the install to save build time
+			
+			//Make sure that we have a dexed library directory
+			library.getLibraryJarDexFolder(context.getLibrariesFolder()).mkdir();
+			
+			try {
+				File[] jars = library.getLibraryJars(context.getLibrariesFolder());
+				File[] dexJars = library.getLibraryDexJars(context.getLibrariesFolder());
+				
+				//Dex all of the files...
+				for (int i = 0; i < jars.length; i++) {
+					dexJar(jars[i], dexJars[i], context);
+				}
+			} catch (NullPointerException e) {
+				//If we can't find the JARs
+				System.err.println(String.format(Locale.US,
+						context.getResources().getString(R.string.install_library_failure_poor_structure),
+						library.getLibraryJarFolder(context.getLibrariesFolder())));
+				e.printStackTrace();
+				return false;
+			}
+		} finally {
+			FileSelection.closeFd(fd);
 		}
 		
 		library.setStatus(Library.Status.INSTALLED);
@@ -123,17 +142,27 @@ public class ContributionManager {
 	/**
 	 * Searches a zip file for the name of the library that it (hopefully) contains
 	 * 
-	 * @param libraryZip
+	 * @param uri
 	 * @return the name of the zipped library
 	 */
-	public static String detectLibraryName(File libraryZip) {
+	@Nullable
+	public static String detectLibraryName(Context context, Uri uri) {
 		//Read the contents of the zip file, searching for the name of the library that it contains
+		
+		if (uri == null) {
+			return null;
+		}
+		ParcelFileDescriptor fd = FileSelection.openUri(context, uri, FileSelection.Mode.READ, true);
+		if (fd == null) {
+			return null;
+		}
+		InputStream inputStream = new FileInputStream(fd.getFileDescriptor());
 		
 		ZipInputStream zis = null;
 		
 		try {
 			String filename;
-			zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(libraryZip)));
+			zis = new ZipInputStream(new BufferedInputStream(inputStream));
 			ZipEntry ze;
 			
 			//Just in case things don't quite work out
@@ -159,16 +188,12 @@ public class ContributionManager {
 				
 				//Look for the "library.properties" file...
 				if((lastSlash >= 0 ? filename.substring(lastSlash, filename.length()) : filename).equals(Library.propertiesFilename)) {
-					ZipFile zipFile = new ZipFile(libraryZip);
-					
 					//...and read the properties
 					Properties props = new Properties();
-					props.load(zipFile.getInputStream(ze));
+					props.load(zis);
 					
 					//Specifically, the name
 					String libraryName = props.getProperty("name");
-					
-					zipFile.close();
 					
 					//But make sure that the properties file is formatted properly
 					if(libraryName != null) {
@@ -194,6 +219,7 @@ public class ContributionManager {
 				if (zis != null) {
 					zis.close();
 				}
+				fd.close();
 			} catch (IOException e) {
 				//...
 				e.printStackTrace();
@@ -201,7 +227,10 @@ public class ContributionManager {
 		}
 		
 		//If all else fails, return the name of the zip file
-		String zipName = libraryZip.getName();
+		String zipName = FileSelection.uriToFilename(context, uri);
+		if (zipName == null) {
+			return null;
+		}
 		
 		//It had better end with ".zip", because it's a zip file... but you never know
 		if(zipName.endsWith(".zip")) {
@@ -218,7 +247,7 @@ public class ContributionManager {
 	 * @param output
 	 * @return
 	 */
-	public static boolean extractFile(File input, File output) {
+	public static boolean extractFile(InputStream input, File output) {
 		//Modified from:
 		//StackOverflow: http://stackoverflow.com/questions/3382996/how-to-unzip-files-programmatically-in-android
 		
@@ -226,7 +255,7 @@ public class ContributionManager {
 		
 		try {
 			String filename;
-			zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(input)));
+			zis = new ZipInputStream(new BufferedInputStream(input));
 			ZipEntry ze;
 			byte[] buffer = new byte[1024];
 			int count;

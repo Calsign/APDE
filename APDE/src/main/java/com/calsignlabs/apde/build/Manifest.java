@@ -228,9 +228,14 @@ public class Manifest {
 			// Services need the label also in the service section
 			if (appComp == ComponentTarget.WALLPAPER || appComp == ComponentTarget.WATCHFACE) {
 				XML serv = app.getChild("service");
-				label = serv.getString("android:label");
-				if (label.length() == 0) {
+				if (serv == null) {
+					serv = app.addChild("service");
 					serv.setString("android:label", className);
+				} else {
+					label = serv.getString("android:label");
+					if (label.length() == 0) {
+						serv.setString("android:label", className);
+					}
 				}
 			}
 			

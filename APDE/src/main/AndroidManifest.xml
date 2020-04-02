@@ -88,22 +88,6 @@
 			android:name=".vcs.GitHistoryActivity"
 			android:label="@string/git_history"
 			android:theme="@style/FullscreenTheme"/>
-		<!-- This is a hook into the AFileChooser library's custom file chooser activity -->
-		<activity
-			android:name="com.ipaulpro.afilechooser.FileChooserActivity"
-			android:enabled="@bool/use_activity"
-			android:exported="true"
-			android:icon="@drawable/ic_chooser"
-			android:label="@string/file_chooser_title">
-			<intent-filter>
-				<action android:name="android.intent.action.GET_CONTENT"/>
-				
-				<category android:name="android.intent.category.DEFAULT"/>
-				<category android:name="android.intent.category.OPENABLE"/>
-				
-				<data android:mimeType="*/*"/>
-			</intent-filter>
-		</activity>
 		<activity
 			android:name=".ReferenceActivity"
 			android:label="@string/title_activity_reference"

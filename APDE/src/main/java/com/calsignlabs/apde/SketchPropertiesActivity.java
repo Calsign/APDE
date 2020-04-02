@@ -1,6 +1,5 @@
 package com.calsignlabs.apde;
 
-import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -9,24 +8,19 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.view.LayoutInflater;
+import android.os.ParcelFileDescriptor;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.WindowManager;
-import android.widget.EditText;
-import android.widget.LinearLayout;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.preference.EditTextPreference;
-import androidx.preference.PreferenceManager;
 
-import com.ipaulpro.afilechooser.utils.FileUtils;
+import com.calsignlabs.apde.support.FileSelection;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Locale;
+import java.io.InputStream;
 import java.util.Map.Entry;
 
 public class SketchPropertiesActivity extends AppCompatActivity implements Toolbar.OnMenuItemClickListener {
@@ -69,32 +63,17 @@ public class SketchPropertiesActivity extends AppCompatActivity implements Toolb
 		switch(requestCode) {
 		case REQUEST_CHOOSER:
 			if(resultCode == RESULT_OK) {
-				final Uri uri = data.getData();
-				
-				// Get the File path from the Uri
-				String path = FileUtils.getPath(this, uri);
-				
-				if(path != null && FileUtils.isLocal(path)) {
-					File file = new File(path);
-					if(file.exists()) {
-						addFile(file);
-					}
+				for (Uri uri : FileSelection.getSelectedUris(data)) {
+					addFile(uri);
 				}
 			}
 			
 			break;
 		case REQUEST_ICON_FILE:
 			if (resultCode == RESULT_OK) {
-				final Uri uri = data.getData();
-				
-				// Get the File path from the Uri
-				String path = FileUtils.getPath(this, uri);
-				
-				if(path != null && FileUtils.isLocal(path)) {
-					File file = new File(path);
-					if(file.exists() && fragment.iconFile != null) {
-						fragment.iconFile.setText(path);
-					}
+				Uri uri = FileSelection.getSelectedUri(data);
+				if (uri != null) {
+					fragment.iconFile.setText(uri.toString());
 				}
 			}
 			
@@ -141,19 +120,24 @@ public class SketchPropertiesActivity extends AppCompatActivity implements Toolb
 		startActivity(new Intent(this, SettingsActivity.class));
 	}
 	
-	public void addFile(File source) {
+	public void addFile(Uri source) {
 		//Get the location of this sketch's data folder
 		File dataFolder = new File(getGlobalState().getSketchLocation(), "/data/");
 		dataFolder.mkdir();
 		
-		File dest = new File(dataFolder, source.getName());
+		String title = FileSelection.uriToFilename(this, source);
+		if (title == null) {
+			// TODO perhaps come up with unique names?
+			title = "new_file";
+		}
 		
-		try {
-			APDE.copyFile(source, dest);
-		} catch (IOException e) {
-			//Something bad happened
-			System.err.println(getResources().getString(R.string.sketch_properties_add_file_failure));
-			e.printStackTrace();
+		File dest = new File(dataFolder, title);
+		
+		ParcelFileDescriptor fd = FileSelection.openUri(this, source, FileSelection.Mode.READ, true);
+		
+		if (fd != null) {
+			FileSelection.streamToFile(FileSelection.fdIn(fd), dest);
+			FileSelection.closeFd(fd);
 		}
 	}
 	
