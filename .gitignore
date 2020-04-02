@@ -10,7 +10,6 @@ build/**
 .idea/libraries/
 .idea/dictionaries/
 .idea/workspace.xml
-gradle/
 *.log
 local.properties
 *.iml
