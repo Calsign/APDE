@@ -24,22 +24,6 @@ import android.os.Environment;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
-import androidx.annotation.NonNull;
-import com.google.android.material.tabs.TabLayout;
-import androidx.core.app.ActivityCompat;
-import androidx.core.widget.ImageViewCompat;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentStatePagerAdapter;
-import androidx.core.content.ContextCompat;
-import androidx.viewpager.widget.PagerAdapter;
-import androidx.viewpager.widget.ViewPager;
-import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
-import androidx.appcompat.widget.Toolbar;
-
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
@@ -83,20 +67,35 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.widget.ImageViewCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentStatePagerAdapter;
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
+
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.CompilerProblem;
 import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.CopyAndroidJarTask;
 import com.calsignlabs.apde.build.Manifest;
+import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.build.dag.ModularBuild;
-import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
 import com.google.android.gms.wearable.MessageClient;
-import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.Wearable;
+import com.google.android.material.tabs.TabLayout;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -293,27 +292,24 @@ public class EditorActivity extends AppCompatActivity {
 		// Register receiver for sketch logs / console output
 		registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
 	
-		wearConsoleReceiver = new MessageClient.OnMessageReceivedListener() {
-			@Override
-			public void onMessageReceived(@NonNull MessageEvent messageEvent) {
-				if (messageEvent.getPath().equals("/apde_receive_logs")) {
-					try {
-						JSONObject json = new JSONObject(new String(messageEvent.getData()));
-						String severityStr = json.getString("severity");
-						
-						if (severityStr.length() != 1) {
-							System.err.println("Wear console receiver - invalid severity: \"" + severityStr + "\"");
-							return;
-						}
-						
-						char severity = severityStr.charAt(0);
-						String message = json.getString("message");
-						String exception = json.getString("exception");
-						
-						handleSketchConsoleLog(severity, message, exception);
-					} catch (JSONException e) {
-						e.printStackTrace();
+		wearConsoleReceiver = messageEvent -> {
+			if (messageEvent.getPath().equals("/apde_receive_logs")) {
+				try {
+					JSONObject json = new JSONObject(new String(messageEvent.getData()));
+					String severityStr = json.getString("severity");
+					
+					if (severityStr.length() != 1) {
+						System.err.println("Wear console receiver - invalid severity: \"" + severityStr + "\"");
+						return;
 					}
+					
+					char severity = severityStr.charAt(0);
+					String message = json.getString("message");
+					String exception = json.getString("exception");
+					
+					handleSketchConsoleLog(severity, message, exception);
+				} catch (JSONException e) {
+					e.printStackTrace();
 				}
 			}
 		};
@@ -328,7 +324,7 @@ public class EditorActivity extends AppCompatActivity {
 		//Initialize the list of tabs
 		tabs = new ArrayList<SketchFile>();
         
-		codePager = (ViewPager) findViewById(R.id.code_pager);
+		codePager = findViewById(R.id.code_pager);
 		codePagerAdapter = new FragmentStatePagerAdapter(getSupportFragmentManager()) {
 			@Override
 			public int getCount() {
@@ -355,7 +351,7 @@ public class EditorActivity extends AppCompatActivity {
 		};
 		codePager.setAdapter(codePagerAdapter);
 		
-		codeTabStrip = (TabLayout) findViewById(R.id.code_pager_tabs);
+		codeTabStrip = findViewById(R.id.code_pager_tabs);
 		codeTabStrip.setBackgroundColor(getResources().getColor(R.color.bar_overlay));
 		codeTabStrip.setSelectedTabIndicatorColor(getResources().getColor(R.color.holo_select));
 		codeTabStrip.setSelectedTabIndicatorHeight((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, getResources().getDisplayMetrics()));
@@ -490,77 +486,74 @@ public class EditorActivity extends AppCompatActivity {
 				}
                 supportInvalidateOptionsMenu();
         }};
-        drawer.setDrawerListener(drawerToggle);
+        drawer.addDrawerListener(drawerToggle);
         
         // Detect drawer sketch selection events
-        drawerList.setOnItemClickListener(new ListView.OnItemClickListener() {
-			@Override
-			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-				FileNavigatorAdapter.FileItem item = ((FileNavigatorAdapter) drawerList.getAdapter()).getItem(position);
-				
-				if (drawerSketchLocationType == null && !drawerRecentSketch) {
-					switch (position) {
-					case 0:
-						drawerSketchLocationType = APDE.SketchLocation.SKETCHBOOK;
-						break;
-					case 1:
-						drawerSketchLocationType = APDE.SketchLocation.EXAMPLE;
-						break;
-					case 2:
-						drawerSketchLocationType = APDE.SketchLocation.LIBRARY_EXAMPLE;
-						break;
-					case 3:
-						drawerSketchLocationType = APDE.SketchLocation.TEMPORARY;
-						break;
-					case 4:
-						drawerSketchLocationType = null;
-						drawerSketchPath = "";
-						drawerRecentSketch = true;
-						break;
-					}
-				} else {
-					switch (item.getType()) {
-					case NAVIGATE_UP:
-						int lastSlash = drawerSketchPath.lastIndexOf('/');
-						if (lastSlash > 0) {
-							drawerSketchPath = drawerSketchPath.substring(0, lastSlash);
-						} else if(drawerSketchPath.length() > 0) {
-							drawerSketchPath = "";
-						} else {
-							drawerSketchLocationType = null;
-						}
-						
-						if (drawerRecentSketch) {
-							drawerRecentSketch = false;
-						}
-						
-						break;
-					case MESSAGE:
-						break;
-					case FOLDER:
-						drawerSketchPath += "/" + item.getText();
-						
-						break;
-					case SKETCH:
-						// Save the current sketch...
-						autoSave();
-						
-						if (drawerRecentSketch) {
-							APDE.SketchMeta sketch = getGlobalState().getRecentSketches().get(position - 1); // "position - 1" because the first item is the UP button
-							
-							loadSketch(sketch.getPath(), sketch.getLocation());
-						} else {
-							loadSketch(drawerSketchPath + "/" + item.getText(), drawerSketchLocationType);
-						}
-						
-						drawer.closeDrawers();
-						
-						break;
-					}
+        drawerList.setOnItemClickListener((parent, view, position, id) -> {
+			FileNavigatorAdapter.FileItem item = ((FileNavigatorAdapter) drawerList.getAdapter()).getItem(position);
+			
+			if (drawerSketchLocationType == null && !drawerRecentSketch) {
+				switch (position) {
+				case 0:
+					drawerSketchLocationType = APDE.SketchLocation.SKETCHBOOK;
+					break;
+				case 1:
+					drawerSketchLocationType = APDE.SketchLocation.EXAMPLE;
+					break;
+				case 2:
+					drawerSketchLocationType = APDE.SketchLocation.LIBRARY_EXAMPLE;
+					break;
+				case 3:
+					drawerSketchLocationType = APDE.SketchLocation.TEMPORARY;
+					break;
+				case 4:
+					drawerSketchLocationType = null;
+					drawerSketchPath = "";
+					drawerRecentSketch = true;
+					break;
 				}
-				
-				forceDrawerReload();
+			} else {
+				switch (item.getType()) {
+				case NAVIGATE_UP:
+					int lastSlash = drawerSketchPath.lastIndexOf('/');
+					if (lastSlash > 0) {
+						drawerSketchPath = drawerSketchPath.substring(0, lastSlash);
+					} else if(drawerSketchPath.length() > 0) {
+						drawerSketchPath = "";
+					} else {
+						drawerSketchLocationType = null;
+					}
+					
+					if (drawerRecentSketch) {
+						drawerRecentSketch = false;
+					}
+					
+					break;
+				case MESSAGE:
+					break;
+				case FOLDER:
+					drawerSketchPath += "/" + item.getText();
+					
+					break;
+				case SKETCH:
+					// Save the current sketch...
+					autoSave();
+					
+					if (drawerRecentSketch) {
+						APDE.SketchMeta sketch = getGlobalState().getRecentSketches().get(position - 1); // "position - 1" because the first item is the UP button
+						
+						loadSketch(sketch.getPath(), sketch.getLocation());
+					} else {
+						loadSketch(drawerSketchPath + "/" + item.getText(), drawerSketchLocationType);
+					}
+					
+					drawer.closeDrawers();
+					
+					break;
+				}
 			}
+			
+			forceDrawerReload();
 		});
         
         // TODO This scrolling is currently somewhat choppy because we have a drag listener for every item to deal with ListView item recycling
@@ -604,151 +597,164 @@ public class EditorActivity extends AppCompatActivity {
         // Detect software keyboard open / close events
         // StackOverflow: http://stackoverflow.com/questions/2150078/how-to-check-visibility-of-software-keyboard-in-android
         activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
+			private View buffer = findViewById(R.id.buffer);
+			private TextView messageArea = findViewById(R.id.message);
+			private View console = findViewById(R.id.console_wrapper);
+			private View content = findViewById(R.id.content);
+			private FrameLayout autoCompileProgress = findViewById(R.id.auto_compile_progress_wrapper);
+			
+			private int previousVisibleHeight = -1;
+   
 			@SuppressWarnings("deprecation")
 			@Override
 			public void onGlobalLayout() {
-				// Calculate the difference in height
+				// We only want to update if the activity has changed size
 				Rect r = new Rect();
 				activityRootView.getWindowVisibleDisplayFrame(r);
-				int heightDiff = activityRootView.getRootView().getHeight() - (r.bottom - r.top);
-				
-				// Hide the soft keyboard if it's trying to show its dirty face...
-				// ...and the user doesn't want it
-				if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
-					InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-					imm.hideSoftInputFromWindow(activityRootView.getWindowToken(), 0);
+				int visibleHeight = r.bottom - r.top;
+				if (visibleHeight == previousVisibleHeight) {
 					return;
 				}
+				previousVisibleHeight = visibleHeight;
+				
+				// Calculate the difference in height
+				int heightDiff = activityRootView.getRootView().getHeight() - visibleHeight;
 				
 				if (oldCodeHeight == -1) {
 					oldCodeHeight = codePager.getHeight();
 				}
 				
-				if (heightDiff > getResources().getDimension(R.dimen.keyboard_visibility_change_threshold)) { //If the difference is bigger than 200dp, it's probably the keyboard
+				// An important note for understanding the following code:
+				// The tab bar is actually inside the code area pager, so the height of "code"
+				// includes the height of the tab bar
+				
+				if (message == -1) {
+					message = buffer.getHeight();
+				}
+				
+				int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight();
+				// If the difference is bigger than 160dp, it's probably the keyboard
+				boolean keyboardCoveringScreen = heightDiff > getResources().getDimension(R.dimen.keyboard_visibility_change_threshold);
+				boolean allowSoftKeyboard = !PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false);
+				
+				if (keyboardCoveringScreen && !keyboardVisible) {
+					// The keyboard just appeared
 					
-					// An important note for understanding the following code:
-					// The tab bar is actually inside the code area pager, so the height of "code"
-					// includes the height of the tab bar
+					// Hide the soft keyboard if it's trying to show its dirty face...
+					// ...and the user doesn't want it
+					if (!allowSoftKeyboard) {
+						InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+						imm.hideSoftInputFromWindow(activityRootView.getWindowToken(), 0);
+						return;
+					}
 					
-					if (!keyboardVisible) {
-						keyboardVisible = true;
+					keyboardVisible = true;
+					
+					// Configure the layout for the keyboard
+					
+					if (firstResize) {
+						firstResize = false;
+					} else {
+						oldCodeHeight = codePager.getHeight();
+					}
+					
+					if (totalHeight > oldCodeHeight) {
+						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, totalHeight));
+						console.startAnimation(new ResizeAnimation<LinearLayout>(console, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0));
+					} else {
+						codePager.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, totalHeight));
+						console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
+					}
+					
+					// Remove the focus from the Message slider if it has it and maintain styling
+					switch (messageType) {
+						case MESSAGE:
+							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
+							buffer.setBackgroundColor(getResources().getColor(R.color.message_back));
+							messageArea.setTextColor(getResources().getColor(R.color.message_text));
+							break;
+						case ERROR:
+							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
+							buffer.setBackgroundColor(getResources().getColor(R.color.error_back));
+							messageArea.setTextColor(getResources().getColor(R.color.error_text));
+							break;
+						case WARNING:
+							buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_warning));
+							buffer.setBackgroundColor(getResources().getColor(R.color.warning_back));
+							messageArea.setTextColor(getResources().getColor(R.color.warning_text));
+							break;
+					}
+					CodeEditText codeArea = getSelectedCodeArea();
+					
+					if (codeArea != null) {
+						codeArea.updateBracketMatch();
+					}
+					
+					// Don't do anything if the user has disabled the character insert tray
+					if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true)) {
+						//Update the character insert tray
+						toggleCharInsertsProblemOverviewButton(false, true);
 						
-						// Configure the layout for the keyboard
-
-						View buffer = findViewById(R.id.buffer);
-						TextView messageArea = findViewById(R.id.message);
-						View console = findViewById(R.id.console_wrapper);
-						View content = findViewById(R.id.content);
-						FrameLayout autoCompileProgress = findViewById(R.id.auto_compile_progress_wrapper);
-						
-						if (message == -1) {
-							message = buffer.getHeight();
-						}
-						
-						if (firstResize) {
-							firstResize = false;
-						} else {
-							oldCodeHeight = codePager.getHeight();
-						}
-						
-						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight();
-						
-						if (totalHeight > oldCodeHeight) {
-							codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, totalHeight));
-							console.startAnimation(new ResizeAnimation<LinearLayout>(console, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, 0));
-						} else {
-							codePager.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, totalHeight));
-							console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
-						}
-						
-						// Remove the focus from the Message slider if it has it and maintain styling
-						switch (messageType) {
-							case MESSAGE:
-								buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back));
-								buffer.setBackgroundColor(getResources().getColor(R.color.message_back));
-								messageArea.setTextColor(getResources().getColor(R.color.message_text));
-								break;
-							case ERROR:
-								buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_error));
-								buffer.setBackgroundColor(getResources().getColor(R.color.error_back));
-								messageArea.setTextColor(getResources().getColor(R.color.error_text));
-								break;
-							case WARNING:
-								buffer.setBackgroundDrawable(getResources().getDrawable(R.drawable.back_warning));
-								buffer.setBackgroundColor(getResources().getColor(R.color.warning_back));
-								messageArea.setTextColor(getResources().getColor(R.color.warning_text));
-								break;
-						}
-						CodeEditText codeArea = getSelectedCodeArea();
-						
-						if (codeArea != null) {
-							codeArea.updateBracketMatch();
-						}
-						
-						// Don't do anything if the user has disabled the character insert tray
-						if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("char_inserts", true)) {
-							//Update the character insert tray
-							toggleCharInsertsProblemOverviewButton(false, true);
+						if (charInserts) {
+							View charInsertTray = findViewById(R.id.char_insert_tray);
 							
-							if (charInserts) {
-								View charInsertTray = findViewById(R.id.char_insert_tray);
-								
-								correctMessageAreaHeight();
-								toggleCharInserts.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_right_black);
-								
-								// This is really screwy, but it gets the job done
-								messageArea.getLayoutParams().width = 0;
-								charInsertTray.setVisibility(View.VISIBLE);
-								charInsertTray.getLayoutParams().width = findViewById(R.id.message_char_insert_wrapper).getWidth();
-								
-								messageArea.requestLayout();
-								charInsertTray.requestLayout();
-							}
+							correctMessageAreaHeight();
+							toggleCharInserts.setImageResource(messageType != MessageType.MESSAGE ? R.drawable.ic_caret_right_white : R.drawable.ic_caret_right_black);
+							
+							// This is really screwy, but it gets the job done
+							messageArea.getLayoutParams().width = 0;
+							charInsertTray.setVisibility(View.VISIBLE);
+							charInsertTray.getLayoutParams().width = findViewById(R.id.message_char_insert_wrapper).getWidth();
+							
+							messageArea.requestLayout();
+							charInsertTray.requestLayout();
 						}
 					}
-				} else {
-					View consoleArea = findViewById(R.id.console_wrapper);
-					ViewGroup content = findViewById(R.id.content);
-					FrameLayout autoCompileProgress = findViewById(R.id.auto_compile_progress_wrapper);
+				} else if (!keyboardCoveringScreen && keyboardVisible) {
+					// The keyboard just disappeared
 					
-					if (keyboardVisible) {
-						//Configure the layout for the absence of the keyboard
-						// Configure the layout for the absence of the keyboard
-						
-						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight();
-						
-						codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight, false));
-						consoleArea.startAnimation(new ResizeAnimation<LinearLayout>(consoleArea, ResizeAnimation.DEFAULT, totalHeight - codePager.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight, false));
-						
-						keyboardVisible = false;
-						
-						if (oldCodeHeight > 0) {
-							consoleWasHidden = false;
-						}
-						
-						// Remove any unnecessary focus from the code area
-						getSelectedCodeArea().clearFocus();
-						getSelectedCodeArea().matchingBracket = -1;
-						
-						// Update the character insert tray
-						toggleCharInsertsProblemOverviewButton(true, true);
-						
-						findViewById(R.id.message).setVisibility(View.VISIBLE);
-						findViewById(R.id.char_insert_tray).setVisibility(View.GONE);
-						
-						hideCharInsertsNoAnimation(false);
-					} else if (!firstResize) {
-						// Fix console height
-						// This is necessary when toggling between fullscreen and non-fullscreen
-						int totalHeight = content.getHeight() - message - (extraHeaderView != null ? extraHeaderView.getHeight() : 0) - tabBarContainer.getHeight() - autoCompileProgress.getHeight();
-						consoleArea.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, totalHeight - codePager.getHeight()));
+					codePager.startAnimation(new ResizeAnimation<LinearLayout>(codePager, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, ResizeAnimation.DEFAULT, oldCodeHeight, false));
+					console.startAnimation(new ResizeAnimation<LinearLayout>(console, ResizeAnimation.DEFAULT, totalHeight - codePager.getHeight(), ResizeAnimation.DEFAULT, totalHeight - oldCodeHeight, false));
+					
+					keyboardVisible = false;
+					
+					if (oldCodeHeight > 0) {
+						consoleWasHidden = false;
 					}
+					
+					// Remove any unnecessary focus from the code area
+					getSelectedCodeArea().clearFocus();
+					getSelectedCodeArea().matchingBracket = -1;
+					
+					// Update the character insert tray
+					toggleCharInsertsProblemOverviewButton(true, true);
+					
+					findViewById(R.id.message).setVisibility(View.VISIBLE);
+					findViewById(R.id.char_insert_tray).setVisibility(View.GONE);
+					
+					hideCharInsertsNoAnimation(false);
+				} else if (keyboardVisible) {
+					// Minor adjustment because the window size changed for some reason
+					
+					codePager.getLayoutParams().height = totalHeight;
+					console.getLayoutParams().height = 0;
+					
+					codePager.requestLayout();
+					console.requestLayout();
+				} else {
+					// Minor adjustment because the window size changed for some reason
+					
+					codePager.getLayoutParams().height = Math.min(totalHeight, codePager.getHeight());
+					console.getLayoutParams().height = Math.max(totalHeight - codePager.getHeight(), 0);
+					
+					codePager.requestLayout();
+					console.requestLayout();
 				}
 			}
 		});
 		
 		// Set up character insert tray toggle
-		toggleCharInserts = (ImageButton) findViewById(R.id.toggle_char_inserts);
+		toggleCharInserts = findViewById(R.id.toggle_char_inserts);
 		toggleCharInserts.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View view) {
@@ -4647,9 +4653,10 @@ public class EditorActivity extends AppCompatActivity {
 			content = findViewById(R.id.content);
 		}
 		
-		@SuppressWarnings("deprecation")
 		@Override
 		public boolean onTouch(View view, MotionEvent event) {
+			view.performClick();
+			
 			// Don't resize the console if there is no console to speak of
 			if(keyboardVisible)
 				return false;
@@ -4684,8 +4691,8 @@ public class EditorActivity extends AppCompatActivity {
 					int codeDim = maxCode - consoleDim;
 					
 					// Set the new dimensions
-					codePager.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, codeDim));
-					console.setLayoutParams(new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
+					codePager.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, codeDim));
+					console.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, consoleDim));
 					
 					firstResize = false;
 					
@@ -4698,7 +4705,7 @@ public class EditorActivity extends AppCompatActivity {
 					pressed = false;
 					
 					View buffer = findViewById(R.id.buffer);
-					TextView messageArea = (TextView) findViewById(R.id.message);
+					TextView messageArea = findViewById(R.id.message);
 					
 					switch (messageType) {
 						case MESSAGE:
@@ -4732,7 +4739,7 @@ public class EditorActivity extends AppCompatActivity {
 			pressed = true;
 			
 			View buffer = findViewById(R.id.buffer);
-			TextView messageArea = (TextView) findViewById(R.id.message);
+			TextView messageArea = findViewById(R.id.message);
 			
 			// Change the message area drawable and maintain styling
 			switch (messageType) {
