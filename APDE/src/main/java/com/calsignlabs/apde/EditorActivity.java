@@ -2027,7 +2027,7 @@ public class EditorActivity extends AppCompatActivity {
 	public void scheduleAutoCompile(boolean immediate) {
 		cancelAutoCompile();
 		
-		long timeout = Long.parseLong(getGlobalState().getPref("pref_key_build_compile_timeout", getGlobalState().getString(R.string.pref_build_compile_timeout)));
+		long timeout = Long.parseLong(getGlobalState().getPref("pref_key_build_compile_timeout", getGlobalState().getString(R.string.pref_build_compile_timeout_default_value)));
 		
 		if (timeout != -1L) {
 			findViewById(R.id.auto_compile_placeholder).setBackgroundColor(getResources().getColor(R.color.bar_overlay));
