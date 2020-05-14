@@ -368,9 +368,14 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 				Uri.parse(iconFile.getText().toString()), FileSelection.Mode.READ, true);
 		
 		if (fd == null) {
-			// Let the user type in a path manually
-			fd = FileSelection.openUri(getSketchPropertiesActivity(),
-					FileSelection.pathToUri(iconFile.getText().toString()), FileSelection.Mode.READ, true);
+			// Technically this check shouldn't be necessary, but there's some kind of stupid
+			// issue on 5.1 that necessitates this check
+			File file = new File(iconFile.getText().toString());
+			if (file.exists() && file.isFile()) {
+				// Let the user type in a path manually
+				fd = FileSelection.openUri(getSketchPropertiesActivity(),
+						FileSelection.pathToUri(iconFile.getText().toString()), FileSelection.Mode.READ, true);
+			}
 		}
 		
 		if (fd == null) {
