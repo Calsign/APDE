@@ -209,9 +209,9 @@
 	<string name="pref_about_google_play">APDE on Google Play</string>
 	<string name="pref_about_github">APDE on GitHub</string>
 	<string name="pref_about_github_uri">https://github.com/Calsign/APDE/</string>
-	<string name="pref_about_preview_channel">APDE Preview Channel</string>
-	<string name="pref_about_preview_channel_desc">Join community to receive preview releases</string>
-	<string name="pref_about_preview_channel_uri">https://plus.google.com/communities/117703520591262292626</string>
+	<string name="pref_about_open_beta">APDE Open Beta</string>
+	<string name="pref_about_open_beta_desc">Join open beta to receive pre-releases</string>
+	<string name="pref_about_open_beta_uri">https://play.google.com/apps/testing/com.calsignlabs.apde</string>
 	<string name="pref_about_email_dev">Email Developer</string>
 	<string name="pref_about_email_address">calsignlabs@gmail.com</string>
 	<string name="pref_about_email_subject">APDE - Android Processing IDE</string>

@@ -17,9 +17,9 @@
             android:title="@string/pref_about_github" />
         
         <androidx.preference.Preference
-            android:key="pref_about_preview_channel"
-            android:title="@string/pref_about_preview_channel"
-            android:summary="@string/pref_about_preview_channel_desc" />
+            android:key="pref_about_open_beta"
+            android:title="@string/pref_about_open_beta"
+            android:summary="@string/pref_about_open_beta_desc" />
         
         <androidx.preference.Preference
             android:key="pref_about_email_dev"

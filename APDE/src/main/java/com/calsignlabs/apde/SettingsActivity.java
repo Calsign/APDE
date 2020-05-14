@@ -258,11 +258,11 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 			});
 		}
 		
-		Preference previewChannel = frag.findPreference("pref_about_preview_channel");
+		Preference openBeta = frag.findPreference("pref_about_open_beta");
 		
-		if (previewChannel != null) {
-			previewChannel.setOnPreferenceClickListener(preference -> {
-				launchPreviewChannel();
+		if (openBeta != null) {
+			openBeta.setOnPreferenceClickListener(preference -> {
+				launchOpenBeta();
 				
 				return true;
 			});
@@ -440,8 +440,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.pref_about_github_uri))));
 	}
 	
-	protected void launchPreviewChannel() {
-		startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.pref_about_preview_channel_uri))));
+	protected void launchOpenBeta() {
+		startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.pref_about_open_beta_uri))));
 	}
 	
 	protected void launchEmailDev() {
