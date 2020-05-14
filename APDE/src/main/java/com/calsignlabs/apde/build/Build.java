@@ -1121,6 +1121,9 @@ public class Build {
 			System.out.println(editor.getResources().getString(R.string.build_signing_private_key));
 			
 			File outputBinFolder = new File((editor.getGlobalState().isExample() || editor.getGlobalState().isTemp()) ? editor.getGlobalState().getSketchbookFolder() : editor.getGlobalState().getSketchLocation(), "bin");
+			if (!outputBinFolder.mkdirs() && verbose) {
+				System.err.println("Failed to make output dir");
+			}
 			String outFilename = outputBinFolder.getAbsolutePath() + "/" + sketchName + ".apk";
 			
 			//We want to sign for release!!!
