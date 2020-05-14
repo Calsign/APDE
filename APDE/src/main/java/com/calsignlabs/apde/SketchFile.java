@@ -640,8 +640,10 @@ public class SketchFile extends BareSketchFile implements Parcelable {
 	}
 	
 	private static String handleBadChars(String string) {
-		// Convert all newlines to something we know how to deal with
-		return string.replaceAll("\\R", "\n");
+		// Convert all newlines to something we know how to deal with.
+		// Detect all possible line breaks - \R doesn't seem to work on older versions of Android,
+		// so the below is copied from the reference for \R.
+		return string.replaceAll("\\u000D\\u000A|[\\u000A\\u000B\\u000C\\u000D\\u0085\\u2028\\u2029]", "\n");
 	}
 	
 	private void initFragment() {
