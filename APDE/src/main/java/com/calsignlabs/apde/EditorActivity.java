@@ -2046,7 +2046,9 @@ public class EditorActivity extends AppCompatActivity {
 					
 					toggleAutoCompileIndicator(true);
 					
-					findViewById(R.id.auto_compile_placeholder).setBackgroundColor(getResources().getColor(R.color.message_back));
+					runOnUiThread(() -> {
+						findViewById(R.id.auto_compile_placeholder).setBackgroundColor(getResources().getColor(R.color.message_back));
+					});
 					builder.build("debug", getComponentTarget(), true);
 					
 					toggleAutoCompileIndicator(false);
@@ -3894,7 +3896,7 @@ public class EditorActivity extends AppCompatActivity {
 			// Each SketchFile figures out which problems it needs, so just give them every problem
 			sketchFile.setCompilerProblems(compilerProblems, i);
 			if (sketchFile.getFragment() != null && sketchFile.getFragment().getCodeEditText() != null) {
-				sketchFile.getFragment().getCodeEditText().invalidate();
+				runOnUiThread(sketchFile.getFragment().getCodeEditText()::invalidate);
 			}
 			i++;
 		}
