@@ -1,3 +1,16 @@
+v0.5.2-pre1 Alpha
+
+ - Real-time compilation
+   - Your code automatically compiles in the background
+   - Errors and warnings are underlined in your code
+   - The problem overview screen (to the right of the console) shows
+     all errors and warnings found in your code
+   - Improved preprocessor
+ - Improved file selection
+ - Bug fixes and improvements
+
+------------------------------------------------------------------------
+
 v0.5.1 Alpha
 
  - Preview mode runs sketches without installing them
