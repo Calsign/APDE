@@ -722,9 +722,11 @@ public class EditorActivity extends AppCompatActivity {
 						consoleWasHidden = false;
 					}
 					
-					// Remove any unnecessary focus from the code area
-					getSelectedCodeArea().clearFocus();
-					getSelectedCodeArea().matchingBracket = -1;
+					if (getSelectedCodeArea() != null) {
+						// Remove any unnecessary focus from the code area
+						getSelectedCodeArea().clearFocus();
+						getSelectedCodeArea().matchingBracket = -1;
+					}
 					
 					// Update the character insert tray
 					toggleCharInsertsProblemOverviewButton(true, true);
@@ -1322,7 +1324,7 @@ public class EditorActivity extends AppCompatActivity {
 		
 		Intent intent = getIntent();
 		
-		if ((intent.getAction().equals(Intent.ACTION_VIEW) || intent.getAction().equals(Intent.ACTION_EDIT))) {
+		if (intent.getAction() != null && (intent.getAction().equals(Intent.ACTION_VIEW) || intent.getAction().equals(Intent.ACTION_EDIT)) && intent.getData() != null) {
 			String scheme = intent.getData().getScheme();
 			String filePath = intent.getData().getPath();
 			

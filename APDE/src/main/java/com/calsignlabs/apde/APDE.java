@@ -811,23 +811,27 @@ public class APDE extends MultiDexApplication {
 	final static double BYTE_PER_GB = 1_073_741_824.0d; // 1024^3
 	
 	public static String getAvailableSpace(File drive) {
-		StatFs stat = new StatFs(drive.getAbsolutePath());
-		
-		DecimalFormat df = new DecimalFormat("#.00");
-		df.setRoundingMode(RoundingMode.HALF_UP);
-		
-		long available;
-		long total;
-		
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-			available = stat.getAvailableBytes();
-			total = stat.getTotalBytes();
-		} else {
-			available = stat.getAvailableBlocks() * stat.getBlockSize();
-			total = stat.getBlockCount() * stat.getBlockSize();
+		try {
+			StatFs stat = new StatFs(drive.getAbsolutePath());
+			
+			DecimalFormat df = new DecimalFormat("#.00");
+			df.setRoundingMode(RoundingMode.HALF_UP);
+			
+			long available;
+			long total;
+			
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+				available = stat.getAvailableBytes();
+				total = stat.getTotalBytes();
+			} else {
+				available = stat.getAvailableBlocks() * stat.getBlockSize();
+				total = stat.getBlockCount() * stat.getBlockSize();
+			}
+			
+			return df.format(available / BYTE_PER_GB) + " GB free of " + df.format(total / BYTE_PER_GB) + " GB";
+		} catch (IllegalArgumentException e) {
+			return "Failed to stat FS";
 		}
-		
-		return df.format(available / BYTE_PER_GB) + " GB free of " + df.format(total / BYTE_PER_GB) + " GB";
 	}
 	
 	/**
