@@ -271,6 +271,10 @@ public class CopyBuildTask extends BuildTask {
 			ZipEntry zipEntry;
 			while ((zipEntry = zipIn.getNextEntry()) != null) {
 				File file = new File(folder, zipEntry.getName());
+				if (file.getCanonicalPath().startsWith(folder.getCanonicalPath())) {
+					System.err.println("Aborted zip! Attempted zip path traversal attack extracting to: " + folder.getAbsolutePath());
+					return false;
+				}
 				
 				if (zipEntry.isDirectory()) {
 					if (!file.exists() && !file.mkdirs()) return false;
