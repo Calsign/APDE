@@ -3404,19 +3404,22 @@ public class EditorActivity extends AppCompatActivity {
 		}
     }
     
-    /**
-     * Stops the current sketch's build process
-     * This CAN be called multiple times without breaking anything
-     */
-    private void stopApplication() {
-    	// This will stop the current build process
-    	// I don't think we can stop a running app...
-    	// ...that's what the BACK button is for
-    	
-    	if (building) {
-			getGlobalState().getModularBuild().halt();
+	/**
+	 * Stops the current sketch's build process
+	 * This CAN be called multiple times without breaking anything
+	 */
+	private void stopApplication() {
+		// This will stop the current build process
+		// I don't think we can stop a running app...
+		// ...that's what the BACK button is for
+		
+		if (building) {
+			// Not using modular build
+			//getGlobalState().getModularBuild().halt();
+		    
+			Build.halt();
 		}
-    }
+	}
 	
 	public void changeRunStopIcon(final boolean run) {
 		runStopMenuButton.post(() -> {
