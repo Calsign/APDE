@@ -152,15 +152,11 @@ public class Preprocessor {
 			replaceHexLiterals(scrubbed);
 			
 			writeHeader(baseImports, sketchImports); // imports get written here
-			writeFooter(settingsStatements);
+			writeFooter(settingsStatements, hasSettings(scrubbed));
 			
 			advancedPreprocess();
 			
 			buildPreprocessedText();
-			// The compiler can actually do this for us...
-			// The only benefit to doing it here is that we can get preprocessor errors earlier
-			// But that will be moot because we are switching to synchronous build
-//			findSyntaxProblems();
 		} catch (TextTransform.OverlappingEditException | TextTransform.LockException e) {
 			e.printStackTrace();
 		}
@@ -201,6 +197,19 @@ public class Preprocessor {
 		}
 	}
 	
+	private boolean hasSettings(CharSequence scrubbed) {
+		switch (mode) {
+			case ACTIVE:
+				Matcher settingsMatcher = SETTINGS_REGEX.matcher(scrubbed);
+				return settingsMatcher.find();
+			case JAVA:
+				return true;
+			case STATIC:
+			default:
+				return false;
+		}
+	}
+	
 	private List<String> extractSettings(CharSequence scrubbed) throws TextTransform.LockException {
 		List<String> statements = new ArrayList<>();
 		
@@ -236,6 +245,9 @@ public class Preprocessor {
 	
 	private static final Pattern SETUP_REGEX = Pattern.compile(
 			"(?:^|\\s|;)void\\s+setup\\s*\\(", Pattern.MULTILINE);
+	
+	private static final Pattern SETTINGS_REGEX = Pattern.compile(
+			"(?:^|\\s|;)void\\s+settings\\s*\\(", Pattern.MULTILINE);
 	
 	private static final Pattern CLOSING_BRACE = Pattern.compile("\\}");
 	
@@ -642,14 +654,15 @@ public class Preprocessor {
 		}
 	}
 	
-	private void writeFooter(List<String> settingsStatements) {
+	private void writeFooter(List<String> settingsStatements, boolean hasSettings) {
 		StringBuilder builder = new StringBuilder();
 		
 		if (mode != Mode.JAVA) {
 			if (mode == Mode.STATIC) {
 				builder.append("\n}");
 			}
-			if (settingsStatements.size() > 0) {
+			// Don't make a second settings function if one already exists
+			if (settingsStatements.size() > 0 && !hasSettings) {
 				builder.append("\npublic void settings() {\n");
 				for (String statement : settingsStatements) {
 					builder.append("  ");
