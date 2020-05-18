@@ -652,6 +652,10 @@ public class ModularBuild {
 	
 	private void promptInstallPreviewer(List<String> newPermissions) {
 		global.getEditor().runOnUiThread(() -> {
+			if (global.getEditor().isFinishing()) {
+				return;
+			}
+			
 			AlertDialog.Builder builder = new AlertDialog.Builder(global.getEditor());
 			
 			StringBuilder message = new StringBuilder(global.getResources()

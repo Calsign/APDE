@@ -331,25 +331,26 @@ public class Build {
 				public void failure() {
 					halt();
 					
-					editor.runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-							AlertDialog.Builder builder = new AlertDialog.Builder(editor);
-							
-							builder.setTitle(R.string.watchface_watch_disconnected_dialog_title);
-							builder.setMessage(R.string.watchface_watch_disconnected_dialog_message);
-							
-							builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-								@Override
-								public void onClick(DialogInterface dialogInterface, int i) {}
-							});
-							
-							builder.show();
-							
-							System.err.println();
-							System.err.println(editor.getResources().getString(R.string.watchface_check_available_failure));
-							System.err.println();
+					editor.runOnUiThread(() -> {
+						if (editor.isFinishing()) {
+							return;
 						}
+						
+						AlertDialog.Builder builder = new AlertDialog.Builder(editor);
+						
+						builder.setTitle(R.string.watchface_watch_disconnected_dialog_title);
+						builder.setMessage(R.string.watchface_watch_disconnected_dialog_message);
+						
+						builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+							@Override
+							public void onClick(DialogInterface dialogInterface, int i) {}
+						});
+						
+						builder.show();
+						
+						System.err.println();
+						System.err.println(editor.getResources().getString(R.string.watchface_check_available_failure));
+						System.err.println();
 					});
 				}
 			});
@@ -462,6 +463,10 @@ public class Build {
 							@Override
 							public void onClick(DialogInterface dialogInterface, int i) {}
 						});
+						
+						if (editor.isFinishing()) {
+							return;
+						}
 						
 						builder.show();
 					});
