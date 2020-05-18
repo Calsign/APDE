@@ -2020,14 +2020,21 @@ public class EditorActivity extends AppCompatActivity {
 		}
 	}
 	
-	public void cancelAutoCompile() {
+	public boolean cancelAutoCompile() {
+		if (building) {
+			return false;
+		}
 		if (autoCompileTask != null && !autoCompileTask.isDone() && !autoCompileTask.isCancelled()) {
 			autoCompileTask.cancel(true);
 		}
+		return true;
 	}
 	
 	public void scheduleAutoCompile(boolean immediate) {
-		cancelAutoCompile();
+		if (!cancelAutoCompile()) {
+			// We're currently building
+			return;
+		}
 		
 		long timeout = Long.parseLong(getGlobalState().getPref("pref_key_build_compile_timeout", getGlobalState().getString(R.string.pref_build_compile_timeout_default_value)));
 		
