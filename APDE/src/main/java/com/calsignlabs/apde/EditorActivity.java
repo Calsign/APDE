@@ -2124,6 +2124,8 @@ public class EditorActivity extends AppCompatActivity {
 		
 		// Reload the navigation drawer
 		forceDrawerReload();
+		
+		scheduleAutoCompile(true);
 	}
     
 	/**
@@ -3819,6 +3821,11 @@ public class EditorActivity extends AppCompatActivity {
 				// Get a reference to the code area
 				final CodeEditText code = getSelectedCodeArea();
 				
+				// We can't highlight code if there is no tab selected
+				if (code == null) {
+					return;
+				}
+				
 				// Calculate the beginning and ending of the line
 				int lineStart = code.offsetForLine(line);
 				int lineStop = code.offsetForLineEnd(line);
@@ -3946,6 +3953,7 @@ public class EditorActivity extends AppCompatActivity {
 	public void addTab(SketchFile sketchFile) {
 		tabs.add(sketchFile);
 		codePagerAdapter.notifyDataSetChanged();
+		scheduleAutoCompile(true);
 	}
 	
 	public void onTabReselected(View view) {
@@ -4151,6 +4159,8 @@ public class EditorActivity extends AppCompatActivity {
 				selectCode(tabs.size() - 1);
 			}
 			
+			scheduleAutoCompile(true);
+			
 	    	// Inform the user in the message area
 	    	message(getResources().getText(R.string.tab_delete_success));
     	}
@@ -4219,6 +4229,8 @@ public class EditorActivity extends AppCompatActivity {
 //    			tabs.get(tabBar.getSelectedTab()).setTitle(value);
     	    	getSelectedSketchFile().setTitle(value);
 				codePagerAdapter.notifyDataSetChanged();
+				
+				scheduleAutoCompile(true);
 				
     	    	//Notify the user of success
     			message(getResources().getText(R.string.tab_rename_success));
