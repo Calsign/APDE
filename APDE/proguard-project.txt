@@ -44,3 +44,5 @@
 -keep class org.spongycastle.jcajce.provider.** { *; }
 -keep class kellinwood.security.zipsigner.** { *; }
 -keep class org.eclipse.core.internal.runtime.** { *; }
+-keep class androidx.test.** { *; }
+-keep class androidx.drawerlayout.widget.DrawerLayout$SimpleDrawerListener { *; }

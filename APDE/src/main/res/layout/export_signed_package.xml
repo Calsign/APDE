@@ -80,14 +80,14 @@
                 android:contentDescription="@string/export_signed_package_certificate_info"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_info_white" />
-            
+    
             <ImageButton
                 android:id="@id/alias_new"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_alignTop="@+id/alias"
                 android:layout_alignBottom="@+id/alias"
                 android:layout_alignParentRight="true"
-                android:layout_alignTop="@+id/alias"
                 android:contentDescription="@string/export_signed_package_key_alias_new"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_new_white" />

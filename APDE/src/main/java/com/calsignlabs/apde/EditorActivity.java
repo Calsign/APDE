@@ -79,6 +79,7 @@ import androidx.core.widget.ImageViewCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentStatePagerAdapter;
+import androidx.test.espresso.idling.concurrent.IdlingScheduledThreadPoolExecutor;
 import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
@@ -118,8 +119,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Stack;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -270,8 +273,8 @@ public class EditorActivity extends AppCompatActivity {
 		setSupportActionBar(toolbar);
 		
 		// Create custom output / error streams for the console
-		outStream = new PrintStream(new ConsoleStream());
-		errStream = new PrintStream(new ConsoleStream());
+		outStream = new PrintStream(new ConsoleStream(System.out));
+		errStream = new PrintStream(new ConsoleStream(System.err));
 		
 		// Set the custom output / error streams
 		System.setOut(outStream);
@@ -954,9 +957,14 @@ public class EditorActivity extends AppCompatActivity {
 				// Do nothing
 			}
 		});
-	
-		autoSaveTimer = new ScheduledThreadPoolExecutor(1);
-		autoCompileTimer = new ScheduledThreadPoolExecutor(1);
+		
+		if (false) {
+			autoSaveTimer = new IdlingScheduledThreadPoolExecutor("autoSaveTimer", 1, Executors.defaultThreadFactory());
+			autoCompileTimer = new IdlingScheduledThreadPoolExecutor("autoCompileTimer", 1, Executors.defaultThreadFactory());
+		} else {
+			autoSaveTimer = new ScheduledThreadPoolExecutor(1);
+			autoCompileTimer = new ScheduledThreadPoolExecutor(1);
+		}
 		
 		// Fallback component target
 		setComponentTarget(ComponentTarget.PREVIEW);
@@ -1022,12 +1030,13 @@ public class EditorActivity extends AppCompatActivity {
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
 		switch (requestCode) {
-		case PERMISSIONS_REQUEST_CODE:
-			if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-				// TODO Explain that we NEED this permission!
-			}
-			break;
+			case PERMISSIONS_REQUEST_CODE:
+				if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+					// TODO Explain that we NEED this permission!
+				}
+				break;
 		}
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 	}
 	
 	public ComponentTarget getComponentTarget() {
@@ -2521,21 +2530,16 @@ public class EditorActivity extends AppCompatActivity {
 		alert.setTitle(String.format(Locale.US, getResources().getString(R.string.delete_sketch_dialog_title), getGlobalState().getSketchName()));
 		alert.setMessage(String.format(Locale.US, getResources().getString(R.string.delete_sketch_dialog_message), getGlobalState().getSketchName()));
 		
-		alert.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
-			@SuppressLint("NewApi")
-			public void onClick(DialogInterface dialog, int whichButton) {
-				deleteSketch();
-				
-				getGlobalState().selectNewTempSketch();
-				newSketch();
-				
-				toolbar.setTitle(getGlobalState().getSketchName());
-			}
+		alert.setPositiveButton(R.string.delete, (dialog, whichButton) -> {
+			deleteSketch();
+			
+			getGlobalState().selectNewTempSketch();
+			newSketch();
+			
+			toolbar.setTitle(getGlobalState().getSketchName());
 		});
 		
-		alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {}
-		});
+		alert.setNegativeButton(R.string.cancel, (dialog, whichButton) -> {});
 		
 		alert.create().show();
 	}
@@ -4794,8 +4798,10 @@ public class EditorActivity extends AppCompatActivity {
 	// Custom console output stream, used for System.out and System.err
 	private class ConsoleStream extends OutputStream {
 		final byte single[] = new byte[1];
+		private OutputStream pipeTo;
 		
-		public ConsoleStream() {
+		public ConsoleStream(OutputStream pipeTo) {
+			this.pipeTo = pipeTo;
 		}
 		
 		public void close() { }
@@ -4808,17 +4814,22 @@ public class EditorActivity extends AppCompatActivity {
 		
 		@Override
 		public void write(byte b[], int offset, int length) {
+			// Also pipe output
+			try {
+				pipeTo.write(b, offset, length);
+			} catch (IOException e) {
+				// shrug
+			}
+			
 			final String value = new String(b, offset, length);
 			
 			if (!(FLAG_SUSPEND_OUT_STREAM.get() &&
 					!PreferenceManager.getDefaultSharedPreferences(EditorActivity.this)
 							.getBoolean("pref_debug_global_verbose_output", false))) {
 				
-				runOnUiThread(new Runnable() {
-					public void run() {
-						//	Write the value to the console
-						postConsole(value);
-					}
+				runOnUiThread(() -> {
+					//	Write the value to the console
+					postConsole(value);
 				});
 			}
 		}
@@ -4852,11 +4863,7 @@ public class EditorActivity extends AppCompatActivity {
 			@Override
 			public void run() {
 				// Update default examples in a separate thread
-				new Thread(new Runnable() {
-					public void run() {
-						copyAssetFolder(getAssets(), "examples", getGlobalState().getStarterExamplesFolder().getAbsolutePath());
-					}
-				}).start();
+				new Thread(() -> copyAssetFolder(getAssets(), "examples", getGlobalState().getStarterExamplesFolder().getAbsolutePath())).start();
 			}
 		});
 		

@@ -552,17 +552,9 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		builder.setTitle(getResources().getString(R.string.library_manager_contrib_uninstall_warning_title) + " " + lib.getName());
 		builder.setMessage(lib.getName() + " " + getResources().getString(R.string.library_manager_contrib_uninstall_warning_message));
 		
-		builder.setPositiveButton(R.string.library_manager_contrib_uninstall_warning_title, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				uninstallLibrary(lib);
-			}
-		});
+		builder.setPositiveButton(R.string.library_manager_contrib_uninstall_warning_title, (dialog, which) -> uninstallLibrary(lib));
 		
-		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {}
-		});
+		builder.setNegativeButton(R.string.cancel, (dialog, which) -> {});
 		
 		builder.create().show();
 	}
@@ -691,22 +683,20 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		//Initialize the progress dialog
 		final CustomProgressDialog dialog = new CustomProgressDialog(this, View.GONE, View.GONE);
 		
-		final Thread uninstallThread = new Thread(new Runnable() {
-			public void run() {
-				working = true;
-				ContributionManager.uninstallLibrary(library, context);
-				working = false;
-				
-				findViewById(R.id.library_manager_list).post(new Runnable() {
-					public void run() {
-						context.rebuildLibraryList();
-						refreshLibraryList();
-						findViewById(R.id.library_manager_list).invalidate();
-						
-						dialog.dismiss();
-					}
-				});
-			}
+		final Thread uninstallThread = new Thread(() -> {
+			working = true;
+			ContributionManager.uninstallLibrary(library, context);
+			working = false;
+			
+			findViewById(R.id.library_manager_list).post(new Runnable() {
+				public void run() {
+					context.rebuildLibraryList();
+					refreshLibraryList();
+					findViewById(R.id.library_manager_list).invalidate();
+					
+					dialog.dismiss();
+				}
+			});
 		});
 		
 		//Set up the progress dialog TODO It would be cool if this was a real progress bar, displaying percentage complete - 

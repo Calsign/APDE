@@ -453,16 +453,10 @@ public class Build {
 						builder.setTitle(R.string.preview_sketch_previewer_install_dialog_title);
 						builder.setMessage(message.toString());
 						
-						builder.setPositiveButton(R.string.preview_sketch_previewer_install_dialog_install_button, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialogInterface, int i) {
-								editor.getGlobalState().getTaskManager().launchTask("sketchPreviewBuild", false,null, false, new SketchPreviewerBuilder(editor, sketchPermissions, true, false));
-							}
-						});
-						builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialogInterface, int i) {}
-						});
+						builder.setPositiveButton(R.string.preview_sketch_previewer_install_dialog_install_button,
+								(dialogInterface, i) -> editor.getGlobalState().getTaskManager()
+								.launchTask("sketchPreviewBuild", false,null, false, new SketchPreviewerBuilder(editor, sketchPermissions, true, false)));
+						builder.setNegativeButton(R.string.cancel, (dialogInterface, i) -> {});
 						
 						if (editor.isFinishing()) {
 							return;

@@ -494,11 +494,19 @@ public class ExportSignedPackage implements Tool {
 				
 				if (aliasPassword.length() > 0) {
 					(new Thread(() -> {
-						ValidationResult result = loadKey(keystoreFile.getText().toString(),
-								getKeystoreFileUri(),
-								keystorePassword.getText().toString().toCharArray(),
-								aliasAdapter.getItem(alias.getSelectedItemPosition()),
-								aliasPassword.getText().toString().toCharArray());
+						int selectedAlias = alias.getSelectedItemPosition();
+						ValidationResult result;
+						if (selectedAlias == Spinner.INVALID_POSITION) {
+							result = new ValidationResult(13,
+									ValidationResult.MessageSeverity.ERROR,
+									R.string.export_signed_package_error_unexpected);
+						} else {
+							result = loadKey(keystoreFile.getText().toString(),
+									getKeystoreFileUri(),
+									keystorePassword.getText().toString().toCharArray(),
+									aliasAdapter.getItem(selectedAlias),
+									aliasPassword.getText().toString().toCharArray());
+						}
 						
 						context.getEditor().runOnUiThread(() -> {
 							if (aliasPasswordValidation.isNewestTicket(ticket)) {
@@ -681,7 +689,14 @@ public class ExportSignedPackage implements Tool {
 					certificateName.getText().toString(), certificateOrganizationalUnit.getText().toString(), certificateOrganization.getText().toString(),
 					certificateCity.getText().toString(), certificateState.getText().toString(), certificateCountry.getText().toString());
 			
-			alias.setSelection(((ArrayAdapter<String>) alias.getAdapter()).getPosition(createAliasAlias.getText().toString()));
+			ArrayAdapter<String> adapter = ((ArrayAdapter<String>) alias.getAdapter());
+			String aliasText = createAliasAlias.getText().toString();
+			int aliasPosition = adapter.getPosition(aliasText);
+			if (aliasPosition == Spinner.INVALID_POSITION) {
+				// implementation might be case insensitive, so try all lowercase too
+				aliasPosition = adapter.getPosition(aliasText.toLowerCase(Locale.ROOT));
+			}
+			alias.setSelection(aliasPosition);
 			aliasPassword.setText(new String(createAliasPassword.getText().toString()));
 		});
 		

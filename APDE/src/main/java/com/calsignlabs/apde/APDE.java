@@ -928,61 +928,59 @@ public class APDE extends MultiDexApplication {
 							examplesRepo.close();
 							
 							// Yucky multi-threading
-							editor.runOnUiThread(new Runnable() {
-								public void run() {
-									AlertDialog.Builder builder = new AlertDialog.Builder(editor);
-									
-									builder.setTitle(R.string.examples_update_dialog_title);
-									
-									LinearLayout layout = (LinearLayout) View.inflate(new ContextThemeWrapper(editor, R.style.Theme_AppCompat_Dialog), R.layout.examples_update_dialog, null);
-									
-									final CheckBox dontShowAgain = (CheckBox) layout.findViewById(R.id.examples_update_dialog_dont_show_again);
-									final TextView disableWarning = (TextView) layout.findViewById(R.id.examples_update_dialog_disable_warning);
-									
-									builder.setView(layout);
-									
-									builder.setPositiveButton(R.string.examples_update_dialog_update_button, new DialogInterface.OnClickListener() {
-										@Override
-										public void onClick(DialogInterface dialog, int which) {
-											if (dontShowAgain.isChecked()) {
-												// "Close"
-												
-												// Disable examples updates
-												SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(APDE.this).edit();
-												edit.putBoolean("update_examples", false);
-												edit.apply();
-											} else {
-												// "Update"
-												
-												// This kicks off yet another thread
-												updateExamplesRepo();
-											}
+							editor.runOnUiThread(() -> {
+								AlertDialog.Builder builder = new AlertDialog.Builder(editor);
+								
+								builder.setTitle(R.string.examples_update_dialog_title);
+								
+								LinearLayout layout = (LinearLayout) View.inflate(new ContextThemeWrapper(editor, R.style.Theme_AppCompat_Dialog), R.layout.examples_update_dialog, null);
+								
+								final CheckBox dontShowAgain = (CheckBox) layout.findViewById(R.id.examples_update_dialog_dont_show_again);
+								final TextView disableWarning = (TextView) layout.findViewById(R.id.examples_update_dialog_disable_warning);
+								
+								builder.setView(layout);
+								
+								builder.setPositiveButton(R.string.examples_update_dialog_update_button, new DialogInterface.OnClickListener() {
+									@Override
+									public void onClick(DialogInterface dialog, int which) {
+										if (dontShowAgain.isChecked()) {
+											// "Close"
+											
+											// Disable examples updates
+											SharedPreferences.Editor edit = PreferenceManager.getDefaultSharedPreferences(APDE.this).edit();
+											edit.putBoolean("update_examples", false);
+											edit.apply();
+										} else {
+											// "Update"
+											
+											// This kicks off yet another thread
+											updateExamplesRepo();
 										}
-									});
+									}
+								});
 
-									builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-										@Override
-										public void onClick(DialogInterface dialog, int which) {
-										}
-									});
-									
-									AlertDialog dialog = builder.create();
-									dialog.show();
-									
-									final Button updateButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
-									final Button cancelButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
-									
-									dontShowAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-										@Override
-										public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-											disableWarning.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-											// Change the behavior if the user wants to get rid of this dialog...
-											updateButton.setText(isChecked ? R.string.tool_find_replace_close : R.string.examples_update_dialog_update_button);
-											// Hide the cancel button so that it's unambiguous
-											cancelButton.setEnabled(!isChecked);
-										}
-									});
-								}
+								builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+									@Override
+									public void onClick(DialogInterface dialog, int which) {
+									}
+								});
+								
+								AlertDialog dialog = builder.create();
+								dialog.show();
+								
+								final Button updateButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+								final Button cancelButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
+								
+								dontShowAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+									@Override
+									public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+										disableWarning.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+										// Change the behavior if the user wants to get rid of this dialog...
+										updateButton.setText(isChecked ? R.string.tool_find_replace_close : R.string.examples_update_dialog_update_button);
+										// Hide the cancel button so that it's unambiguous
+										cancelButton.setEnabled(!isChecked);
+									}
+								});
 							});
 						}
 					} finally {
