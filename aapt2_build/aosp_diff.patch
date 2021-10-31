@@ -1,0 +1,120 @@
+
+project frameworks/base/
+diff --git a/libs/androidfw/Android.bp b/libs/androidfw/Android.bp
+index 70d52164ff74..a03d3bf67080 100644
+--- a/libs/androidfw/Android.bp
++++ b/libs/androidfw/Android.bp
+@@ -25,6 +25,10 @@ cc_defaults {
+             // The Windows compiler warns incorrectly for value initialization with {}.
+             cppflags: ["-Wno-missing-field-initializers"],
+         },
++        android: {
++            cflags: ["-DSTATIC_ANDROIDFW_FOR_TOOLS"],
++            enabled: true,
++        },
+         host: {
+             cflags: ["-DSTATIC_ANDROIDFW_FOR_TOOLS"],
+         },
+@@ -76,7 +80,7 @@ cc_library {
+                 "libz",
+             ],
+             static: {
+-                enabled: false,
++                enabled: true,
+             },
+         },
+         host: {
+diff --git a/tools/aapt2/Android.bp b/tools/aapt2/Android.bp
+index 48cfc4453d8f..e9d69d15ae27 100644
+--- a/tools/aapt2/Android.bp
++++ b/tools/aapt2/Android.bp
+@@ -35,6 +35,7 @@ cc_defaults {
+         "-Wno-missing-field-initializers",
+         "-fno-exceptions",
+         "-fno-rtti",
++        "-Wno-non-virtual-dtor",
+     ],
+     target: {
+         windows: {
+@@ -44,6 +45,9 @@ cc_defaults {
+         darwin: {
+             cflags: ["-D_DARWIN_UNLIMITED_STREAMS"],
+         },
++        android: {
++            enabled: true,
++        },
+     },
+     static_libs: [
+         "libandroidfw",
+@@ -58,6 +62,11 @@ cc_defaults {
+         "libz",
+     ],
+     group_static_libs: true,
++    static_executable: true,
++    ldflags: [
++        "-Wl,--hash-style=both",  // needed for older versions of Android
++    ],
++    stl: "libc++_static",
+ }
+ 
+ // ==========================================================
+@@ -67,9 +76,9 @@ cc_defaults {
+ // ==========================================================
+ 
+ // ==========================================================
+-// Build the host static library: aapt2
++// Build the static library: aapt2
+ // ==========================================================
+-cc_library_host_static {
++cc_library_static {
+     name: "libaapt2",
+     srcs: [
+         "compile/IdAssigner.cpp",
+@@ -153,26 +162,26 @@ cc_library_host_static {
+ }
+ 
+ // ==========================================================
+-// Build the host shared library: aapt2_jni
++// Build the shared library: aapt2_jni
+ // ==========================================================
+-cc_library_host_shared {
++cc_library_shared {
+     name: "libaapt2_jni",
+     srcs: toolSources + ["jni/aapt2_jni.cpp"],
+-    static_libs: ["libaapt2"],
++    whole_static_libs: ["libaapt2"],
+     defaults: ["aapt2_defaults"],
+ }
+ 
+ // ==========================================================
+-// Build the host tests: aapt2_tests
++// Build the tests: aapt2_tests
+ // ==========================================================
+-cc_test_host {
++cc_test {
+     name: "aapt2_tests",
+     srcs: [
+         "test/Builders.cpp",
+         "test/Common.cpp",
+         "**/*_test.cpp",
+     ] + toolSources,
+-    static_libs: [
++    whole_static_libs: [
+         "libaapt2",
+         "libgmock",
+     ],
+@@ -181,11 +190,11 @@ cc_test_host {
+ }
+ 
+ // ==========================================================
+-// Build the host executable: aapt2
++// Build the executable: aapt2
+ // ==========================================================
+-cc_binary_host {
++cc_binary {
+     name: "aapt2",
+     srcs: ["Main.cpp"] + toolSources,
+-    static_libs: ["libaapt2"],
++    whole_static_libs: ["libaapt2"],
+     defaults: ["aapt2_defaults"],
+ }

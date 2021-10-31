@@ -46,3 +46,4 @@
 -keep class org.eclipse.core.internal.runtime.** { *; }
 -keep class androidx.test.** { *; }
 -keep class androidx.drawerlayout.widget.DrawerLayout$SimpleDrawerListener { *; }
+-keep class com.android.tools.aapt2.Aapt2Jni { *; }

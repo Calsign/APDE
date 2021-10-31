@@ -18,7 +18,8 @@
 		android:icon="@drawable/ic_launcher"
 		android:label="@string/apde_app_title"
 		android:theme="@style/AppTheme"
-		android:usesCleartextTraffic="true">
+		android:usesCleartextTraffic="true"
+		android:extractNativeLibs="true"> <!-- support AAPT on API 29+ -->
 		
 		<activity
 			android:name=".EditorActivity"
