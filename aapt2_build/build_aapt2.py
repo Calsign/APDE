@@ -67,7 +67,8 @@ def copy(aosp_dir, dry_run):
             shutil.copyfile(bin_out, bin_dest)
 
         print("chmod +x {}".format(bin_dest))
-        os.chmod(bin_dest, os.stat(bin_dest).st_mode | 0o0111)
+        if not dry_run:
+            os.chmod(bin_dest, os.stat(bin_dest).st_mode | 0o0111)
 
 
 def main():
