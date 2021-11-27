@@ -19,6 +19,7 @@ import android.content.Intent;
 import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import android.preference.PreferenceManager;
 import androidx.core.content.FileProvider;
@@ -207,7 +208,7 @@ public class Build {
 			return;
 		}
 		
-		if (android.os.Build.VERSION.SDK_INT >= 24) {
+		if (shouldLaunchSplitScreen(editor.getGlobalState())) {
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
 		} else {
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -1336,7 +1337,7 @@ public class Build {
 		intent.putExtra("SKETCH_CLASS_NAME", sketchName);
 		
 		// Launch in multi-window mode if available
-		if (android.os.Build.VERSION.SDK_INT >= 24) {
+		if (shouldLaunchSplitScreen(editor.getGlobalState())) {
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
 		} else {
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -1376,6 +1377,14 @@ public class Build {
 	private boolean isBuildForClassLoader(boolean debug) {
 		return debug && (getAppComponent() == ComponentTarget.WATCHFACE
 				|| getAppComponent() == ComponentTarget.PREVIEW);
+	}
+	
+	public static boolean isSplitScreenAvailable() {
+		return android.os.Build.VERSION.SDK_INT >= 24;
+	}
+	
+	public static boolean shouldLaunchSplitScreen(APDE global) {
+		return isSplitScreenAvailable() && global.getPref("pref_launch_sketch_split_screen", false);
 	}
 	
 	private void signApk() {

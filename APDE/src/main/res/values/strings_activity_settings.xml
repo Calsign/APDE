@@ -21,6 +21,8 @@
 	<string name="pref_vibrate_desc">May consume battery</string>
 	<string name="pref_use_hardware_keyboard">Use Hardware Keyboard</string>
 	<string name="pref_enable_voice_input">Enable Voice Input</string>
+	<string name="pref_launch_sketch_split_screen">Launch Sketches in Split Screen</string>
+	<string name="pref_launch_sketch_split_screen_desc">May not work on all devices</string>
 	
 	<string name="pref_sketchbook">Sketchbook</string>
 	<string name="pref_sketchbook_drive">Sketchbook Location</string>
@@ -34,6 +36,8 @@
 	<string name="pref_debug">Debug</string>
 	<string name="pref_debug_global_verbose_output">Global Verbose Output</string>
 	<string name="pref_debug_code_deletion_debug_logs">Code Deletion Debug Logs</string>
+	<string name="pref_debug_delay_before_run_sketch">Delay before running sketch</string>
+	<string name="pref_debug_delay_before_run_sketch_desc">Wait before launching sketch. May fix issues with sketch not appearing</string>
 	
 	<!-- Editor -->
 	

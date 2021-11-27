@@ -18,6 +18,12 @@
 			android:defaultValue="false"
 			android:key="enable_voice_input"
 			android:title="@string/pref_enable_voice_input" />
+		
+		<androidx.preference.SwitchPreferenceCompat
+			android:defaultValue="false"
+			android:key="pref_launch_sketch_split_screen"
+			android:title="@string/pref_launch_sketch_split_screen"
+			android:summary="@string/pref_launch_sketch_split_screen_desc" />
 	</androidx.preference.PreferenceCategory>
 	
 	<androidx.preference.PreferenceCategory
@@ -60,5 +66,10 @@
 		<androidx.preference.SwitchPreferenceCompat
 			android:key="pref_debug_code_deletion_debug_logs"
 			android:title="@string/pref_debug_code_deletion_debug_logs" />
+		
+		<androidx.preference.SwitchPreferenceCompat
+			android:key="pref_debug_delay_before_run_sketch"
+			android:title="@string/pref_debug_delay_before_run_sketch"
+			android:summary="@string/pref_debug_delay_before_run_sketch_desc" />
 	</androidx.preference.PreferenceCategory>
 </androidx.preference.PreferenceScreen>

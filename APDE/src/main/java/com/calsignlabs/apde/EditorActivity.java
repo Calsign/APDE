@@ -21,6 +21,7 @@ import android.graphics.drawable.AnimatedVectorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
@@ -1249,7 +1250,16 @@ public class EditorActivity extends AppCompatActivity {
 			// Note: we only get the result code if we pass it as an extra
 			if (resultCode == RESULT_OK) {
 				// The user installed the sketch, so launch the sketch
-				Build.launchSketchPostLaunch(this);
+				if (getGlobalState().getPref("pref_debug_delay_before_run_sketch", false)) {
+					// For some reason, on my phone I need a small delay before running the sketch.
+					// This is probably a Samsung-specific thing because it seems to work fine
+					// in the emulator.
+					Handler handler = new Handler(getMainLooper());
+					handler.postDelayed(() -> runOnUiThread((() ->
+							Build.launchSketchPostLaunch(this))), 1000);
+				} else {
+					Build.launchSketchPostLaunch(this);
+				}
 			}
     		Build.cleanUpPostLaunch(this);
     	} else if (requestCode == FLAG_SET_WALLPAPER) {
