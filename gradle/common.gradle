@@ -1,0 +1,15 @@
+// NOTE: Some things shared by assets.gradle and previewBuild.gradle are factored out here to avoid
+// including tasks twice. There should be do tasks defined in this file.
+
+project.ext.downloads = new File(rootProject.projectDir, 'build/downloads')
+project.ext.additionalAssets = new File(project.downloads, 'assets')
+
+// these are the current supported densities of APDE's icon; we use the same icon for the sketch previewer
+def PREVIEW_ICON_DENSITIES = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
+
+def previewIconInputFile(String density) {
+    return new File(rootProject.projectDir, 'APDE/src/main/res/drawable-' + density + '/ic_launcher.png')
+}
+
+project.ext.PREVIEW_ICON_DENSITIES = PREVIEW_ICON_DENSITIES
+project.ext.previewIconInputFile = this.&previewIconInputFile

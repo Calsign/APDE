@@ -7,26 +7,66 @@ import com.calsignlabs.apde.R;
  * components that APDE can build for.
  */
 public enum ComponentTarget {
-	APP(R.drawable.ic_comp_app, R.string.editor_menu_comp_select_app, 17, "AppActivity.java", "MainActivity.java", "AppManifest.xml"),
-	WALLPAPER(R.drawable.ic_comp_wallpaper, R.string.editor_menu_comp_select_wallpaper, 17, "WallpaperService.java", "MainService.java", "WallpaperManifest.xml"),
-	WATCHFACE(R.drawable.ic_comp_watchface, R.string.editor_menu_comp_select_watchface, 19, "WatchFaceService.java", "MainService.java", "WatchFaceManifest.xml"),
-	VR(R.drawable.ic_comp_vr, R.string.editor_menu_comp_select_vr, 25, "VRActivity.java", "MainService.java", "VRManifest.xml"),
-	PREVIEW(R.drawable.ic_comp_preview, R.string.editor_menu_comp_select_preview, 17, "AppActivity.java", "MainActivity.java", "AppManifest.xml");
+	APP(
+			R.drawable.ic_comp_app,
+			R.string.editor_menu_comp_select_app,
+			17,
+			"AppActivity.java",
+			"MainActivity.java",
+			"AppManifest.xml",
+			new String[] {"commonArtifacts"}),
+	WALLPAPER(
+			R.drawable.ic_comp_wallpaper,
+			R.string.editor_menu_comp_select_wallpaper,
+			17,
+			"WallpaperService.java",
+			"MainService.java",
+			"WallpaperManifest.xml",
+			new String[] {"commonArtifacts"}),
+	WATCHFACE(
+			R.drawable.ic_comp_watchface,
+			R.string.editor_menu_comp_select_watchface,
+			19,
+			"WatchFaceService.java",
+			"MainService.java",
+			"WatchFaceManifest.xml",
+			new String[] {"commonArtifacts", "watchArtifacts"}),
+	VR(
+			R.drawable.ic_comp_vr,
+			R.string.editor_menu_comp_select_vr,
+			25,
+			"VRActivity.java",
+			"MainService.java",
+			"VRManifest.xml",
+			new String[] {"commonArtifacts", "vrArtifacts"}),
+	PREVIEW(
+			R.drawable.ic_comp_preview,
+			R.string.editor_menu_comp_select_preview,
+			17,
+			"AppActivity.java",
+			"MainActivity.java",
+			"AppManifest.xml",
+			new String[] {"commonArtifacts"});
 	
-	private int iconId;
-	private int nameId;
+	private final int iconId;
+	private final int nameId;
 	
-	private int minSdk;
+	private final int minSdk;
 	
-	private String mainClassTemplate, mainClassName, manifestTemplate;
+	private final String mainClassTemplate;
+	private final String mainClassName;
+	private final String manifestTemplate;
 	
-	ComponentTarget(int iconId, int nameId, int minSdk, String mainClassTemplate, String mainClassName, String manifestTemplate) {
+	private final String[] assetPrefixes;
+	
+	ComponentTarget(int iconId, int nameId, int minSdk, String mainClassTemplate, String mainClassName, String manifestTemplate, String[] assetPrefixes) {
 		this.iconId = iconId;
 		this.nameId = nameId;
 		this.minSdk = minSdk;
 		this.mainClassTemplate = mainClassTemplate;
 		this.mainClassName = mainClassName;
 		this.manifestTemplate = manifestTemplate;
+		this.assetPrefixes = assetPrefixes;
 	}
 	
 	public int getIconId() {
@@ -51,6 +91,10 @@ public enum ComponentTarget {
 	
 	public String getManifestTemplate() {
 		return manifestTemplate + ".tmpl";
+	}
+	
+	public String[] getAssetPrefixes() {
+		return assetPrefixes;
 	}
 	
 	public int serialize() {

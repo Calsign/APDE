@@ -85,22 +85,16 @@ public class Aapt2Jni {
 	
 	private native int nativeLink(List<String> args, Aapt2Jni diagnostics);
 	
-	public static void compile(List<String> args) {
+	public static int compile(List<String> args) {
 		Aapt2Jni aapt2 = get();
 		aapt2.clearLogs();
-		int exitCode = aapt2.nativeCompile(args, aapt2);
-		if (exitCode != 0) {
-			throw new RuntimeException("AAPT2 compile failed: " + exitCode + ", " + getLogs());
-		}
+		return aapt2.nativeCompile(args, aapt2);
 	}
 	
-	public static void link(List<String> args) {
+	public static int link(List<String> args) {
 		Aapt2Jni aapt2 = get();
 		aapt2.clearLogs();
-		int exitCode = aapt2.nativeLink(args, aapt2);
-		if (exitCode != 0) {
-			throw new RuntimeException("AAPT2 link failed: " + exitCode + ", " + getLogs());
-		}
+		return aapt2.nativeLink(args, aapt2);
 	}
 	
 	public static List<Log> getLogs() {

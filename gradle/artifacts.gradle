@@ -1,0 +1,170 @@
+import java.util.stream.Collectors
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        // shadow - used for relocating classes in the artifact jars.
+        classpath "gradle.plugin.com.github.johnrengelman:shadow:7.1.0"
+    }
+}
+
+apply from: new File(rootProject.projectDir, 'gradle/copySingleFile.gradle')
+apply from: new File(rootProject.projectDir, 'gradle/d8.gradle')
+apply from: new File(rootProject.projectDir, 'gradle/aapt2.gradle')
+apply from: new File(rootProject.projectDir, 'gradle/manifest.gradle')
+
+/*
+ * This file handles artifacts - extracting the JARs, dexing the JARs, extracting the resources,
+ * compiling the resources, etc.
+ */
+
+project.ext.commonRJavaPackage = 'processing.test'
+
+def createArtifactTasks(String name, File artifact) {
+    def assetJar, manifestParse
+    if (artifact.name.endsWith('.aar')) {
+        def unzipTask = tasks.create(name: 'unzip_' + name, type: Copy) {
+            from zipTree(artifact)
+            into new File(new File(project.downloads, 'artifacts'), name)
+            includeEmptyDirs false
+            fileMode 0644
+        }
+        manifestParse = tasks.create(name: 'manifestParse_' + name, type: ParseManifestTask,
+                dependsOn: unzipTask) {
+            manifestFile = new File(unzipTask.destinationDir, 'AndroidManifest.xml')
+        }
+        // we repackage each artifact JAR to reference our custom R class.
+        def repackagedDir = new File(new File(project.downloads, 'shadow_repackaged'), name)
+        def repackagedJar = tasks.create(name: 'repackagedJar_' + name,
+                dependsOn: [unzipTask, manifestParse],
+                type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+            from new File(unzipTask.destinationDir, 'classes.jar')
+            destinationDirectory = repackagedDir
+            archiveFileName = 'classes.jar'
+        }
+        manifestParse.doLast {
+            repackagedJar.configure {
+                // move references to R and all its inner classes
+                relocate(manifestParse.packageName, project.commonRJavaPackage) {
+                    include "%regex[${manifestParse.packageName}.R(\\\$[A-Za-z]*)?]"
+                }
+            }
+        }
+        assetJar = tasks.create(name: 'assetJar_' + name, dependsOn: repackagedJar, type: CopySingleFile) {
+            input = new File(repackagedDir, 'classes.jar')
+            output = new File(project.assetsLibs, name + '.jar')
+        }
+        def aapt2Compile = tasks.create(name: 'aapt2Compile_' + name, type: Aapt2CompileTask,
+                dependsOn: unzipTask) {
+            inputDir = new File(unzipTask.destinationDir, 'res').with {it.exists() ? it : null}
+            outputDir = new File(new File(project.downloads, 'compiled_res'), name)
+        }
+        def assetResCompiled = tasks.create(name: 'assetResCompiled_' + name, dependsOn: aapt2Compile, type: Zip) {
+            from aapt2Compile.outputDir
+            archiveFileName = name + '.zip'
+            destinationDirectory = new File(project.additionalAssets, 'res-compiled')
+            includeEmptyDirs false
+            eachFile {
+                it.path = name + '/' + it.path
+            }
+        }
+        def assetJniLibs = tasks.create(name: 'assetJniLibs_' + name, dependsOn: unzipTask, type: Zip) {
+            from new File(unzipTask.destinationDir, 'jni')
+            archiveFileName = name + '.zip'
+            destinationDirectory = new File(project.additionalAssets, 'jniLibs')
+            includeEmptyDirs false
+            eachFile {
+                it.path = 'lib/' + it.path
+            }
+        }
+        createAdditionalAssets.dependsOn aapt2Compile, assetResCompiled, manifestParse, assetJniLibs
+    } else if (artifact.name.endsWith('.jar')) {
+        assetJar = tasks.create(name: 'assetJar_' + name, type: CopySingleFile) {
+            input = artifact
+            output = new File(project.assetsLibs, name + '.jar')
+        }
+        manifestParse = null
+    } else {
+        throw new GradleException('Unrecognized artifact extension: ' + artifact.name)
+    }
+    createAdditionalAssets.dependsOn assetJar
+    return [assetJar, manifestParse]
+}
+
+def handleArtifacts(Configuration configuration, boolean is_common = false) {
+    // artifacts pulled in through maven, e.g. androidx.appcompat
+    def artifacts = configuration.resolvedConfiguration.resolvedArtifacts
+
+    // only local file artifacts, not those pulled in by maven (e.g. vr.jar)
+    def standaloneFiles = configuration.files
+    artifacts.each {
+        standaloneFiles.remove(it.file)
+    }
+
+    if (!is_common) {
+        // we don't want to duplicate artifacts between different build targets, so we factor out
+        // the common ones into the 'commonArtifacts' configuration
+        def commonArtifactFiles = project.configurations.commonArtifacts
+                .resolvedConfiguration.resolvedArtifacts
+                .stream().map {it.file}.collect(Collectors.toSet())
+        artifacts.removeIf {commonArtifactFiles.contains(it.file)}
+        def commonFiles = project.configurations.commonArtifacts.files
+        standaloneFiles.removeIf {commonFiles.contains(it)}
+    }
+
+    def jarTasks = new ArrayList<Task>()
+    def jars = files()
+    def manifestParses = new ArrayList<Task>()
+
+    def seen = new HashSet<>()
+    artifacts.each {
+        if (seen.contains(it.file)) {
+            // TODO: for some reason there are duplicates, and I don't know why
+            return
+        }
+        seen.add(it.file)
+        def name = configuration.name + '__' + it.id.componentIdentifier.group + '_' + it.id.componentIdentifier.module
+        def (jarTask, manifestParse) = createArtifactTasks(name, it.file)
+        jarTasks.add(jarTask)
+        jars.from(jarTask.output)
+        if (manifestParse != null) {
+            manifestParses.add(manifestParse)
+        }
+    }
+    standaloneFiles.each {
+        if (seen.contains(it)) {
+            throw new GradleException('Logic error: already seen standalone file: ' + it)
+        }
+        def name = configuration.name + '__' + it.name
+        def (jarTask, manifestParse) = createArtifactTasks(name, it)
+        jarTasks.add(jarTask)
+        jars.from(jarTask.output)
+        if (manifestParse != null) {
+            manifestParses.add(manifestParse)
+        }
+    }
+
+    def assetDex = tasks.create(name: 'assetDex_' + configuration.name, dependsOn: jarTasks, type: project.D8Task) {
+        inputFiles = jars
+        output = new File(project.assetsLibsDex, configuration.name + '__dex.jar')
+    }
+    createAdditionalAssets.dependsOn assetDex
+
+    def packageNames = tasks.create(name: 'manifestParses_' + configuration.name, dependsOn: manifestParses) {
+        doLast {
+            ext.packages = new ArrayList<String>()
+            for (Task task : manifestParses) {
+                packages.add(task.packageName)
+            }
+        }
+    }
+    createAdditionalAssets.dependsOn packageNames
+    project.packageNameMap.put(configuration.name, packageNames)
+}
+
+project.ext.handleArtifacts = this.&handleArtifacts
+project.ext.packageNameMap = new HashMap<String, Task>()

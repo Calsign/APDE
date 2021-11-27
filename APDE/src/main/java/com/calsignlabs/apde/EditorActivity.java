@@ -86,7 +86,7 @@ import androidx.viewpager.widget.ViewPager;
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.CompilerProblem;
 import com.calsignlabs.apde.build.ComponentTarget;
-import com.calsignlabs.apde.build.CopyAndroidJarTask;
+import com.calsignlabs.apde.build.ExtractStaticBuildResources;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.build.dag.BuildContext;
@@ -122,7 +122,6 @@ import java.util.Stack;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -4913,7 +4912,7 @@ public class EditorActivity extends AppCompatActivity {
 		upgradeChanges.add(new UpgradeChange(22) {
 			@Override
 			public void run() {
-				getGlobalState().getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new CopyAndroidJarTask());
+				getGlobalState().getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new ExtractStaticBuildResources());
 			}
 		});
 		

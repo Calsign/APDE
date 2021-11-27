@@ -1,15 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 31
 
     defaultConfig {
         applicationId "com.calsignlabs.apde.sketchpreview"
         minSdkVersion 19
-        targetSdkVersion 26
+        targetSdkVersion 31
         versionCode 1
         versionName "1.0"
-
     }
 
     buildTypes {
@@ -18,11 +17,20 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    sourceSets {
+        main {
+            // we copy the icons from APDE
+            res.srcDirs += [project.previewRes]
+        }
+    }
 }
 
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+preBuild.dependsOn project.createPreviewRes
 
-    implementation 'androidx.appcompat:appcompat:1.0.0'
-    implementation files('libs/android-core.jar')
+dependencies {
+    // use the same dependencies that we use to build apps in APDE
+    rootProject.configurations.commonArtifacts.each {
+        implementation files(it)
+    }
 }

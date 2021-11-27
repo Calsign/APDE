@@ -1,0 +1,76 @@
+import org.gradle.work.Incremental
+import org.gradle.work.InputChanges
+
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.Transformer
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
+
+/**
+ * Parse a manifest to extract its package name.
+ */
+abstract class ParseManifestTask extends DefaultTask {
+    public String packageName
+
+    @InputFile
+    abstract RegularFileProperty getManifestFile()
+
+    @TaskAction
+    def execParse() {
+        File manifest = manifestFile.getAsFile().get()
+
+        // NOTE: XmlSlurper was inexplicably not working, so using the Java XML stuff instead.
+        Document document = DocumentBuilderFactory.newDefaultInstance().newDocumentBuilder().parse(manifest)
+        this.packageName = document.getDocumentElement().getAttribute('package').toString()
+    }
+}
+
+/**
+ * Copy a manifest to a new location with changes to min sdk and target sdk.
+ *
+ * Used for building the sketch previewer build files used to build a new sketch previewer at
+ * runtime in APDE.
+ */
+abstract class EditManifestTask extends DefaultTask {
+    @Incremental
+    @InputFile
+    abstract RegularFileProperty getInput()
+
+    @OutputFile
+    abstract RegularFileProperty getOutput()
+
+    @Input
+    abstract Property<Integer> getMinSdk()
+
+    @Input
+    abstract Property<Integer> getTargetSdk()
+
+    @TaskAction
+    def execEdit(InputChanges changes) {
+        if (changes.getFileChanges(input).iterator().hasNext()) {
+            File inputManifest = input.asFile.get()
+            File outputManifest = output.asFile.get()
+
+            Document document = DocumentBuilderFactory.newDefaultInstance().newDocumentBuilder().parse(inputManifest)
+
+            document.getDocumentElement().removeAttribute("android:versionCode")
+            document.getDocumentElement().removeAttribute("android:versionName")
+
+            Element usesSdk = document.createElement("uses-sdk")
+            usesSdk.setAttribute("android:minSdkVersion", Integer.toString(minSdk.get()))
+            usesSdk.setAttribute("android:targetSdkVersion", Integer.toString(targetSdk.get()))
+
+            document.getDocumentElement().appendChild(usesSdk)
+
+            Transformer transformer = TransformerFactory.newDefaultInstance().newTransformer()
+            transformer.transform(new DOMSource(document), new StreamResult(outputManifest))
+        }
+    }
+}
+
+project.ext.ParseManifestTask = ParseManifestTask
+project.ext.EditManifestTask = EditManifestTask

@@ -1,0 +1,41 @@
+import org.gradle.work.Incremental
+import org.gradle.work.InputChanges
+
+import java.nio.file.Files
+
+/**
+ * Copy a single file from the input to the output. We use this instead of the regular Copy rule
+ * because it allows us to copy multiple files into the same output directory without gradle getting
+ * upset about multiple rules sharing the same outputs. (The Copy rule specifies an entire directory
+ * as its output even if it is only copying one file.)
+ */
+abstract class CopySingleFile extends DefaultTask {
+    @Incremental
+    @InputFile
+    abstract RegularFileProperty getInput()
+
+    @OutputFile
+    abstract RegularFileProperty getOutput()
+
+    @TaskAction
+    def exec(InputChanges changes) {
+        changes.getFileChanges(input).forEach {
+            def inputFile = it.file
+            if (!inputFile.exists()) {
+                throw new GradleException("Input to CopySingleFile does not exist: " + inputFile.getAbsolutePath())
+            }
+            def outputFile = output.getAsFile().get()
+            if (outputFile.exists()) {
+                outputFile.delete()
+            }
+            outputFile.getParentFile().mkdirs()
+            try {
+                Files.copy(inputFile.toPath(), outputFile.toPath())
+            } catch (Exception e) {
+                throw new GradleException(e)
+            }
+        }
+    }
+}
+
+project.ext.CopySingleFile = CopySingleFile

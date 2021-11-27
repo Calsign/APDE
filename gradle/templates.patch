@@ -1,0 +1,149 @@
+diff --git ARActivity.java.tmpl ARActivity.java.tmpl
+index ade8e71..7a3ad25 100644
+--- ARActivity.java.tmpl
++++ ARActivity.java.tmpl
+@@ -37,6 +37,8 @@ public class MainActivity extends AppCompatActivity {
+     @@external@@
+     PFragment fragment = new PFragment(sketch);
+     fragment.setView(frame, this);
++
++    @@log_broadcaster@@
+   }
+ 
+   @Override
+diff --git ARManifest.xml.tmpl ARManifest.xml.tmpl
+index 4201872..add528d 100644
+--- ARManifest.xml.tmpl
++++ ARManifest.xml.tmpl
+@@ -5,7 +5,7 @@
+     package=""
+     android:versionCode="1"
+     android:versionName="1.0">
+-  <uses-sdk android:minSdkVersion="@@min_sdk@@" />
++  <uses-sdk android:minSdkVersion="@@min_sdk@@" android:targetSdkVersion="@@target_sdk@@" />
+   <uses-permission android:name="android.permission.CAMERA"/>
+   <uses-feature android:name="android.hardware.camera.ar" android:required="true"/>
+   <uses-feature android:glEsVersion="0x00020000" android:required="true" />
+diff --git AppActivity.java.tmpl AppActivity.java.tmpl
+index 3e24984..90e40ef 100644
+--- AppActivity.java.tmpl
++++ AppActivity.java.tmpl
+@@ -25,6 +25,8 @@ public class MainActivity extends AppCompatActivity {
+     @@external@@
+     PFragment fragment = new PFragment(sketch);
+     fragment.setView(frame, this);
++
++    @@log_broadcaster@@
+   }
+   
+   @Override
+diff --git AppManifest.xml.tmpl AppManifest.xml.tmpl
+index f8f0cba..3a545d6 100644
+--- AppManifest.xml.tmpl
++++ AppManifest.xml.tmpl
+@@ -3,7 +3,7 @@
+           package=""
+           android:versionCode="1"
+           android:versionName="1.0">              
+-    <uses-sdk android:minSdkVersion="@@min_sdk@@" />    
++    <uses-sdk android:minSdkVersion="@@min_sdk@@" android:targetSdkVersion="@@target_sdk@@" />
+     <application android:label=""
+                  android:icon="@mipmap/ic_launcher">
+         <activity android:name=".MainActivity"
+@@ -14,4 +14,4 @@
+             </intent-filter>
+         </activity> 
+     </application>
+-</manifest>
+\ No newline at end of file
++</manifest>
+diff --git VRActivity.java.tmpl VRActivity.java.tmpl
+index 304996a..fd5957a 100644
+--- VRActivity.java.tmpl
++++ VRActivity.java.tmpl
+@@ -12,5 +12,7 @@ public class MainActivity extends VRActivity {
+     PApplet sketch = new @@sketch_class_name@@();
+     @@external@@
+     setSketch(sketch);
++
++    @@log_broadcaster@@
+   }
+ }
+\ No newline at end of file
+diff --git VRManifest.xml.tmpl VRManifest.xml.tmpl
+index e6e842b..d70c577 100644
+--- VRManifest.xml.tmpl
++++ VRManifest.xml.tmpl
+@@ -3,7 +3,7 @@
+           package=""
+           android:versionCode="1"
+           android:versionName="1.0">              
+-    <uses-sdk android:minSdkVersion="@@min_sdk@@" />
++    <uses-sdk android:minSdkVersion="@@min_sdk@@" android:targetSdkVersion="@@target_sdk@@" />
+     <uses-permission android:name="android.permission.VIBRATE" />
+     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="true" />
+@@ -26,4 +26,4 @@
+             </intent-filter>
+         </activity> 
+     </application>
+-</manifest>
+\ No newline at end of file
++</manifest>
+diff --git WallpaperManifest.xml.tmpl WallpaperManifest.xml.tmpl
+index 1bd1b42..afde065 100644
+--- WallpaperManifest.xml.tmpl
++++ WallpaperManifest.xml.tmpl
+@@ -3,7 +3,7 @@
+           package=""
+           android:versionCode="1"
+           android:versionName="1.0">              
+-    <uses-sdk android:minSdkVersion="@@min_sdk@@" />
++    <uses-sdk android:minSdkVersion="@@min_sdk@@" android:targetSdkVersion="@@target_sdk@@" />
+     <uses-feature android:name="android.software.live_wallpaper" />       
+     <application android:label=""
+                  android:icon="@mipmap/ic_launcher">
+diff --git WallpaperService.java.tmpl WallpaperService.java.tmpl
+index f38471b..e30b83c 100644
+--- WallpaperService.java.tmpl
++++ WallpaperService.java.tmpl
+@@ -8,6 +8,9 @@ public class MainService extends PWallpaper {
+   public PApplet createSketch() {
+     PApplet sketch = new @@sketch_class_name@@();
+     @@external@@
++
++    @@log_broadcaster@@
++
+     return sketch;
+   }
+ }
+\ No newline at end of file
+diff --git WatchFaceManifest.xml.tmpl WatchFaceManifest.xml.tmpl
+index a00fa04..ed89194 100644
+--- WatchFaceManifest.xml.tmpl
++++ WatchFaceManifest.xml.tmpl
+@@ -3,7 +3,7 @@
+           package=""
+           android:versionCode="1"
+           android:versionName="1.0">              
+-    <uses-sdk android:minSdkVersion="@@min_sdk@@" />
++    <uses-sdk android:minSdkVersion="@@min_sdk@@" android:targetSdkVersion="@@target_sdk@@" />
+     <uses-feature android:name="android.hardware.type.watch" />
+     <uses-permission android:name="android.permission.WAKE_LOCK" />     
+     <application android:label=""
+@@ -20,8 +20,6 @@
+                        android:resource="@drawable/preview_rectangular" />
+             <meta-data android:name="com.google.android.wearable.watchface.preview_circular"
+                        android:resource="@drawable/preview_circular" />
+-            <meta-data android:name="com.google.android.wearable.watchface.companionConfigurationAction"
+-                       android:value="com.catinean.simpleandroidwatchface.CONFIG_DIGITAL" />
+             <intent-filter>
+                 <action android:name="android.service.wallpaper.WallpaperService" />
+                 <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+@@ -29,4 +27,4 @@
+         </service>
+         <activity android:name="processing.android.PermissionRequestor" ></activity>       
+     </application>
+-</manifest>
+\ No newline at end of file
++</manifest>

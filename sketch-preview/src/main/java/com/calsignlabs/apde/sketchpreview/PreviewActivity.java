@@ -6,9 +6,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 
 import processing.android.CompatUtils;
 import processing.android.PFragment;
@@ -93,23 +95,21 @@ public class PreviewActivity extends AppCompatActivity {
 			// If the sketch calls orientation(), then that messes us up
 			// So we wait for the sketch to call orientation() and then we only set the orientation
 			// defined in the manifest if the sketch has not done so
-			runOnUiThread(new Runnable() {
-				@Override
-				public void run() {
-					if (getRequestedOrientation() == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
-						// FYI this orientation comes from the sketch's manifest
-						setOrientation(orientation);
-					}
+			runOnUiThread(() -> {
+				if (getRequestedOrientation() == ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
+					// FYI this orientation comes from the sketch's manifest
+					setOrientation(orientation);
 				}
 			});
 		}
 	}
 	
 	@Override
-	public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 		if (sketch != null) {
 			sketch.onRequestPermissionsResult(requestCode, permissions, grantResults);
 		}
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 	}
 	
 	@Override
@@ -117,6 +117,7 @@ public class PreviewActivity extends AppCompatActivity {
 		if (sketch != null) {
 			sketch.onNewIntent(intent);
 		}
+		super.onNewIntent(intent);
 	}
 	
 	@Override
@@ -124,6 +125,7 @@ public class PreviewActivity extends AppCompatActivity {
 		if (sketch != null) {
 			sketch.onActivityResult(requestCode, resultCode, data);
 		}
+		super.onActivityResult(requestCode, resultCode, data);
 	}
 	
 	@Override

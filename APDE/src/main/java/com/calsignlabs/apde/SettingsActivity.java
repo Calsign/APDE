@@ -42,7 +42,7 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.calsignlabs.apde.build.CopyAndroidJarTask;
+import com.calsignlabs.apde.build.ExtractStaticBuildResources;
 import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.support.CustomListPreference;
 import com.calsignlabs.apde.support.StockPreferenceFragment;
@@ -212,7 +212,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		
 		if (recopyAndroidJar != null) {
 			recopyAndroidJar.setOnPreferenceClickListener(preference -> {
-				((APDE) getApplication()).getTaskManager().launchTask("recopyAndroidJarTask", false, null, false, new CopyAndroidJarTask());
+				((APDE) getApplication()).getTaskManager().launchTask("extractStaticBuildResources", true, this, false, new ExtractStaticBuildResources());
 				
 				return true;
 			});

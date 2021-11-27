@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply from: new File(rootProject.projectDir, 'gradle/previewBuild.gradle')
 
 android {
     compileSdkVersion 28
@@ -13,6 +14,8 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunnerArguments clearPackageData: 'true'
+
+        buildConfigField 'String', 'COMMON_R_JAVA_PACKAGE', '"' + rootProject.commonRJavaPackage + '"'
     }
 
     buildTypes {
@@ -47,6 +50,8 @@ android {
         main {
             res.srcDirs = ['src/main/res']
             java.srcDirs = ['src/main/java']
+            // assets we extract from downloaded files (Processing and Android mode)
+            assets.srcDirs += [project.additionalAssets]
         }
         test {
             java.srcDirs = ['src/test/java']
@@ -54,6 +59,15 @@ android {
         androidTest {
             java.srcDirs = ['src/androidTest/java']
         }
+    }
+
+    packagingOptions {
+        // declared by a bunch of eclipse jars
+        exclude 'plugin.xml'
+        exclude 'plugin.properties'
+        exclude 'META-INF/*'
+        exclude 'about_files/*'
+        exclude '*.html'
     }
 
     lintOptions {
@@ -70,27 +84,21 @@ android {
     }
 }
 
+preBuild.dependsOn project.createAdditionalAssets
+preBuild.dependsOn project.assetPreviewBuildZip
+
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation files('libs/android-core.jar')
+    implementation files(project.androidCore)
+    implementation project.javaMode
+    implementation project.pde
     implementation files('libs/antlr.jar')
     implementation files('libs/core-1.51.0.0.jar')
     implementation files('libs/dx.jar')
-    implementation files('libs/org.eclipse.jdt.core.jar')
-    implementation files('libs/org.eclipse.core.runtime.jar')
-    implementation files('libs/org.eclipse.osgi.jar')
-    implementation files('libs/org.eclipse.equinox.common.jar')
-    implementation files('libs/org.eclipse.core.resources.jar')
-    implementation files('libs/org.eclipse.core.contenttype.jar')
-    implementation files('libs/org.eclipse.equinox.preferences.jar')
-    implementation files('libs/org.eclipse.core.jobs.jar')
-    implementation files('libs/jdi.jar')
-    implementation files('libs/JavaMode.jar')
     implementation files('libs/jsch-0.1.51.jar')
     implementation files('libs/kellinwood-logging-android-1.4.jar')
     implementation files('libs/kellinwood-logging-lib-1.1.jar')
     implementation files('libs/org.eclipse.jgit-3.5.2.201411120430-r.jar')
-    implementation files('libs/pde.jar')
     implementation files('libs/pkix-1.51.0.0.jar')
     implementation files('libs/prov-1.51.0.0.jar')
     implementation files('libs/sdklib.jar')

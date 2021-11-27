@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class Aapt2Wrapper {
@@ -26,6 +27,12 @@ public class Aapt2Wrapper {
 		return new File(context.getApplicationInfo().nativeLibraryDir, "libaapt2_bin.so");
 	}
 	
+	private static void throwIfFailed(int exitCode, List<String> args) throws InvocationFailedException {
+		if (exitCode != 0) {
+			throw new InvocationFailedException(exitCode, args.toArray(new String[0]), Aapt2Jni.getLogs());
+		}
+	}
+	
 	public static void compile(APDE context, List<String> args) throws InvocationFailedException, IOException, InterruptedException {
 		if (useAapt2Bin()) {
 			List<String> fullArgs = new ArrayList<>(args);
@@ -33,7 +40,7 @@ public class Aapt2Wrapper {
 			fullArgs.add(1, "compile");
 			invokeBinary(context, fullArgs.toArray(new String[0]));
 		} else {
-			Aapt2Jni.compile(args);
+			throwIfFailed(Aapt2Jni.compile(args), args);
 		}
 	}
 	
@@ -44,18 +51,20 @@ public class Aapt2Wrapper {
 			fullArgs.add(1, "link");
 			invokeBinary(context, fullArgs.toArray(new String[0]));
 		} else {
-			Aapt2Jni.link(args);
+			throwIfFailed(Aapt2Jni.link(args), args);
 		}
 	}
 	
 	public static class InvocationFailedException extends Exception {
 		public final int exitCode;
 		public final String[] args;
+		public final List<Aapt2Jni.Log> logs;
 		
-		public InvocationFailedException(int exitCode, String[] args) {
+		public InvocationFailedException(int exitCode, String[] args, List<Aapt2Jni.Log> logs) {
 			super("Execution failed with exit code " + exitCode + ": " + Arrays.toString(args));
 			this.exitCode = exitCode;
 			this.args = args;
+			this.logs = Collections.unmodifiableList(logs);
 		}
 	}
 	
@@ -78,7 +87,7 @@ public class Aapt2Wrapper {
 		
 		if (code != 0) {
 			System.err.println("AAPT2 exited with error code: " + code);
-			throw new InvocationFailedException(code, args);
+			throw new InvocationFailedException(code, args, Collections.emptyList());
 		}
 	}
 }

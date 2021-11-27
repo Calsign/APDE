@@ -1,0 +1,58 @@
+apply from: new File(rootProject.projectDir, 'gradle/common.gradle')
+apply from: new File(rootProject.projectDir, 'gradle/manifest.gradle')
+
+/**
+ * This file constructs assets needed for APDE to build the sketch previewer at runtime.
+ *
+ * NOTE: this file is factored out from assets.gradle to avoid a circular dependency:
+ * sketch-preview depends on assets.gradle, and this file depends on sketch-preview.
+ */
+
+project.ext.previewBuild = new File(downloads, 'preview_build')
+
+task previewBuildGlslProcessing(dependsOn: project.assetGlslProcessingExtract, type: Copy) {
+    from new File(assetGlslProcessingExtract.destinationDir, 'assets')
+    into new File(project.previewBuild, 'assets')
+}
+
+task previewBuildManifest(type: EditManifestTask) {
+    input = new File(rootProject.projectDir, 'sketch-preview/src/main/AndroidManifest.xml')
+    output = new File(project.previewBuild, 'AndroidManifest.xml')
+    minSdk = 19
+    targetSdk = 29
+}
+
+task previewBuildResValues(type: Copy) {
+    from new File(rootProject.projectDir, 'sketch-preview/src/main/res/values')
+    into new File(project.previewBuild, 'res/values')
+}
+
+// copy classes.dex from the sketch-preview build artifacts
+task previewBuildClassesDex(type: CopySingleFile, dependsOn: ':sketch-preview:assembleRelease') {
+    input = new File(rootProject.projectDir, 'sketch-preview/build/intermediates/dex/release/mergeDexRelease/classes.dex')
+    output = new File(project.previewBuild, 'classes.dex')
+}
+
+// task which creates the contents which get zipped into preview_build.zip
+task createPreviewBuild {
+    dependsOn previewBuildGlslProcessing
+    dependsOn previewBuildManifest
+    dependsOn previewBuildResValues
+    dependsOn previewBuildClassesDex
+}
+
+// previewer icons are just copies of the APDE icons
+for (def density : project.PREVIEW_ICON_DENSITIES) {
+    def outputFilename = 'drawable-' + density + '/ic_launcher.png'
+    def previewBuildResIcon = tasks.create(name: 'previewBuildResIcon_' + density, type: CopySingleFile) {
+        input = project.previewIconInputFile(density)
+        output = new File(project.previewBuild, 'res/' + outputFilename)
+    }
+    createPreviewBuild.dependsOn previewBuildResIcon
+}
+
+task assetPreviewBuildZip(type: Zip, dependsOn: createPreviewBuild) {
+    from project.previewBuild
+    archiveFileName = 'preview_build.zip'
+    destinationDirectory = project.additionalAssets
+}

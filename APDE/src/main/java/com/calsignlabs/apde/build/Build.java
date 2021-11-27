@@ -25,7 +25,9 @@ import androidx.core.content.FileProvider;
 import android.view.inputmethod.InputMethodManager;
 
 import com.android.sdklib.build.ApkBuilder;
+import com.android.tools.aapt2.Aapt2Jni;
 import com.calsignlabs.apde.APDE;
+import com.calsignlabs.apde.BuildConfig;
 import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
@@ -49,9 +51,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.RandomAccessFile;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
 import java.security.Security;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -244,42 +251,29 @@ public class Build {
 			}
 		}
 		
-		//Renaming solution for the file system lock with EBUSY errors
-		//StackOverflow: http://stackoverflow.com/questions/11539657/open-failed-ebusy-device-or-resource-busy
-		final File to = new File(f.getAbsolutePath() + System.currentTimeMillis());
-		f.renameTo(to);
+		boolean tryRename = false;
 		
-		if (!to.delete()) {
-			System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failure), f.getAbsolutePath()));
-			return false;
+		try {
+			// attempt to delete it without renaming first; this should be faster
+			if (!f.delete()) {
+				tryRename = true;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			tryRename = true;
+		}
+		
+		if (tryRename) {
+			//Renaming solution for the file system lock with EBUSY errors
+			//StackOverflow: http://stackoverflow.com/questions/11539657/open-failed-ebusy-device-or-resource-busy
+			final File to = new File(f.getAbsolutePath() + System.currentTimeMillis());
+			if (!f.renameTo(to) || !to.delete()) {
+				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.delete_file_failure), f.getAbsolutePath()));
+				return false;
+			}
 		}
 		
 		return true;
-	}
-	
-	public static File getAndroidJarLoc(Context context) {
-		return new File(getTempFolder(context), "android.jar");
-	}
-    
-	public static void copyAndroidJar(Context context) throws IOException {
-		InputStream is = context.getAssets().open("android.jar");
-		createFileFromInputStream(is, getAndroidJarLoc(context));
-		is.close();
-	}
-	
-	public static String getAaptName() {
-		String arch = android.os.Build.CPU_ABI.substring(0, 3).toLowerCase(Locale.US);
-		
-		// We no longer support Android 4.0 or below, so all devices now use the PIE AAPT binaries
-		
-		// Get the correct AAPT binary for this processor architecture
-		switch (arch) {
-			case "x86":
-				return "aapt-binaries/aapt-x86-pie";
-			case "arm":
-			default:
-				return "aapt-binaries/aapt-arm-pie";
-		}
 	}
 	
 	public void build(String target, ComponentTarget comp) {
@@ -410,7 +404,7 @@ public class Build {
 			return;
 		}
 		
-		File androidJarLoc = getAndroidJarLoc(editor);
+		File androidJarLoc = StaticBuildResources.getAndroidJarLoc(editor);
 		
 		boolean customProblems = PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_problem_overview_enable", true);
 		
@@ -526,102 +520,17 @@ public class Build {
 			
 			AssetManager am = editor.getAssets();
 			
-			// Copy AppCompat res files
-			
-			File supportResFolder = new File(buildFolder, "support-res");
-			resFolder.mkdir();
-			createFolderFromZippedAssets(editor.getAssets(), "support-res.zip", supportResFolder);
-			
-			// We want to make these directories whether or not we're actually building for that target
-			// If we don't make the directory then AAPT yells at us
-			File wearableResFolder = new File(buildFolder, "support-wearable-res");
-			wearableResFolder.mkdir();
-			File vrResFolder = new File(buildFolder, "vr-res");
-			vrResFolder.mkdir();
-			
-			if (getAppComponent() == ComponentTarget.WATCHFACE) {
-				// Copy support-wearable res files
-				createFolderFromZippedAssets(editor.getAssets(), "support-wearable-res.zip", wearableResFolder);
-			}
-			
-			if (getAppComponent() == ComponentTarget.VR) {
-				// Copy GVR res files
-				createFolderFromZippedAssets(editor.getAssets(), "vr-res.zip", vrResFolder);
-				
-				// Copy GVR binaries
-				File gvrBinaryZip = new File(buildFolder, "vr-lib.zip");
-				InputStream inputStream = am.open("vr-lib.zip");
-				createFileFromInputStream(inputStream, gvrBinaryZip);
-			}
-			
 			// Copy android.jar if it hasn't been done yet
 			if (!androidJarLoc.exists()) {
 				if (verbose) {
 					System.out.println(editor.getResources().getString(R.string.build_copying_android_jar));
 				}
 				
-				copyAndroidJar(editor);
+				// TODO: maybe we can just copy all the static resources here instead?
+				StaticBuildResources.copyAndroidJar(editor);
 			}
 			
-			//Copy native libraries
-			
-			if (verbose) {
-				System.out.println(editor.getResources().getString(R.string.build_copying_processing_libraries));
-			}
-			
-			String[] libsToCopy = {
-					"processing-core", "support-core-utils", "support-compat",
-					"appcompat", "support-fragment",
-					getAppComponent() == ComponentTarget.WATCHFACE ? "support-wearable" : "",
-					getAppComponent() == ComponentTarget.WATCHFACE ? "percent" : "",
-					getAppComponent() == ComponentTarget.VR ? "gvr" : "",
-					getAppComponent() == ComponentTarget.VR ? "vr" : ""
-			};//, "support-vector-drawable"};
-			String prefix = "libs/";
-			String suffix = ".jar";
-			
-			//Copy for the compiler
-			for(String lib : libsToCopy) {
-				if (lib.equals("")) continue; // pass through, lets us use ternary if in the array
-				InputStream inputStream = am.open(prefix + lib + suffix);
-				createFileFromInputStream(inputStream, new File(libsFolder, lib + suffix));
-				inputStream.close();
-			}
-			
-			//Copy dexed versions to speed up the DEX process
-			
-			if (verbose) {
-				System.out.println(editor.getResources().getString(R.string.build_copying_dexed_processing_libraries));
-			}
-			
-			String[] dexLibsToCopy = {
-					"all-lib-dex",
-					/*
-					 * Part of bugfix for #43. 2018-06-03.
-					 *
-					 * Android mode classes reference the wearable support library. This means
-					 * that we get a VerifyError on 4.4 (API level 19) because that platform
-					 * does not have the wearable library classes, even though these classes are
-					 * never touched. So we add the dexed support library on 4.4 and below so
-					 * that Android can see the classes and stop complaining.
-					 *
-					 * API level 20 is 4.4W (W for Wear) - uncertain whether or not these
-					 * classes are present. It doesn't hurt too much to include them, so that's
-					 * what we're doing.
-					 */
-					getAppComponent() == ComponentTarget.WATCHFACE || android.os.Build.VERSION.SDK_INT <= 20 ? "support-wearable-dex" : "",
-					getAppComponent() == ComponentTarget.VR ? "vr-dex" : ""
-			};
-			String dexPrefix = "libs-dex/";
-			String dexSuffix = ".jar";
-			
-			//Copy for the dexer
-			for(String lib : dexLibsToCopy) {
-				if (lib.equals("")) continue; // pass through, lets us use ternary if in the array
-				InputStream inputStream = am.open(dexPrefix + lib + dexSuffix);
-				createFileFromInputStream(inputStream, new File(dexedLibsFolder, lib + dexSuffix));
-				inputStream.close();
-			}
+			// TODO: detect static build resources not copied yet and copy them
 			
 			if (verbose) {
 				System.out.println(editor.getResources().getString(R.string.build_copying_contributed_libraries));
@@ -714,39 +623,6 @@ public class Build {
 			System.out.println(String.format(editor.getResources().getString(R.string.build_available_cores), numCores));
 		}
 		
-		// TODO: Only re-copy AAPT if we need to
-		// Note: Make sure that it gets re-copied if the user changes the pre-0.3.3 preference
-		
-		File aaptLoc = new File(tmpFolder, "aapt"); //Use the same name for the destination so that the hyphens aren't an issue
-		
-		//AAPT setup
-		try {
-			if (verbose) {
-				System.out.println(editor.getResources().getString(R.string.build_copying_aapt));
-			}
-			
-			AssetManager am = editor.getAssets();
-			
-			InputStream inputStream = am.open(getAaptName());
-			createFileFromInputStream(inputStream, aaptLoc);
-			inputStream.close();
-			
-			if (verbose) {
-				System.out.println(editor.getResources().getString(R.string.build_changing_aapt_execution_permissions));
-			}
-			
-			// We don't need to use chmod!!!!!!!
-			if (!aaptLoc.setExecutable(true, true)){
-				System.err.println(editor.getResources().getString(R.string.build_change_aapt_execution_permissions_failed));
-				
-				cleanUpError();
-				return;
-			}
-		} catch (IOException e) {
-			System.out.println(editor.getResources().getString(R.string.build_change_aapt_execution_permissions_failed));
-			e.printStackTrace();
-		}
-		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
 			return;
@@ -778,7 +654,7 @@ public class Build {
 				
 				//Copy the zip archive
 				InputStream inputStream = editor.getAssets().open("glsl-processing.zip");
-				createFileFromInputStream(inputStream, glslFolder);
+				StaticBuildResources.createFileFromInputStream(inputStream, glslFolder);
 			} catch (IOException e) { //Uh-oh...
 				System.out.println(editor.getResources().getString(R.string.build_copy_glsl_failed));
 				e.printStackTrace();
@@ -788,70 +664,122 @@ public class Build {
 			}
 		}
 		
-		if(!running.get()) { //CHECK
+		if(!running.get()) { // CHECK
 			cleanUpHalt();
 			return;
 		}
 		
 		if (!stopAfterCompile || verbose) {
-			System.out.println(); //Separator
+			System.out.println(); // Separator
 		}
 		
-		// Run AAPT
+		if (!running.get()) { //CHECK
+			cleanUpHalt();
+			return;
+		}
+		
+		// Run AAPT2
 		try {
 			if (!stopAfterCompile || verbose) {
 				System.out.println(editor.getResources().getString(R.string.build_packaging_aapt));
 			}
 			
-			// Create folder structure for R.java TODO why is this necessary?
-			(new File(genFolder.getAbsolutePath() + "/" + mainActivityLoc + "/")).mkdirs();
+			// NOTE: we pre-compile the resources for the artifacts, so we only need to compile
+			// the artifacts in res.
+			// In theory we could add additional res dirs in the future, hence the list.
+			List<File> resDirs = Collections.singletonList(new File(buildFolder, "res"));
 			
-			String[] args = {
-				aaptLoc.getAbsolutePath(), // The location of AAPT
-				"package", "-v", "-f", "-m", "--auto-add-overlay",
-				"--no-version-vectors", // Fix crash on 4.4 due to some support library vector voodoo
-				"-S", buildFolder.getAbsolutePath() + "/res/", // The location of the /res folder
-				"-S", buildFolder.getAbsolutePath() + "/support-res/", // The location of the support lib res folder
-				"-S", buildFolder.getAbsolutePath() + "/support-wearable-res/",
-				"-S", buildFolder.getAbsolutePath() + "/vr-res/",
-				"--extra-packages", (getAppComponent() == ComponentTarget.VR ? "com.google.vr.cardboard" : "android.support.v7.appcompat"), // Make AAPT generate R.java for AppCompat/GVR
-				"-J", genFolder.getAbsolutePath(), // The location of the /gen folder
-				"-A", assetsFolder.getAbsolutePath(), // The location of the /assets folder
-				"-M", buildFolder.getAbsolutePath() + "/AndroidManifest.xml", // The location of the AndroidManifest.xml file
-				"-I", androidJarLoc.getAbsolutePath(), // The location of the android.jar resource
-				"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res" // The location of the output .apk.res file
-			};
+			File compiledRes = new File(binFolder, "res-compiled");
 			
-			Process aaptProcess = Runtime.getRuntime().exec(args);
-			
-			// We have to give it an output stream for some reason
-			// So give it one that ignores the data
-			// We don't want to print the standard out to the console because it is WAY too much stuff
-			// It even causes APDE to crash because there is too much text in the console to fit in a transaction
-			// We want to show the error stream in verbose mode though because this lets us debug things
-			copyStream(aaptProcess.getInputStream(), new NullOutputStream());
-			copyStream(aaptProcess.getErrorStream(), verbose ? System.err : new NullOutputStream());
-			
-			int code = aaptProcess.waitFor();
-			
-			if (code != 0) {
-				System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_aapt_failed_error_code), code));
-				
-				cleanUpError();
-				return;
+			for (File resDir : resDirs) {
+				File outputDir = new File(compiledRes, resDir.getName());
+				outputDir.mkdirs();
+				for (File innerDir : resDir.listFiles()) {
+					for (File resFile : innerDir.listFiles()) {
+						String[] args = {
+								resFile.getAbsolutePath(),
+								"-o", outputDir.getAbsolutePath(),
+						};
+						
+						Aapt2Wrapper.compile(editor.getGlobalState(), Arrays.asList(args));
+					}
+				}
 			}
-		} catch (IOException e) {
-			//Something weird happened
+			
+			List<String> linkArgs = new ArrayList<>(
+					Arrays.asList(
+							"-o", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res",
+							"--manifest", buildFolder.getAbsolutePath() + "/AndroidManifest.xml",
+							"-I", androidJarLoc.getAbsolutePath(),
+							"-A", assetsFolder.getAbsolutePath(),
+							"--java", genFolder.getAbsolutePath(),
+							"--auto-add-overlay",
+							"--no-version-vectors"
+					)
+			);
+			
+			// The artifact JARs are modified to point to one common R class instead of their own.
+			// This allows us to generate only two R.java files - one for the sketch and one common
+			// one used by the artifacts. This speeds up compile and dex times considerably compared
+			// to the other option, passing --extra-packages for each artifact.
+			if (!manifest.getPackageName().equals(BuildConfig.COMMON_R_JAVA_PACKAGE)) {
+				linkArgs.add("--extra-packages");
+				linkArgs.add(BuildConfig.COMMON_R_JAVA_PACKAGE);
+			}
+			
+			if (editor.getGlobalState().getPref("pref_build_generate_all_support_library_resource_classes", false)) {
+				// If requested, we can still generate all of the R.java files. This is only
+				// necessary if a third-party library references resources from the support library,
+				// but we include it as an escape hatch because the thing we are doing by default
+				// is truly quite hacky and perhaps surprising.
+				
+				try {
+					List<String> artifactPackages = getArtifactPackages();
+					
+					for (String extraPackage : artifactPackages) {
+						linkArgs.add("--extra-packages");
+						linkArgs.add(extraPackage);
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+					cleanUpError();
+					return;
+				}
+			}
+			
+			List<File> compiledResDirs = new ArrayList<>(Arrays.asList(compiledRes.listFiles()));
+			for (File targetCompiledResDir : StaticBuildResources.getTargetDirs(StaticBuildResources.getResCompiledDir(editor), getAppComponent())) {
+				if (targetCompiledResDir.exists()) {
+					compiledResDirs.addAll(Arrays.asList(targetCompiledResDir.listFiles()));
+				}
+			}
+		
+			for (File compiledResDir : compiledResDirs) {
+				for (File compiledResFile : compiledResDir.listFiles()) {
+					linkArgs.add("-R");
+					linkArgs.add(compiledResFile.getAbsolutePath());
+				}
+			}
+			
+			Aapt2Wrapper.link(editor.getGlobalState(), linkArgs);
+			
+			// TODO: report errors in problem overview
+		} catch (Aapt2Wrapper.InvocationFailedException e) {
 			System.out.println(editor.getResources().getString(R.string.build_aapt_failed));
 			e.printStackTrace();
+			
+			// TODO: report errors in problem overview
+			for (Aapt2Jni.Log log : e.logs) {
+				System.err.println(log.toString());
+			}
 			
 			cleanUpError();
 			return;
-		} catch (InterruptedException e) {
-			//Something even weirder happened
+		} catch (IOException | InterruptedException e) {
+			// Something weird happened
 			System.out.println(editor.getResources().getString(R.string.build_aapt_failed));
 			e.printStackTrace();
-
+			
 			cleanUpError();
 			return;
 		}
@@ -873,27 +801,63 @@ public class Build {
 			
 			Compiler compiler = new Compiler(customProblems);
 			
-			String[] args = {
-				(verbose ? "-verbose"
-						: "-warn:-unusedImport"), // Disable warning for unused imports (the preprocessor gives us a lot of them, so this is just a lot of noise)
-				"-extdirs", libsFolder.getAbsolutePath(), // The location of the external libraries (Processing's core.jar and others)
-				"-bootclasspath", androidJarLoc.getAbsolutePath(), //buildFolder.getAbsolutePath() + "/sdk/platforms/" + androidVersion + "/android.jar", // The location of android.jar
-				"-classpath", srcFolder.getAbsolutePath() // The location of the source folder
-				+ ":" + genFolder.getAbsolutePath() // The location of the generated folder
-				+ ":" + libsFolder.getAbsolutePath(), // The location of the library folder
-				"-1.6",
-				"-target", "1.6", // Target Java level
-				"-proc:none", // Disable annotation processors...
-				"-d", binFolder.getAbsolutePath() + "/classes/", // The location of the output folder
-				srcFolder.getAbsolutePath() + "/",
-				genFolder.getAbsolutePath() + "/",
-			};
+			List<String> args = new ArrayList<String>();
+			
+			if (verbose) {
+				args.add("-verbose");
+			} else {
+				// Disable warning for unused imports (the preprocessor gives us a lot of them, so this is just a lot of noise)
+				args.add("-warn:-unusedImport");
+			}
+			
+			List<File> extDirs = new ArrayList<File>();
+			
+			// user libraries
+			extDirs.add(libsFolder);
+			
+			List<File> classPathEntries = new ArrayList<>();
+			classPathEntries.add(srcFolder);
+			classPathEntries.add(genFolder);
+			classPathEntries.add(libsFolder);
+			
+			// artifact libraries
+			for (File targetLibsDir : StaticBuildResources.getTargetDirs(StaticBuildResources.getLibsDir(editor), getAppComponent())) {
+				if (targetLibsDir.exists()) {
+					extDirs.add(targetLibsDir);
+					classPathEntries.add(targetLibsDir);
+				}
+			}
+			
+			args.add("-extdirs");
+			args.add(joinFilesForEcj(extDirs));
+			
+			args.add("-bootclasspath");
+			args.add(androidJarLoc.getAbsolutePath());
+			
+			args.add("-classpath");
+			args.add(joinFilesForEcj(classPathEntries));
+			
+			// target java 1.6
+			args.add("-1.6");
+			args.add("-target");
+			args.add("1.6");
+			
+			// disable annotation processors
+			args.add("-proc:none");
+			
+			// where to output .class files
+			args.add("-d");
+			args.add(binFolder.getAbsolutePath() + "/classes/");
+			
+			// source code locations
+			args.add(srcFolder.getAbsolutePath() + "/");
+			args.add(genFolder.getAbsolutePath() + "/");
 			
 			if (verbose) {
 				System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_compiling_file), srcFolder.getAbsolutePath() + "/" + mainActivityLoc + "/" + sketchName + ".java"));
 			}
 			
-			boolean success = compiler.compile(args) && !preprocessor.hasSyntaxErrors();
+			boolean success = compiler.compile(args.toArray(new String[] {})) && !preprocessor.hasSyntaxErrors();
 			
 			if (customProblems) {
 				try {
@@ -947,7 +911,7 @@ public class Build {
 			String[] args;
 			
 			//Yuck, this is the best way to support verbose output...
-			if (verbose ) {
+			if (verbose) {
 				args = new String[] {
 						"--verbose",
 						"--num-threads=" + numCores,
@@ -988,6 +952,8 @@ public class Build {
 			return;
 		}
 		
+		// NOTE: this is only dexed libs from libraries and the code folder.
+		// Processing core and the support library are handled out of band.
 		File[] dexedLibs = dexedLibsFolder.listFiles((dir, filename) -> filename.endsWith("-dex.jar"));
 		
 		// PREVIEW STOPS HERE
@@ -1005,16 +971,25 @@ public class Build {
 		try {
 			System.out.println(editor.getResources().getString(R.string.build_dx_merger));
 			
-			String[] args = new String[dexedLibs.length + 2];
-			args[0] = binFolder.getAbsolutePath() + "/classes.dex"; //The location of the output DEX class file
-			args[1] = binFolder.getAbsolutePath() + "/sketch-classes.dex"; //The location of the sketch's dexed classes
+			List<String> args = new ArrayList<>();
+			args.add(binFolder.getAbsolutePath() + "/classes.dex"); // where the output of merging should go
+			args.add(binFolder.getAbsolutePath() + "/sketch-classes.dex"); // the sketch's dexed classes
 			
-			//Apparently, this tool accepts as many dex files as we want to throw at it...
-			for (int i = 0; i < dexedLibs.length; i ++) {
-				args[i + 2] = dexedLibs[i].getAbsolutePath();
+			// Grab the user libraries
+			for (File dexedLib : dexedLibs) {
+				args.add(dexedLib.getAbsolutePath());
 			}
 			
-			com.androidjarjar.dx.merge.DexMerger.main(args);
+			// Include the artifact libraries (processing core, support libs, etc.)
+			for (File targetLibDexDir : StaticBuildResources.getTargetDirs(StaticBuildResources.getLibsDexDir(editor), getAppComponent())) {
+				if (targetLibDexDir.exists()) {
+					for (File libDex : targetLibDexDir.listFiles()) {
+						args.add(libDex.getAbsolutePath());
+					}
+				}
+			}
+			
+			com.androidjarjar.dx.merge.DexMerger.main(args.toArray(new String[] {}));
 		} catch (Exception e) {
 			System.out.println(editor.getResources().getString(R.string.build_dx_merger_failed));
 			e.printStackTrace();
@@ -1060,9 +1035,13 @@ public class Build {
 			}
 			builder.addSourceFolder(srcFolder); // The location of the source folder
 			
-			if (getAppComponent() == ComponentTarget.VR) {
-				// Add GVR binary libs
-				builder.addZipFile(new File(buildFolder, "vr-lib.zip"));
+			// Add JNI libs - currently only used for VR and AR
+			for (File targetJniLibsDir : StaticBuildResources.getTargetDirs(StaticBuildResources.getJniLibsDir(editor), getAppComponent())) {
+				if (targetJniLibsDir.exists()) {
+					for (File jniLibZip : targetJniLibsDir.listFiles()) {
+						builder.addZipFile(jniLibZip);
+					}
+				}
 			}
 			
 			// Seal the APK
@@ -1075,33 +1054,6 @@ public class Build {
 			return;
 		}
 		
-		//TODO Switch over to AAPT...
-		//This is seriously messed up right now...
-		
-//		//Run AAPT
-//		try {
-//			System.out.println("Running AAPT...");
-//			
-//			String[] args = {
-//					aaptLoc.getAbsolutePath(), //The location of AAPT
-//					"package", "-v", "-f",
-//					"-j", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.res",
-//					"-j", glslFolder.getAbsolutePath(),
-//					"-F", binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned",
-//					binFolder.getAbsolutePath()
-//			};
-//			
-//			aaptProc = Runtime.getRuntime().exec(args);
-//			
-//			System.out.println("Ran AAPT successfully");
-//		} catch(IOException e) {
-//			System.out.println("AAPT failed");
-//			e.printStackTrace();
-//			
-//			cleanUpError();
-//			return;
-//		}
-//		
 		if(!running.get()) { //CHECK
 			cleanUpHalt();
 			return;
@@ -1220,6 +1172,45 @@ public class Build {
 		cleanUp();
 	}
 	
+	private String joinFilesForEcj(List<File> files) {
+		StringBuilder joined = new StringBuilder();
+		for (int i = 0; i < files.size(); i++) {
+			if (i != 0) {
+				joined.append(':');
+			}
+			joined.append(files.get(i).getAbsolutePath());
+		}
+		return joined.toString();
+	}
+	
+	/**
+	 * Get the package names of all the artifacts for the current build target.
+	 *
+	 * @return the artifact package names
+	 */
+	private List<String> getArtifactPackages() throws IOException {
+		// Package names for all artifacts
+		List<String> artifactPackages = new ArrayList<>();
+		// Package names we need are generated by gradle and placed in this file.
+		// (See the packageNames task in gradle/assets.gradle.)
+		BufferedReader reader = new BufferedReader(new InputStreamReader(
+				editor.getAssets().open("artifact_package_names.txt")));
+		String line;
+		while ((line = reader.readLine()) != null) {
+			// each line is delimited by semicolons
+			String[] split = line.split(";");
+			// the first item is the assetPrefix
+			// we want to add the package names needed for all asset prefixes we need
+			for (String assetPrefix : getAppComponent().getAssetPrefixes()) {
+				if (split.length > 0 && assetPrefix.equals(split[0])) {
+					// the remaining items are package names
+					artifactPackages.addAll(Arrays.asList(split).subList(1, split.length));
+				}
+			}
+		}
+		return artifactPackages;
+	}
+	
 	/**
 	 * Check to see which permissions are required by the sketch but aren't included in the
 	 * installed sketch previewer app.
@@ -1307,21 +1298,16 @@ public class Build {
 		// We need to copy the dexed libs to the sketch previewer
 		String[] libUris = new String[dexedLibs.length];
 		for (int i = 0; i < dexedLibs.length; i ++) {
-			// Don't copy the dexed Processing core lib, already included in sketch previewer
-			// Also don't copy support-wearable, required for all apps (really dumb, I know)
-			// on API 20 and below
-			if (!(dexedLibs[i].getName().equals("all-lib-dex.jar") || dexedLibs[i].getName().equals("support-wearable-dex.jar"))) {
-				try {
-					// We used to put the dexed libs in their own folder, but this didn't work on 4.4
-					// So instead we give them all a prefix
-					File dest = new File(editor.getFilesDir(), "preview_dexed_lib_" + dexedLibs[i].getName());
-					copyFile(dexedLibs[i], dest);
-					libUris[i] = makeFileAvailableToPreview(dest).toString();
-				} catch (IOException e) {
-					System.err.println(editor.getResources().getString(R.string.build_preview_dexed_lib_copy_failed));
-					cleanUpError();
-					return;
-				}
+			try {
+				// We used to put the dexed libs in their own folder, but this didn't work on 4.4
+				// So instead we give them all a prefix
+				File dest = new File(editor.getFilesDir(), "preview_dexed_lib_" + dexedLibs[i].getName());
+				copyFile(dexedLibs[i], dest);
+				libUris[i] = makeFileAvailableToPreview(dest).toString();
+			} catch (IOException e) {
+				System.err.println(editor.getResources().getString(R.string.build_preview_dexed_lib_copy_failed));
+				cleanUpError();
+				return;
 			}
 		}
 		
@@ -1554,54 +1540,55 @@ public class Build {
 		File localIcon144 = new File(sketchFolder, ICON_144);
 		File localIcon192 = new File(sketchFolder, ICON_192);
 		
-		File buildIcon48 = new File(resFolder, "drawable/icon.png");
-		File buildIcon36 = new File(resFolder, "drawable-ldpi/icon.png");
-		File buildIcon72 = new File(resFolder, "drawable-hdpi/icon.png");
-		File buildIcon96 = new File(resFolder, "drawable-xhdpi/icon.png");
-		File buildIcon144 = new File(resFolder, "drawable-xxhdpi/icon.png");
-		File buildIcon192 = new File(resFolder, "drawable-xxxhdpi/icon.png");
+		String iconLauncherName = "ic_launcher.png";
+		File buildIcon36 = new File(resFolder, "mipmap-ldpi/" + iconLauncherName);
+		File buildIcon48 = new File(resFolder, "mipmap-mdpi/" + iconLauncherName);
+		File buildIcon72 = new File(resFolder, "mipmap-hdpi/" + iconLauncherName);
+		File buildIcon96 = new File(resFolder, "mipmap-xhdpi/" + iconLauncherName);
+		File buildIcon144 = new File(resFolder, "mipmap-xxhdpi/" + iconLauncherName);
+		File buildIcon192 = new File(resFolder, "mipmap-xxxhdpi/" + iconLauncherName);
 		
 		if (!localIcon36.exists() && !localIcon48.exists() && !localIcon72.exists() && !localIcon96.exists() && !localIcon144.exists() && !localIcon192.exists()) {
 			try {
 				// if no icons are in the sketch folder, then copy all the defaults
 				if(buildIcon36.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_36);
-					createFileFromInputStream(inputStream, buildIcon36);
+					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon36);
 					inputStream.close();
 				} else {
 					System.err.println(editor.getResources().getString(R.string.build_write_res_ldpi_failed));
 				}
 				if(buildIcon48.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_48);
-					createFileFromInputStream(inputStream, buildIcon48);
+					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon48);
 					inputStream.close();
 				} else {
 					System.err.println(editor.getResources().getString(R.string.build_write_res_mdpi_failed));
 				}
 				if(buildIcon72.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_72);
-					createFileFromInputStream(inputStream, buildIcon72);
+					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon72);
 					inputStream.close();
 				} else {
 					System.err.println(editor.getResources().getString(R.string.build_write_res_hdpi_failed));
 				}
 				if(buildIcon96.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_96);
-					createFileFromInputStream(inputStream, buildIcon96);
+					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon96);
 					inputStream.close();
 				} else {
 					System.err.println(editor.getResources().getString(R.string.build_write_res_xhdpi_failed));
 				}
 				if(buildIcon144.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_144);
-					createFileFromInputStream(inputStream, buildIcon144);
+					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon144);
 					inputStream.close();
 				} else {
 					System.err.println(editor.getResources().getString(R.string.build_write_res_xxhdpi_failed));
 				}
 				if(buildIcon192.getParentFile().mkdirs()) {
 					InputStream inputStream = am.open("icons/" + ICON_192);
-					createFileFromInputStream(inputStream, buildIcon192);
+					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon192);
 					inputStream.close();
 				} else {
 					System.err.println(editor.getResources().getString(R.string.build_write_res_xxxhdpi_failed));
@@ -1613,34 +1600,46 @@ public class Build {
 			// if at least one of the icons already exists, then use that across the board
 			try {
 				if (localIcon36.exists()) {
-					if (new File(resFolder, "drawable-ldpi").mkdirs()) {
+					if (buildIcon36.getParentFile().mkdirs()) {
 						copyFile(localIcon36, buildIcon36);
 					}
+				} else {
+					System.err.println(editor.getResources().getString(R.string.build_write_res_ldpi_failed));
 				}
 				if (localIcon48.exists()) {
-					if (new File(resFolder, "drawable").mkdirs()) {
+					if (buildIcon48.getParentFile().mkdirs()) {
 						copyFile(localIcon48, buildIcon48);
 					}
+				} else {
+					System.err.println(editor.getResources().getString(R.string.build_write_res_mdpi_failed));
 				}
 				if (localIcon72.exists()) {
-					if (new File(resFolder, "drawable-hdpi").mkdirs()) {
+					if (buildIcon72.getParentFile().mkdirs()) {
 						copyFile(localIcon72, buildIcon72);
 					}
+				} else {
+					System.err.println(editor.getResources().getString(R.string.build_write_res_hdpi_failed));
 				}
 				if (localIcon96.exists()) {
-					if (new File(resFolder, "drawable-xhdpi").mkdirs()) {
+					if (buildIcon96.getParentFile().mkdirs()) {
 						copyFile(localIcon96, buildIcon96);
 					}
+				} else {
+					System.err.println(editor.getResources().getString(R.string.build_write_res_xhdpi_failed));
 				}
 				if (localIcon144.exists()) {
-					if (new File(resFolder, "drawable-xxhdpi").mkdirs()) {
+					if (buildIcon144.getParentFile().mkdirs()) {
 						copyFile(localIcon144, buildIcon144);
 					}
+				} else {
+					System.err.println(editor.getResources().getString(R.string.build_write_res_xxhdpi_failed));
 				}
 				if (localIcon192.exists()) {
-					if (new File(resFolder, "drawable-xxxhdpi").mkdirs()) {
+					if (buildIcon192.getParentFile().mkdirs()) {
 						copyFile(localIcon192, buildIcon192);
 					}
+				} else {
+					System.err.println(editor.getResources().getString(R.string.build_write_res_xxxhdpi_failed));
 				}
 			} catch (IOException e) {
 				System.err.println(editor.getResources().getString(R.string.build_write_res_icon_copy_failed));
@@ -1662,7 +1661,7 @@ public class Build {
 					}
 				} else {
 					InputStream inputStream = am.open("icons/" + WATCHFACE_ICON_CIRCULAR);
-					createFileFromInputStream(inputStream, buildIconCircle);
+					StaticBuildResources.createFileFromInputStream(inputStream, buildIconCircle);
 					inputStream.close();
 				}
 				
@@ -1672,7 +1671,7 @@ public class Build {
 					}
 				} else {
 					InputStream inputStream = am.open("icons/" + WATCHFACE_ICON_RECTANGULAR);
-					createFileFromInputStream(inputStream, buildIconRect);
+					StaticBuildResources.createFileFromInputStream(inputStream, buildIconRect);
 					inputStream.close();
 				}
 			} catch (IOException e) {
@@ -1891,63 +1890,6 @@ public class Build {
 				}
 			}
 		}
-	}
-	
-	private static File createFolderFromZippedAssets(AssetManager am, String zipFile, File destFile) {
-		try {
-			ZipInputStream inputStream = new ZipInputStream(am.open(zipFile));
-			
-			ZipEntry zipEntry = null;
-			while ((zipEntry = inputStream.getNextEntry()) != null) {
-				File file = new File(destFile.getAbsolutePath(), zipEntry.getName());
-				
-				if (zipEntry.isDirectory()) {
-					file.mkdirs();
-				} else {
-					createFileFromInputStream(inputStream, file, false);
-					inputStream.closeEntry();
-				}
-			}
-			
-			inputStream.close();
-			
-			return destFile;
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		return null;
-	}
-	
-	protected static File createFileFromInputStream(InputStream inputStream, File destFile) {
-		return createFileFromInputStream(inputStream, destFile, true);
-	}
-	
-	// http://stackoverflow.com/questions/11820142/how-to-pass-a-file-path-which-is-in-assets-folder-to-filestring-path
-	protected static File createFileFromInputStream(InputStream inputStream, File destFile, boolean close) {
-		try {
-			// Make sure that the parent folder exists
-			destFile.getParentFile().mkdirs();
-			
-			FileOutputStream outputStream = new FileOutputStream(destFile);
-			byte buffer[] = new byte[1024];
-			int length = 0;
-			
-			while ((length = inputStream.read(buffer)) > 0) {
-				outputStream.write(buffer, 0, length);
-			}
-			
-			outputStream.close();
-			if (close) {
-				inputStream.close();
-			}
-			
-			return destFile;
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		return null;
 	}
 	
 	static public File mkdirs(final File parent, final String name, Context context) {
@@ -2203,7 +2145,7 @@ public class Build {
 	 * @param replaceMap map of replacements
 	 * @param context context
 	 */
-	public static void createFileFromTemplate(String template, File dest, Map<String, String> replaceMap, Context context) {
+	public static boolean createFileFromTemplate(String template, File dest, Map<String, String> replaceMap, Context context) {
 		try {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(context.getAssets().open("templates/" + template)));
 			PrintStream writer = new PrintStream(new FileOutputStream(dest));
@@ -2229,8 +2171,11 @@ public class Build {
 			reader.close();
 			writer.flush();
 			writer.close();
+			
+			return true;
 		} catch (IOException e) {
 			e.printStackTrace();
+			return false;
 		}
 	}
 	

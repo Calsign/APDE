@@ -1,0 +1,222 @@
+apply from: new File(rootProject.projectDir, 'gradle/copySingleFile.gradle')
+apply from: new File(rootProject.projectDir, 'gradle/common.gradle')
+apply from: new File(rootProject.projectDir, 'gradle/artifacts.gradle')
+
+/*
+ * This file defines tasks for pulling in external dependencies and extracting APDE assets from
+ * them.
+ */
+
+task downloadAndroidMode(type: Download) {
+    src 'https://github.com/processing/processing-android/releases/download/android-279/AndroidMode-279.zip'
+    dest new File(project.downloads, 'AndroidMode.zip')
+    overwrite false
+}
+
+task downloadProcessing(type: Download) {
+    src 'https://github.com/processing/processing/releases/download/processing-0270-3.5.4/processing-3.5.4-linux64.tgz'
+    dest new File(project.downloads, 'processing.tgz')
+    overwrite false
+}
+
+task downloadAndroidPlatform(type: Download) {
+    src 'https://dl.google.com/android/repository/platform-29_r05.zip'
+    dest new File(project.downloads, 'android_platform.zip')
+    overwrite false
+}
+
+task unzipAndroidMode(dependsOn: downloadAndroidMode, type: Copy) {
+    from zipTree(downloadAndroidMode.dest)
+    into new File(project.downloads, 'android_mode')
+    includeEmptyDirs false
+    fileMode 0644
+    eachFile {
+        it.path = it.path.substring(it.path.indexOf('/') + 1)
+    }
+}
+
+task unzipProcessing(dependsOn: downloadProcessing, type: Copy) {
+    from tarTree(downloadProcessing.dest)
+    into new File(project.downloads, 'processing')
+    includeEmptyDirs false
+    fileMode 0644
+    eachFile {
+        it.path = it.path.substring(it.path.indexOf('/') + 1)
+    }
+}
+
+task unzipAndroidPlatform(dependsOn: downloadAndroidPlatform, type: Copy) {
+    from zipTree(downloadAndroidPlatform.dest)
+    into new File(project.downloads, 'android_platform')
+    includeEmptyDirs false
+    fileMode 0644
+    eachFile {
+        it.path = it.path.substring(it.path.indexOf('/') + 1)
+    }
+}
+
+project.ext.pde = fileTree(
+        dir: unzipProcessing.destinationDir,
+        includes: ['lib/pde.jar']
+)
+
+project.ext.javaMode = fileTree(
+        dir: new File(unzipProcessing.destinationDir, 'modes/java/mode/'),
+        includes: [
+                'JavaMode.jar',
+                'jdi.jar',
+                'org.eclipse.core.contenttype.jar',
+                'org.eclipse.core.jobs.jar',
+                'org.eclipse.core.resources.jar',
+                'org.eclipse.core.runtime.jar',
+                'org.eclipse.equinox.common.jar',
+                'org.eclipse.equinox.preferences.jar',
+                'org.eclipse.jdt.core.jar',
+                'org.eclipse.osgi.jar',
+        ]
+)
+
+project.ext.androidMode = fileTree(
+        dir: unzipAndroidMode,
+        includes: ['mode/AndroidMode.jar'],
+)
+
+project.ext.androidCore = task androidCore(dependsOn: unzipAndroidMode, type: CopySingleFile) {
+    input = new File(unzipAndroidMode.destinationDir, 'processing-core.zip')
+    output = new File(project.downloads, 'android-core.jar')
+}
+
+def vrJar = new File(unzipAndroidMode.destinationDir, 'libraries/vr/library/vr.jar')
+def arJar = new File(unzipAndroidMode.destinationDir, 'libraries/ar/library/ar.jar')
+
+project.ext.assetsLibs = new File(project.additionalAssets, 'libs')
+project.ext.assetsLibsDex = new File(project.additionalAssets, 'libs-dex')
+
+project.ext.assetGlslProcessingExtract = task assetGlslProcessingExtract(dependsOn: project.androidCore, type: Copy) {
+    from zipTree(project.androidCore.output)
+    include '**/*.glsl'
+    includeEmptyDirs false
+    into new File(project.downloads, 'glsl_processing')
+}
+
+task assetGlslProcessingZip(dependsOn: assetGlslProcessingExtract, type: Zip) {
+    from assetGlslProcessingExtract.destinationDir
+    archiveFileName = 'glsl-processing.zip'
+    destinationDirectory = project.additionalAssets
+}
+
+task assetDefaults(dependsOn: unzipProcessing, type: Copy) {
+    from new File(unzipProcessing.destinationDir, 'lib/defaults.txt')
+    into new File(project.additionalAssets, 'processing-default')
+}
+
+task assetIcons(dependsOn: unzipAndroidMode, type: Copy) {
+    from new File(unzipAndroidMode.destinationDir, 'icons')
+    into new File(project.additionalAssets, 'icons')
+    rename 'launcher_(.*)', 'icon-$1'
+}
+
+task assetTemplates(dependsOn: unzipAndroidMode, type: Copy) {
+    from new File(unzipAndroidMode.destinationDir, 'templates')
+    into new File(project.additionalAssets, 'templates')
+    doLast {
+        // NOTE: we modify the templates slightly to add support for the log broadcaster and
+        // setting the target sdk version
+        ant.patch(
+                patchfile: new File(rootProject.projectDir, 'gradle/templates.patch'),
+                dir: assetTemplates.destinationDir
+        )
+    }
+}
+
+task assetAndroidJar(dependsOn: unzipAndroidPlatform, type: CopySingleFile) {
+    input = new File(unzipAndroidPlatform.destinationDir, 'android.jar')
+    output = new File(project.additionalAssets, 'android.jar')
+}
+
+// task creating APDE assets
+project.ext.createAdditionalAssets = task createAdditionalAssets {
+    dependsOn androidCore
+    dependsOn assetDefaults
+    dependsOn assetGlslProcessingExtract
+    dependsOn assetGlslProcessingZip
+    dependsOn assetIcons
+    dependsOn assetTemplates
+    dependsOn assetAndroidJar
+}
+
+// configurations for all build targets
+// note that preview, app, and wallpaper all just use common.
+configurations {
+    commonArtifacts
+    vrArtifacts
+    arArtifacts
+    watchArtifacts
+
+    // the other configurations all inherit from commonArtifacts
+    [vrArtifacts, arArtifacts, watchArtifacts].each {
+        it.extendsFrom commonArtifacts
+    }
+}
+
+// dependencies of the configurations for all build targets
+dependencies {
+    // NOTE: commonArtifacts are also used as dependencies of sketch-preview
+    commonArtifacts 'androidx.appcompat:appcompat:1.3.1'
+    commonArtifacts files(project.androidCore)
+
+    // vr
+    vrArtifacts 'com.google.vr:sdk-audio:1.160.0'
+    vrArtifacts 'com.google.vr:sdk-base:1.160.0'
+    vrArtifacts files(vrJar)
+
+    // ar
+    arArtifacts 'com.google.ar:core:1.28.0'
+    arArtifacts files(arJar)
+
+    // watch face
+    watchArtifacts 'com.google.android.gms:play-services-wearable:17.1.0'
+    watchArtifacts 'com.google.android.support:wearable:2.8.1'
+    watchArtifacts 'com.google.android.wearable:wearable:2.8.1'
+}
+
+project.handleArtifacts project.configurations.commonArtifacts, true
+project.handleArtifacts project.configurations.vrArtifacts
+project.handleArtifacts project.configurations.arArtifacts
+project.handleArtifacts project.configurations.watchArtifacts
+
+// build a file containing a map from artifact configurations to the package names of all artifacts
+// contained therein
+task packageNames(dependsOn: packageNameMap.values()) {
+    doLast {
+        file(new File(project.additionalAssets, 'artifact_package_names.txt')).withWriter {
+            // each line is a semicolon-separate list with the artifact configuration as the first
+            // item and the remaining items the list of package names
+            for (String config : packageNameMap.keySet()) {
+                List<String> packageNames = packageNameMap.get(config).packages
+                it.write config
+                for (String packageName : packageNames) {
+                    it.write ';'
+                    it.write packageName
+                }
+                it.write '\n'
+            }
+        }
+    }
+}
+project.createAdditionalAssets.dependsOn packageNames
+
+project.ext.previewRes = new File(downloads, 'preview_res')
+
+// task creating sketch-previewer resources
+project.ext.createPreviewRes = task createPreviewRes {}
+
+// previewer icons are just copies of the APDE icons
+for (def density : project.PREVIEW_ICON_DENSITIES) {
+    def outputFilename = 'drawable-' + density + '/ic_launcher.png'
+    def previewResIcon = tasks.create(name: 'previewResIcon_' + density, type: CopySingleFile) {
+        input = project.previewIconInputFile(density)
+        output = new File(project.previewRes, outputFilename)
+    }
+    createPreviewRes.dependsOn previewResIcon
+}

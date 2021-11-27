@@ -9,6 +9,7 @@ import android.preference.PreferenceManager;
 import androidx.core.content.FileProvider;
 import android.view.inputmethod.InputMethodManager;
 
+import com.android.tools.aapt2.Aapt2Jni;
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
@@ -16,13 +17,19 @@ import com.calsignlabs.apde.task.Task;
 
 import org.xml.sax.SAXException;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -75,6 +82,10 @@ public class SketchPreviewerBuilder extends Task {
 		}
 	}
 	
+	protected File getResApk() {
+		return new File(getBuildFolder(), "sketch_previewer.res.apk");
+	}
+	
 	protected File getUnsignedApk() {
 		return new File(getBuildFolder(), "sketch_previewer.unsigned.apk");
 	}
@@ -96,40 +107,71 @@ public class SketchPreviewerBuilder extends Task {
 		return new File(getBuildFolder(), "res");
 	}
 	
-	protected File getSupportResFolder() {
-		return new File(getBuildFolder(), "support-res");
+	protected File getCompiledResFolder() {
+		return new File(getBuildFolder(), "compiled_res");
 	}
 	
 	protected File getClassesDexFile() {
 		return new File(getBuildFolder(), "classes.dex");
 	}
 	
-	protected File getAaptFile() {
-		return new File(Build.getTempFolder(editor), "aapt");
-	}
-	
 	public File getAndroidJarLoc() {
-		return new File(Build.getTempFolder(editor), "android.jar");
+		return StaticBuildResources.getAndroidJarLoc(editor);
 	}
 	
 	protected static void unzipFile(InputStream input, File destFolder) throws IOException {
-		ZipInputStream inputStream = new ZipInputStream(input);
-		
-		ZipEntry zipEntry = null;
-		while ((zipEntry = inputStream.getNextEntry()) != null) {
-			String name = zipEntry.getName();
-			
-			File file = new File(destFolder.getAbsolutePath(), name);
-			
-			if (zipEntry.isDirectory()) {
-				file.mkdirs();
-			} else {
-				Build.createFileFromInputStream(inputStream, file, false);
-				inputStream.closeEntry();
+		try (ZipInputStream inputStream = new ZipInputStream(input)) {
+			ZipEntry zipEntry = null;
+			while ((zipEntry = inputStream.getNextEntry()) != null) {
+				String name = zipEntry.getName();
+				
+				File file = new File(destFolder.getAbsolutePath(), name);
+				
+				if (zipEntry.isDirectory()) {
+					file.mkdirs();
+				} else {
+					StaticBuildResources.createFileFromInputStream(inputStream, file, false);
+					inputStream.closeEntry();
+				}
 			}
 		}
-		
-		inputStream.close();
+	}
+	
+	/**
+	 * Add a file to a zip archive, outputting to a new zip archive.
+	 *
+	 * @param inZip the zip file to copy
+	 * @param outZip the file to write the new zip archive with the additional file
+	 * @param addFileName the path to the added file in the zip archive
+	 * @param addFile the file to add
+	 * @throws IOException if some IO thing failed
+	 */
+	protected static void addFileZip(File inZip, File outZip, String addFileName, File addFile) throws IOException {
+		try (ZipInputStream inputStream = new ZipInputStream(new BufferedInputStream(new FileInputStream(inZip)));
+		     InputStream addInpuStream = new BufferedInputStream(new FileInputStream(addFile));
+		     ZipOutputStream outputStream = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outZip)))) {
+			
+			int read;
+			byte[] buffer = new byte[4096];
+			
+			// copy over all existing entries
+			ZipEntry entry;
+			while ((entry = inputStream.getNextEntry()) != null) {
+				outputStream.putNextEntry(new ZipEntry(entry.getName()));
+				while ((read = inputStream.read(buffer)) > 0) {
+					outputStream.write(buffer, 0, read);
+				}
+				outputStream.closeEntry();
+			}
+			
+			outputStream.putNextEntry(new ZipEntry(addFileName));
+			while ((read = addInpuStream.read(buffer)) > 0) {
+				outputStream.write(buffer, 0, read);
+			}
+			outputStream.closeEntry();
+			
+			outputStream.flush();
+		}
 	}
 	
 	@Override
@@ -142,8 +184,6 @@ public class SketchPreviewerBuilder extends Task {
 			copyAndroidJar();
 			postStatus(R.string.preview_build_setting_manifest_permissions);
 			setManifestPermissions();
-			postStatus(R.string.preview_build_setting_up_aapt);
-			setupAapt();
 			postStatus(R.string.preview_build_running_aapt);
 			buildApk();
 			addClassesDex();
@@ -170,7 +210,7 @@ public class SketchPreviewerBuilder extends Task {
 	protected void copyAndroidJar() throws BuildFailedException {
 		if (!getAndroidJarLoc().exists()) {
 			try {
-				Build.copyAndroidJar(editor);
+				StaticBuildResources.copyAndroidJar(editor);
 			} catch (IOException e) {
 				e.printStackTrace();
 				throw new BuildFailedException();
@@ -217,77 +257,69 @@ public class SketchPreviewerBuilder extends Task {
 		}
 	}
 	
-	protected void setupAapt() throws BuildFailedException {
-		if (!getAaptFile().exists()) {
-			try {
-				File aaptLoc = getAaptFile();
-				
-				InputStream inputStream = editor.getAssets().open(Build.getAaptName());
-				Build.createFileFromInputStream(inputStream, aaptLoc);
-				
-				if (!aaptLoc.setExecutable(true, true)) {
-					throw new BuildFailedException();
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
+	protected void buildApk() throws BuildFailedException, InterruptedException {
+		try {
+			if (!getCompiledResFolder().mkdirs()) {
+				System.err.println("Failed to make compiled res folder");
 				throw new BuildFailedException();
 			}
+			
+			// TODO: perform compile step in advance
+			for (File resDir : getResFolder().listFiles()) {
+				for (File resFile : resDir.listFiles()) {
+					String[] args = {
+							resFile.getAbsolutePath(),
+							"-o", getCompiledResFolder().getAbsolutePath(),
+					};
+					
+					Aapt2Wrapper.compile(editor.getGlobalState(), Arrays.asList(args));
+				}
+			}
+			
+			List<String> linkArgs = new ArrayList<>(Arrays.asList(
+					"-o", getResApk().getAbsolutePath(),
+					"--manifest", getManifestFile().getAbsolutePath(),
+					"-I", getAndroidJarLoc().getAbsolutePath(),
+					"-A", getAssetsFolder().getAbsolutePath(),
+					"--auto-add-overlay",
+					"--no-version-vectors",
+					"--extra-packages", "android.support.v7.appcompat"
+			));
+			
+			List<File> compiledResDirs = new ArrayList<>();
+			compiledResDirs.add(getCompiledResFolder());
+			// pull in compiled resources from the artifacts
+			for (File targetCompiledResDir : StaticBuildResources.getTargetDirs(StaticBuildResources.getResCompiledDir(editor), ComponentTarget.APP)) {
+				if (targetCompiledResDir.exists()) {
+					compiledResDirs.addAll(Arrays.asList(targetCompiledResDir.listFiles()));
+				}
+			}
+			
+			for (File compiledResDir : compiledResDirs) {
+				for (File compiledResFile : compiledResDir.listFiles()) {
+					linkArgs.add("-R");
+					linkArgs.add(compiledResFile.getAbsolutePath());
+				}
+			}
+			
+			Aapt2Wrapper.link(editor.getGlobalState(), linkArgs);
+		} catch (Aapt2Wrapper.InvocationFailedException e) {
+			e.printStackTrace();
+			
+			for (Aapt2Jni.Log log : e.logs) {
+				System.err.println(log);
+			}
+			
+			throw new BuildFailedException();
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new BuildFailedException();
 		}
 	}
 	
-	protected void buildApk() throws BuildFailedException, InterruptedException {
-		// Not sure if the appcompat stuff is necessary, but it doesn't hurt
-		String[] args = {
-				getAaptFile().getAbsolutePath(),
-				"package", "-f", "--auto-add-overlay", "--no-version-vectors",
-				"--extra-packages", "android.support.v7.appcompat",
-				"-S", getResFolder().getAbsolutePath(), // res
-				"-S", getSupportResFolder().getAbsolutePath(), // support lib res
-				"-A", getAssetsFolder().getAbsolutePath(), // assets
-				"-M", getManifestFile().getAbsolutePath(), // manifest
-				"-I", getAndroidJarLoc().getAbsolutePath(), // android.jar
-				"-F", getUnsignedApk().getAbsolutePath(), // output apk
-		};
-		
-		runAapt(args);
-	}
-	
-	protected void addClassesDex() throws BuildFailedException, InterruptedException {
-		// -k is needed to ignore the path of classes.dex, otherwise the entire file structure
-		// gets replicated within the apk and that is bad news for everyone
-		String[] args = {
-				getAaptFile().getAbsolutePath(),
-				"add", "-f", "-k",
-				getUnsignedApk().getAbsolutePath(),
-				getClassesDexFile().getAbsolutePath(),
-		};
-		
-		runAapt(args);
-	}
-	
-	protected void runAapt(String[] args) throws BuildFailedException, InterruptedException {
-		// Runs AAPT with the provided set of arguments - we use this twice
-		
-		boolean verbose = PreferenceManager.getDefaultSharedPreferences(editor).getBoolean("pref_debug_global_verbose_output", false);
-		
+	protected void addClassesDex() throws BuildFailedException {
 		try {
-			ProcessBuilder pb = new ProcessBuilder(args);
-			// Combine output streams, otherwise we need two threads or risk deadlock
-			pb.redirectErrorStream(true);
-			Process aaptProcess = pb.start();
-			
-			// We have to give it an output stream for some reason
-			// So give it one that ignores the data
-			// We don't want to print the standard out to the console because it is WAY too much stuff
-			// It even causes APDE to crash because there is too much text in the console to fit in a transaction
-			// We want to show the error stream in verbose mode though because this lets us debug things
-			Build.copyStream(aaptProcess.getInputStream(), verbose ? System.out : new Build.NullOutputStream());
-			
-			int code = aaptProcess.waitFor();
-			
-			if (code != 0) {
-				throw new BuildFailedException();
-			}
+			addFileZip(getResApk(), getUnsignedApk(), "classes.dex", getClassesDexFile());
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new BuildFailedException();

@@ -15,6 +15,7 @@
 		android:label="@string/title">
 		
 		<activity
+			android:exported="true"
 			android:name=".PreviewActivity"
 			android:theme="@style/Theme.AppCompat.Light.NoActionBar">
 			

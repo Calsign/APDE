@@ -78,6 +78,12 @@
 	
 		<androidx.preference.Preference
 			android:key="pref_build_recopy_android_jar"
-			android:title="@string/pref_build_recopy_android_jar" />
+			android:title="@string/pref_build_extract_static_build_resources" />
+	    
+	    <androidx.preference.SwitchPreferenceCompat
+		    android:defaultValue="false"
+		    android:key="pref_build_generate_all_support_library_resource_classes"
+		    android:title="@string/pref_build_generate_all_support_library_resource_classes"
+		    android:summary="@string/pref_build_generate_all_support_library_resource_classes_desc" />
     </androidx.preference.PreferenceCategory>
 </androidx.preference.PreferenceScreen>

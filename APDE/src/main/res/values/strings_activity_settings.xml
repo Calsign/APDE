@@ -161,7 +161,9 @@
 	<string name="pref_build_folder_keep">Keep Build Folder</string>
 	<string name="pref_build_aapt_binary">Use pre-v0.3.3 AAPT Binary</string>
 	<string name="pref_build_aapt_binary_desc">Potential fix for devices where v0.3.3 broke the build process</string>
-	<string name="pref_build_recopy_android_jar">Re-copy android.jar file</string>
+	<string name="pref_build_extract_static_build_resources">Extract Static Build Resources</string>
+	<string name="pref_build_generate_all_support_library_resource_classes">Generate Support Library Resource Classes</string>
+	<string name="pref_build_generate_all_support_library_resource_classes_desc">Makes build slower, but may fix rare issues with libraries depending on support library resources</string>
 	
 	<!-- Coding Assistance -->
 	

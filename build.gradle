@@ -1,7 +1,7 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
     repositories {
         jcenter()
+        mavenCentral()
         google()
     }
     dependencies {
@@ -9,9 +9,19 @@ buildscript {
     }
 }
 
+plugins {
+    // used for downloading files in gradle/assets.gradle
+    id 'de.undercouch.download' version '4.1.2'
+}
+
 allprojects {
     repositories {
-        google()
         jcenter()
+        mavenCentral()
+        google()
     }
 }
+
+// Define these tasks at the root so that we only need one copy of each for the whole project.
+// A bunch of tasks are shared by APDE and sketch-preview.
+apply from: new File(rootProject.projectDir, 'gradle/assets.gradle')

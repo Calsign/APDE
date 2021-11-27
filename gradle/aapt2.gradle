@@ -1,0 +1,49 @@
+import org.gradle.work.Incremental
+import org.gradle.work.InputChanges
+
+/**
+ * Get the AAPT2 binary from the locally installed Android SDK.
+ */
+def getAapt2Bin() {
+    // https://stackoverflow.com/questions/20203787/access-sdk-dir-value-in-build-gradle-after-project-evaluation
+    def sdk = rootProject.project('APDE').android.sdkDirectory
+    assert sdk.exists()
+    def buildTools = new File(sdk, 'build-tools')
+    // pick the latest build-tools
+    def versions = buildTools.list()
+    Arrays.sort(versions)
+    def bin = new File(buildTools, versions[-1] + '/aapt2')
+    assert bin.exists()
+    return bin
+}
+
+project.ext.getAapt2Bin = this.&getAapt2Bin
+
+/**
+ * Perform AAPT2 compile on a resource directory.
+ */
+abstract class Aapt2CompileTask extends DefaultTask {
+    @Incremental
+    @InputDirectory
+    @Optional
+    abstract DirectoryProperty getInputDir()
+
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDir()
+
+    @TaskAction
+    def execCompile(InputChanges changes) {
+        if (changes.getFileChanges(inputDir).iterator().hasNext()) {
+            File inputDir = inputDir.get().asFile
+            File outputDir = outputDir.get().asFile
+
+            if (inputDir.exists()) {
+                project.exec {
+                    commandLine project.getAapt2Bin(), 'compile', '--dir', inputDir, '-o', outputDir
+                }
+            }
+        }
+    }
+}
+
+project.ext.Aapt2CompileTask = Aapt2CompileTask

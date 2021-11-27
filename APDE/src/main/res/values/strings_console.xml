@@ -92,7 +92,7 @@
 	<string name="build_change_aapt_execution_permissions_failed">Failed to make AAPT executable</string>
 	<string name="build_copying_glsl">Copying GLSL shader files…</string>
 	<string name="build_copy_glsl_failed">Failed to copy GLSL resources</string>
-	<string name="build_packaging_aapt">Packaging resources with AAPT…</string>
+	<string name="build_packaging_aapt">Packaging resources with AAPT2…</string>
 	<string name="build_aapt_failed_error_code">AAPT failed with error code <xliff:g id="aaptErrorCode" example="1">%1$d</xliff:g></string>
 	<string name="build_aapt_failed">AAPT failed</string>
 	<string name="build_compiling_ecj">Compiling with ECJ…</string>
@@ -136,7 +136,6 @@
 	<string name="preview_build_copying_preview_build_directory">Copying preview build directory…</string>
 	<string name="preview_build_copying_android_jar">Copying android.jar…</string>
 	<string name="preview_build_setting_manifest_permissions">Setting manifest permissions…</string>
-	<string name="preview_build_setting_up_aapt">Setting up AAPT…</string>
 	<string name="preview_build_running_aapt">Running AAPT…</string>
 	<string name="preview_build_signing_apk">Signing APK…</string>
 	<string name="preview_build_installing_apk">Installing APK…</string>

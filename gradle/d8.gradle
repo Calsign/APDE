@@ -1,0 +1,52 @@
+buildscript {
+    repositories {
+        google()
+    }
+
+    dependencies {
+        classpath 'com.android.tools:r8:3.0.73'
+    }
+}
+
+import org.gradle.work.Incremental
+import org.gradle.work.InputChanges
+
+import com.android.tools.r8.D8
+import com.android.tools.r8.D8Command
+import com.android.tools.r8.OutputMode
+import com.android.tools.r8.CompilationMode
+
+/**
+ * Run D8 to convert a jar to dex format.
+ */
+abstract class D8Task extends DefaultTask {
+    @Incremental
+    @InputFiles
+    abstract Property<FileCollection> getInputFiles()
+
+    @OutputFile
+    abstract RegularFileProperty getOutput()
+
+    @TaskAction
+    def execD8(InputChanges changes) {
+        if (changes.getFileChanges(inputFiles).iterator().hasNext()) {
+            File outputFile = output.getAsFile().get()
+            outputFile.getParentFile().mkdirs()
+
+            def paths = new ArrayList<>()
+            inputFiles.get().files.each {
+                paths.add(it.toPath())
+            }
+            def command = D8Command.builder()
+                    .addProgramFiles(paths)
+                    .setOutput(outputFile.toPath(), OutputMode.DexIndexed)
+                    .setMode(CompilationMode.DEBUG)
+                    .setIntermediate(true)
+                    .setEnableDesugaring(false)
+                    .build()
+            D8.run(command)
+        }
+    }
+}
+
+project.ext.D8Task = D8Task
