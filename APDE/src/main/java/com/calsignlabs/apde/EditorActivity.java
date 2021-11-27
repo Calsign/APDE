@@ -187,8 +187,8 @@ public class EditorActivity extends AppCompatActivity {
 	private int message = -1;
 	
 	//Custom output / error streams for printing to the console
-	private PrintStream outStream;
-	private PrintStream errStream;
+	private ConsoleStream outStream;
+	private ConsoleStream errStream;
 	protected AtomicBoolean FLAG_SUSPEND_OUT_STREAM = new AtomicBoolean(false);
 	
 	//Recieve log / console output from sketches
@@ -274,12 +274,12 @@ public class EditorActivity extends AppCompatActivity {
 		setSupportActionBar(toolbar);
 		
 		// Create custom output / error streams for the console
-		outStream = new PrintStream(new ConsoleStream(System.out));
-		errStream = new PrintStream(new ConsoleStream(System.err));
+		outStream = new ConsoleStream(System.out);
+		errStream = new ConsoleStream(System.err);
 		
 		// Set the custom output / error streams
-		System.setOut(outStream);
-		System.setErr(errStream);
+		System.setOut(new PrintStream(outStream));
+		System.setErr(new PrintStream(errStream));
 		
 		// Initialize log / console receiver
 		consoleBroadcastReceiver = new BroadcastReceiver() {
@@ -1845,8 +1845,15 @@ public class EditorActivity extends AppCompatActivity {
 	
 	@Override
 	public void onDestroy() {
-		//Unregister the log / console receiver
-    	unregisterReceiver(consoleBroadcastReceiver);
+		// Unregister the log / console receiver
+		unregisterReceiver(consoleBroadcastReceiver);
+		
+		// Stop the print streams. It seems like sometimes the app gets destroyed without restarting
+		// the JVM, and in this situation we start piping the new console streams into the old one;
+		// the result is duplicated messages in the console. We avoid this by preventing console
+		// streams in destroyed activity from displaying their output.
+		outStream.disable();
+		errStream.disable();
 		
 		getGlobalState().writeCodeDeletionDebugStatus("onDestroy()");
 		
@@ -4809,9 +4816,15 @@ public class EditorActivity extends AppCompatActivity {
 	private class ConsoleStream extends OutputStream {
 		final byte single[] = new byte[1];
 		private OutputStream pipeTo;
+		private boolean enabled;
 		
 		public ConsoleStream(OutputStream pipeTo) {
 			this.pipeTo = pipeTo;
+			this.enabled = true;
+		}
+		
+		public void disable() {
+			enabled = false;
 		}
 		
 		public void close() { }
@@ -4824,23 +4837,25 @@ public class EditorActivity extends AppCompatActivity {
 		
 		@Override
 		public void write(byte b[], int offset, int length) {
-			// Also pipe output
-			try {
-				pipeTo.write(b, offset, length);
-			} catch (IOException e) {
-				// shrug
-			}
-			
-			final String value = new String(b, offset, length);
-			
-			if (!(FLAG_SUSPEND_OUT_STREAM.get() &&
-					!PreferenceManager.getDefaultSharedPreferences(EditorActivity.this)
-							.getBoolean("pref_debug_global_verbose_output", false))) {
+			if (enabled) {
+				// Also pipe output
+				try {
+					pipeTo.write(b, offset, length);
+				} catch (IOException e) {
+					// shrug
+				}
 				
-				runOnUiThread(() -> {
-					//	Write the value to the console
-					postConsole(value);
-				});
+				final String value = new String(b, offset, length);
+				
+				if (!(FLAG_SUSPEND_OUT_STREAM.get() &&
+						!PreferenceManager.getDefaultSharedPreferences(EditorActivity.this)
+								.getBoolean("pref_debug_global_verbose_output", false))) {
+					
+					runOnUiThread(() -> {
+						//Write the value to the console
+						postConsole(value);
+					});
+				}
 			}
 		}
 		
