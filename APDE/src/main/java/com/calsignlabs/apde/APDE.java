@@ -1744,15 +1744,12 @@ public class APDE extends MultiDexApplication {
 	}
 	
 	public void assignLongPressDescription(final ImageButton button, final int descId) {
-		button.setOnLongClickListener(new ImageButton.OnLongClickListener() {
-			@Override
-			public boolean onLongClick(View v) {
-				Toast toast = Toast.makeText(getEditor(), descId, Toast.LENGTH_SHORT);
-				positionToast(toast, button, getEditor().getWindow(), 0, 0);
-				toast.show();
-				
-				return true;
-			}
+		button.setOnLongClickListener(v -> {
+			Toast toast = Toast.makeText(getEditor(), descId, Toast.LENGTH_SHORT);
+			positionToast(toast, button, getEditor().getWindow(), 0, 0);
+			toast.show();
+			
+			return true;
 		});
 	}
 	
@@ -1770,12 +1767,18 @@ public class APDE extends MultiDexApplication {
 		int viewTop = viewLocation[1] - rect.top;
 		
 		// measure toast to center it relatively to the anchor view
-		DisplayMetrics metrics = new DisplayMetrics();
-		window.getWindowManager().getDefaultDisplay().getMetrics(metrics);
-		int widthMeasureSpec = View.MeasureSpec.makeMeasureSpec(metrics.widthPixels, View.MeasureSpec.UNSPECIFIED);
-		int heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(metrics.heightPixels, View.MeasureSpec.UNSPECIFIED);
-		toast.getView().measure(widthMeasureSpec, heightMeasureSpec);
-		int toastWidth = toast.getView().getMeasuredWidth();
+		int toastWidth;
+		if (toast.getView() == null) {
+			// TODO: view is null on Android 11+. find a better way to do this.
+			toastWidth = 0;
+		} else {
+			DisplayMetrics metrics = new DisplayMetrics();
+			window.getWindowManager().getDefaultDisplay().getMetrics(metrics);
+			int widthMeasureSpec = View.MeasureSpec.makeMeasureSpec(metrics.widthPixels, View.MeasureSpec.UNSPECIFIED);
+			int heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(metrics.heightPixels, View.MeasureSpec.UNSPECIFIED);
+			toast.getView().measure(widthMeasureSpec, heightMeasureSpec);
+			toastWidth = toast.getView().getMeasuredWidth();
+		}
 		
 		// compute toast offsets
 		int toastX = viewLeft + (view.getWidth() / 2 - toastWidth) + offsetX;

@@ -106,11 +106,11 @@ dependencies {
     implementation files('libs/zipsigner-lib-1.17.jar')
     implementation files('libs/zipsigner-lib-optional-1.17.jar')
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.3.1'
-    implementation 'com.google.android.material:material:1.1.0'
+    implementation 'androidx.appcompat:appcompat:1.4.0'
+    implementation 'com.google.android.material:material:1.4.0'
     implementation 'com.takisoft.preferencex:preferencex:1.1.0'
-    implementation 'com.google.android.gms:play-services-auth:17.0.0'
-    implementation 'com.google.android.gms:play-services-wearable:17.0.0'
+    implementation 'com.google.android.gms:play-services-auth:19.2.0'
+    implementation 'com.google.android.gms:play-services-wearable:17.1.0'
     implementation 'androidx.test.espresso.idling:idling-concurrent:3.4.0'
 
     // unit testing
