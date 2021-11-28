@@ -43,6 +43,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.calsignlabs.apde.build.ExtractStaticBuildResources;
+import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.support.CustomListPreference;
 import com.calsignlabs.apde.support.StockPreferenceFragment;
@@ -151,6 +152,15 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 			Vibrator vibrate = (Vibrator) getSystemService(VIBRATOR_SERVICE);
 			if(!vibrate.hasVibrator())
 				((PreferenceCategory) frag.findPreference("pref_general_settings")).removePreference(vibrator);
+		}
+		
+		Preference launchSketchSplitScreen = frag.findPreference("pref_launch_sketch_split_screen");
+		
+		if (launchSketchSplitScreen != null) {
+			// Hide on lower API levels where this isn't an option
+			if (!Build.isSplitScreenAvailable()) {
+				launchSketchSplitScreen.setVisible(false);
+			}
 		}
 		
 		final SwitchPreferenceCompat enableUndoRedo = frag.findPreference("pref_key_undo_redo");

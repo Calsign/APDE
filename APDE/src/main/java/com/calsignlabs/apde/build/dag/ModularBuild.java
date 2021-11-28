@@ -9,6 +9,7 @@ import androidx.core.content.FileProvider;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.contrib.Library;
 
@@ -774,7 +775,7 @@ public class ModularBuild {
 		intent.putExtra("SKETCH_CLASS_NAME", context.getSketchName());
 		
 		// Launch in multi-window mode if available
-		if (android.os.Build.VERSION.SDK_INT >= 24) {
+		if (Build.shouldLaunchSplitScreen(global)) {
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
 		} else {
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

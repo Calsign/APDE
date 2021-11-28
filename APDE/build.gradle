@@ -8,8 +8,8 @@ android {
         applicationId "com.calsignlabs.apde"
         minSdkVersion 19
         targetSdkVersion 28
-        versionCode 32
-        versionName "0.5.2-pre1"
+        versionCode 33
+        versionName "0.5.2-pre2"
         multiDexEnabled true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
