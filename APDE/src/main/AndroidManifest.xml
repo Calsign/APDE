@@ -24,7 +24,8 @@
 		<activity
 			android:name=".EditorActivity"
 			android:label="@string/apde_app_title"
-			android:theme="@style/FullscreenTheme">
+			android:theme="@style/FullscreenTheme"
+			android:exported="true">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN"/>
 				
@@ -104,5 +105,9 @@
 				android:resource="@xml/paths"/>
 		</provider>
 	</application>
-
+	
+	<!-- Allows us to query the sketch previewer on Android 11+. -->
+	<queries>
+		<package android:name="com.calsignlabs.apde.sketchpreview" />
+	</queries>
 </manifest>

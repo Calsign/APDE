@@ -2,12 +2,12 @@ apply plugin: 'com.android.application'
 apply from: new File(rootProject.projectDir, 'gradle/previewBuild.gradle')
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 31
 
     defaultConfig {
         applicationId "com.calsignlabs.apde"
         minSdkVersion 19
-        targetSdkVersion 28
+        targetSdkVersion 31
         versionCode 33
         versionName "0.5.2-pre2"
         multiDexEnabled true
