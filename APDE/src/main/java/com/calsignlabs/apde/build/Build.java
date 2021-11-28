@@ -764,14 +764,29 @@ public class Build {
 			
 			Aapt2Wrapper.link(editor.getGlobalState(), linkArgs);
 			
-			// TODO: report errors in problem overview
+			if (customProblems) {
+				// add problems
+				// they will be reported after compilation
+				for (Aapt2Jni.Log log : Aapt2Jni.getLogs()) {
+					compilerProblems.add(Aapt2Wrapper.buildCompilerProblem(log));
+				}
+			}
 		} catch (Aapt2Wrapper.InvocationFailedException e) {
 			System.out.println(editor.getResources().getString(R.string.build_aapt_failed));
-			e.printStackTrace();
 			
-			// TODO: report errors in problem overview
-			for (Aapt2Jni.Log log : e.logs) {
-				System.err.println(log.toString());
+			if (customProblems) {
+				for (Aapt2Jni.Log log : e.logs) {
+					compilerProblems.add(Aapt2Wrapper.buildCompilerProblem(log));
+				}
+				
+				// show problems now because we aren't going to make it to compilation
+				editor.showProblems(compilerProblems);
+			} else {
+				e.printStackTrace();
+				
+				for (Aapt2Jni.Log log : e.logs) {
+					System.err.println(log.toString());
+				}
 			}
 			
 			cleanUpError();

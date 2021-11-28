@@ -827,7 +827,7 @@ public class SketchFile extends BareSketchFile implements Parcelable {
 	public void setCompilerProblems(List<CompilerProblem> problems, int i) {
 		compilerProblems.clear();
 		for (CompilerProblem problem : problems) {
-			if (problem.sketchFile.getIndex() == i) {
+			if (problem.sketchFile != null && problem.sketchFile.getIndex() == i) {
 				compilerProblems.add(problem);
 			}
 		}

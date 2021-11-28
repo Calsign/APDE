@@ -8,6 +8,10 @@ import com.calsignlabs.apde.build.dag.SketchCode;
  * Similar to ECJ's CategorizedProblem, but that type proved insufficient for our needs.
  */
 public class CompilerProblem {
+	/**
+	 * The file containing the error.
+	 * May be null to indicate that the error is not in any sketch file.
+	 * */
 	public SketchCode sketchFile;
 	public int line, start, length;
 	public boolean error;

@@ -2,6 +2,7 @@ package com.calsignlabs.apde.build;
 
 import com.android.tools.aapt2.Aapt2Jni;
 import com.calsignlabs.apde.APDE;
+import com.calsignlabs.apde.build.dag.BuildContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -89,5 +90,10 @@ public class Aapt2Wrapper {
 			System.err.println("AAPT2 exited with error code: " + code);
 			throw new InvocationFailedException(code, args, Collections.emptyList());
 		}
+	}
+	
+	public static CompilerProblem buildCompilerProblem(Aapt2Jni.Log error) {
+		return new CompilerProblem(null, (int) error.line, 0, 0,
+				error.level == Aapt2Jni.Log.Level.ERROR, "AAPT2: " + error.message);
 	}
 }

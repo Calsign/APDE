@@ -899,11 +899,15 @@ public class EditorActivity extends AppCompatActivity {
 			@Override
 			public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
 				CompilerProblem problem = problemOverviewListAdapter.getItem(i);
-				highlightTextExt(problem.sketchFile.getIndex(), problem.line, problem.start, problem.length);
-				if (problem.isError()) {
-					errorExt(problem.getMessage());
-				} else {
-					warningExt(problem.getMessage());
+				if (problem != null) {
+					if (problem.sketchFile != null) {
+						highlightTextExt(problem.sketchFile.getIndex(), problem.line, problem.start, problem.length);
+					}
+					if (problem.isError()) {
+						errorExt(problem.getMessage());
+					} else {
+						warningExt(problem.getMessage());
+					}
 				}
 			}
 		});
@@ -913,11 +917,13 @@ public class EditorActivity extends AppCompatActivity {
 			ClipboardManager clipboardManager = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
 			if (clipboardManager != null) {
 				CompilerProblem problem = problemOverviewListAdapter.getItem(i);
-				String text = getProblemOverviewDescription(EditorActivity.this, problem).toString();
-				ClipData clipData = ClipData.newPlainText(getResources().getString(R.string.problem_overview_list_copy_description), text);
-				clipboardManager.setPrimaryClip(clipData);
-				
-				Toast.makeText(EditorActivity.this, R.string.problem_overview_list_copy_toast_message, Toast.LENGTH_SHORT).show();
+				if (problem != null) {
+					String text = getProblemOverviewDescription(EditorActivity.this, problem).toString();
+					ClipData clipData = ClipData.newPlainText(getResources().getString(R.string.problem_overview_list_copy_description), text);
+					clipboardManager.setPrimaryClip(clipData);
+					
+					Toast.makeText(EditorActivity.this, R.string.problem_overview_list_copy_toast_message, Toast.LENGTH_SHORT).show();
+				}
 				
 				return true;
 			} else {
@@ -3274,7 +3280,7 @@ public class EditorActivity extends AppCompatActivity {
     	}
     }
 	
-	public class ProblemOverviewListAdapter extends ArrayAdapter<CompilerProblem> {
+	public static class ProblemOverviewListAdapter extends ArrayAdapter<CompilerProblem> {
 		public ProblemOverviewListAdapter(@NonNull Context context, int resource, List<CompilerProblem> items) {
 			super(context, resource, items);
 		}
