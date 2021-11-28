@@ -1,4 +1,4 @@
-v0.5.2-pre1 Alpha
+v0.5.2-pre2 Alpha
 
  - Real-time compilation
    - Your code automatically compiles in the background
@@ -7,7 +7,14 @@ v0.5.2-pre1 Alpha
      all errors and warnings found in your code
    - Improved preprocessor
  - Improved file selection
+ - Sketches no longer open in split-screen by default
  - Bug fixes and improvements
+
+Note: Google Play now requires all app updates to target API level 30,
+but doing so breaks the way that APDE currently uses AAPT on
+Android 10+. As a result, v0.5.2 will not be released on Google Play.
+Instead, v0.5.3 is in progress and will feature a new approach for
+running AAPT, among other things.
 
 ------------------------------------------------------------------------
 
