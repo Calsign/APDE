@@ -418,4 +418,10 @@
 	
 	<!-- Build misc. -->
 	<string name="build_copying">Copying…</string>
+	
+	<!-- External storage permissions -->
+	<string name="external_storage_dialog_title">External Storage Access</string>
+	<string name="external_storage_dialog_message">APDE requires access to the external storage in order to store sketches there. Either grant the required permissions or change the sketchbook location to the internal storage.</string>
+	<string name="external_storage_dialog_grant_permission_button">Grant Permission</string>
+	<string name="external_storage_dialog_use_internal_storage_button">Use Internal Storage</string>
 </resources>

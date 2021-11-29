@@ -729,7 +729,6 @@ public class APDE extends MultiDexApplication {
 	
 	public ArrayList<StorageDrive> getStorageLocations() {
 		File primaryExtDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile();
-		File internalDir = getDir("sketchbook", 0);
 		
 		ArrayList<StorageDrive> locations = new ArrayList<StorageDrive>();
 		
@@ -747,13 +746,20 @@ public class APDE extends MultiDexApplication {
 				}
 			}
 			
-			locations.add(new StorageDrive(internalDir, StorageDrive.StorageDriveType.INTERNAL, getAvailableSpace(internalDir)));
+			locations.add(getInternalStorageDrive());
 		} else {
-			locations.add(new StorageDrive(primaryExtDir, StorageDrive.StorageDriveType.EXTERNAL, getAvailableSpace(primaryExtDir)));
-			locations.add(new StorageDrive(internalDir, StorageDrive.StorageDriveType.INTERNAL, getAvailableSpace(internalDir)));
+			if (primaryExtDir != null) {
+				locations.add(new StorageDrive(primaryExtDir, StorageDrive.StorageDriveType.EXTERNAL, getAvailableSpace(primaryExtDir)));
+			}
+			locations.add(getInternalStorageDrive());
 		}
 		
 		return locations;
+	}
+	
+	public StorageDrive getInternalStorageDrive() {
+		File internalDir = getDir("sketchbook", 0);
+		return new StorageDrive(internalDir, StorageDrive.StorageDriveType.INTERNAL, getAvailableSpace(internalDir));
 	}
 	
 	public StorageDrive getDefaultSketchbookStorageDrive(ArrayList<StorageDrive> storageDrives) {
@@ -771,6 +777,20 @@ public class APDE extends MultiDexApplication {
 		}
 		
 		return firstChoice != null ? firstChoice : secondChoice;
+	}
+	
+	/**
+	 * Change the storage drive preference to use the internal storage.
+	 *
+	 * Note that this function will not move any files from the sketchbook to the new storage
+	 * location, it just updates the preference.
+	 */
+	public void useInternalStorageDrive() {
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		final String storageDrivePref = "pref_sketchbook_drive";
+		SharedPreferences.Editor edit = prefs.edit();
+		edit.putString(storageDrivePref, getInternalStorageDrive().root.toString());
+		edit.apply();
 	}
 	
 	public StorageDrive getStorageDriveByRoot(ArrayList<StorageDrive> storageDrives, String root) {

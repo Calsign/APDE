@@ -25,6 +25,7 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
@@ -1004,14 +1005,29 @@ public class EditorActivity extends AppCompatActivity {
 		
 		getGlobalState().writeCodeDeletionDebugStatus("onStart()");
 		
-		APDE.StorageDrive.StorageDriveType storageDriveType = getGlobalState().getSketchbookStorageDrive().type;
+		APDE.StorageDrive.StorageDriveType storageDriveType =
+				getGlobalState().getSketchbookStorageDrive().type;
+		boolean isExternal =
+				storageDriveType.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL)
+						|| storageDriveType.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL);
 		
-		if (storageDriveType.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL) || storageDriveType.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)) {
+		if (isExternal) {
 			// Make sure we have WRITE_EXTERNAL_STORAGE
 			if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-				// We have to request it...
-				// TODO Explain why to the user?
-				ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
+				AlertDialog.Builder builder = new AlertDialog.Builder(this);
+				builder.setTitle(R.string.external_storage_dialog_title);
+				builder.setMessage(R.string.external_storage_dialog_message);
+				builder.setPositiveButton(R.string.external_storage_dialog_grant_permission_button, (dialog, which) -> {
+					ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
+					dialog.cancel();
+				});
+				builder.setNeutralButton(R.string.external_storage_dialog_use_internal_storage_button,
+						(dialog, which) -> {
+							getGlobalState().useInternalStorageDrive();
+							dialog.cancel();
+						});
+				
+				builder.show();
 			}
 		}
 	}
