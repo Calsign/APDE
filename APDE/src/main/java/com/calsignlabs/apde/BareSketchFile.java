@@ -20,7 +20,11 @@ public abstract class BareSketchFile {
 	 * @return the filename as it is saved (name + suffix)
 	 */
 	public String getFilename() {
-		return getTitle() + getSuffix();
+		if(getSuffix().equalsIgnoreCase(".java")&&getTitle().endsWith(getSuffix())) {
+			return getTitle();
+		} else {
+			return getTitle() + getSuffix();
+		}
 	}
 	
 	public boolean isPde() {
