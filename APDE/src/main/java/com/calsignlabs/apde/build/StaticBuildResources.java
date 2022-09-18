@@ -3,6 +3,8 @@ package com.calsignlabs.apde.build;
 import android.content.Context;
 import android.content.res.AssetManager;
 
+import com.calsignlabs.apde.R;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -19,6 +21,14 @@ import java.util.zip.ZipInputStream;
  * The resources are extracted by ExtractStaticBuildResources.
  */
 public class StaticBuildResources {
+	public static void extractAll(Context context) throws IOException {
+		copyAndroidJar(context);
+		extractAssets(context, "res-compiled", StaticBuildResources.getResCompiledDir(context), true);
+		extractAssets(context, "jniLibs", StaticBuildResources.getJniLibsDir(context), false);
+		extractAssets(context, "libs", StaticBuildResources.getLibsDir(context), false);
+		extractAssets(context, "libs-dex", StaticBuildResources.getLibsDexDir(context), false);
+	}
+	
 	public static File getStaticBuildResourcesDir(Context context) {
 		return context.getDir("static_build_resources", 0);
 	}

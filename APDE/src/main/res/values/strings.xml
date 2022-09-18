@@ -391,11 +391,7 @@
 	<string name="library_manager_library_author_by">by <xliff:g example="William Smith (calsignlabs.com)" id="author">%1$s</xliff:g></string>
 	
 	<!-- Extract static build resources button in settings. -->
-	<string name="task_extract_static_build_resources_android_jar">Extracting android.jar…</string>
-	<string name="task_extract_static_build_resources_compiled_res">Extracting support library compiled resources…</string>
-	<string name="task_extract_static_build_resources_jni_libs">Extracting support library native libraries…</string>
-	<string name="task_extract_static_build_resources_libs">Extracting support library JARs…</string>
-	<string name="task_extract_static_build_resources_libs_dex">Extracting support library dexed JARs…</string>
+	<string name="task_extract_static_build_resources_start">Extracting static build resources…</string>
 	<string name="task_extract_static_build_resources_done">Finished extracting static build resources.</string>
 	
 	<string name="apde_0_5_upgrade_error">\n\nError upgrading last opened sketch info to v0.5.0.\nPlease report stack trace above to developer.\n\nYour last opened sketch has been copied to a temporary sketch.\nThe original sketch is still there.\n\nYou should not see this message again.</string>
