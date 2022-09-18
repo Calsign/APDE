@@ -120,7 +120,7 @@ public class StaticBuildResources {
 		return null;
 	}
 	
-	protected static File createFileFromInputStream(InputStream inputStream, File destFile) {
+	public static File createFileFromInputStream(InputStream inputStream, File destFile) {
 		return createFileFromInputStream(inputStream, destFile, true);
 	}
 	
