@@ -80,6 +80,7 @@ android {
     lint {
         abortOnError false
     }
+    namespace 'com.calsignlabs.apde'
 }
 
 preBuild.dependsOn project.createAdditionalAssets
