@@ -139,13 +139,18 @@ public class StaticBuildResources {
 			}
 			
 			outputStream.close();
-			if (close) {
-				inputStream.close();
-			}
 			
 			return destFile;
 		} catch (IOException e) {
 			e.printStackTrace();
+		} finally {
+			if (close) {
+				try {
+					inputStream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 		
 		return null;

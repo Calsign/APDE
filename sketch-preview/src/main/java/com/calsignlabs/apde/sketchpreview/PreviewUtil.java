@@ -158,6 +158,7 @@ public class PreviewUtil {
 		File[] files = context.getFilesDir().listFiles();
 		File dexFile = getSketchDex(context);
 		for (File file : files) {
+			// TODO: this won't delete subdirectories, but they aren't supported anyway
 			// Don't delete the sketch's APK!
 			if (!file.equals(dexFile)) {
 				// These log messages don't hurt anybody
@@ -216,8 +217,9 @@ public class PreviewUtil {
 					file.mkdirs();
 				} else {
 					createFileFromInputStream(inputStream, file, false);
-					inputStream.closeEntry();
 				}
+				
+				inputStream.closeEntry();
 			}
 			
 			inputStream.close();
@@ -232,7 +234,7 @@ public class PreviewUtil {
 		destFile.getParentFile().mkdirs();
 		
 		FileOutputStream outputStream = new FileOutputStream(destFile);
-		byte buffer[] = new byte[4096];
+		byte[] buffer = new byte[4096];
 		int length = 0;
 		
 		while ((length = inputStream.read(buffer)) > 0) {

@@ -623,7 +623,9 @@ public class GitRepository {
 						final String remote = ((EditText) layout.findViewById(R.id.git_clone_remote)).getText().toString();
 						final String localName = ((EditText) layout.findViewById(R.id.git_clone_local_name)).getText().toString();
 						
-						final File destDir = new File(context.getSketchbookFolder(), localName);
+						// final File destDir = new File(context.getSketchbookFolder(), localName);
+						// TODO: this doesn't work with the SAF
+						final File destDir = null;
 						
 						final String username = ((EditText) layout.findViewById(R.id.git_credentials_username)).getText().toString();
 						final char[] password = ((EditText) layout.findViewById(R.id.git_credentials_password)).getText().toString().toCharArray();

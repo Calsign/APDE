@@ -1,6 +1,7 @@
 package com.calsignlabs.apde.build.dag;
 
 import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -36,6 +37,7 @@ public class CopyBuildTask extends BuildTask {
 	private static final int FILE     = 0x00000001;
 	private static final int FOLDER   = 0x00000002;
 	private static final int STREAM   = 0x00000004;
+	private static final int DOCUMENT = 0x00000008;
 	
 	private static final int COPY     = 0x00000100;
 	private static final int EXTRACT  = 0x00000200;
@@ -43,6 +45,7 @@ public class CopyBuildTask extends BuildTask {
 	
 	private int inputType, outputType;
 	private Getter<File> inputFile, outputFile;
+	private Getter<MaybeDocumentFile> inputDocument;
 	private Getter<InputStream> inputStreamGetter;
 	private Getter<OutputStream> outputStreamGetter;
 	private int zipMethod;
@@ -67,6 +70,13 @@ public class CopyBuildTask extends BuildTask {
 	public CopyBuildTask inFolder(Getter<File> in) {
 		inputType = FOLDER;
 		inputFile = in;
+		orGetterChangeNoticer(in);
+		return this;
+	}
+	
+	public CopyBuildTask inDocument(Getter<MaybeDocumentFile> in) {
+		inputType = DOCUMENT;
+		inputDocument = in;
 		orGetterChangeNoticer(in);
 		return this;
 	}

@@ -1,0 +1,2 @@
+NOTE: Vendored from AndroidX because some changes are needed that are otherwise impossible.
+Upstream: https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:documentfile/documentfile/src/main/java/androidx/documentfile/provider/

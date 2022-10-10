@@ -4,14 +4,17 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
+import android.provider.DocumentsContract;
 
 import androidx.core.content.FileProvider;
+import com.calsignlabs.apde.support.documentfile.DocumentFile;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.contrib.Library;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,21 +36,33 @@ public class ModularBuild {
 	private Map<String, Boolean> previousTaskStatus;
 	private BuildTaskRunner runner;
 	
-	// Prettier name alias
+	// Prettier name aliases
+	private interface SketchFile extends Getter<MaybeDocumentFile> {}
 	private interface BuildFile extends Getter<File> {}
+	
+	private static SketchFile makeSketchFile(SketchFile parent, String name, String mimeType) {
+		return context -> {
+			try {
+				return parent.get(context).child(name, mimeType);
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				// TODO: probably need better handling
+				throw new RuntimeException(e);
+			}
+		};
+	}
 	
 	private static BuildFile makeBuildFile(BuildFile parent, String name) {
 		return context -> new File(parent.get(context), name);
 	}
 	
-	private static BuildFile SKETCH = BuildContext::getSketchFolder;
-	private static BuildFile SKETCH_PROPERTIES = makeBuildFile(SKETCH, "sketch.properties");
-	private static BuildFile SKETCH_DATA = makeBuildFile(SKETCH, "data");
-	private static BuildFile SKETCH_CODE_FOLDER = makeBuildFile(SKETCH, "code");
-	private static BuildFile SKETCH_CODE_DEX_FOLDER = makeBuildFile(SKETCH, "code-dex");
-	private static BuildFile SKETCH_RES = makeBuildFile(SKETCH, "res");
+	private static SketchFile SKETCH = BuildContext::getSketchFolder;
+	private static SketchFile SKETCH_PROPERTIES = makeSketchFile(SKETCH, "sketch.properties", "text/plain");
+	private static SketchFile SKETCH_DATA = makeSketchFile(SKETCH, "data", DocumentsContract.Document.MIME_TYPE_DIR);
+	private static SketchFile SKETCH_CODE_FOLDER = makeSketchFile(SKETCH, "code", DocumentsContract.Document.MIME_TYPE_DIR);
+	private static SketchFile SKETCH_CODE_DEX_FOLDER = makeSketchFile(SKETCH, "code-dex", DocumentsContract.Document.MIME_TYPE_DIR);
+	private static SketchFile SKETCH_RES = makeSketchFile(SKETCH, "res", DocumentsContract.Document.MIME_TYPE_DIR);
 	
-	private static BuildFile SKETCHBOOK_LIBRARIES = BuildContext::getLibrariesFolder;
+	private static SketchFile SKETCHBOOK_LIBRARIES = BuildContext::getLibrariesFolder;
 	
 	private static BuildFile BUILD = BuildContext::getBuildFolder;
 	
@@ -91,13 +106,13 @@ public class ModularBuild {
 	private static BuildFile PREVIEW_SKETCH_DATA = makeBuildFile(ROOT_FILES_INTERNAL, "preview_sketch_data.zip");
 	
 	private static class IconSet {
-		protected BuildFile sketchIcon;
+		protected SketchFile sketchIcon;
 		protected String assetsPath;
 		protected BuildFile resIcon;
 		
 		private IconSet(BuildFile drawableFolder, String iconSize) {
 			String iconFile = "icon-" + iconSize + ".png";
-			sketchIcon = makeBuildFile(SKETCH, iconFile);
+			sketchIcon = makeSketchFile(SKETCH, iconFile, "image/png");
 			assetsPath = "icons/" + iconFile;
 			resIcon = makeBuildFile(drawableFolder, "icon.png");
 		}
@@ -129,7 +144,13 @@ public class ModularBuild {
 	private void makeDag() {
 		// INIT
 		
-		BuildContext throwawayContext = BuildContext.create(global);
+		BuildContext throwawayContext;
+		try {
+			throwawayContext = BuildContext.create(global);
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+			return;
+		}
 		
 		BuildTask makeFolders = new MkdirBuildTask(BUILD, SRC, GEN, LIBS, ASSETS, RES, BIN, DEXED_LIBS, STAGE).setName("make folders");
 		
@@ -171,17 +192,17 @@ public class ModularBuild {
 			ref.store(context.getSketchName());
 			return match;
 		}).setName("sketch name");
-		BuildTask sketchProperties = makeChecksummer(SKETCH_PROPERTIES).setName("sketch properties");
-		BuildTask dataFolder = makeChecksummer(SKETCH_DATA).setName("sketch data");
-		BuildTask codeFolder = makeChecksummer(SKETCH_CODE_FOLDER).setName("sketch code folder");
-		BuildTask codeDexFolder = makeChecksummer(SKETCH_CODE_DEX_FOLDER).setName("sketch code dex folder");
-		BuildTask resFolder = makeChecksummer(SKETCH_RES).setName("sketch res");
-		BuildTask sketchbookLibrariesFolder = makeChecksummer(SKETCHBOOK_LIBRARIES).setName("sketchbook libraries");
+		BuildTask sketchProperties = makeDocumentChecksummer(SKETCH_PROPERTIES).setName("sketch properties");
+		BuildTask dataFolder = makeDocumentChecksummer(SKETCH_DATA).setName("sketch data");
+		BuildTask codeFolder = makeDocumentChecksummer(SKETCH_CODE_FOLDER).setName("sketch code folder");
+		BuildTask codeDexFolder = makeDocumentChecksummer(SKETCH_CODE_DEX_FOLDER).setName("sketch code dex folder");
+		BuildTask resFolder = makeDocumentChecksummer(SKETCH_RES).setName("sketch res");
+		BuildTask sketchbookLibrariesFolder = makeDocumentChecksummer(SKETCHBOOK_LIBRARIES).setName("sketchbook libraries");
 		
 		List<BuildTask> sketchIconChecksumList = new ArrayList<>();
 		
 		for (IconSet icon : ICONS) {
-			sketchIconChecksumList.add(makeChecksummer(icon.sketchIcon).setName("icon checksum: " + icon.assetsPath));
+			sketchIconChecksumList.add(makeDocumentChecksummer(icon.sketchIcon).setName("icon checksum: " + icon.assetsPath));
 		}
 		
 		// TODO watch face icons
@@ -218,11 +239,11 @@ public class ModularBuild {
 				(context, file, filename) -> file.equals(SKETCH_APK_RES.get(context)))
 				.setName("delete old apk res");
 		
-		BuildTask copySketchCode = new CopyBuildTask(codeFolder, init).inFolder(SKETCH_CODE_FOLDER).outFolder(LIBS).setVacuousSuccess(true).setName("copy sketch code");
-		BuildTask copySketchCodeDex = new CopyBuildTask(codeDexFolder, init).inFolder(SKETCH_CODE_DEX_FOLDER).outFolder(DEXED_LIBS).setVacuousSuccess(true).setName("copy sketch code dex");
+		BuildTask copySketchCode = new CopyBuildTask(codeFolder, init).inDocument(SKETCH_CODE_FOLDER).outFolder(LIBS).setVacuousSuccess(true).setName("copy sketch code");
+		BuildTask copySketchCodeDex = new CopyBuildTask(codeDexFolder, init).inDocument(SKETCH_CODE_DEX_FOLDER).outFolder(DEXED_LIBS).setVacuousSuccess(true).setName("copy sketch code dex");
 		
-		BuildTask copySketchRes = new CopyBuildTask(resFolder, init, deleteOldRes).inFolder(SKETCH_RES).outFolder(RES).setVacuousSuccess(true).setName("copy sketch res");
-		BuildTask copySketchData = new CopyBuildTask(dataFolder, deleteOldAssets, init).inFolder(SKETCH_DATA).outFolder(ASSETS).setVacuousSuccess(true).setName("copy sketch data");
+		BuildTask copySketchRes = new CopyBuildTask(resFolder, init, deleteOldRes).inDocument(SKETCH_RES).outFolder(RES).setVacuousSuccess(true).setName("copy sketch res");
+		BuildTask copySketchData = new CopyBuildTask(dataFolder, deleteOldAssets, init).inDocument(SKETCH_DATA).outFolder(ASSETS).setVacuousSuccess(true).setName("copy sketch data");
 		
 		BuildTask makeSketchClassFolder = new MkdirBuildTask(getSketchClassLocation("", manifestDepList), generateManifest, deleteOldSrc, init).setName("make sketch class location");
 		BuildTask makeResDirs = new MkdirBuildTask(Arrays.asList(RES_LAYOUT, RES_VALUES, RES_XML), init, deleteOldRes).setName("make res dirs");
@@ -286,7 +307,7 @@ public class ModularBuild {
 				// TODO need to add sketchIcons as a change dependency?
 				if (icon.sketchIcon.get(context).exists()) {
 					tasks.add(new CopyBuildTask(deleteOldRes, makeResDrawableDirs, sketchIcons)
-							.inFile(icon.sketchIcon).outFile(icon.resIcon, false)
+							.inDocument(icon.sketchIcon).outFile(icon.resIcon, false)
 							.setName("copy user icon " + icon.assetsPath));
 				} else {
 					tasks.add(new CopyBuildTask(deleteOldRes, makeResDrawableDirs, sketchIcons)
@@ -333,47 +354,51 @@ public class ModularBuild {
 			// This can be called before the preprocessing has been done, but we won't run until
 			// the preprocessor is ready
 			if (context.getPreprocessor() != null) {
-				List<File> libraryLibs = new ArrayList<>();
-				List<File> libraryDexedLibs = new ArrayList<>();
+				List<DocumentFile> libraryLibs = new ArrayList<>();
+				List<DocumentFile> libraryDexedLibs = new ArrayList<>();
 				
 				for (Library library : context.getImportedLibraries()) {
-					for (File exportFile : library.getAndroidExports(context.getLibrariesFolder())) {
-						String exportName = exportFile.getName();
-						
-						if (!exportFile.exists()) {
-							System.err.println(String.format(Locale.US, context.getResources()
-									.getString(R.string.build_export_library_file_missing), exportName));
-						} else if (exportFile.isDirectory()) {
-							// Copy native library folders
-							if (exportName.equals("armeabi") ||
-									exportName.equals("armeabi-v7a") ||
-									exportName.equals("x86")) {
-								
-								tasks.add(new CopyBuildTask(preprocess, sketchbookLibrariesFolder)
-										.inFolder(Getter.wrap(exportFile))
-										.outFolder(makeBuildFile(LIBS, exportName))
-										.setName("copy library export native folder: " + exportName));
-							} else {
-								tasks.add(new CopyBuildTask(preprocess, sketchbookLibrariesFolder)
-										.inFolder(Getter.wrap(exportFile))
-										.outFolder(makeBuildFile(ASSETS, exportName))
-										.setName("copy library export folder: " + exportName));
-							}
-						} else if (exportFile.isFile()) {
-							// Note: we dropped support for zip files (treated as jars)
-							// Just rename them to jar
+					try {
+						for (DocumentFile exportFile : library.getAndroidExports(context.getLibrariesFolder())) {
+							String exportName = exportFile.getName();
 							
-							if (exportName.toLowerCase(Locale.US).endsWith("-dex.jar")) {
-								libraryDexedLibs.add(exportFile);
-							} else if (exportName.toLowerCase(Locale.US).endsWith(".jar")) {
-								libraryLibs.add(exportFile);
-							} else {
-								tasks.add(new CopyBuildTask(preprocess, sketchbookLibrariesFolder)
-										.inFile(Getter.wrap(exportFile))
-										.outFile(makeBuildFile(ASSETS, exportName))
-										.setName("copy library export unknown/asset: " + exportName));
+							if (!exportFile.exists()) {
+								System.err.println(String.format(Locale.US, context.getResources()
+										.getString(R.string.build_export_library_file_missing), exportName));
+							} else if (exportFile.isDirectory()) {
+								// Copy native library folders
+								if (exportName.equals("armeabi") ||
+										exportName.equals("armeabi-v7a") ||
+										exportName.equals("x86")) {
+									
+									tasks.add(new CopyBuildTask(preprocess, sketchbookLibrariesFolder)
+											.inDocument(Getter.wrap(new MaybeDocumentFile(exportFile)))
+											.outFolder(makeBuildFile(LIBS, exportName))
+											.setName("copy library export native folder: " + exportName));
+								} else {
+									tasks.add(new CopyBuildTask(preprocess, sketchbookLibrariesFolder)
+											.inDocument(Getter.wrap(new MaybeDocumentFile(exportFile)))
+											.outFolder(makeBuildFile(ASSETS, exportName))
+											.setName("copy library export folder: " + exportName));
+								}
+							} else if (exportFile.isFile()) {
+								// Note: we dropped support for zip files (treated as jars)
+								// Just rename them to jar
+								
+								if (exportName.toLowerCase(Locale.US).endsWith("-dex.jar")) {
+									libraryDexedLibs.add(exportFile);
+								} else if (exportName.toLowerCase(Locale.US).endsWith(".jar")) {
+									libraryLibs.add(exportFile);
+								} else {
+									tasks.add(new CopyBuildTask(preprocess, sketchbookLibrariesFolder)
+											.inDocument(Getter.wrap(new MaybeDocumentFile(exportFile)))
+											.outFile(makeBuildFile(ASSETS, exportName))
+											.setName("copy library export unknown/asset: " + exportName));
+								}
 							}
 						}
+					} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+						e.printStackTrace();
 					}
 				}
 				
@@ -389,7 +414,7 @@ public class ModularBuild {
 							return true;
 						}
 					}
-					for (File lib : context.getLibraryLibs()) {
+					for (DocumentFile lib : context.getLibraryLibs()) {
 						if (filename.equals(lib.getName())) {
 							return true;
 						}
@@ -404,7 +429,7 @@ public class ModularBuild {
 							return true;
 						}
 					}
-					for (File dexLib : context.getLibraryDexedLibs()) {
+					for (DocumentFile dexLib : context.getLibraryDexedLibs()) {
 						if (filename.equals(dexLib.getName())) {
 							return true;
 						}
@@ -420,15 +445,15 @@ public class ModularBuild {
 			tasks.add(init);
 			
 			if (context.getLibraryLibs() != null) {
-				for (File lib : context.getLibraryLibs()) {
+				for (DocumentFile lib : context.getLibraryLibs()) {
 					tasks.add(new CopyBuildTask(copyLibraryFiles)
-							.inFile(Getter.wrap(lib))
+							.inDocument(Getter.wrap(new MaybeDocumentFile(lib)))
 							.outFile(makeBuildFile(LIBS, lib.getName()))
 							.setName("copy library export jar: " + lib.getName()));
 				}
-				for (File dexLib : context.getLibraryDexedLibs()) {
+				for (DocumentFile dexLib : context.getLibraryDexedLibs()) {
 					tasks.add(new CopyBuildTask(copyLibraryFiles)
-							.inFile(Getter.wrap(dexLib))
+							.inDocument(Getter.wrap(new MaybeDocumentFile(dexLib)))
 							.outFile(makeBuildFile(DEXED_LIBS, dexLib.getName()))
 							.setName("copy library export dex jar: " + dexLib.getName()));
 				}
@@ -452,7 +477,7 @@ public class ModularBuild {
 				.inFile(BIN_SKETCH_CLASSES).outFile(PREVIEW_SKETCH_DEX)
 				.setName("preview copy sketch dex");
 		BuildTask previewDataZip = new CopyBuildTask(dataFolder)
-				.inFolder(SKETCH_DATA).outFile(PREVIEW_SKETCH_DATA).compress()
+				.inDocument(SKETCH_DATA).outFile(PREVIEW_SKETCH_DATA).compress()
 				.setName("preview copy sketch data");
 		
 		// TODO this isn't being run every build like it should be
@@ -460,12 +485,12 @@ public class ModularBuild {
 				previewDexJarPrefix + ".*",
 				(context, file, filename) -> {
 					String realName = file.getName().substring(previewDexJarPrefix.length());
-					for (File newDexedLib : context.getLibraryDexedLibs()) {
+					for (DocumentFile newDexedLib : context.getLibraryDexedLibs()) {
 						// We compare names and then checksums
 						// If names are the same, file might not necessarily be the same;
 						// e.g. the user may have updated the library
 						if (realName.equals(newDexedLib.getName())
-								&& ChecksumChangeNoticer.sameChecksum(file, newDexedLib, true)) {
+								&& ChecksumChangeNoticer.sameChecksum(file, new MaybeDocumentFile(newDexedLib), true)) {
 							return true;
 						}
 					}
@@ -477,10 +502,10 @@ public class ModularBuild {
 			tasks.add(deleteOldDexedLibsPreview);
 			
 			if (context.getLibraryDexedLibs() != null) {
-				for (File newDexedLib : context.getLibraryDexedLibs()) {
+				for (DocumentFile newDexedLib : context.getLibraryDexedLibs()) {
 					
 					tasks.add(new CopyBuildTask(deleteOldDexedLibsPreview)
-							.inFile(Getter.wrap(newDexedLib))
+							.inDocument(Getter.wrap(new MaybeDocumentFile(newDexedLib)))
 							.outFile(makeBuildFile(ROOT_FILES_INTERNAL, previewDexJarPrefix + newDexedLib.getName()))
 							.setName("copy preview sketch dex jar: " + newDexedLib.getName()));
 				}
@@ -488,16 +513,20 @@ public class ModularBuild {
 		}).setName("preview copy dexed libs");
 		
 		BuildTask preparePreview = new ContextualCompoundBuildTask((context, tasks) -> {
-			tasks.add(previewSketchDex);
-			
-			if (context.getLibraryDexedLibs() != null && !context.getLibraryDexedLibs().isEmpty()) {
-				tasks.add(prepareDexedLibsPreview);
-			}
-			
-			File dataFolderFile = SKETCH_DATA.get(context);
-			context.setHasData(dataFolderFile.isDirectory() && dataFolderFile.listFiles().length > 0);
-			if (context.hasData()) {
-				tasks.add(previewDataZip);
+			try {
+				tasks.add(previewSketchDex);
+				
+				if (context.getLibraryDexedLibs() != null && !context.getLibraryDexedLibs().isEmpty()) {
+					tasks.add(prepareDexedLibsPreview);
+				}
+				
+				MaybeDocumentFile dataFolderFile = SKETCH_DATA.get(context);
+				context.setHasData(dataFolderFile.isDirectory() && dataFolderFile.resolve().listFiles().length > 0);
+				if (context.hasData()) {
+					tasks.add(previewDataZip);
+				}
+			} catch (MaybeDocumentFile.ResolutionException e) {
+				e.printStackTrace();
 			}
 		}).setName("prepare preview");
 		
@@ -551,6 +580,10 @@ public class ModularBuild {
 	
 	private static BuildTask makeChecksummer(Getter<File> file) {
 		return new ChangeNoticerWrapper((new ChecksumChangeNoticer()).fileDiff(file));
+	}
+	
+	private static BuildTask makeDocumentChecksummer(Getter<MaybeDocumentFile> file) {
+		return new ChangeNoticerWrapper((new ChecksumChangeNoticer()).documentDiff(file));
 	}
 	
 	private Getter<File> getSketchClassLocation(String filename, List<BuildTask> deps) {
@@ -718,7 +751,13 @@ public class ModularBuild {
 		
 		long start = System.currentTimeMillis();
 		
-		BuildContext context = BuildContext.create(global);
+		BuildContext context = null;
+		try {
+			context = BuildContext.create(global);
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+			return;
+		}
 		context.setPreviousTaskSucess(previousTaskStatus);
 		runner = new BuildTaskRunner(global, buildTask, context);
 		

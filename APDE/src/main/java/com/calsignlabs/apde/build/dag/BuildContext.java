@@ -1,9 +1,12 @@
 package com.calsignlabs.apde.build.dag;
 
+import android.content.ContentResolver;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+
+import com.calsignlabs.apde.support.documentfile.DocumentFile;
 
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.build.CompilerProblem;
@@ -12,6 +15,7 @@ import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.build.Preprocessor;
 import com.calsignlabs.apde.build.SketchProperties;
 import com.calsignlabs.apde.contrib.Library;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -25,7 +29,9 @@ import java.util.regex.Pattern;
 public class BuildContext {
 	private APDE apde;
 	
-	private File buildFolder, sketchFolder, stageFolder, librariesFolder, rootFilesDir, alternateBuildFolder;
+	private DocumentFile sketchFolder;
+	private MaybeDocumentFile librariesFolder;
+	private File buildFolder, stageFolder, rootFilesDir, alternateBuildFolder;
 	private String sketchName;
 	private boolean isExample, verbose, external, injectLogBroadcaster, customProblems;
 	private ComponentTarget componentTarget;
@@ -35,7 +41,7 @@ public class BuildContext {
 	private List<CompilerProblem> problems;
 	private Map<String, List<Library>> importToLibraryTable;
 	private Preprocessor preprocessor;
-	private List<File> libraryLibs, libraryDexedLibs;
+	private List<DocumentFile> libraryLibs, libraryDexedLibs;
 	private boolean hasData;
 	
 	private Set<String> completedTasks;
@@ -54,13 +60,13 @@ public class BuildContext {
 		problems = new ArrayList<>();
 	}
 	
-	public static BuildContext create(APDE context) {
+	public static BuildContext create(APDE context) throws MaybeDocumentFile.MaybeDocumentFileException {
 		BuildContext buildContext = new BuildContext();
 		
 		buildContext.apde = context;
 		
 		buildContext.buildFolder = context.getBuildFolder();
-		buildContext.sketchFolder = context.getSketchLocation();
+		buildContext.sketchFolder = context.getSketchLocation().resolve();
 		buildContext.stageFolder = new File(context.getFilesDir(), "stage");
 		buildContext.librariesFolder = context.getLibrariesFolder();
 		buildContext.sketchName = context.getSketchName();
@@ -99,19 +105,23 @@ public class BuildContext {
 		return buildContext;
 	}
 	
+	public ContentResolver getContentResolver() {
+		return apde.getContentResolver();
+	}
+	
 	public File getBuildFolder() {
 		return buildFolder;
 	}
 	
-	public File getSketchFolder() {
-		return sketchFolder;
+	public MaybeDocumentFile getSketchFolder() {
+		return new MaybeDocumentFile(sketchFolder);
 	}
 	
 	public File getStageFolder() {
 		return stageFolder;
 	}
 	
-	public File getLibrariesFolder() {
+	public MaybeDocumentFile getLibrariesFolder() {
 		return librariesFolder;
 	}
 	
@@ -187,19 +197,19 @@ public class BuildContext {
 		this.preprocessor = preprocessor;
 	}
 	
-	public void setLibraryLibs(List<File> libraryLibs) {
+	public void setLibraryLibs(List<DocumentFile> libraryLibs) {
 		this.libraryLibs = libraryLibs;
 	}
 	
-	public List<File> getLibraryLibs() {
+	public List<DocumentFile> getLibraryLibs() {
 		return libraryLibs;
 	}
 	
-	public void setLibraryDexedLibs(List<File> libraryDexedLibs) {
+	public void setLibraryDexedLibs(List<DocumentFile> libraryDexedLibs) {
 		this.libraryDexedLibs = libraryDexedLibs;
 	}
 	
-	public List<File> getLibraryDexedLibs() {
+	public List<DocumentFile> getLibraryDexedLibs() {
 		return libraryDexedLibs;
 	}
 	
@@ -255,7 +265,11 @@ public class BuildContext {
 	}
 	
 	public void reloadLibraries() {
-		apde.rebuildLibraryList();
+		try {
+			apde.rebuildLibraryList();
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public File getAlternateBuildFolder() {

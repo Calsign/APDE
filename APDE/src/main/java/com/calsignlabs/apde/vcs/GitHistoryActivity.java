@@ -68,7 +68,10 @@ public class GitHistoryActivity extends AppCompatActivity {
 		
 		//Get a list of commits
 		
-		repo = new GitRepository(((APDE) getApplicationContext()).getSketchLocation());
+		// TODO: this doesn't work with the SAF
+		// repo = new GitRepository(((APDE) getApplicationContext()).getSketchLocation());
+		repo = null;
+		
 		//TODO Implement infinite scrolling with dynamic loading for sketches with lots of commits
 		commits = repo.getRecentCommits(-1);
 		commitMessages = repo.getRecentCommitMessages(commits, 72);

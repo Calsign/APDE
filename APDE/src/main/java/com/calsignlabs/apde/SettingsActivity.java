@@ -324,8 +324,8 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 			for (int i = 0; i < drives.size(); i ++) {
 				APDE.StorageDrive drive = drives.get(i);
 				
-				readables[i] = drive.space + " " + drive.type.title + "\n" + drive.root.getAbsolutePath();
-				paths[i] = drive.root.getAbsolutePath();
+				readables[i] = drive.space + " " + drive.type.title + "\n" + drive.getUriString();
+				paths[i] = drive.getUriString();
 			}
 			
 			sketchbookDrive.setEntries(readables);
@@ -340,10 +340,10 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 				
 				((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_type)).setText(drive.type.title);
 				((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_space)).setText(drive.space);
-				((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_root)).setText(drive.root.getAbsolutePath());
-			}, () -> updateSketchbookDrivePref(sketchbookDrive, sketchbookLocation, drives));
+				((TextView) layout.findViewById(R.id.pref_sketchbook_drive_list_item_text_root)).setText(drive.getUriString());
+			}, () -> updateSketchbookDrivePref(sketchbookDrive, sketchbookLocation, drives, true));
 			
-			updateSketchbookDrivePref(sketchbookDrive, sketchbookLocation, drives);
+			updateSketchbookDrivePref(sketchbookDrive, sketchbookLocation, drives, false);
 		}
 		
 		EditTextPreference codeTextSize = frag.findPreference("textsize");
@@ -386,7 +386,7 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		bindPreferenceSummaryToValue(frag.findPreference("pref_vr_default_renderer"));
 	}
 	
-	protected void updateSketchbookDrivePref(ListPreference sketchbookDrive, Preference sketchbookLocation, ArrayList<APDE.StorageDrive> drives) {
+	protected void updateSketchbookDrivePref(ListPreference sketchbookDrive, Preference sketchbookLocation, ArrayList<APDE.StorageDrive> drives, boolean userInput) {
 		int selectedIndex = sketchbookDrive.findIndexOfValue(sketchbookDrive.getValue());
 		
 		if (selectedIndex == -1) {
@@ -398,6 +398,10 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 		
 		sketchbookLocation.setEnabled(!(selected.type.equals(APDE.StorageDrive.StorageDriveType.INTERNAL) || selected.type.equals(APDE.StorageDrive.StorageDriveType.SECONDARY_EXTERNAL)));
 		sketchbookDrive.setSummary(selected.space + " " + selected.type.title);
+		
+		if (userInput && selected.type.equals(APDE.StorageDrive.StorageDriveType.SAF_EXTERNAL)) {
+			((APDE) getApplicationContext()).checkAndroid11SketchbookAccess(this, true);
+		}
 	}
 	
 	private int PREVIEW_PERMISSIONS = 16;
@@ -408,6 +412,12 @@ public class SettingsActivity extends AppCompatActivity implements PreferenceFra
 			String[] permissions = data.getStringArrayExtra("permissions");
 			if (permissions != null) {
 				previewReinstall(permissions, true, true);
+			}
+		} else if (requestCode == APDE.FLAG_SELECT_SKETCHBOOK_FOLDER) {
+			if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+				((APDE) getApplicationContext()).setSafStorageDrive(data.getData());
+			} else {
+				// TODO: how to handle errors?
 			}
 		} else {
 			super.onActivityResult(requestCode, resultCode, data);

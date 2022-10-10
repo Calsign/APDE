@@ -31,19 +31,21 @@ public class GitManager implements Tool {
 
 	@Override
 	public void run() {
-		AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
-
-		final GitRepository repo = new GitRepository(context.getSketchLocation());
-
-		final ArrayList<GitRepository.GitAction> actions = repo.getActions(context);
-		final String[] actionNames = repo.getActionNames(actions);
-
-		repo.close();
-
-		builder.setTitle(R.string.tool_git_manager);
-		builder.setItems(actionNames, (dialog, which) -> actions.get(which).run());
-
-		builder.create().show();
+		// TODO: this just doesn't work with the SAF
+		
+//		AlertDialog.Builder builder = new AlertDialog.Builder(context.getEditor());
+//
+//		final GitRepository repo = new GitRepository(context.getSketchLocation());
+//
+//		final ArrayList<GitRepository.GitAction> actions = repo.getActions(context);
+//		final String[] actionNames = repo.getActionNames(actions);
+//
+//		repo.close();
+//
+//		builder.setTitle(R.string.tool_git_manager);
+//		builder.setItems(actionNames, (dialog, which) -> actions.get(which).run());
+//
+//		builder.create().show();
 	}
 
 	@Override

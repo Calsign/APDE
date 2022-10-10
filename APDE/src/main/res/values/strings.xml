@@ -56,6 +56,8 @@
 	<!-- Messages shown to the user upon success/failure of saving the sketch. -->
 	<string name="message_sketch_save_success">The sketch has been saved.</string>
 	<string name="message_sketch_save_failure">The sketch has not been saved properly.</string>
+	<string name="save_sketch_create_dir_error">Failed to create sketch directory</string>
+	<string name="save_sketch_save_file_error">Failed to save file \"<xliff:g id="sketchFileName" example="">%1$s</xliff:g>\"</string>
 	
 	<!-- Error messages shown to the user when they try to create or rename a tab to an invalid
 	     name. -->

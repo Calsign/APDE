@@ -47,22 +47,10 @@ public class ExportGradleProject implements Tool {
     		break;
     	}
 		
-		//Don't try to export if we're already exporting...
+		// Don't try to export if we're already exporting...
 		if (exporting) {
 			return;
 		}
-		
-		//If this is an example, then put the sketch in the "bin" directory within the sketchbook
-		final File binFolder = new File((context.isExample() || context.isTemp()) ? context.getSketchbookFolder() : context.getSketchLocation(), "bin");
-		final File exportFolder = new File(binFolder, "export");
-		
-		binFolder.mkdir();
-		exportFolder.mkdir();
-		
-		//Clear the console
-    	((TextView) context.getEditor().findViewById(R.id.console)).setText("");
-		
-		final Build builder = new Build(context, BuildContext.create(context));
 		
 		new Thread(() -> {
 			exporting = true;

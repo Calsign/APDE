@@ -2,6 +2,7 @@ package com.calsignlabs.apde;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -16,10 +17,13 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
 import android.preference.PreferenceManager;
-import androidx.core.content.FileProvider;
+
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import com.calsignlabs.apde.support.documentfile.DocumentFile;
 import androidx.multidex.MultiDexApplication;
 
+import android.provider.DocumentsContract;
 import android.util.DisplayMetrics;
 import android.view.ContextThemeWrapper;
 import android.view.Gravity;
@@ -36,7 +40,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.calsignlabs.apde.FileNavigatorAdapter.FileItem;
 import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.build.SketchProperties;
@@ -44,6 +47,7 @@ import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.build.dag.ModularBuild;
 import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.support.AndroidPlatform;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 import com.calsignlabs.apde.task.TaskManager;
 import com.calsignlabs.apde.tool.AutoFormat;
 import com.calsignlabs.apde.tool.ColorSelector;
@@ -72,7 +76,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -84,14 +87,17 @@ import java.nio.channels.FileChannel;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import processing.app.Platform;
 
@@ -100,7 +106,6 @@ import processing.app.Platform;
  * currently selected sketch and references to the various activities.
  */
 public class APDE extends MultiDexApplication {
-	public static final String DEFAULT_SKETCHBOOK_LOCATION = "Sketchbook";
 	public static final String LIBRARIES_FOLDER = "libraries";
 	
 	public static final String DEFAULT_SKETCH_TAB = "sketch";
@@ -119,14 +124,28 @@ public class APDE extends MultiDexApplication {
 	private SketchPropertiesActivity propertiesActivity;
 	
 	private Map<String, List<Library>> importToLibraryTable = Collections.synchronizedMap(new HashMap<>());
-	private ArrayList<Library> contributedLibraries;
+	private List<Library> contributedLibraries;
 	
-	private HashMap<String, Tool> packageToToolTable;
-	private ArrayList<Tool> tools;
+	private Map<String, Tool> packageToToolTable;
+	private List<Tool> tools;
 	
 	private ModularBuild modularBuild;
 	
-	public static enum SketchLocation {
+	public static final String STORAGE_DRIVE_PREF = "pref_sketchbook_drive";
+	public static final String SKETCHBOOK_EXTERNAL_STORAGE_PATH_PREF = "pref_sketchbook_location";
+	public static final String DEFAULT_SKETCHBOOK_LOCATION = "Sketchbook";
+	public static final String SKETCHBOOK_LOCATION_SAF_PREF = "pref_sketchbook_location_saf";
+	
+	// Intent flag for obtaining access to the sketchbook folder on Android 11+
+	public static final int FLAG_SELECT_SKETCHBOOK_FOLDER = 9;
+	
+	// On Android 10+ we use SAF and not the standard File API for accessing the external storage.
+	// We could set the requestLegacyExternalStorage flag in the manifest to continue having the
+	// legacy behavior on Android 10, but then we need to make the switch for Android 11 which
+	// doesn't seem worth it. So we choose Q here, which is Android 10.
+	public static final int SAF_API_CUTOFF = Build.VERSION_CODES.Q;
+	
+	public enum SketchLocation {
 		SKETCHBOOK, // A sketch in the sketchbook folder
 		EXAMPLE, // An example on the the internal storage
 		LIBRARY_EXAMPLE, // An example packaged with a (contributed) library
@@ -248,14 +267,14 @@ public class APDE extends MultiDexApplication {
 	 * @param sketchPath
 	 * @param sketchLocation
 	 */
-	public void selectSketch(String sketchPath, SketchLocation sketchLocation) {
+	public void selectSketch(String sketchPath, SketchLocation sketchLocation) throws MaybeDocumentFile.MaybeDocumentFileException {
 		this.sketchPath = sketchPath;
 		this.sketchLocation = sketchLocation;
 		
 		setSketchName(getSketchLocation().getName());
 	}
 	
-	public void selectNewTempSketch() {
+	public void selectNewTempSketch() throws MaybeDocumentFile.MaybeDocumentFileException {
 		selectSketch("/" + getNextTemporarySketchName(), SketchLocation.TEMPORARY);
 		putPref(LAST_TEMPORARY_SKETCH_NAME_PREF, getSketchName());
 	}
@@ -267,8 +286,8 @@ public class APDE extends MultiDexApplication {
 	 * @param depth
 	 * @return the list of sketches in the given directory
 	 */
-	public ArrayList<File> listSketches(File directory, int depth) {
-		//Convenience method
+	public List<DocumentFile> listSketches(MaybeDocumentFile directory, int depth) throws MaybeDocumentFile.ResolutionException {
+		// Convenience method
 		return listSketches(directory, depth, new String[] {});
 	}
 	
@@ -280,37 +299,36 @@ public class APDE extends MultiDexApplication {
 	 * @param ignoreFilenames
 	 * @return the list of sketches in the given directory
 	 */
-	public ArrayList<File> listSketches(File directory, int depth, String[] ignoreFilenames) {
-		//Sanity check...
-		if(!directory.isDirectory()) {
-			return new ArrayList<File>();
+	public List<DocumentFile> listSketches(MaybeDocumentFile directory, int depth, String[] ignoreFilenames) throws MaybeDocumentFile.ResolutionException {
+		// Sanity check...
+		if (!directory.exists() || !directory.isDirectory()) {
+			return Collections.emptyList();
 		}
 		
-		//Make sure we don't want to ignore this directory
-		for(String ignore : ignoreFilenames) {
-			if(directory.getName().equals(ignore)) {
-				return new ArrayList<File>();
+		DocumentFile resolvedDirectory = directory.resolve();
+		
+		// Make sure we don't want to ignore this directory
+		for (String ignore : ignoreFilenames) {
+			if (directory.getName() != null && directory.getName().equals(ignore)) {
+				return Collections.emptyList();
 			}
 		}
 		
 		//Let's check this folder first...
-		if(validSketch(directory)) {
-			ArrayList<File> output = new ArrayList<File>();
-			output.add(directory);
-			
-			return output;
+		if (validSketch(directory)) {
+			return Collections.singletonList(resolvedDirectory);
 		}
 		
-		File[] contents = directory.listFiles();
-		ArrayList<File> output = new ArrayList<File>();
+		DocumentFile[] contents = resolvedDirectory.listFiles();
+		ArrayList<DocumentFile> output = new ArrayList<>();
 		
-		//This check permits anything greater the "0" for a countdown...
-		//...or values like "-1" for infinite search depth
-		if(depth != 0) {
-			//Check the subfolders
-			for(File file : contents) {
-				if(file.isDirectory()) { //This check is redundant, but it's here anyway
-					output.addAll(listSketches(file, depth - 1, ignoreFilenames));
+		// This check permits anything greater the "0" for a countdown...
+		// ...or values like "-1" for infinite search depth
+		if (depth != 0) {
+			// Check the subfolders
+			for (DocumentFile file : contents) {
+				if (file.isDirectory()) { // This check is redundant, but it's here anyway
+					output.addAll(listSketches(new MaybeDocumentFile(file), depth - 1, ignoreFilenames));
 				}
 			}
 		}
@@ -322,8 +340,8 @@ public class APDE extends MultiDexApplication {
 	 * @param directory
 	 * @return whether or not the directory contains any sketches
 	 */
-	public boolean containsSketches(File directory) {
-		//Convenience method
+	public boolean containsSketches(MaybeDocumentFile directory) throws MaybeDocumentFile.ResolutionException {
+		// Convenience method
 		return containsSketches(directory, new String[] {});
 	}
 	
@@ -332,15 +350,17 @@ public class APDE extends MultiDexApplication {
 	 * @param ignoreFilenames
 	 * @return whether or not the directory contains any sketches
 	 */
-	public boolean containsSketches(File directory, String[] ignoreFilenames) {
+	public boolean containsSketches(MaybeDocumentFile directory, String[] ignoreFilenames) throws MaybeDocumentFile.ResolutionException {
 		// Sanity check...
-		if (!directory.isDirectory()) {
+		if (!directory.exists() || !directory.isDirectory()) {
 			return false;
 		}
 		
+		DocumentFile resolvedDirectory = directory.resolve();
+		
 		// Make sure we don't want to ignore this directory
 		for (String ignore : ignoreFilenames) {
-			if (directory.getName().equals(ignore)) {
+			if (directory.getName() != null && directory.getName().equals(ignore)) {
 				return false;
 			}
 		}
@@ -350,19 +370,12 @@ public class APDE extends MultiDexApplication {
 			return true;
 		}
 		
-		File[] contents = directory.listFiles();
-		
-		if (contents == null) {
-			// This occasionally happens when probing Android secure directories...
-			return false;
-		}
+		DocumentFile[] contents = resolvedDirectory.listFiles();
 		
 		// Check the subfolders
-		for (File file : contents) {
+		for (DocumentFile file : contents) {
 			if (file.isDirectory()) {
-				if (validSketch(file)) {
-					return true;
-				} else if (containsSketches(file)) {
+				if (containsSketches(new MaybeDocumentFile(file))) {
 					return true;
 				}
 			}
@@ -375,22 +388,20 @@ public class APDE extends MultiDexApplication {
 	 * @param sketchFolder
 	 * @return whether or not the given folder is a valid sketch folder
 	 */
-	public boolean validSketch(File sketchFolder) {
+	public boolean validSketch(MaybeDocumentFile sketchFolder) throws MaybeDocumentFile.ResolutionException {
 		// Sanity check
 		if ((!sketchFolder.exists()) || (!sketchFolder.isDirectory())) {
 			return false;
 		}
 		
-		File[] contents = sketchFolder.listFiles();
+		DocumentFile[] contents = sketchFolder.resolve().listFiles();
 		
-		if (contents == null) {
-			// This occasionally happens when probing Android secure directories...
-			return false;
-		}
-		
-		for (File file : contents) {
+		for (DocumentFile file : contents) {
 			// Get the file extension
 			String filename = file.getName();
+			if (filename == null) {
+				continue;
+			}
 			int lastDot = filename.lastIndexOf('.');
 			String extension = lastDot != -1 ? filename.substring(lastDot) : "";
 			
@@ -404,71 +415,69 @@ public class APDE extends MultiDexApplication {
 		return false;
 	}
 	
-	public ArrayList<FileNavigatorAdapter.FileItem> listSketchContainingFolders(File directory, boolean parentDraggable, boolean draggable, SketchMeta location) {
-		//Convenience method
+	public ArrayList<FileNavigatorAdapter.FileItem> listSketchContainingFolders(
+			MaybeDocumentFile directory, boolean parentDraggable, boolean draggable, SketchMeta location) throws MaybeDocumentFile.ResolutionException {
+		// Convenience method
 		return listSketchContainingFolders(directory, new String[] {}, parentDraggable, draggable, location);
 	}
 	
-	public ArrayList<FileNavigatorAdapter.FileItem> listSketchContainingFolders(File directory, final String[] ignoreFilenames, boolean parentDroppable, boolean itemsDraggable, SketchMeta location) {
-		ArrayList<FileNavigatorAdapter.FileItem> output = new ArrayList<FileNavigatorAdapter.FileItem>();
+	public ArrayList<FileNavigatorAdapter.FileItem> listSketchContainingFolders(
+			MaybeDocumentFile directory, final String[] ignoreFilenames, boolean parentDroppable,
+			boolean itemsDraggable, SketchMeta location) throws MaybeDocumentFile.ResolutionException {
+		ArrayList<FileNavigatorAdapter.FileItem> output = new ArrayList<>();
 		
-		//Add the "navigate up" button
-		output.add(new FileNavigatorAdapter.FileItem(FileNavigatorAdapter.NAVIGATE_UP_TEXT, FileNavigatorAdapter.FileItemType.NAVIGATE_UP, false, parentDroppable,
+		FileNavigatorAdapter.FileItem emptyItem =
+				new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_empty),
+						FileNavigatorAdapter.FileItemType.MESSAGE);
+		
+		// Add the "navigate up" button
+		output.add(new FileNavigatorAdapter.FileItem(FileNavigatorAdapter.NAVIGATE_UP_TEXT,
+				FileNavigatorAdapter.FileItemType.NAVIGATE_UP, false, parentDroppable,
 				new SketchMeta(location.getLocation(), location.getParent())));
 		
-		//Sanity check...
-		if (directory == null || !directory.isDirectory()) {
-			//Let the user know that the folder is empty...
-			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
-			
+		// Sanity check...
+		if (directory == null || !directory.exists() || !directory.isDirectory()) {
+			// Let the user know that the folder is empty...
+			output.add(emptyItem);
 			return output;
 		}
 		
-		File[] contents = directory.listFiles(new FilenameFilter() {
-			@Override
-			public boolean accept(File dir, String filename) {
-				for(String ignore : ignoreFilenames) {
-					if(filename.equals(ignore)) {
-						return false;
-					}
-				}
-				
-				return true;
+		DocumentFile resolvedDirectory = directory.resolve();
+		
+		Set<String> ignored = new HashSet<>(Arrays.asList(ignoreFilenames));
+		
+		DocumentFile[] contents = resolvedDirectory.listFiles();
+		
+		// Cycle through the files
+		for (DocumentFile file : contents) {
+			if (file.getName() == null || ignored.contains(file.getName())) {
+				continue;
 			}
-		});
-		
-		// This happens if the user didn't give the WRITE_EXTERNAL_STORAGE permission...
-		// Perhaps put an error message to this effect here?
-		if (contents == null) {
-			//Let the user know that the folder is empty...
-			output.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_empty), FileNavigatorAdapter.FileItemType.MESSAGE));
-			System.out.println(getResources().getString(R.string.list_sketch_containing_folders_failed_contents_null));
 			
-			return output;
-		}
-		
-		//Cycle through the files
-		for (File file : contents) {
-			//Check to see if this folder has anything worth our time
-			if (validSketch(file)) {
-				output.add(new FileNavigatorAdapter.FileItem(file.getName(), FileNavigatorAdapter.FileItemType.SKETCH, itemsDraggable, false,
+			// Check to see if this folder has anything worth our time
+			if (validSketch(new MaybeDocumentFile(file))) {
+				output.add(new FileNavigatorAdapter.FileItem(file.getName(),
+						FileNavigatorAdapter.FileItemType.SKETCH, itemsDraggable, false,
 						new SketchMeta(location.getLocation(), location.getPath() + "/" + file.getName())));
-			} else if (containsSketches(file)) {
-				output.add(new FileNavigatorAdapter.FileItem(file.getName(), FileNavigatorAdapter.FileItemType.FOLDER, itemsDraggable, itemsDraggable,
+			} else if (containsSketches(new MaybeDocumentFile(file))) {
+				output.add(new FileNavigatorAdapter.FileItem(file.getName(),
+						FileNavigatorAdapter.FileItemType.FOLDER, itemsDraggable, itemsDraggable,
 						new SketchMeta(location.getLocation(), location.getPath() + "/" + file.getName())));
 			}
 		}
 		
-		//Sort the output alphabetically with folders on top
-		Collections.sort(output, new Comparator<FileNavigatorAdapter.FileItem>() {
-			@Override
-			public int compare(FileItem one, FileItem two) {
-				if(one.getType().equals(two.getType())) {
-					return one.getText().compareTo(two.getText());
-				}
-				
-				return one.getType().compareTo(two.getType());
+		// If only navigate up button, then it's empty
+		if (output.size() == 1) {
+			output.add(emptyItem);
+			return output;
+		}
+		
+		// Sort the output alphabetically with folders on top
+		Collections.sort(output, (one, two) -> {
+			if (one.getType().equals(two.getType())) {
+				return one.getText().compareTo(two.getText());
 			}
+			return one.getType().compareTo(two.getType());
 		});
 		
 		return output;
@@ -561,46 +570,35 @@ public class APDE extends MultiDexApplication {
 	/**
 	 * @return the location of the current sketch, be it a sketch, an example, or something else
 	 */
-	public File getSketchLocation() {
-		// Decide what to do...
-		
-		switch (sketchLocation) {
-		case SKETCHBOOK:
-			return new File(getSketchbookFolder(), sketchPath);
-		case EXAMPLE:
-			return new File(getExamplesFolder(), sketchPath);
-		case LIBRARY_EXAMPLE:
-			return new File(getLibrariesFolder(), sketchPath);
-		case EXTERNAL:
-			return new File(sketchPath);
-		case TEMPORARY:
-			return new File(getTemporarySketchesFolder(), sketchPath);
-		default:
-			// Maybe a temporary sketch...
-			return null;
-		}
+	public MaybeDocumentFile getSketchLocation() throws MaybeDocumentFile.MaybeDocumentFileException {
+		return getSketchLocation(sketchPath, sketchLocation);
 	}
 	
 	/**
 	 * @return the location of the sketch, be it a sketch, an example, or something else
 	 */
-	public File getSketchLocation(String sketchPath, SketchLocation sketchLocation) {
+	public MaybeDocumentFile getSketchLocation(String sketchPath, SketchLocation sketchLocation) throws MaybeDocumentFile.MaybeDocumentFileException {
 		// Decide what to do...
 
 		switch (sketchLocation) {
 		case SKETCHBOOK:
-			return new File(getSketchbookFolder(), sketchPath);
+			return getSketchbookFolder().childPathDirectory(sketchPath);
 		case EXAMPLE:
-			return new File(getExamplesFolder(), sketchPath);
+			return getExamplesFolder().childPathDirectory(sketchPath);
 		case LIBRARY_EXAMPLE:
-			return new File(getLibrariesFolder(), sketchPath);
+			return getLibrariesFolder().childPathDirectory(sketchPath);
 		case EXTERNAL:
-			return new File(sketchPath);
+			// TODO this might not be the best approach
+			DocumentFile file = DocumentFile.fromSingleUri(this, Uri.parse(sketchPath));
+			if (file != null) {
+				return new MaybeDocumentFile(file);
+			} else {
+				throw new RuntimeException("could not load external sketch");
+			}
 		case TEMPORARY:
-			return new File(getTemporarySketchesFolder(), sketchPath);
+			return getTemporarySketchesFolder().childPathDirectory(sketchPath);
 		default:
-			// Uh-oh...
-			return null;
+			throw new RuntimeException("impossible");
 		}
 	}
 	
@@ -644,19 +642,20 @@ public class APDE extends MultiDexApplication {
 	/**
 	 * @return the location of the Sketchbook folder on the external storage
 	 */
-	public File getSketchbookFolder() {
+	public MaybeDocumentFile getSketchbookFolder() throws MaybeDocumentFile.MaybeDocumentFileException {
 		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 		
 		StorageDrive savedDrive = getSketchbookDrive();
-		String externalPath = prefs.getString("pref_sketchbook_location", DEFAULT_SKETCHBOOK_LOCATION);
+		String externalPath = prefs.getString(SKETCHBOOK_EXTERNAL_STORAGE_PATH_PREF, DEFAULT_SKETCHBOOK_LOCATION);
 		
 		switch (savedDrive.type) {
 			case INTERNAL:
 			case SECONDARY_EXTERNAL:
-				return savedDrive.root;
+			case SAF_EXTERNAL:
+				return new MaybeDocumentFile(savedDrive.root);
 			case EXTERNAL:
 			case PRIMARY_EXTERNAL:
-				return new File(savedDrive.root, externalPath);
+				return new MaybeDocumentFile(savedDrive.root).childPathDirectory(externalPath);
 			default:
 				return null;
 		}
@@ -664,11 +663,9 @@ public class APDE extends MultiDexApplication {
 	
 	public StorageDrive getSketchbookDrive() {
 		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-		final String storageDrivePref = "pref_sketchbook_drive";
-		
 		ArrayList<StorageDrive> storageDrives = getStorageLocations();
 		
-		if (prefs.contains("internal_storage_sketchbook") && !prefs.contains(storageDrivePref)) {
+		if (prefs.contains("internal_storage_sketchbook") && !prefs.contains(STORAGE_DRIVE_PREF)) {
 			// Upgrade from the old way of doing sketchbook location (pre 0.3.3)
 			
 			String path;
@@ -680,40 +677,40 @@ public class APDE extends MultiDexApplication {
 			}
 			
 			SharedPreferences.Editor edit = prefs.edit();
-			edit.putString(storageDrivePref, path);
+			edit.putString(STORAGE_DRIVE_PREF, path);
 			edit.apply();
-		} else if (!prefs.contains(storageDrivePref)) {
+		} else if (!prefs.contains(STORAGE_DRIVE_PREF)) {
 			// Or... if there is nothing set, use the default
 			
 			SharedPreferences.Editor edit = prefs.edit();
-			edit.putString(storageDrivePref, getDefaultSketchbookStorageDrive(storageDrives).root.toString());
+			edit.putString(STORAGE_DRIVE_PREF, getDefaultSketchbookStorageDrive(storageDrives).root.getUri().toString());
 			edit.apply();
 		}
 		
-		String externalStoragePath = "pref_sketchbook_location";
-		
-		StorageDrive savedDrive = getStorageDriveByRoot(storageDrives, prefs.getString(storageDrivePref, ""));
-		String externalPath = prefs.getString(externalStoragePath, "");
+		StorageDrive savedDrive = getStorageDriveByRoot(storageDrives, prefs.getString(STORAGE_DRIVE_PREF, ""));
+		String externalPath = prefs.getString(SKETCHBOOK_EXTERNAL_STORAGE_PATH_PREF, "");
 		
 		// Don't let the user set their sketchbook folder to be the root of their internal storage.
 		// What if they want that? They really don't. I don't think it works.
 		if (externalPath.equals("")) {
 			SharedPreferences.Editor edit = prefs.edit();
-			edit.putString(externalStoragePath, DEFAULT_SKETCHBOOK_LOCATION);
+			edit.putString(SKETCHBOOK_EXTERNAL_STORAGE_PATH_PREF, DEFAULT_SKETCHBOOK_LOCATION);
 			edit.apply();
 		}
 		
-		if (savedDrive == null) {
+		if (savedDrive == null || savedDrive.root == null) {
 			// The drive has probably been removed
 			
 			System.err.println(getResources().getString(R.string.sketchbook_drive_not_found));
 			
 			SharedPreferences.Editor edit = prefs.edit();
-			edit.putString(storageDrivePref, getDefaultSketchbookStorageDrive(storageDrives).root.toString());
+			edit.putString(STORAGE_DRIVE_PREF, getDefaultSketchbookStorageDrive(storageDrives).root.getUri().toString());
 			edit.apply();
 			
-			savedDrive = getStorageDriveByRoot(storageDrives, prefs.getString(storageDrivePref, ""));
+			savedDrive = getStorageDriveByRoot(storageDrives, prefs.getString(STORAGE_DRIVE_PREF, ""));
 		}
+		
+		assert savedDrive != null;
 		
 		return savedDrive;
 	}
@@ -721,36 +718,63 @@ public class APDE extends MultiDexApplication {
 	public StorageDrive getSketchbookStorageDrive() {
 		ArrayList<StorageDrive> storageDrives = getStorageLocations();
 		
-		StorageDrive storageDrive = getStorageDriveByRoot(storageDrives, PreferenceManager.getDefaultSharedPreferences(this).getString("pref_sketchbook_drive", ""));
+		StorageDrive storageDrive = getStorageDriveByRoot(storageDrives, PreferenceManager.getDefaultSharedPreferences(this).getString(STORAGE_DRIVE_PREF, ""));
 		
 		// Will be null on devices without an external storage
 		return storageDrive != null ? storageDrive : getDefaultSketchbookStorageDrive(storageDrives);
 	}
 	
-	public ArrayList<StorageDrive> getStorageLocations() {
-		File primaryExtDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile();
+	public String getSafStorageDriveRoot() {
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		return prefs.getString(SKETCHBOOK_LOCATION_SAF_PREF, "");
+	}
+	
+	public DocumentFile getSafStorageDrive() {
+		String uriStr = getSafStorageDriveRoot();
+		if (uriStr.length() == 0) {
+			return null;
+		} else {
+			// TODO: error checking on this?
+			return DocumentFile.fromTreeUri(this, Uri.parse(uriStr));
+		}
+	}
+	
+	public void setSafStorageDrive(Uri uri) {
+		getContentResolver().takePersistableUriPermission(uri,
+				Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 		
+		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		prefs.edit()
+				.putString(SKETCHBOOK_LOCATION_SAF_PREF, uri.toString())
+				.putString(STORAGE_DRIVE_PREF, uri.toString())
+				.apply();
+	}
+	
+	public ArrayList<StorageDrive> getStorageLocations() {
 		ArrayList<StorageDrive> locations = new ArrayList<StorageDrive>();
 		
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+		if (Build.VERSION.SDK_INT >= SAF_API_CUTOFF) {
+			locations.add(new StorageDrive(getSafStorageDrive(), StorageDrive.StorageDriveType.SAF_EXTERNAL, "n/a", getSafStorageDriveRoot()));
+			locations.add(getInternalStorageDrive());
+		} else {
+			File primaryExtDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getParentFile();
 			File[] extDirs = getExternalFilesDirs(null);
 			
 			for (File dir : extDirs) {
 				if (dir != null) {
-					if (dir.getAbsolutePath().startsWith(primaryExtDir.getAbsolutePath())) {
-						//Use the root of the primary external storage, don't use the application-specific folder
-						locations.add(new StorageDrive(primaryExtDir, StorageDrive.StorageDriveType.PRIMARY_EXTERNAL, getAvailableSpace(primaryExtDir)));
+					if (primaryExtDir != null && dir.getAbsolutePath().startsWith(primaryExtDir.getAbsolutePath())) {
+						// Use the root of the primary external storage, don't use the application-specific folder
+						locations.add(new StorageDrive(DocumentFile.fromFile(primaryExtDir),
+								StorageDrive.StorageDriveType.PRIMARY_EXTERNAL,
+								getAvailableSpace(primaryExtDir)));
 					} else {
-						locations.add(new StorageDrive(new File(dir, "sketchbook"), StorageDrive.StorageDriveType.SECONDARY_EXTERNAL, getAvailableSpace(dir)));
+						locations.add(new StorageDrive(DocumentFile.fromFile(new File(dir, "sketchbook")),
+								StorageDrive.StorageDriveType.SECONDARY_EXTERNAL,
+								getAvailableSpace(dir)));
 					}
 				}
 			}
 			
-			locations.add(getInternalStorageDrive());
-		} else {
-			if (primaryExtDir != null) {
-				locations.add(new StorageDrive(primaryExtDir, StorageDrive.StorageDriveType.EXTERNAL, getAvailableSpace(primaryExtDir)));
-			}
 			locations.add(getInternalStorageDrive());
 		}
 		
@@ -759,7 +783,8 @@ public class APDE extends MultiDexApplication {
 	
 	public StorageDrive getInternalStorageDrive() {
 		File internalDir = getDir("sketchbook", 0);
-		return new StorageDrive(internalDir, StorageDrive.StorageDriveType.INTERNAL, getAvailableSpace(internalDir));
+		return new StorageDrive(DocumentFile.fromFile(internalDir),
+				StorageDrive.StorageDriveType.INTERNAL, getAvailableSpace(internalDir));
 	}
 	
 	public StorageDrive getDefaultSketchbookStorageDrive(ArrayList<StorageDrive> storageDrives) {
@@ -787,15 +812,14 @@ public class APDE extends MultiDexApplication {
 	 */
 	public void useInternalStorageDrive() {
 		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-		final String storageDrivePref = "pref_sketchbook_drive";
 		SharedPreferences.Editor edit = prefs.edit();
-		edit.putString(storageDrivePref, getInternalStorageDrive().root.toString());
+		edit.putString(STORAGE_DRIVE_PREF, getInternalStorageDrive().root.toString());
 		edit.apply();
 	}
 	
 	public StorageDrive getStorageDriveByRoot(ArrayList<StorageDrive> storageDrives, String root) {
 		for (StorageDrive storageDrive : storageDrives) {
-			if (storageDrive.root.getAbsolutePath().equals(root)) {
+			if (storageDrive.rootString != null && storageDrive.rootString.equals(root)) {
 				return storageDrive;
 			}
 		}
@@ -804,26 +828,59 @@ public class APDE extends MultiDexApplication {
 	}
 	
 	public static class StorageDrive {
-		public File root;
+		public DocumentFile root;
 		public StorageDriveType type;
 		public String space;
+		public String rootString;
 		
-		public StorageDrive(File root, StorageDriveType type, String space) {
+		public StorageDrive(DocumentFile root, StorageDriveType type, String space, String rootString) {
 			this.root = root;
 			this.type = type;
 			this.space = space;
+			if (rootString == null && root != null) {
+				this.rootString = root.getUri().toString();
+			} else {
+				this.rootString = rootString;
+			}
 		}
 		
-		public static enum StorageDriveType {
+		public StorageDrive(DocumentFile root, StorageDriveType type, String space) {
+			this(root, type, space, null);
+		}
+		
+		public enum StorageDriveType {
 			INTERNAL ("Internal"),
 			EXTERNAL ("External"),
 			PRIMARY_EXTERNAL ("Primary External"),
-			SECONDARY_EXTERNAL ("Secondary External");
+			SECONDARY_EXTERNAL ("Secondary External"),
+			SAF_EXTERNAL ("External");
 			
 			public String title;
 			
 			StorageDriveType(String title) {
 				this.title = title;
+			}
+			
+			public boolean requiresExternalStoragePermission() {
+				switch (this) {
+					case EXTERNAL:
+					case PRIMARY_EXTERNAL:
+						return true;
+					case INTERNAL:
+					case SECONDARY_EXTERNAL:
+					case SAF_EXTERNAL:
+						return false;
+					default:
+						throw new RuntimeException("should be impossible");
+				}
+			}
+		}
+		
+		public String getUriString() {
+			if (rootString != null) {
+				return rootString;
+			} else {
+				return "n/a";
 			}
 		}
 	}
@@ -857,8 +914,8 @@ public class APDE extends MultiDexApplication {
 	/**
 	 * @return the location of the libraries folder within the Sketchbook
 	 */
-	public File getLibrariesFolder() {
-		return new File(getSketchbookFolder(), LIBRARIES_FOLDER);
+	public MaybeDocumentFile getLibrariesFolder() throws MaybeDocumentFile.MaybeDocumentFileException {
+		return getSketchbookFolder().childDirectory(LIBRARIES_FOLDER);
 	}
 	
 	public File getStarterExamplesFolder() {
@@ -869,14 +926,19 @@ public class APDE extends MultiDexApplication {
 		return getDir("examples_repo", 0);
 	}
 	
-	public File getTemporarySketchesFolder() {
-		return getDir("temporary", 0);
+	public MaybeDocumentFile getTemporarySketchesFolder() {
+		try {
+			return MaybeDocumentFile.fromDirectory(getDir("temporary", 0), this);
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
 	}
 	
 	/**
 	 * @return the location of the examples folder on the private internal storage
 	 */
-	public File getExamplesFolder() {
+	public MaybeDocumentFile getExamplesFolder() {
 		/*
 		 * We're using the internal private storage directory for now
 		 * 
@@ -891,8 +953,16 @@ public class APDE extends MultiDexApplication {
 		
 		File examplesRepo = getExamplesRepoFolder();
 		
-		//Let's use the examples repo if it's been initialized
-		return examplesRepo.list().length > 0 ? examplesRepo : getStarterExamplesFolder();
+		try {
+			if (examplesRepo != null && examplesRepo.list().length > 0) {
+				// Let's use the examples repo if it's been initialized
+				return MaybeDocumentFile.fromDirectory(examplesRepo, this);
+			} else {
+				return MaybeDocumentFile.fromDirectory(getStarterExamplesFolder(), this);
+			}
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			throw new RuntimeException(e);
+		}
 	}
 	
 	/**
@@ -1109,36 +1179,36 @@ public class APDE extends MultiDexApplication {
 		}
 	}
 	
-	public void moveFolder(SketchMeta source, SketchMeta dest, Activity activityContext) {
-		final File sourceFile = getSketchLocation(source.getPath(), source.getLocation());
-		final File destFile = getSketchLocation(dest.getPath(), dest.getLocation());
+	public void moveFolder(SketchMeta source, SketchMeta dest, Activity activityContext) throws MaybeDocumentFile.MaybeDocumentFileException, FileNotFoundException {
+		final MaybeDocumentFile sourceFile = getSketchLocation(source.getPath(), source.getLocation());
+		final MaybeDocumentFile destFile = getSketchLocation(dest.getPath(), dest.getLocation());
 		
 		final boolean isSketch = validSketch(sourceFile);
 		final boolean selected = getSketchLocation().equals(getSketchLocation(source.getPath(), source.getLocation()));
 		
-		//Let's not overwrite anything...
-		//TODO Maybe give the user options to replace / keep both in the new location?
-		//We don't need that much right now, they can deal with things manually...
-		if(destFile.exists()) {
+		if (!sourceFile.exists()) {
+			throw new FileNotFoundException("Source file does not exist: " + sourceFile.toString());
+		}
+		
+		// Let's not overwrite anything...
+		// TODO Maybe give the user options to replace / keep both in the new location?
+		// We don't need that much right now, they can deal with things manually...
+		if (destFile.exists()) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(activityContext);
 			
 			builder.setTitle(isSketch ? R.string.rename_sketch_failure_title : R.string.rename_move_folder_failure_title);
 			builder.setMessage(isSketch ? R.string.rename_sketch_failure_message : R.string.rename_move_folder_failure_message);
 			
-			builder.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-				}
-			});
+			builder.setNeutralButton(R.string.ok, (dialog, which) -> {});
 			
 			builder.create().show();
 			
 			return;
 		}
 		
-		//TODO Maybe run in a separate thread if the file size is large enough?
+		// TODO Maybe run in a separate thread if the file size is large enough?
 		
-		if (moveFolder(sourceFile, destFile) && selected) {
+		if (performMoveSketch(sourceFile.resolve(), destFile) && selected) {
 			selectSketch(dest.getPath(), dest.getLocation());
 			putRecentSketch(dest.getLocation(), dest.getPath());
 		}
@@ -1146,10 +1216,10 @@ public class APDE extends MultiDexApplication {
 		editor.forceDrawerReload();
 	}
 	
-	private boolean moveFolder(File sourceFile, File destFile) {
+	private boolean performMoveSketch(DocumentFile sourceFile, MaybeDocumentFile destFile) {
 		try {
-			copyFile(sourceFile, destFile);
-		} catch (IOException e) {
+			copyDocumentFile(sourceFile, destFile, getContentResolver());
+		} catch (IOException | MaybeDocumentFile.MaybeDocumentFileException e) {
 			System.err.println(getResources().getString(R.string.move_folder_error_moving_sketch));
 			e.printStackTrace();
 			
@@ -1157,7 +1227,7 @@ public class APDE extends MultiDexApplication {
 		}
 		
 		try {
-			deleteFile(sourceFile);
+			deleteDocumentFile(sourceFile);
 		} catch (IOException e) {
 			System.err.println(getResources().getString(R.string.move_folder_error_deleting_old_sketch));
 			e.printStackTrace();
@@ -1168,13 +1238,35 @@ public class APDE extends MultiDexApplication {
 		return true;
 	}
 	
+	public static void copyDocumentFile(DocumentFile sourceFile, MaybeDocumentFile destFile,
+	                                    ContentResolver contentResolver) throws MaybeDocumentFile.MaybeDocumentFileException, IOException {
+		if (sourceFile.isDirectory()) {
+			for (DocumentFile content : sourceFile.listFiles()) {
+				copyDocumentFile(content, destFile.child(content.getName(), content.getType()), contentResolver);
+			}
+		} else {
+			if (!destFile.exists()) {
+				destFile.resolve();
+			}
+			
+			try (InputStream source = contentResolver.openInputStream(sourceFile.getUri());
+			     OutputStream destination = destFile.openOut(contentResolver)) {
+				byte[] buffer = new byte[4096];
+				int read;
+				while ((read = source.read(buffer)) > 0) {
+					destination.write(buffer, 0, read);
+				}
+			}
+		}
+	}
+	
 	public static void copyFile(File sourceFile, File destFile) throws IOException {
 		if (sourceFile.isDirectory()) {
     		for (File content : sourceFile.listFiles()) {
     			copyFile(content, new File(destFile, content.getName()));
     		}
     		
-    		//Don't try to copy the folder using file methods, it won't work
+    		// Don't try to copy the folder using file methods, it won't work
     		return;
     	}
 		
@@ -1183,21 +1275,32 @@ public class APDE extends MultiDexApplication {
 			destFile.createNewFile();
 		}
 		
-		FileChannel source = null;
-		FileChannel destination = null;
-		
-		try {
-			source = new FileInputStream(sourceFile).getChannel();
-			destination = new FileOutputStream(destFile).getChannel();
+		try (FileChannel source = new FileInputStream(sourceFile).getChannel();
+		     FileChannel destination = new FileOutputStream(destFile).getChannel()) {
 			destination.transferFrom(source, 0, source.size());
-		} finally {
-			if (source != null) {
-				source.close();
+		}
+	}
+	
+	public static void deleteDocumentFile(DocumentFile file, boolean suppressFailure) throws IOException {
+		if (file.exists()) {
+			if (file.isDirectory()) {
+				for (DocumentFile content : file.listFiles()) {
+					deleteDocumentFile(content, suppressFailure);
+				}
 			}
-			if (destination != null) {
-				destination.close();
+			
+			if (!file.delete()) {
+				if (suppressFailure) {
+					System.err.println("Failed to delete file: " + file);
+				} else {
+					throw new FileNotFoundException("Failed to delete file: " + file);
+				}
 			}
 		}
+	}
+	
+	public static void deleteDocumentFile(DocumentFile file) throws IOException {
+		deleteDocumentFile(file, false);
 	}
 	
 	/**
@@ -1291,7 +1394,7 @@ public class APDE extends MultiDexApplication {
 		return sketchLocation.equals(SketchLocation.SKETCHBOOK);
 	}
 	
-	public void putRecentSketch(SketchLocation location, String path) {
+	public void putRecentSketch(SketchLocation location, String path) throws MaybeDocumentFile.MaybeDocumentFileException {
 		ArrayList<SketchMeta> oldSketches = getRecentSketches();
 		SketchMeta[] sketches = new SketchMeta[oldSketches.size() + 1];
 		
@@ -1311,7 +1414,7 @@ public class APDE extends MultiDexApplication {
 		PreferenceManager.getDefaultSharedPreferences(this).edit().putString("recent", data).commit();
 	}
 	
-	public ArrayList<SketchMeta> getRecentSketches() {
+	public ArrayList<SketchMeta> getRecentSketches() throws MaybeDocumentFile.MaybeDocumentFileException {
 		String data = PreferenceManager.getDefaultSharedPreferences(this).getString("recent", "");
 		String[] sketchLines = data.split("\n");
 		
@@ -1350,7 +1453,7 @@ public class APDE extends MultiDexApplication {
 		return sketches;
 	}
 	
-	public ArrayList<FileNavigatorAdapter.FileItem> listRecentSketches() {
+	public ArrayList<FileNavigatorAdapter.FileItem> listRecentSketches() throws MaybeDocumentFile.MaybeDocumentFileException {
 		ArrayList<SketchMeta> sketches = getRecentSketches();
 		
 		ArrayList<FileNavigatorAdapter.FileItem> fileItems = new ArrayList<FileNavigatorAdapter.FileItem>(sketches.size() + 1);
@@ -1436,18 +1539,18 @@ public class APDE extends MultiDexApplication {
 	/**
 	 * @return the sketch properties of the current sketch
 	 */
-	public SketchProperties getProperties() {
+	public SketchProperties getProperties() throws MaybeDocumentFile.MaybeDocumentFileException {
 		return getProperties(BuildContext.create(this));
 	}
 	
-	public SketchProperties getProperties(BuildContext buildContext) {
+	public SketchProperties getProperties(BuildContext buildContext) throws MaybeDocumentFile.MaybeDocumentFileException {
 		// TODO maybe load once and store reference?
 		if (needsPropertiesUpgrade()) {
 			// Sketch still has an AndroidManifest.xml, upgrade to sketch.properties
 			return upgradeManifestToProperties(buildContext);
 		} else {
 			// Load sketch.properties
-			File propertiesFile = getSketchPropertiesFile();
+			MaybeDocumentFile propertiesFile = getSketchPropertiesFile();
 			SketchProperties properties = new SketchProperties(buildContext, propertiesFile);
 			// Create properties if they don't exist
 			if (!propertiesFile.exists() && !isExample()) {
@@ -1457,46 +1560,49 @@ public class APDE extends MultiDexApplication {
 		}
 	}
 	
-	public String getSketchPackageName() {
+	public String getSketchPackageName() throws MaybeDocumentFile.MaybeDocumentFileException {
 		return getProperties().getPackageName(getSketchName());
 	}
 	
-	public File getSketchPropertiesFile() {
-		return new File(getSketchLocation(), "sketch.properties");
+	public MaybeDocumentFile getSketchPropertiesFile() throws MaybeDocumentFile.MaybeDocumentFileException {
+		return getSketchLocation().child("sketch.properties", "text/x-java-properties");
 	}
 	
 	protected boolean needsPropertiesUpgrade() {
 		// Determine whether or not we need to upgrade to sketch.properties
 		
-		// We can't upgrade if we don't have a manifest
-		if (!(new File(getSketchLocation(), Manifest.MANIFEST_XML)).exists()) {
-			return false;
-		}
-		
-		// First, see if file exists - if not we need to upgrade
-		if (getSketchPropertiesFile().exists()) {
-			try {
-				// Load the properties file
-				Properties properties = new Properties();
-				SketchProperties.loadProperties(properties, new FileInputStream(getSketchPropertiesFile()));
-				// If it has our keys then it should be good to go, otherwise we need to upgrade
-				if (properties.containsKey(SketchProperties.KEY_PACKAGE_NAME)) {
-					return false;
-				} else {
-					return true;
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
+		try {
+			// We can't upgrade if we don't have a manifest
+			MaybeDocumentFile manifestFile = getSketchLocation().child(Manifest.MANIFEST_XML, "application/xml");
+			if (manifestFile == null || !manifestFile.exists()) {
 				return false;
 			}
-		} else {
-			return true;
+			
+			// First, see if file exists - if not we need to upgrade
+			if (getSketchPropertiesFile().exists()) {
+				try {
+					// Load the properties file
+					Properties properties = new Properties();
+					SketchProperties.loadProperties(properties,
+							getSketchPropertiesFile().openIn(getContentResolver()));
+					// If it has our keys then it should be good to go, otherwise we need to upgrade
+					return !properties.containsKey(SketchProperties.KEY_PACKAGE_NAME);
+				} catch (IOException e) {
+					e.printStackTrace();
+					return false;
+				}
+			} else {
+				return true;
+			}
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+			return false;
 		}
 	}
 	
-	protected SketchProperties upgradeManifestToProperties(BuildContext buildContext) {
+	protected SketchProperties upgradeManifestToProperties(BuildContext buildContext) throws MaybeDocumentFile.MaybeDocumentFileException {
 		// The old AndroidManifest.xml
-		File manifestFile = new File(getSketchLocation(), Manifest.MANIFEST_XML);
+		MaybeDocumentFile manifestFile = getSketchLocation().child(Manifest.MANIFEST_XML, "application/xml");
 		Manifest manifest = new Manifest(buildContext);
 		manifest.load(manifestFile, ComponentTarget.APP);
 		
@@ -1540,16 +1646,18 @@ public class APDE extends MultiDexApplication {
 		return getBuildFolder(true);
 	}
 	
-	public void rebuildLibraryList() {
+	public void rebuildLibraryList() throws MaybeDocumentFile.MaybeDocumentFileException {
 		importToLibraryTable.clear();
 		
-		File contribLibrariesFolder = getLibrariesFolder();
-		if (contribLibrariesFolder != null) {
-			contributedLibraries = Library.list(contribLibrariesFolder, this);
+		MaybeDocumentFile contribLibrariesFolder = getLibrariesFolder();
+		if (contribLibrariesFolder != null && contribLibrariesFolder.exists()) {
+			contributedLibraries = Library.list(contribLibrariesFolder.resolve(), this);
 			for (Library lib : contributedLibraries) {
 				lib.addPackageList(importToLibraryTable,
 						(APDE) editor.getApplicationContext());
 			}
+		} else {
+			contributedLibraries = Collections.emptyList();
 		}
 	}
 	
@@ -1557,7 +1665,7 @@ public class APDE extends MultiDexApplication {
 		return importToLibraryTable;
 	}
 	
-	public ArrayList<Library> getLibraries() {
+	public List<Library> getLibraries() {
 		return contributedLibraries;
 	}
 	
@@ -1621,7 +1729,7 @@ public class APDE extends MultiDexApplication {
 		});
 	}
 	
-	private void loadTool(ArrayList<Tool> list, HashMap<String, Tool> table, String toolName) {
+	private void loadTool(List<Tool> list, Map<String, Tool> table, String toolName) {
 		try {
 			Class<?> toolClass = Class.forName(toolName);
 			Tool tool = (Tool) toolClass.newInstance();
@@ -1630,29 +1738,17 @@ public class APDE extends MultiDexApplication {
 			
 			list.add(tool);
 			table.put(toolName, tool);
-		} catch (ClassNotFoundException e) {
-			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
-			e.printStackTrace();
-		} catch (InstantiationException e) {
-			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
-			e.printStackTrace();
-		} catch (Error e) {
-			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
-			e.printStackTrace();
-		} catch (Exception e) {
+		} catch (Error | Exception e) {
 			System.err.println(String.format(Locale.US, getResources().getString(R.string.tool_load_failed), toolName));
 			e.printStackTrace();
 		}
 	}
 	
-	public HashMap<String, Tool> getPackageToToolTable() {
+	public Map<String, Tool> getPackageToToolTable() {
 		return packageToToolTable;
 	}
 	
-	public ArrayList<Tool> getTools() {
+	public List<Tool> getTools() {
 		return tools;
 	}
 	
@@ -1819,23 +1915,28 @@ public class APDE extends MultiDexApplication {
 		// The only file manager that works is Open Intents (OI), which uses a separate mechanism.
 		// TODO Need to create an in-app file browser to avoid depending on an external file browser
 		
-		File sketchFolder = getSketchLocation();
-		Intent intent = new Intent(Intent.ACTION_VIEW);
-		Uri uri;
+		// TODO: unclear how to do this with DocumentFiles
 		
-		if (android.os.Build.VERSION.SDK_INT >= 24) {
-			// Need to use FileProvider
-			uri = FileProvider.getUriForFile(activityContext, "com.calsignlabs.apde.fileprovider", sketchFolder);
-			intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-		} else {
-			uri = Uri.fromFile(sketchFolder);
-		}
-		
-		// Support OI File Manager - perhaps the only file manager that supports displaying folders
-		intent.putExtra("org.openintents.extra.ABSOLUTE_PATH", sketchFolder.getAbsolutePath());
-		intent.setDataAndType(uri, "*/*");
-		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Start this in a separate task
-		activityContext.startActivity(Intent.createChooser(intent, getResources().getString(R.string.show_sketch_folder_title)));
+//		DocumentFile sketchFolder = getSketchLocation();
+//		Intent intent = new Intent(Intent.ACTION_VIEW);
+//		Uri uri;
+//
+//		if (android.os.Build.VERSION.SDK_INT >= 30) {
+//			// TODO don't know if we can do this
+//			uri = null;
+//		} else if (android.os.Build.VERSION.SDK_INT >= 24) {
+//			// Need to use FileProvider
+//			uri = FileProvider.getUriForFile(activityContext, "com.calsignlabs.apde.fileprovider", sketchFolder);
+//			intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+//		} else {
+//			uri = Uri.fromFile(sketchFolder);
+//		}
+//
+//		// Support OI File Manager - perhaps the only file manager that supports displaying folders
+//		intent.putExtra("org.openintents.extra.ABSOLUTE_PATH", sketchFolder.getAbsolutePath());
+//		intent.setDataAndType(uri, "*/*");
+//		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Start this in a separate task
+//		activityContext.startActivity(Intent.createChooser(intent, getResources().getString(R.string.show_sketch_folder_title)));
 	}
 	
 	public ModularBuild getModularBuild() {
@@ -1850,7 +1951,8 @@ public class APDE extends MultiDexApplication {
 	
 	public void writeDebugLog(String tag, String msg) {
 		try {
-			FileOutputStream out = new FileOutputStream(new File(getSketchbookFolder(), "debugLog.txt"), true);
+			MaybeDocumentFile output = getSketchbookFolder().child("debugLog.txt", "text/plain");
+			OutputStream out = output.openOut(getContentResolver());
 			Writer writer = new BufferedWriter(new OutputStreamWriter(out));
 			
 			writer.write(DEBUG_LOG_TIMESTAMP_FORMATTER.format(new Date()) + "    " + tag + "    " + msg + "\n");
@@ -1859,7 +1961,7 @@ public class APDE extends MultiDexApplication {
 			writer.close();
 			out.flush();
 			out.close();
-		} catch (IOException e) {
+		} catch (IOException | MaybeDocumentFile.MaybeDocumentFileException e) {
 			e.printStackTrace();
 		}
 	}
@@ -1877,13 +1979,20 @@ public class APDE extends MultiDexApplication {
 			msg.append("\n");
 			
 			for (SketchFile sketchFile : editor.getSketchFiles()) {
-				File file = new File(getSketchLocation(), sketchFile.getFilename());
-				
-				msg.append("    FS - ");
-				msg.append(sketchFile.getFilename());
-				msg.append(": ");
-				msg.append(file.length());
-				msg.append("\n");
+				try {
+					MaybeDocumentFile file = getSketchLocation().child(sketchFile.getFilename(), "text/pde");
+					if (file != null && file.exists()) {
+						msg.append("    FS - ");
+						msg.append(sketchFile.getFilename());
+						msg.append(": ");
+						msg.append(file.resolve().length());
+						msg.append("\n");
+					} else {
+						msg.append("   FS - null\n");
+					}
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					msg.append("    FS - failed to read\n");
+				}
 			}
 			
 			for (SketchFile sketchFile : editor.getSketchFiles()) {
@@ -1906,6 +2015,28 @@ public class APDE extends MultiDexApplication {
 			}
 			
 			writeDebugLog(loc, msg.toString());
+		}
+	}
+	
+	public void checkAndroid11SketchbookAccess(Activity activity, boolean forceUpdate) {
+		if (android.os.Build.VERSION.SDK_INT >= SAF_API_CUTOFF) {
+			if (getSafStorageDrive() == null || forceUpdate) {
+				// Need to get user to set SAF storage drive
+				try {
+					// Need to use storage access framework to access sketchbook on Android 11+.
+					// As far as I'm concerned, Google is dumb as bricks for making this a requirement.
+					
+					Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+					// TODO: we need to have a separate path for upgrading from an older version of APDE
+					MaybeDocumentFile existing = getSketchbookFolder();
+					if (existing.exists()) {
+						intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, existing.resolve().getUri());
+					}
+					activity.startActivityForResult(intent, FLAG_SELECT_SKETCHBOOK_FOLDER);
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 }

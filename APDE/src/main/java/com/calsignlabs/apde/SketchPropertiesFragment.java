@@ -33,12 +33,14 @@ import androidx.preference.PreferenceManager;
 
 import com.calsignlabs.apde.build.SketchProperties;
 import com.calsignlabs.apde.support.FileSelection;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 import com.takisoft.preferencex.EditTextPreference;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Objects;
 
 public class SketchPropertiesFragment extends PreferenceFragmentCompat {
@@ -61,23 +63,27 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 	}
 	
 	public static void updatePrefs(APDE global) {
-		SketchProperties properties = global.getProperties();
-		
-		SharedPreferences.Editor edit = global.getSharedPreferences(global.getSketchName(), 0).edit();
-		edit.putString("prop_pretty_name", properties.getDisplayName(global.getSketchName()));
-		edit.putString("prop_package_name", properties.getPackageName(global.getSketchName()));
-		edit.putString("permissions", properties.getPermissionsString());
-		edit.putString("prop_target_sdk", Integer.toString(properties.getTargetSdk()));
-		edit.putString("prop_min_sdk", Integer.toString(properties.getMinSdk()));
-		edit.putString("prop_orientation", properties.getOrientation());
-		edit.putString("prop_version_code", Integer.toString(properties.getVersionCode()));
-		edit.putString("prop_pretty_version", properties.getVersionName());
-		edit.apply();
+		try {
+			SketchProperties properties = global.getProperties();
+			
+			SharedPreferences.Editor edit = global.getSharedPreferences(global.getSketchName(), 0).edit();
+			edit.putString("prop_pretty_name", properties.getDisplayName(global.getSketchName()));
+			edit.putString("prop_package_name", properties.getPackageName(global.getSketchName()));
+			edit.putString("permissions", properties.getPermissionsString());
+			edit.putString("prop_target_sdk", Integer.toString(properties.getTargetSdk()));
+			edit.putString("prop_min_sdk", Integer.toString(properties.getMinSdk()));
+			edit.putString("prop_orientation", properties.getOrientation());
+			edit.putString("prop_version_code", Integer.toString(properties.getVersionCode()));
+			edit.putString("prop_pretty_version", properties.getVersionName());
+			edit.apply();
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	@Override
 	public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-		//Switch to the preferences for the current sketch
+		// Switch to the preferences for the current sketch
 		getPreferenceManager().setSharedPreferencesName(getGlobalState().getSketchName());
 		
 		updatePrefs(getGlobalState());
@@ -158,7 +164,7 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 			}
 		});
 		
-		//If this is an example...
+		// If this is an example...
 		if(getGlobalState().isExample()) {
 			//...disable all of the preferences
 			findPreference("prop_manifest").setEnabled(false);
@@ -169,31 +175,40 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 		// ...or a local instance, for that matter
 		// StackOverflow: http://stackoverflow.com/questions/2542938/sharedpreferences-onsharedpreferencechangelistener-not-being-called-consistently
 		prefListener = (pref, key) -> {
-			SketchProperties properties = getGlobalState().getProperties();
-			
-			if (key.equals("prop_pretty_name"))
-				properties.setDisplayName(pref.getString(key, ""));
-			if (key.equals("prop_package_name"))
-				properties.setPackageName(pref.getString(key, ""));
-			if (key.equals("prop_version_code"))
-				properties.setVersionCode(Integer.parseInt(pref.getString(key, getResources().getString(R.string.prop_version_code_default))));
-			if (key.equals("prop_pretty_version"))
-				properties.setVersionName(pref.getString(key, getResources().getString(R.string.prop_pretty_version_default)));
-			if (key.equals("permissions"))
-				properties.setPermissionsString(pref.getString(key, ""));
-			if (key.equals("prop_target_sdk"))
-				properties.setTargetSdk(Integer.parseInt(pref.getString("prop_target_sdk", getResources().getString(R.string.prop_target_sdk_default))));
-			if (key.equals("prop_min_sdk"))
-				properties.setMinSdk(Integer.parseInt(pref.getString("prop_min_sdk", getResources().getString(R.string.prop_min_sdk_default))));
-			if (key.equals("prop_orientation"))
-				properties.setOrientation(pref.getString("prop_orientation", getResources().getString(R.string.prop_orientation_default)));
-			
-			properties.save(getGlobalState().getSketchPropertiesFile());
+			try {
+				SketchProperties properties = getGlobalState().getProperties();
+				
+				if (key.equals("prop_pretty_name"))
+					properties.setDisplayName(pref.getString(key, ""));
+				if (key.equals("prop_package_name"))
+					properties.setPackageName(pref.getString(key, ""));
+				if (key.equals("prop_version_code"))
+					properties.setVersionCode(Integer.parseInt(pref.getString(key, getResources().getString(R.string.prop_version_code_default))));
+				if (key.equals("prop_pretty_version"))
+					properties.setVersionName(pref.getString(key, getResources().getString(R.string.prop_pretty_version_default)));
+				if (key.equals("permissions"))
+					properties.setPermissionsString(pref.getString(key, ""));
+				if (key.equals("prop_target_sdk"))
+					properties.setTargetSdk(Integer.parseInt(pref.getString("prop_target_sdk", getResources().getString(R.string.prop_target_sdk_default))));
+				if (key.equals("prop_min_sdk"))
+					properties.setMinSdk(Integer.parseInt(pref.getString("prop_min_sdk", getResources().getString(R.string.prop_min_sdk_default))));
+				if (key.equals("prop_orientation"))
+					properties.setOrientation(pref.getString("prop_orientation", getResources().getString(R.string.prop_orientation_default)));
+				
+				properties.save(getGlobalState().getSketchPropertiesFile());
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				e.printStackTrace();
+			}
 		};
 		
 		if (!getGlobalState().isExample() && !getGlobalState().isTemp()) {
-			// Set "Show Sketch Folder"'s summary to be the absolute path of the sketch
-			findPreference("prop_show_sketch_folder").setSummary(getGlobalState().getSketchLocation().getAbsolutePath());
+			try {
+				// Set "Show Sketch Folder"'s summary to be the absolute path of the sketch
+				findPreference("prop_show_sketch_folder")
+						.setSummary(getGlobalState().getSketchLocation().toString());
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				e.printStackTrace();
+			}
 		}
 		
 		// Detect changes to the preferences so that we can save them to the manifest file directly
@@ -271,7 +286,7 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 		iconFile = (EditText) changeIconLayout.findViewById(R.id.change_icon_file);
 		final ImageButton iconFileSelect = (ImageButton) changeIconLayout.findViewById(R.id.change_icon_file_select);
 		
-		//Scale format radio group
+		// Scale format radio group
 		final RadioGroup scaleFormat = (RadioGroup) changeIconLayout.findViewById(R.id.format_scale);
 		
 		for (int i = 0; i < scaleFormat.getChildCount(); i ++) {
@@ -285,7 +300,7 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 			}
 		});
 		
-		//Alt text for the big icon
+		// Alt text for the big icon
 		final TextView bigIconAltText = (TextView) changeIconLayout.findViewById(R.id.big_icon_alt_text);
 		
 		bigIconAltText.setAllCaps(true);
@@ -295,42 +310,38 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 		builder.setNegativeButton(R.string.cancel, (dialog, which) -> {});
 		
 		builder.setPositiveButton(R.string.ok, (dialog, which) -> {
+			if (getContext() == null) {
+				return;
+			}
+			
 			Bitmap bitmap = loadBitmap();
 			
 			if (bitmap != null) {
-				int minDim = Math.min(bitmap.getWidth(), bitmap.getHeight());
+				int maxDim = Math.min(bitmap.getWidth(), bitmap.getHeight());
 				
 				int[] dims = {36, 48, 72, 96, 144, 192};
 				
 				for (int dim : dims) {
-					File out = new File(getGlobalState().getSketchLocation(), "icon-" + dim + ".png");
-					
-					//Don't scale the image up
-					if (dim <= minDim) {
-						FileOutputStream stream = null;
+					try {
+						MaybeDocumentFile out = getGlobalState().getSketchLocation().child("icon-" + dim + ".png", "image/png");
 						
-						try {
-							stream = new FileOutputStream(out);
-							
-							//Replace the old icon
-							formatIcon(bitmap, dim, getScaleFormat(scaleFormat)).compress(Bitmap.CompressFormat.PNG, 100, stream);
-						} catch (FileNotFoundException e) {
-							e.printStackTrace();
-							//...
-						} finally {
-							//Always close the stream...
-							if (stream != null) {
-								try {
-									stream.close();
-								} catch (IOException e) {
-									e.printStackTrace();
-									//Whatever at this point...
-								}
+						// Don't scale the image up
+						if (dim <= maxDim) {
+							try (OutputStream stream = out.openOut(getContext().getContentResolver());) {
+								// Replace the old icon
+								formatIcon(bitmap, dim,
+										getScaleFormat(scaleFormat)).compress(Bitmap.CompressFormat.PNG, 100, stream);
+							} catch (IOException exception) {
+								exception.printStackTrace();
+							}
+						} else {
+							// Get rid of the old icon
+							if (out.exists()) {
+								out.resolve().delete();
 							}
 						}
-					} else {
-						//Get rid of the old icon...
-						out.delete();
+					} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+						e.printStackTrace();
 					}
 				}
 			}
@@ -445,34 +456,36 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 		
 		//Load the old icon for the current sketch
 		
-		File sketchFolder = getGlobalState().getSketchLocation();
-		String[] iconTitles = com.calsignlabs.apde.build.Build.ICON_LIST;
-		
-		String iconPath = "";
-		
-		for (String iconTitle : iconTitles) {
-			File icon = new File(sketchFolder, iconTitle);
+		try {
 			
-			if (icon.exists()) {
-				iconPath = icon.getAbsolutePath();
-				break;
+			MaybeDocumentFile sketchFolder = getGlobalState().getSketchLocation();
+			String[] iconTitles = com.calsignlabs.apde.build.Build.ICON_LIST;
+			
+			MaybeDocumentFile icon = null;
+			for (String iconTitle : iconTitles) {
+				icon = sketchFolder.child(iconTitle, "image/png");
+				if (icon.exists()) {
+					break;
+				}
 			}
-		}
-		
-		if (!iconPath.equals("")) {
-			Bitmap oldIcon = BitmapFactory.decodeFile(iconPath);
 			
-			if (oldIcon != null) {
-				smallIcon.setImageBitmap(oldIcon);
+			if (icon != null && icon.exists() && getContext() != null) {
+				Bitmap oldIcon = BitmapFactory.decodeStream(icon.openIn(getContext().getContentResolver()));
+				
+				if (oldIcon != null) {
+					smallIcon.setImageBitmap(oldIcon);
+				} else {
+					//Uh-oh, some error occurred...
+				}
 			} else {
-				//Uh-oh, some error occurred...
+				smallIcon.setImageDrawable(getResources().getDrawable(R.drawable.default_icon));
 			}
-		} else {
-			smallIcon.setImageDrawable(getResources().getDrawable(R.drawable.default_icon));
+			
+			bigIcon.setVisibility(View.GONE);
+			bigIconAltText.setVisibility(View.VISIBLE);
+		} catch (MaybeDocumentFile.MaybeDocumentFileException | FileNotFoundException e) {
+			e.printStackTrace();
 		}
-		
-		bigIcon.setVisibility(View.GONE);
-		bigIconAltText.setVisibility(View.VISIBLE);
 		
 		changeIconOK.setEnabled(false);
 		for (int i = 0; i < scaleFormat.getChildCount(); i ++) {

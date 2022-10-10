@@ -28,6 +28,7 @@ import android.net.Uri;
 import androidx.test.espresso.intent.Intents;
 
 import com.calsignlabs.apde.build.StaticBuildResources;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import org.hamcrest.core.StringEndsWith;
 import org.junit.Test;
@@ -75,7 +76,11 @@ public class SketchPropertiesTest extends BaseTest {
 		
 		// make sure the sketch properties file was written
 		editorActivityRule.getScenario().onActivity(editorActivity -> {
-			assert editorActivity.getGlobalState().getSketchPropertiesFile().exists();
+			try {
+				assert editorActivity.getGlobalState().getSketchPropertiesFile().exists();
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				throw new RuntimeException(e);
+			}
 		});
 	}
 	
@@ -109,9 +114,19 @@ public class SketchPropertiesTest extends BaseTest {
 		
 		// make sure the file was added correctly
 		editorActivityRule.getScenario().onActivity(editorActivity -> {
-			File addedFile = new File(new File(
-					editorActivity.getGlobalState().getSketchLocation(), "data"), dataFilename);
-			assert addedFile.exists();
+			try {
+				// TODO: the file doesn't get the correct name because it's coming through a single
+				// file URI, so we need to rename it
+				MaybeDocumentFile dataFolder = editorActivity.getGlobalState().getSketchLocation().childDirectory("data");
+				MaybeDocumentFile addedFile = dataFolder.child(SketchPropertiesActivity.DEFAULT_ADDED_FILENAME, "application/octet-stream");
+				MaybeDocumentFile renamedFile = dataFolder.child(dataFilename, "application/octet-stream");
+				assert addedFile.exists();
+				addedFile.resolve().renameTo(dataFilename);
+				assert renamedFile.exists();
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				e.printStackTrace();
+				throw new RuntimeException(e);
+			}
 		});
 		
 		pressBack();
@@ -174,9 +189,13 @@ public class SketchPropertiesTest extends BaseTest {
 		// make sure the icon files were created
 		editorActivityRule.getScenario().onActivity(editorActivity -> {
 			// we just check one icon, should be fine
-			File icon96File = new File(
-					editorActivity.getGlobalState().getSketchLocation(), "icon-96.png");
-			assert icon96File.exists();
+			try {
+				MaybeDocumentFile icon96File = editorActivity.getGlobalState().getSketchLocation().child("icon-96.png", "image/png");
+				assert icon96File.exists();
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				e.printStackTrace();
+				throw new RuntimeException(e);
+			}
 		});
 	}
 }

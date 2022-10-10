@@ -27,6 +27,8 @@ import static org.junit.Assert.assertTrue;
 import androidx.test.espresso.ViewInteraction;
 import androidx.test.filters.LargeTest;
 
+import com.calsignlabs.apde.support.MaybeDocumentFile;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -144,9 +146,12 @@ public class TabTest extends BaseTest {
 			// make sure the file exists
 			editorActivity.autoSave();
 			
-			File sketchPde = new File(editorActivity.getGlobalState().getSketchLocation(),
-					DEFAULT_TAB_NAME + ".pde");
-			assertTrue(sketchPde.exists());
+			try {
+				MaybeDocumentFile sketchPde = editorActivity.getGlobalState().getSketchLocation().child(DEFAULT_TAB_NAME + ".pde", SketchFile.PDE_MIME_TYPE);
+				assertTrue(sketchPde.exists());
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				throw new RuntimeException(e);
+			}
 		});
 		
 		onTab(DEFAULT_TAB_NAME)
@@ -167,12 +172,16 @@ public class TabTest extends BaseTest {
 			// make sure the files are updated
 			editorActivity.autoSave();
 			
-			File sketchFolder = editorActivity.getGlobalState().getSketchLocation();
-			File sketchPde = new File(sketchFolder, DEFAULT_TAB_NAME + ".pde");
-			File renamedPde = new File(sketchFolder, renamedTabName + ".pde");
-			
-			assertFalse(sketchPde.exists());
-			assertTrue(renamedPde.exists());
+			try {
+				MaybeDocumentFile sketchFolder = editorActivity.getGlobalState().getSketchLocation();
+				MaybeDocumentFile sketchPde = sketchFolder.child(DEFAULT_TAB_NAME + ".pde", SketchFile.PDE_MIME_TYPE);
+				MaybeDocumentFile renamedPde = sketchFolder.child(renamedTabName + ".pde", SketchFile.PDE_MIME_TYPE);
+				
+				assertFalse(sketchPde.exists());
+				assertTrue(renamedPde.exists());
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				e.printStackTrace();
+			}
 		});
 	}
 	
@@ -283,12 +292,16 @@ public class TabTest extends BaseTest {
 			// make sure the files are updated
 			editorActivity.autoSave();
 			
-			File sketchFolder = editorActivity.getGlobalState().getSketchLocation();
-			File sketchPde = new File(sketchFolder, DEFAULT_TAB_NAME + ".pde");
-			File renamedPde = new File(sketchFolder, newFile + ".pde");
-			
-			assertFalse(sketchPde.exists());
-			assertTrue(renamedPde.exists());
+			try {
+				MaybeDocumentFile sketchFolder = editorActivity.getGlobalState().getSketchLocation();
+				MaybeDocumentFile sketchPde = sketchFolder.child(DEFAULT_TAB_NAME + ".pde", SketchFile.PDE_MIME_TYPE);
+				MaybeDocumentFile renamedPde = sketchFolder.child(newFile + ".pde", SketchFile.PDE_MIME_TYPE);
+				
+				assertFalse(sketchPde.exists());
+				assertTrue(renamedPde.exists());
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				e.printStackTrace();
+			}
 		});
 	}
 	

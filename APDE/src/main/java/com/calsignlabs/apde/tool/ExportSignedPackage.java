@@ -31,6 +31,7 @@ import com.calsignlabs.apde.build.Build;
 import com.calsignlabs.apde.build.ComponentTarget;
 import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.support.FileSelection;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import org.spongycastle.asn1.x509.X509Name;
 import org.spongycastle.jce.X509Principal;
@@ -1293,22 +1294,33 @@ public class ExportSignedPackage implements Tool {
 	}
 	
 	protected void releaseBuild() {
-		//If this is an example, then put the sketch in the "bin" directory within the sketchbook
-		final File binFolder = new File((context.isExample() || context.isTemp()) ? context.getSketchbookFolder() : context.getSketchLocation(), "bin");
-		
-		binFolder.mkdir();
-		
-		//Clear the console
-    	((TextView) context.getEditor().findViewById(R.id.console)).setText("");
-		
-		builder = new Build(context, BuildContext.create(context));
-		builder.setKey(getKeystoreFileUri(), keystorePassword.getText().toString().toCharArray(), (String) alias.getSelectedItem(), aliasPassword.getText().toString().toCharArray());
-		
-		new Thread(() -> {
-			exporting = true;
-			builder.build("release", ComponentTarget.deserialize(componentTarget.getSelectedItemPosition()));
-			exporting = false;
-		}).start();
+		try {
+			// If this is an example, then put the sketch in the "bin" directory within the sketchbook
+			// TODO: if the sketchbook is on the internal storage, find a way to expose the output APK
+			MaybeDocumentFile outputRoot;
+			if (context.isExample()) {
+				outputRoot = context.getSketchbookFolder();
+			} else {
+				outputRoot = context.getSketchLocation();
+			}
+			final MaybeDocumentFile binFolder = outputRoot.childDirectory("bin");
+			
+			binFolder.resolve();
+			
+			//Clear the console
+			((TextView) context.getEditor().findViewById(R.id.console)).setText("");
+			
+			builder = new Build(context, BuildContext.create(context));
+			builder.setKey(getKeystoreFileUri(), keystorePassword.getText().toString().toCharArray(), (String) alias.getSelectedItem(), aliasPassword.getText().toString().toCharArray());
+			
+			new Thread(() -> {
+				exporting = true;
+				builder.build("release", ComponentTarget.deserialize(componentTarget.getSelectedItemPosition()));
+				exporting = false;
+			}).start();
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	@Override

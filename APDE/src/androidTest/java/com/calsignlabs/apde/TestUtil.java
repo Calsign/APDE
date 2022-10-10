@@ -141,7 +141,7 @@ public class TestUtil {
 				device.findObject(matchesAnyString("Open", "OPEN")).click();
 			} else {
 				UiObject done = device.findObject(matchesAnyString("Done", "DONE"));
-				if (done.waitForExists(400)) {
+				if (done.waitForExists(1000)) {
 					done.click();
 				}
 			}

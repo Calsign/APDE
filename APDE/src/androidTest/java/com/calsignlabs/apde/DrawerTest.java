@@ -4,6 +4,8 @@ import static androidx.test.espresso.Espresso.onData;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.clearText;
 import static androidx.test.espresso.action.ViewActions.click;
+import static androidx.test.espresso.action.ViewActions.swipeDown;
+import static androidx.test.espresso.action.ViewActions.swipeUp;
 import static androidx.test.espresso.action.ViewActions.typeText;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.RootMatchers.isDialog;
@@ -24,6 +26,8 @@ import static org.hamcrest.Matchers.containsString;
 
 import androidx.test.espresso.matcher.BoundedMatcher;
 import androidx.test.filters.LargeTest;
+
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -84,26 +88,26 @@ public class DrawerTest extends BaseTest {
 		
 		openMenu();
 		
-		onView(withText(R.string.editor_menu_move_temp_to_sketchbook))
-				.perform(click());
-		
-		onView(withText(R.string.move_temp_to_sketchbook_button))
-				.inRoot(isDialog())
-				.perform(click());
-		
-		openMenu();
-		
-		onView(withText(R.string.editor_menu_rename_sketch))
-				.perform(click());
-		
-		onDialogEditText()
-				.perform(clearText(), typeText(sketch));
-		
-		onView(withText(R.string.rename_sketch_button))
-				.inRoot(isDialog())
-				.perform(click());
-		
 		try {
+			onView(withText(R.string.editor_menu_move_temp_to_sketchbook))
+					.perform(click());
+			
+			onView(withText(R.string.move_temp_to_sketchbook_button))
+					.inRoot(isDialog())
+					.perform(click());
+			
+			openMenu();
+			
+			onView(withText(R.string.editor_menu_rename_sketch))
+					.perform(click());
+			
+			onDialogEditText()
+					.perform(clearText(), typeText(sketch));
+			
+			onView(withText(R.string.rename_sketch_button))
+					.inRoot(isDialog())
+					.perform(click());
+			
 			openDrawer();
 			
 			onView(withText(conway))
@@ -119,6 +123,8 @@ public class DrawerTest extends BaseTest {
 			
 			onView(withText(R.string.drawer_folder_recent))
 					.perform(click());
+			
+			onView(withId(R.id.drawer_list)).perform(swipeDown());
 			
 			onData(anything())
 					.inAdapterView(withId(R.id.drawer_list))
@@ -142,8 +148,19 @@ public class DrawerTest extends BaseTest {
 			editorActivityRule.getScenario().onActivity(editorActivity -> {
 				// don't take any chances trying to navigate the UI
 				// just make sure the thing gets deleted
-				File sketchFolder = new File(editorActivity.getGlobalState().getSketchbookFolder(), sketch);
-				deleteFile(sketchFolder, true);
+				try {
+					MaybeDocumentFile sketchFolder = editorActivity.getGlobalState().getSketchbookFolder().childDirectory(sketch);
+					sketchFolder.delete();
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					e.printStackTrace();
+				}
+				
+				try {
+					MaybeDocumentFile sketchFolder = editorActivity.getGlobalState().getSketchbookFolder().childDirectory(bouncyBubbles);
+					sketchFolder.delete();
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					e.printStackTrace();
+				}
 			});
 		}
 	}

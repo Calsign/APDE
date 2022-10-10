@@ -13,6 +13,7 @@ import android.app.AlertDialog;
 import android.app.WallpaperManager;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -23,6 +24,8 @@ import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import android.preference.PreferenceManager;
 import androidx.core.content.FileProvider;
+import com.calsignlabs.apde.support.documentfile.DocumentFile;
+
 import android.view.inputmethod.InputMethodManager;
 
 import com.android.sdklib.build.ApkBuilder;
@@ -36,6 +39,7 @@ import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.support.FileSelection;
 import com.calsignlabs.apde.support.InputStreamKeySigner;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
@@ -46,6 +50,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,10 +67,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -91,9 +98,6 @@ public class Build {
 	private File dexedLibsFolder;
 	
 	private List<Library> importedLibraries;
-	
-	protected String classPath;
-	protected String javaLibraryPath;
 	
 	// Additional resources
 	static private final String LAYOUT_ACTIVITY_TEMPLATE = "LayoutActivity.xml.tmpl";
@@ -207,7 +211,13 @@ public class Build {
 	}
 	
 	public static void launchSketchPostLaunch(EditorActivity editor) {
-		String packageName = editor.getGlobalState().getSketchPackageName();
+		String packageName;
+		try {
+			packageName = editor.getGlobalState().getSketchPackageName();
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+			return;
+		}
 		Intent intent = editor.getPackageManager().getLaunchIntentForPackage(packageName);
 		
 		if (intent == null) {
@@ -230,16 +240,19 @@ public class Build {
 	}
 	
 	public static void setWallpaperPostLaunch(EditorActivity editor) {
+		String packageName;
+		try {
+			packageName = editor.getGlobalState().getSketchPackageName();
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+			return;
+		}
+		
 		Intent intent = new Intent();
 		
-		if (android.os.Build.VERSION.SDK_INT >= 16) {
-			intent.setAction(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER);
-			String packageName = editor.getGlobalState().getSketchPackageName();
-			String canonicalName = packageName + "." + "MainService";
-			intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, new ComponentName(packageName, canonicalName));
-		} else {
-			intent.setAction(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER);
-		}
+		intent.setAction(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER);
+		String canonicalName = packageName + "." + "MainService";
+		intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, new ComponentName(packageName, canonicalName));
 		
 		editor.startActivity(intent);
 	}
@@ -390,8 +403,14 @@ public class Build {
 			tmpFolder.mkdir();
 		}
 		
-		//Make sure we have the latest version of the libraries folder
-		((APDE) editor.getApplicationContext()).rebuildLibraryList();
+		try {
+			// Make sure we have the latest version of the libraries folder
+			((APDE) editor.getApplicationContext()).rebuildLibraryList();
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+			cleanUpError();
+			return;
+		}
 		
 		Manifest manifest = null;
 		String sketchClassName = null;
@@ -540,30 +559,31 @@ public class Build {
 			// Copy any imported libraries (their libs and assets),
 			// and anything in the code folder contents to the project.
 			copyLibraries(libsFolder, dexedLibsFolder, assetsFolder);
-			copyCodeFolder(libsFolder);
-			
+			copyCodeFolder(getSketchCodeFolder(), libsFolder);
 			// Copy the dexed JARs from the code-dex folder
-			copyCodeDexFolder(dexedLibsFolder);
+			copyCodeFolder(getSketchCodeDexFolder(), dexedLibsFolder);
 			
 			// Copy the data folder (if one exists) to the project's 'assets' folder
-			final File sketchDataFolder = getSketchDataFolder();
-			if(sketchDataFolder.exists()) {
+			final MaybeDocumentFile sketchDataFolder = getSketchDataFolder();
+			if (sketchDataFolder.exists()) {
 				if (verbose) {
 					System.out.println(editor.getResources().getString(R.string.build_copying_data_folder));
 				}
 				
-				copyDir(sketchDataFolder, assetsFolder);
+				APDE.copyDocumentFile(sketchDataFolder.resolve(),
+						MaybeDocumentFile.fromDirectory(assetsFolder, editor), editor.getContentResolver());
 			}
 			
 			// Do the same for the 'res' folder.
 			// http://code.google.com/p/processing/issues/detail?id=767
-			final File sketchResFolder = new File(getSketchFolder(), "res");
-			if(sketchResFolder.exists()) {
+			final MaybeDocumentFile sketchResFolder = getSketchFolder().childDirectory("res");
+			if (sketchResFolder.exists()) {
 				if (verbose) {
 					System.out.println(editor.getResources().getString(R.string.build_copying_res_folder));
 				}
 				
-				copyDir(sketchResFolder, resFolder);
+				APDE.copyDocumentFile(sketchResFolder.resolve(),
+						MaybeDocumentFile.fromDirectory(resFolder, editor), editor.getContentResolver());
 			}
 			
 			if(!running.get()) { //CHECK
@@ -610,7 +630,11 @@ public class Build {
 			editor.errorExt(e.getMessage());
 			
 			//Bail out
-			cleanUp();
+			cleanUpError();
+			return;
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+			cleanUpError();
 			return;
 		}
 		
@@ -1085,22 +1109,40 @@ public class Build {
 			//Sign the APK using ZipSigner
 			signApk();
 		} else {
-			System.out.println(editor.getResources().getString(R.string.build_signing_private_key));
-			
-			File outputBinFolder = new File((editor.getGlobalState().isExample() || editor.getGlobalState().isTemp()) ? editor.getGlobalState().getSketchbookFolder() : editor.getGlobalState().getSketchLocation(), "bin");
-			if (!outputBinFolder.mkdirs() && verbose) {
-				System.err.println("Failed to make output dir");
+			try {
+				System.out.println(editor.getResources().getString(R.string.build_signing_private_key));
+				
+				MaybeDocumentFile outputBinFolder;
+				if (editor.getGlobalState().isExample() || editor.getGlobalState().isTemp()) {
+					outputBinFolder = editor.getGlobalState().getSketchbookFolder().childDirectory("bin");
+				} else {
+					outputBinFolder = editor.getGlobalState().getSketchLocation().childDirectory("bin");
+				}
+				MaybeDocumentFile outFile = outputBinFolder.child(sketchName + ".apk",
+						"application/vnd.android.package-archive");
+				
+				// Zipsigner doesn't support SAF. So make the file on the internal storage and
+				// send then copy it over.
+				File tempOutputFile = new File(binFolder, sketchName + ".apk");
+				
+				// We want to sign for release!!!
+				signApkRelease(tempOutputFile.getAbsolutePath());
+				
+				APDE.copyDocumentFile(DocumentFile.fromFile(tempOutputFile), outFile,
+						editor.getContentResolver());
+				
+				System.out.println(String.format(Locale.US,
+						editor.getResources().getString(R.string.build_exported_to),
+						outputBinFolder.toString()));
+				editor.messageExt(editor.getResources().getString(R.string.export_signed_package_success));
+				
+				cleanUp();
+				return;
+			} catch (MaybeDocumentFile.MaybeDocumentFileException | IOException e) {
+				e.printStackTrace();
+				cleanUpError();
+				return;
 			}
-			String outFilename = outputBinFolder.getAbsolutePath() + "/" + sketchName + ".apk";
-			
-			//We want to sign for release!!!
-			signApkRelease(outFilename);
-			
-			System.out.println(String.format(Locale.US, editor.getResources().getString(R.string.build_exported_to), outFilename));
-			editor.messageExt(editor.getResources().getString(R.string.export_signed_package_success));
-			
-			cleanUp();
-			return;
 		}
 		
 		if(!running.get()) { //CHECK
@@ -1116,7 +1158,7 @@ public class Build {
 			System.out.println(editor.getResources().getString(R.string.build_installing_apk));
 		}
 		
-		//Copy the APK file to a new (and hopefully readable) location
+		// Copy the APK file to a new (and hopefully readable) location
 		
 		String apkName = sketchName + ".apk";
 		File apkFile = new File(binFolder.getAbsolutePath() + "/" + apkName);
@@ -1272,79 +1314,82 @@ public class Build {
 		
 		try {
 			copyFile(classesDex, dexFile);
+			
+			Uri dataUri = null;
+			
+			// Zip up the assets
+			// We need this if the sketch is on the internal storage because this is protected
+			// But just do it for all sketches because it's easier
+			
+			File dataZip = new File(editor.getFilesDir().getAbsolutePath() + "/preview_sketch_data.zip");
+			
+			// Only make the zip if the data folder has files in it
+			if (assetsFolder.isDirectory()) {
+				File[] files = assetsFolder.listFiles();
+				if (files != null && files.length > 0) {
+					try {
+						makeCompressedFile(DocumentFile.fromFile(assetsFolder), dataZip,
+								editor.getContentResolver());
+						dataUri = makeFileAvailableToPreview(dataZip);
+					} catch (IOException e) {
+						e.printStackTrace();
+						System.err.println(editor.getResources().getString(R.string.build_preview_data_compress_failed));
+						cleanUpError();
+						return;
+					}
+				}
+			}
+			
+			dexUri = makeFileAvailableToPreview(dexFile);
+			
+			// Delete old dexed libs
+			File[] oldDexedLibs = editor.getFilesDir().listFiles();
+			if (oldDexedLibs != null) {
+				for (File file : oldDexedLibs) {
+					if (file.getName().startsWith("preview_dexed_lib_")) {
+						deleteFile(file, editor);
+					}
+				}
+			}
+			
+			// We need to copy the dexed libs to the sketch previewer
+			String[] libUris = new String[dexedLibs.length];
+			for (int i = 0; i < dexedLibs.length; i++) {
+				try {
+					// We used to put the dexed libs in their own folder, but this didn't work on 4.4
+					// So instead we give them all a prefix
+					File dest = new File(editor.getFilesDir(), "preview_dexed_lib_" + dexedLibs[i].getName());
+					copyFile(dexedLibs[i], dest);
+					libUris[i] = makeFileAvailableToPreview(dest).toString();
+				} catch (IOException e) {
+					System.err.println(editor.getResources().getString(R.string.build_preview_dexed_lib_copy_failed));
+					cleanUpError();
+					return;
+				}
+			}
+			
+			// Build intent specifically for sketch previewer
+			Intent intent = new Intent("com.calsignlabs.apde.RUN_SKETCH_PREVIEW");
+			intent.setPackage("com.calsignlabs.apde.sketchpreview");
+			intent.putExtra("SKETCH_DEX", dexUri.toString());
+			intent.putExtra("SKETCH_DATA_FOLDER", dataUri == null ? "" : dataUri.toString());
+			intent.putExtra("SKETCH_DEXED_LIBS", libUris);
+			intent.putExtra("SKETCH_ORIENTATION", manifest.getOrientation());
+			intent.putExtra("SKETCH_PACKAGE_NAME", manifest.getPackageName());
+			intent.putExtra("SKETCH_CLASS_NAME", sketchName);
+			
+			// Launch in multi-window mode if available
+			if (shouldLaunchSplitScreen(editor.getGlobalState())) {
+				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+			} else {
+				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+			}
+			if (intent.resolveActivity(editor.getPackageManager()) != null) {
+				editor.startActivity(intent);
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			cleanUpError();
-			return;
-		}
-		
-		Uri dataUri;
-		
-		// Zip up the assets
-		// We need this if the sketch is on the internal storage because this is protected
-		// But just do it for all sketches because it's easier
-		
-		File dataZip = new File(editor.getFilesDir().getAbsolutePath() + "/preview_sketch_data.zip");
-		File copyFrom = new File(getSketchFolder(), "data");
-		
-		// Only make the zip if the data folder has files in it
-		if (copyFrom.isDirectory() && copyFrom.list().length > 0) {
-			try {
-				makeCompressedFile(copyFrom, dataZip);
-				dataUri = makeFileAvailableToPreview(dataZip);
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.err.println(editor.getResources().getString(R.string.build_preview_data_compress_failed));
-				cleanUpError();
-				return;
-			}
-		} else {
-			dataUri = null;
-		}
-		
-		dexUri = makeFileAvailableToPreview(dexFile);
-		
-		// Delete old dexed libs
-		for (File file : editor.getFilesDir().listFiles()) {
-			if (file.getName().startsWith("preview_dexed_lib_")) {
-				deleteFile(file, editor);
-			}
-		}
-		
-		// We need to copy the dexed libs to the sketch previewer
-		String[] libUris = new String[dexedLibs.length];
-		for (int i = 0; i < dexedLibs.length; i ++) {
-			try {
-				// We used to put the dexed libs in their own folder, but this didn't work on 4.4
-				// So instead we give them all a prefix
-				File dest = new File(editor.getFilesDir(), "preview_dexed_lib_" + dexedLibs[i].getName());
-				copyFile(dexedLibs[i], dest);
-				libUris[i] = makeFileAvailableToPreview(dest).toString();
-			} catch (IOException e) {
-				System.err.println(editor.getResources().getString(R.string.build_preview_dexed_lib_copy_failed));
-				cleanUpError();
-				return;
-			}
-		}
-		
-		// Build intent specifically for sketch previewer
-		Intent intent = new Intent("com.calsignlabs.apde.RUN_SKETCH_PREVIEW");
-		intent.setPackage("com.calsignlabs.apde.sketchpreview");
-		intent.putExtra("SKETCH_DEX", dexUri.toString());
-		intent.putExtra("SKETCH_DATA_FOLDER", dataUri == null ? "" : dataUri.toString());
-		intent.putExtra("SKETCH_DEXED_LIBS", libUris);
-		intent.putExtra("SKETCH_ORIENTATION", manifest.getOrientation());
-		intent.putExtra("SKETCH_PACKAGE_NAME", manifest.getPackageName());
-		intent.putExtra("SKETCH_CLASS_NAME", sketchName);
-		
-		// Launch in multi-window mode if available
-		if (shouldLaunchSplitScreen(editor.getGlobalState())) {
-			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
-		} else {
-			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		}
-		if (intent.resolveActivity(editor.getPackageManager()) != null) {
-			editor.startActivity(intent);
 		}
 	}
 	
@@ -1427,7 +1472,7 @@ public class Build {
 				return;
 			}
 			
-			//Let's take advantage of ZipSigner's ability to load JKS keystores as well
+			// Let's take advantage of ZipSigner's ability to load JKS keystores as well
 			InputStreamKeySigner.signZip(signer, FileSelection.fdIn(fd), keystorePassword, keyAlias, keyAliasPassword,
 					"SHA1WITHRSA", inFilename, outputFilename);
 			
@@ -1471,21 +1516,13 @@ public class Build {
 		}
 	}
 	
-	private String[] getCodeFolderPackages() {
-		String[] codeFolderPackages = null;
-		if (getSketchCodeFolder().exists()) {
-			File codeFolder = getSketchCodeFolder();
-			javaLibraryPath = codeFolder.getAbsolutePath();
-			
-			// get a list of .jar files in the "code" folder
-			// (class files in subfolders should also be picked up)
-			String codeFolderClassPath = contentsToClassPath(codeFolder);
-			// append the jar files in the code folder to the class path
-			classPath += File.pathSeparator + codeFolderClassPath;
-			// get list of packages found in those jars
-			codeFolderPackages = packageListFromClassPath(codeFolderClassPath, editor);
+	private Set<String> getCodeFolderPackages() throws MaybeDocumentFile.MaybeDocumentFileException {
+		MaybeDocumentFile codeFolder = getSketchCodeFolder();
+		if (codeFolder.exists()) {
+			return Library.packageListFromDocumentFiles(Arrays.asList(codeFolder.resolve().listFiles()), editor);
+		} else {
+			return Collections.emptySet();
 		}
-		return codeFolderPackages;
 	}
 	
 	@SuppressWarnings("ResultOfMethodCallIgnored")
@@ -1522,7 +1559,7 @@ public class Build {
 		return sketchName + ".java";
 	}
 	
-	private void writeRes(File resFolder, String className) {
+	private void writeRes(File resFolder, String className) throws MaybeDocumentFile.MaybeDocumentFileException {
 		File layoutFolder = mkdirs(resFolder, "layout", editor);
 		writeResLayoutMainActivity(layoutFolder, className);
 		
@@ -1550,158 +1587,64 @@ public class Build {
 			writeResStylesVR(valuesFolder);
 		}
 		
-		File sketchFolder = getSketchFolder();
+		MaybeDocumentFile sketchFolder = getSketchFolder();
 		writeIconFiles(sketchFolder, resFolder);
 	}
 	
-	private void writeIconFiles(File sketchFolder, File resFolder) {
-		AssetManager am = editor.getAssets();
+	private void writeIconFile(String sourceFilename, String destFilename, String directoryName,
+	                           MaybeDocumentFile sketchFolder, File resFolder, boolean useOnlyUserIcons)
+			throws MaybeDocumentFile.MaybeDocumentFileException {
+		File destDir = new File(resFolder, directoryName);
+		File dest = new File(destDir, destFilename);
 		
-		File localIcon36 = new File(sketchFolder, ICON_36);
-		File localIcon48 = new File(sketchFolder, ICON_48);
-		File localIcon72 = new File(sketchFolder, ICON_72);
-		File localIcon96 = new File(sketchFolder, ICON_96);
-		File localIcon144 = new File(sketchFolder, ICON_144);
-		File localIcon192 = new File(sketchFolder, ICON_192);
-		
-		String iconLauncherName = "ic_launcher.png";
-		File buildIcon36 = new File(resFolder, "mipmap-ldpi/" + iconLauncherName);
-		File buildIcon48 = new File(resFolder, "mipmap-mdpi/" + iconLauncherName);
-		File buildIcon72 = new File(resFolder, "mipmap-hdpi/" + iconLauncherName);
-		File buildIcon96 = new File(resFolder, "mipmap-xhdpi/" + iconLauncherName);
-		File buildIcon144 = new File(resFolder, "mipmap-xxhdpi/" + iconLauncherName);
-		File buildIcon192 = new File(resFolder, "mipmap-xxxhdpi/" + iconLauncherName);
-		
-		if (!localIcon36.exists() && !localIcon48.exists() && !localIcon72.exists() && !localIcon96.exists() && !localIcon144.exists() && !localIcon192.exists()) {
-			try {
-				// if no icons are in the sketch folder, then copy all the defaults
-				if(buildIcon36.getParentFile().mkdirs()) {
-					InputStream inputStream = am.open("icons/" + ICON_36);
-					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon36);
-					inputStream.close();
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_ldpi_failed));
-				}
-				if(buildIcon48.getParentFile().mkdirs()) {
-					InputStream inputStream = am.open("icons/" + ICON_48);
-					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon48);
-					inputStream.close();
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_mdpi_failed));
-				}
-				if(buildIcon72.getParentFile().mkdirs()) {
-					InputStream inputStream = am.open("icons/" + ICON_72);
-					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon72);
-					inputStream.close();
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_hdpi_failed));
-				}
-				if(buildIcon96.getParentFile().mkdirs()) {
-					InputStream inputStream = am.open("icons/" + ICON_96);
-					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon96);
-					inputStream.close();
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_xhdpi_failed));
-				}
-				if(buildIcon144.getParentFile().mkdirs()) {
-					InputStream inputStream = am.open("icons/" + ICON_144);
-					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon144);
-					inputStream.close();
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_xxhdpi_failed));
-				}
-				if(buildIcon192.getParentFile().mkdirs()) {
-					InputStream inputStream = am.open("icons/" + ICON_192);
-					StaticBuildResources.createFileFromInputStream(inputStream, buildIcon192);
-					inputStream.close();
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_xxxhdpi_failed));
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
+		try {
+			MaybeDocumentFile userFile = sketchFolder.child(sourceFilename, "image/png");
+			
+			InputStream source;
+			if (userFile.exists()) {
+				source = userFile.openIn(editor.getContentResolver());
+			} else if (useOnlyUserIcons) {
+				// we want to use only user icons, but the user hasn't provided this one.
+				return;
+			} else {
+				source = editor.getAssets().open("icons/" + sourceFilename);
 			}
-		} else {
-			// if at least one of the icons already exists, then use that across the board
-			try {
-				if (localIcon36.exists()) {
-					if (buildIcon36.getParentFile().mkdirs()) {
-						copyFile(localIcon36, buildIcon36);
-					}
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_ldpi_failed));
-				}
-				if (localIcon48.exists()) {
-					if (buildIcon48.getParentFile().mkdirs()) {
-						copyFile(localIcon48, buildIcon48);
-					}
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_mdpi_failed));
-				}
-				if (localIcon72.exists()) {
-					if (buildIcon72.getParentFile().mkdirs()) {
-						copyFile(localIcon72, buildIcon72);
-					}
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_hdpi_failed));
-				}
-				if (localIcon96.exists()) {
-					if (buildIcon96.getParentFile().mkdirs()) {
-						copyFile(localIcon96, buildIcon96);
-					}
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_xhdpi_failed));
-				}
-				if (localIcon144.exists()) {
-					if (buildIcon144.getParentFile().mkdirs()) {
-						copyFile(localIcon144, buildIcon144);
-					}
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_xxhdpi_failed));
-				}
-				if (localIcon192.exists()) {
-					if (buildIcon192.getParentFile().mkdirs()) {
-						copyFile(localIcon192, buildIcon192);
-					}
-				} else {
-					System.err.println(editor.getResources().getString(R.string.build_write_res_xxxhdpi_failed));
-				}
-			} catch (IOException e) {
-				System.err.println(editor.getResources().getString(R.string.build_write_res_icon_copy_failed));
-				e.printStackTrace();
+			
+			if (!dest.exists() && !dest.getParentFile().mkdirs()) {
+				System.err.println(String.format(editor.getResources().getString(R.string.build_write_res_icon_failed), directoryName));
+				return;
+			}
+			
+			// NOTE: this function closes the stream
+			StaticBuildResources.createFileFromInputStream(source, dest);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void writeIconFiles(MaybeDocumentFile sketchFolder, File resFolder) throws MaybeDocumentFile.MaybeDocumentFileException {
+		String[] iconSizes = {"36", "48", "72", "96", "144", "192"};
+		String[] iconDensities = {"ldpi", "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"};
+		
+		// if the user has supplied any icons, then use them
+		boolean useUserIcons = false;
+		for (String iconSize : iconSizes) {
+			if (sketchFolder.child("icon-" + iconSize + ".png", "image/png").exists()) {
+				useUserIcons = true;
+				break;
 			}
 		}
 		
+		for (int i = 0; i < iconSizes.length; i++) {
+			String filename = "icon-" + iconSizes[i] + ".png";
+			String directoryName = "mipmap-" + iconDensities[i];
+			
+			writeIconFile(filename, "ic_launcher.png", directoryName, sketchFolder, resFolder, useUserIcons);
+		}
+		
 		if (getAppComponent() == ComponentTarget.WATCHFACE) {
-			File localIconCircle = new File(sketchFolder, WATCHFACE_ICON_CIRCULAR);
-			File localIconRect = new File(sketchFolder, WATCHFACE_ICON_RECTANGULAR);
-			
-			File buildIconCircle = new File(resFolder, "drawable/" + WATCHFACE_ICON_CIRCULAR);
-			File buildIconRect = new File(resFolder, "drawable-ldpi/" + WATCHFACE_ICON_RECTANGULAR);
-			
-			try {
-				if (localIconCircle.exists()) {
-					if (new File(resFolder, "drawable").mkdirs()) {
-						copyFile(localIconCircle, buildIconCircle);
-					}
-				} else {
-					InputStream inputStream = am.open("icons/" + WATCHFACE_ICON_CIRCULAR);
-					StaticBuildResources.createFileFromInputStream(inputStream, buildIconCircle);
-					inputStream.close();
-				}
-				
-				if (localIconRect.exists()) {
-					if (new File(resFolder, "drawable").mkdirs()) {
-						copyFile(localIconRect, buildIconRect);
-					}
-				} else {
-					InputStream inputStream = am.open("icons/" + WATCHFACE_ICON_RECTANGULAR);
-					StaticBuildResources.createFileFromInputStream(inputStream, buildIconRect);
-					inputStream.close();
-				}
-			} catch (IOException e) {
-				System.err.println(editor.getResources().getString(R.string.build_write_res_icon_copy_failed));
-				e.printStackTrace();
-			}
+			writeIconFile(WATCHFACE_ICON_CIRCULAR, WATCHFACE_ICON_CIRCULAR, "drawable", sketchFolder, resFolder, false);
+			writeIconFile(WATCHFACE_ICON_RECTANGULAR, WATCHFACE_ICON_RECTANGULAR, "drawable-ldpi", sketchFolder, resFolder, false);
 		}
 	}
 	
@@ -1847,69 +1790,77 @@ public class Build {
 		createFileFromTemplate(XML_WATCHFACE_TEMPLATE, xmlFile, null, editor);
 	}
 	
-	private void copyLibraries(final File libsFolder, final File dexedLibsFolder, final File assetsFolder) throws IOException { //TODO support native library stuffs
+	private void copyLibraries(final File libsFolder, final File dexedLibsFolder, final File assetsFolder)
+			throws IOException, MaybeDocumentFile.MaybeDocumentFileException {
+		Set<String> nativeLibFolders = new HashSet<>(
+				Arrays.asList("armeabi", "armeabi-v7a", "arm64", "arm64-v8a", "x86", "x86_64"));
+		
 		for (Library library : importedLibraries) {
-			//Add each item from the library folder / export list to the output
-			for (File exportFile : library.getAndroidExports(((APDE) editor.getApplicationContext()).getLibrariesFolder())) {
-				String exportName = exportFile.getName();
+			// Add each item from the library folder / export list to the output
+			for (DocumentFile exportFile : library.getAndroidExports(((APDE) editor.getApplicationContext()).getLibrariesFolder())) {
 				if (!exportFile.exists()) {
-					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_export_library_file_missing), exportFile.getName()));
-				} else if (exportFile.isDirectory()) {
-					//Copy native library folders to the correct location
-					if (exportName.equals("armeabi") ||
-							exportName.equals("armeabi-v7a") ||
-							exportName.equals("x86")) {
-						copyDir(exportFile, new File(libsFolder, exportName));
+					System.err.println(String.format(Locale.US,
+							editor.getResources().getString(R.string.build_export_library_file_missing), exportFile.getName()));
+					continue;
+				}
+				if (exportFile.getName() == null) {
+					continue;
+				}
+				
+				String exportName = exportFile.getName();
+				File dest;
+				if (exportFile.isDirectory()) {
+					if (nativeLibFolders.contains(exportName)) {
+						// Copy native library folders to the correct location
+						dest = new File(libsFolder, exportName);
 					} else {
-						//Copy any other directory to the assets folder
-						copyDir(exportFile, new File(assetsFolder, exportName));
+						// Copy any other directory to the assets folder
+						dest = new File(assetsFolder, exportName);
 					}
 				} else if (exportName.toLowerCase(Locale.US).endsWith(".zip")) {
 					// As of r4 of the Android SDK, it looks like .zip files
 					// are ignored in the libs folder, so rename to .jar
 					System.err.println(String.format(Locale.US, editor.getResources().getString(R.string.build_library_zip), exportFile.getName()));
 					String jarName = exportName.substring(0, exportName.length() - 4) + ".jar";
-					copyFile(exportFile, new File(libsFolder, jarName));
-				} else if(exportName.toLowerCase(Locale.US).endsWith("-dex.jar")) {
-					//Handle the dexed JARs
-					copyFile(exportFile, new File(dexedLibsFolder, exportName));
+					dest = new File(libsFolder, jarName);
+				} else if (exportName.toLowerCase(Locale.US).endsWith("-dex.jar")) {
+					// Handle the dexed JARs
+					dest = new File(dexedLibsFolder, exportName);
 				} else if (exportName.toLowerCase(Locale.US).endsWith(".jar")) {
-					copyFile(exportFile, new File(libsFolder, exportName));
+					dest = new File(libsFolder, exportName);
 				} else {
-					copyFile(exportFile, new File(assetsFolder, exportName));
+					dest = new File(assetsFolder, exportName);
 				}
+				
+				APDE.copyDocumentFile(exportFile, MaybeDocumentFile.fromFile(dest), editor.getContentResolver());
 			}
 		}
 	}
 	
-	private void copyCodeFolder(final File libsFolder) throws IOException {
+	/**
+	 * Copy files from the 'code' or 'code-dex' folder into the 'libs' or 'libs-dex' folder.
+	 *
+	 * @param codeFolder
+	 * @param libsFolder
+	 * @throws IOException
+	 * @throws MaybeDocumentFile.MaybeDocumentFileException
+	 */
+	private void copyCodeFolder(MaybeDocumentFile codeFolder, File libsFolder)
+			throws IOException, MaybeDocumentFile.MaybeDocumentFileException {
 		// Copy files from the 'code' directory into the 'libs' folder
-		final File codeFolder = getSketchCodeFolder();
-		if(codeFolder != null && codeFolder.exists()) {
-			for(final File item : codeFolder.listFiles()) {
-				if(!item.isDirectory()) {
-					final String name = item.getName();
-					final String lcname = name.toLowerCase(Locale.US);
-					if(lcname.endsWith(".jar") || lcname.endsWith(".zip")) {
+		if (codeFolder != null && codeFolder.exists()) {
+			for (DocumentFile item : codeFolder.resolve().listFiles()) {
+				if (!item.isDirectory() && item.getName() != null) {
+					String name = item.getName();
+					String lcname = name.toLowerCase(Locale.US);
+					if (lcname.endsWith(".jar") || lcname.endsWith(".zip")) {
 						String jarName = name.substring(0, name.length() - 4) + ".jar";
-						copyFile(item, new File(libsFolder, jarName));
-					}
-				}
-			}
-		}
-	}
-	
-	private void copyCodeDexFolder(final File libsDexFolder) throws IOException {
-		// Copy files from the 'code-dex' directory into the 'libs' folder
-		final File codeDexFolder = getSketchCodeDexFolder();
-		if(codeDexFolder != null && codeDexFolder.exists()) {
-			for(final File item : codeDexFolder.listFiles()) {
-				if(!item.isDirectory()) {
-					final String name = item.getName();
-					final String lcname = name.toLowerCase(Locale.US);
-					if(lcname.endsWith(".jar") || lcname.endsWith(".zip")) {
-						String jarName = name.substring(0, name.length() - 4) + ".jar";
-						copyFile(item, new File(libsDexFolder, jarName));
+						if (!libsFolder.exists()) {
+							libsFolder.mkdirs();
+						}
+						File dest = new File(libsFolder, jarName);
+						StaticBuildResources.createFileFromInputStream(
+								editor.getContentResolver().openInputStream(item.getUri()), dest);
 					}
 				}
 			}
@@ -2123,24 +2074,24 @@ public class Build {
 		return new File(context.getFilesDir(), "tmp");
 	}
 	
-	public File getSketchFolder() {
+	public MaybeDocumentFile getSketchFolder() throws MaybeDocumentFile.MaybeDocumentFileException {
 		return ((APDE) editor.getApplication()).getSketchLocation();
 	}
 	
-	public File getSketchDataFolder() {
-		return new File(getSketchFolder(), "data");
+	public MaybeDocumentFile getSketchDataFolder() throws MaybeDocumentFile.MaybeDocumentFileException {
+		return getSketchFolder().childDirectory("data");
 	}
 	
-	public File getSketchCodeFolder() {
-		return new File(getSketchFolder(), "code");
+	public MaybeDocumentFile getSketchCodeFolder() throws MaybeDocumentFile.MaybeDocumentFileException {
+		return getSketchFolder().childDirectory("code");
 	}
 	
-	public File getSketchCodeDexFolder() {
-		return new File(getSketchFolder(), "code-dex");
+	public MaybeDocumentFile getSketchCodeDexFolder() throws MaybeDocumentFile.MaybeDocumentFileException {
+		return getSketchFolder().childDirectory("code-dex");
 	}
 	
-	public File getSketchBinFolder() {
-		return new File(getSketchFolder(), "bin");
+	public MaybeDocumentFile getSketchBinFolder() throws MaybeDocumentFile.MaybeDocumentFileException {
+		return getSketchFolder().childDirectory("bin");
 	}
 	
 	//StackOverflow: http://codereview.stackexchange.com/questions/8835/java-most-compact-way-to-print-inputstream-to-system-out
@@ -2203,23 +2154,36 @@ public class Build {
 		}
 	}
 	
-	protected static void makeCompressedFile(File folder, File compressedFile) throws IOException {
-		List<File> files = new ArrayList<>();
-		buildFileList(files, folder);
+	protected static class DocumentFilePath {
+		protected final String path;
+		protected final DocumentFile file;
+		
+		protected DocumentFilePath(String path, DocumentFile file) {
+			this.path = path;
+			this.file = file;
+		}
+	}
+	
+	protected static void makeCompressedFile(DocumentFile folder, File compressedFile,
+	                                         ContentResolver contentResolver) throws IOException {
+		List<DocumentFilePath> files = new ArrayList<>();
+		buildFileList(files, new DocumentFilePath("", folder));
 		
 		int bufferSize = 4096;
 		byte[] buffer = new byte[bufferSize];
 		
-		String absPath = folder.getAbsolutePath();
-		int folderLength = absPath.endsWith("/") ? absPath.length() : absPath.length() + 1;
 		int count;
 		
-		ZipOutputStream outputStream = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(compressedFile)));
+		ZipOutputStream outputStream =
+				new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(compressedFile)));
 		
-		for (File file : files) {
-			BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(file), bufferSize);
-			ZipEntry entry = new ZipEntry(file.getAbsolutePath().substring(folderLength));
+		for (DocumentFilePath file : files) {
+			BufferedInputStream inputStream = new BufferedInputStream(
+					contentResolver.openInputStream(file.file.getUri()), bufferSize);
+			ZipEntry entry = new ZipEntry(file.path);
 			outputStream.putNextEntry(entry);
+			
+			System.out.println("put zip entry: " + file.path);
 			
 			while ((count = inputStream.read(buffer, 0, bufferSize)) != -1) {
 				outputStream.write(buffer, 0, count);
@@ -2232,13 +2196,13 @@ public class Build {
 		outputStream.close();
 	}
 	
-	protected static void buildFileList(List<File> ret, File dir) {
-		if (dir != null && dir.exists()) {
-			if (dir.isDirectory()) {
-				for (File file : dir.listFiles()) {
-					buildFileList(ret, file);
+	protected static void buildFileList(List<DocumentFilePath> ret, DocumentFilePath dir) {
+		if (dir != null && dir.file.exists()) {
+			if (dir.file.isDirectory()) {
+				for (DocumentFile file : dir.file.listFiles()) {
+					buildFileList(ret, new DocumentFilePath(dir.path + "/" + file.getName(), file));
 				}
-			} else if (dir.isFile()) {
+			} else if (dir.file.isFile()) {
 				ret.add(dir);
 			}
 		}

@@ -24,7 +24,7 @@ public class InputStreamKeySigner {
 		X509Certificate publicKey = (X509Certificate)cert;
 		Key key = keystore.getKey(certAlias, certPw);
 		PrivateKey privateKey = (PrivateKey)key;
-		zipSigner.setKeys("custom", publicKey, privateKey, signatureAlgorithm, (byte[])null);
+		zipSigner.setKeys("custom", publicKey, privateKey, signatureAlgorithm, null);
 		zipSigner.signZip(inputZipFilename, outputZipFilename);
 	}
 	

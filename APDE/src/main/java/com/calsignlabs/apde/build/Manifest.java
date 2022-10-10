@@ -8,9 +8,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
+import com.calsignlabs.apde.support.documentfile.DocumentFile;
+
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.build.dag.WriteTemplateBuildTask;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import org.xml.sax.SAXException;
 
@@ -180,7 +183,7 @@ public class Manifest {
 	public void initBlank() {
 		File buildManifest = new File(context.getBuildFolder(), MANIFEST_XML);
 		writeBlankManifest(buildManifest, context.getComponentTarget());
-		load(buildManifest, context.getComponentTarget());
+		load(new MaybeDocumentFile(DocumentFile.fromFile(buildManifest)), context.getComponentTarget());
 	}
 	
 	private void writeBlankManifest(final File xmlFile, final ComponentTarget appComp) {
@@ -319,10 +322,10 @@ public class Manifest {
 		return xml.getChild("application").getChild("activity").getString("android:screenOrientation", context.getResources().getString(R.string.prop_orientation_default));
 	}
 	
-	public void load(File manifestFile, ComponentTarget appComp) {
+	public void load(MaybeDocumentFile manifestFile, ComponentTarget appComp) {
 		if (manifestFile.exists()) {
 			try {
-				xml = new XML(manifestFile);
+				xml = new XML(manifestFile.openIn(context.getContentResolver()));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -338,7 +341,7 @@ public class Manifest {
 		
 		if (xml == null) {
 			try {
-				xml = new XML(manifestFile);
+				xml = new XML(manifestFile.openIn(context.getContentResolver()));
 				if (permissions != null) {
 					setPermissions(permissions);
 				}
@@ -361,7 +364,7 @@ public class Manifest {
 					xml.getChild("application").setString("android:label", prettyName);
 				}
 			} catch (FileNotFoundException e) {
-				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.manifest_read_failed), manifestFile.getAbsolutePath()));
+				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.manifest_read_failed), manifestFile.toString()));
 				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -371,7 +374,9 @@ public class Manifest {
 				e.printStackTrace();
 			} catch (RuntimeException e) {
 				// Hopefully this solves some crashes from users doing things that they shouldn't be...
-				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.manifest_read_failed_corrupted), manifestFile.getAbsolutePath()));
+				System.err.println(String.format(Locale.US, context.getResources().getString(R.string.manifest_read_failed_corrupted), manifestFile.toString()));
+				e.printStackTrace();
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
 				e.printStackTrace();
 			}
 		}

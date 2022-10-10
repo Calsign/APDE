@@ -121,13 +121,7 @@
 	<string name="build_inject_log_broadcaster_success">Injected log broadcaster</string>
 	<string name="build_inject_log_broadcaster_failed">Failed to inject log broadcaster into sketch!</string>
 	<string name="build_library_import_missing">No library found for <xliff:g id="packageName" example="ketai.camera">%1$s</xliff:g></string>
-	<string name="build_write_res_ldpi_failed">Could not create \"drawable-ldpi\" folder.</string>
-	<string name="build_write_res_mdpi_failed">Could not create \"drawable\" folder.</string>
-	<string name="build_write_res_hdpi_failed">Could not create \"drawable-hdpi\" folder.</string>
-	<string name="build_write_res_xhdpi_failed">Could not create \"drawable-xhdpi\" folder.</string>
-	<string name="build_write_res_xxhdpi_failed">Could not create \"drawable-xxhdpi\" folder.</string>
-	<string name="build_write_res_xxxhdpi_failed">Could not create \"drawable-xxxhdpi\" folder.</string>
-	<string name="build_write_res_icon_copy_failed">Failed to copy icons.</string>
+	<string name="build_write_res_icon_failed">Could not create \"<xliff:g id="name" example="drawable-ldpi">%1$s</xliff:g>\" folder.</string>
 	<string name="build_launch_sketch_activity_failure">Failed to start sketch activity</string>
 	<string name="build_preview_data_compress_failed">Failed to compress data folder</string>
 	<string name="build_preview_dexed_lib_copy_failed">Failed to copy dexed libs</string>

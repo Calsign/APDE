@@ -30,6 +30,7 @@ import org.xml.sax.SAXException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -332,8 +333,8 @@ public class CodeEditText extends AppCompatEditText {
 	
 	@SuppressLint("NewApi")
 	public void setupCustomActionMode() {
-		final ArrayList<Tool> tools = ((APDE) context.getApplicationContext()).getTools();
-		final HashMap<MenuItem, Tool> callbacks = new HashMap<MenuItem, Tool>();
+		final List<Tool> tools = ((APDE) context.getApplicationContext()).getTools();
+		final HashMap<MenuItem, Tool> callbacks = new HashMap<>();
 		
 		setCustomSelectionActionModeCallback(new ActionMode.Callback() {
 			@Override
@@ -586,6 +587,7 @@ public class CodeEditText extends AppCompatEditText {
 	
 	@Override 
 	protected void onSelectionChanged(int selStart, int selEnd) {
+		super.onSelectionChanged(selStart, selEnd);
 		updateBracketMatch();
 		updateCursorCompilerProblem();
 	}

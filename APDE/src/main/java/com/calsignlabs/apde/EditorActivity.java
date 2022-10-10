@@ -25,7 +25,6 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
-import android.provider.Settings;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
@@ -78,6 +77,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.widget.ImageViewCompat;
+import com.calsignlabs.apde.support.documentfile.DocumentFile;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentStatePagerAdapter;
@@ -93,6 +93,7 @@ import com.calsignlabs.apde.build.Manifest;
 import com.calsignlabs.apde.build.SketchPreviewerBuilder;
 import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.build.dag.ModularBuild;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 import com.calsignlabs.apde.support.ResizeAnimation;
 import com.calsignlabs.apde.tool.FindReplace;
 import com.calsignlabs.apde.tool.Tool;
@@ -107,6 +108,7 @@ import org.xml.sax.SAXException;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -543,12 +545,16 @@ public class EditorActivity extends AppCompatActivity {
 					// Save the current sketch...
 					autoSave();
 					
-					if (drawerRecentSketch) {
-						APDE.SketchMeta sketch = getGlobalState().getRecentSketches().get(position - 1); // "position - 1" because the first item is the UP button
-						
-						loadSketch(sketch.getPath(), sketch.getLocation());
-					} else {
-						loadSketch(drawerSketchPath + "/" + item.getText(), drawerSketchLocationType);
+					try {
+						if (drawerRecentSketch) {
+							APDE.SketchMeta sketch = getGlobalState().getRecentSketches().get(position - 1); // "position - 1" because the first item is the UP button
+							
+							loadSketch(sketch.getPath(), sketch.getLocation());
+						} else {
+							loadSketch(drawerSketchPath + "/" + item.getText(), drawerSketchLocationType);
+						}
+					} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+						e.printStackTrace();
 					}
 					
 					drawer.closeDrawers();
@@ -1020,6 +1026,8 @@ public class EditorActivity extends AppCompatActivity {
 				builder.setPositiveButton(R.string.external_storage_dialog_grant_permission_button, (dialog, which) -> {
 					ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
 					dialog.cancel();
+					
+					getGlobalState().checkAndroid11SketchbookAccess(this, false);
 				});
 				builder.setNeutralButton(R.string.external_storage_dialog_use_internal_storage_button,
 						(dialog, which) -> {
@@ -1028,6 +1036,8 @@ public class EditorActivity extends AppCompatActivity {
 						});
 				
 				builder.show();
+			} else {
+				getGlobalState().checkAndroid11SketchbookAccess(this, false);
 			}
 		}
 	}
@@ -1298,7 +1308,13 @@ public class EditorActivity extends AppCompatActivity {
 					runApplication();
 				}
 			}
-		}
+		} else if (requestCode == APDE.FLAG_SELECT_SKETCHBOOK_FOLDER) {
+    		if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+    			getGlobalState().setSafStorageDrive(data.getData());
+		    } else {
+    			// TODO: how to handle errors?
+		    }
+	    }
     	
     	ActivityResultCallback action = activityResultCodes.get(requestCode);
     	
@@ -1453,7 +1469,9 @@ public class EditorActivity extends AppCompatActivity {
 	}
 	
 	private boolean loadExternalSketch(String filePath) {
-		//Try to get the file...
+		// TODO: update to use SAF
+		
+		// Try to get the file...
 		File file = new File(filePath);
 		
 		String ext = "";
@@ -1467,9 +1485,14 @@ public class EditorActivity extends AppCompatActivity {
 			// Let's get the sketch folder...
 			File sketchFolder = file.getParentFile();
 			// Here goes...
-			loadSketch(sketchFolder.getAbsolutePath(), APDE.SketchLocation.EXTERNAL);
-			message(getGlobalState().getString(R.string.sketch_load_external_success));
-			return true;
+			try {
+				loadSketch(sketchFolder.getAbsolutePath(), APDE.SketchLocation.EXTERNAL);
+				message(getGlobalState().getString(R.string.sketch_load_external_success));
+				return true;
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				e.printStackTrace();
+				return false;
+			}
 		}
 		
 		return false;
@@ -1671,19 +1694,23 @@ public class EditorActivity extends AppCompatActivity {
      * Saves the current sketch and sets up the editor with a blank sketch, from the context of the editor.
      */
     public void createNewSketch() {
-		//Save the sketch
-		autoSave();
-		
-		//Update the global state
-		getGlobalState().selectNewTempSketch();
-		
-		//Set up for a new sketch
-		newSketch();
-		//Reload the navigation drawer
-		forceDrawerReload();
-		
-		//Update the action bar title
-		getSupportActionBar().setTitle(getGlobalState().getSketchName());
+		try {
+			// Save the sketch
+			autoSave();
+			
+			// Update the global state
+			getGlobalState().selectNewTempSketch();
+			
+			// Set up for a new sketch
+			newSketch();
+			// Reload the navigation drawer
+			forceDrawerReload();
+			
+			// Update the action bar title
+			getSupportActionBar().setTitle(getGlobalState().getSketchName());
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+		}
     }
 	
 	/**
@@ -1697,30 +1724,31 @@ public class EditorActivity extends AppCompatActivity {
 		
 		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
 		
-		alert.setPositiveButton(R.string.rename_sketch_button, new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {
-				String sketchName = input.getText().toString();
-				
+		alert.setPositiveButton(R.string.rename_sketch_button, (dialog, whichButton) -> {
+			String sketchName = input.getText().toString();
+			
+			try {
 				if (validateSketchName(sketchName) && !sketchName.equals(getGlobalState().getSketchName())) {
-					getGlobalState().setSketchName(sketchName);
-					
 					APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
 					APDE.SketchMeta dest = new APDE.SketchMeta(source.getLocation(), source.getParent() + "/" + sketchName);
 					
 					getGlobalState().moveFolder(source, dest, EditorActivity.this);
+					
+					getGlobalState().setSketchName(sketchName);
+					updateSketchPath("/" + sketchName);
 				}
 				
 				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
 					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
 				}
+			} catch (MaybeDocumentFile.MaybeDocumentFileException | FileNotFoundException e) {
+				e.printStackTrace();
 			}
 		});
 		
-		alert.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {
-				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
-					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
-				}
+		alert.setNegativeButton(R.string.cancel, (dialog, whichButton) -> {
+			if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+				((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
 			}
 		});
 		
@@ -1743,53 +1771,6 @@ public class EditorActivity extends AppCompatActivity {
 		
 		drawer.openDrawer(drawerLayout);
 	}
-    
-    public int getSketchCount() {
-    	//Get the location of the sketchbook
-    	File sketchbookLoc = getGlobalState().getSketchbookFolder();
-    	
-    	int count = 0;
-    	
-    	//If the sketchbook exists
-    	if(sketchbookLoc.exists()) {
-    		//Get a list of sketches
-	    	File[] folders = sketchbookLoc.listFiles();
-	    	for(File folder : folders)
-	    		if(folder.isDirectory())
-	    			//Count this sketch
-	    			count ++;
-    	}
-    	
-    	return count;
-    }
-    
-    protected int drawerIndexOfSketch(String name) {
-    	//Get the location of the sketchbook
-    	File sketchbookLoc = getGlobalState().getSketchbookFolder();
-    	
-    	int index = 1;
-    	
-    	//If the sketchbook exists
-    	if(sketchbookLoc.exists()) {
-    		//Get a list of sketches
-	    	File[] folders = sketchbookLoc.listFiles();
-	    	//Sort the list of sketches alphabetically
-	    	Arrays.sort(folders);
-	    	
-	    	for(File folder : folders) {
-	    		if(folder.isDirectory()) {
-	    			//Check to see if this is the sketch
-	    			if(folder.getName().equals(name))
-	    				return index;
-	    			
-	    			//Increment the counter
-	    			index ++;
-	    		}
-	    	}
-    	}
-    	
-    	return -1;
-    }
     
 	//http://stackoverflow.com/questions/16983989/copy-directory-from-assets-to-data-folder
     protected static boolean copyAssetFolder(AssetManager assetManager, String fromAssetPath, String toPath) {
@@ -2019,7 +2000,11 @@ public class EditorActivity extends AppCompatActivity {
 	public void reloadSketch() {
 		getGlobalState().writeCodeDeletionDebugStatus("before reloadSketch()");
 		
-		loadSketch(getGlobalState().getSketchPath(), getGlobalState().getSketchLocationType());
+		try {
+			loadSketch(getGlobalState().getSketchPath(), getGlobalState().getSketchLocationType());
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+		}
 		
 		getGlobalState().writeCodeDeletionDebugStatus("after reloadSketch()");
 	}
@@ -2094,7 +2079,13 @@ public class EditorActivity extends AppCompatActivity {
 	public void autoCompile() {
 		runOnUiThread(() -> {
 			if (isOldBuild()) {
-				final BuildContext context = BuildContext.create(getGlobalState());
+				final BuildContext context;
+				try {
+					context = BuildContext.create(getGlobalState());
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					e.printStackTrace();
+					return;
+				}
 				final Build builder = new Build(getGlobalState(), context);
 				
 				autoCompileTimer.schedule(() -> {
@@ -2140,36 +2131,24 @@ public class EditorActivity extends AppCompatActivity {
 	/**
 	 * Sets up the editor for a new sketch
 	 */
-	public void newSketch() {
-		//Set the title of the action bar
+	public void newSketch() throws MaybeDocumentFile.MaybeDocumentFileException {
+		// Set the title of the action bar
 		getSupportActionBar().setTitle(getGlobalState().getSketchName());
-		//Reload the action bar actions and overflow
+		// Reload the action bar actions and overflow
 		supportInvalidateOptionsMenu();
 		
-		//Get rid of any existing tabs
-//		tabBar.removeAllTabs();
+		// Get rid of any existing tabs
 		tabs.clear();
 		codePagerAdapter.notifyDataSetChanged();
 		
-		//Add the default "sketch" tab
+		// Add the default "sketch" tab
 		addDefaultTab(APDE.DEFAULT_SKETCH_TAB);
 		
-		//Select the new tab
+		// Select the new tab
 		selectCode(0);
 		
-		//Clear the code area
-//		CodeEditText code = ((CodeEditText) findViewById(R.id.code));
-//		code.setText(""); //We don't use setNoUndoText() because it screws up the undo history...
-		
-		//Fix a strange bug...
+		// Fix a strange bug...
 		getSelectedSketchFile().clearUndoRedo();
-		
-		//Get rid of previous syntax highlighter data
-//		code.clearTokens();
-//		
-//		//Make sure the code area is editable
-//		code.setFocusable(true);
-//		code.setFocusableInTouchMode(true);
 		
 		// Save the new sketch
 		autoSave();
@@ -2189,14 +2168,14 @@ public class EditorActivity extends AppCompatActivity {
 	 * @param sketchLocation
 	 * @return success
 	 */
-	public boolean loadSketch(String sketchPath, APDE.SketchLocation sketchLocation) {
+	public boolean loadSketch(String sketchPath, APDE.SketchLocation sketchLocation) throws MaybeDocumentFile.MaybeDocumentFileException {
 		if (sketchLocation == null) {
 			// Something bad happened
 			return false;
 		}
 		
 		// Get the sketch location
-    	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, sketchLocation);
+    	MaybeDocumentFile sketchLoc = getGlobalState().getSketchLocation(sketchPath, sketchLocation);
     	boolean success;
     	
     	// Ensure that the sketch folder exists and is a directory
@@ -2204,7 +2183,7 @@ public class EditorActivity extends AppCompatActivity {
     		getGlobalState().selectSketch(sketchPath, sketchLocation);
     		
     		// Get all the files in the directory
-    		File[] files = sketchLoc.listFiles();
+    		DocumentFile[] files = sketchLoc.resolve().listFiles();
     		
     		// Why do we need this...?
     		for (SketchFile meta : tabs) {
@@ -2213,71 +2192,44 @@ public class EditorActivity extends AppCompatActivity {
     		
     		// Get rid of any tabs
     		tabs.clear();
-//    		tabBar.removeAllTabs();
-    		// This method is necessary, too
 			
     		// Cycle through the files
-    		for (File file : files) {
-    			// Split the filename into prefix and suffix
-    			String[] folders = file.getPath().split("/");
-    			String[] parts = folders[folders.length - 1].split("\\.");
-    			// If the filename isn't formatted properly, skip this file
-    			if(parts.length != 2)
+    		for (DocumentFile file : files) {
+    			String name = file.getName();
+    			if (name == null) {
     				continue;
+			    }
     			
-    			// Retrieve the prefix and suffix
-    			String prefix = parts[parts.length - 2];
-    			String suffix = parts[parts.length - 1];
+    			String[] parts = name.split("\\.");
+    			if (parts.length != 2) {
+    				continue;
+			    }
+    			String title = parts[0];
+    			String ext = parts[1];
     			
-    			// Check to see if it's a .PDE file
-    			if (suffix.equals("pde")) {
-    				// Build a Tab Meta object
-    				SketchFile meta = new SketchFile("");
-    				meta.readData(file.getAbsolutePath());
-    				meta.setTitle(prefix);
+				if (ext.equals("pde") || ext.equals("java")) {
+					// Build a SketchFile object
+					SketchFile meta = new SketchFile(title);
+					meta.readData(file, getContentResolver());
 					meta.setExample(getGlobalState().isExample());
+					meta.setSuffix("." + ext);
 					
-					// Add the tab
 					addTabWithoutPagerUpdate(meta);
-					
 					meta.getFragment().setSketchFile(meta);
-    			} else if (suffix.equals("java")) {
-    				// Build a Tab Meta object
-    				SketchFile meta = new SketchFile("");
-    				meta.readData(file.getAbsolutePath());
-    				meta.setTitle(prefix);
-    				meta.setSuffix(".java");
-					meta.setExample(getGlobalState().isExample());
-				
-					// Add the tab
-					addTabWithoutPagerUpdate(meta);
-				
-					meta.getFragment().setSketchFile(meta);
-    			}
+				}
     		}
 		
 			codePagerAdapter.notifyDataSetChanged();
     		
-//    		// Update the code area
-//    		if(getCodeCount() > 0)
-//    			((CodeEditText) findViewById(R.id.code)).setNoUndoText(tabs.get(getSelectedCodeIndex()).getText());
-//    		else
-//    			((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
-    		
-			
-    		// Get rid of previous syntax highlighter data
-//    		((CodeEditText) findViewById(R.id.code)).clearTokens();
-    		
     		success = true;
     		
     		// Automatically selects and loads the new tab
-//    		tabBar.selectLoadDefaultTab();
 			selectCode(0);
     	} else {
     		success = false;
     	}
     	
-    	if(success) {
+    	if (success) {
 			// Close Find/Replace (if it's open)
 			((FindReplace) getGlobalState().getPackageToToolTable().get(FindReplace.PACKAGE_NAME)).close();
 			
@@ -2300,7 +2252,7 @@ public class EditorActivity extends AppCompatActivity {
 //    			}
 //    		}
     		
-    		//Add this to the recent sketches
+    		// Add this to the recent sketches
     		getGlobalState().putRecentSketch(sketchLocation, sketchPath);
     		
     		if (!FLAG_FIRST_AUTO_COMPILE) {
@@ -2317,16 +2269,12 @@ public class EditorActivity extends AppCompatActivity {
      * Saves the sketch to the sketchbook folder, creating a new subdirectory if necessary
      */
     public void saveSketch() {
-    	//If we cannot write to the external storage (and the user wants to), make sure to inform the user
-    	if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
-				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
+    	// If we cannot write to the external storage (and the user wants to), make sure to inform the user
+	    if (!externalStorageWritable() && getGlobalState().getSketchbookDrive().type.requiresExternalStoragePermission()) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
             	.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
-            	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-            		@Override
-            		public void onClick(DialogInterface dialog, int which) {}
-            }).show();
+            	.setPositiveButton(R.string.ok, (dialog, which) -> {}).show();
             
     		return;
     	}
@@ -2336,18 +2284,19 @@ public class EditorActivity extends AppCompatActivity {
     	boolean success = true;
     	
     	String sketchPath = getGlobalState().getSketchPath();
-    	
-    	//Obtain the location of the sketch
-    	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, getGlobalState().getSketchLocationType());
-    	
-    	//Ensure that the sketch folder exists
-    	sketchLoc.mkdirs();
-    	
-    	if (getCodeCount() > 0) {
-//	    	//Update the current tab
-//	    	tabs.put(tabBar.getSelectedTab(), new SketchFile(tabBar.getSelectedTab().getText().toString(), this));
-//	    	tabs.get(getSelectedCodeIndex()).update(this, PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_key_undo_redo", true));
-			
+	
+	    MaybeDocumentFile sketchLoc;
+		try {
+			//Obtain the location of the sketch
+			sketchLoc = getGlobalState().getSketchLocation(sketchPath, getGlobalState().getSketchLocationType());
+			sketchLoc.resolve();
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			message(getGlobalState().getString(R.string.save_sketch_create_dir_error));
+			e.printStackTrace();
+			return;
+		}
+	
+	    if (getCodeCount() > 0) {
 			// Update all tabs
 			for (int i = 0; i < tabs.size(); i ++) {
 				// Not all of the tabs are loaded at once
@@ -2362,17 +2311,27 @@ public class EditorActivity extends AppCompatActivity {
 			}
 			
 	    	// Iterate through the SketchFiles...
-	    	for(SketchFile meta : tabs) {
+	    	for (SketchFile meta : tabs) {
 	    		if (meta.enabled()) {
 	    			// ...and write them to the sketch folder
-	    			if (!meta.writeData(sketchLoc.getPath() + "/")) {
-	    				success = false;
-	    			}
+				    try {
+					    if (!meta.writeData(sketchLoc, getContentResolver())) {
+						    success = false;
+					    }
+				    } catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+						message(getGlobalState().getString(R.string.save_sketch_save_file_error, meta.getFilename()));
+						e.printStackTrace();
+						success = false;
+				    }
 	    		}
 	    	}
 			
 	    	if (success) {
-	    		getGlobalState().selectSketch(sketchPath, getGlobalState().getSketchLocationType());
+				try {
+					getGlobalState().selectSketch(sketchPath, getGlobalState().getSketchLocationType());
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					e.printStackTrace();
+				}
 	    		
 	    		// Force the drawer to reload
 	    		forceDrawerReload();
@@ -2402,9 +2361,8 @@ public class EditorActivity extends AppCompatActivity {
     }
     
     public void copyToSketchbook() {
-    	//If we cannot write to the external storage (and the user wants to), make sure to inform the user
-		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
-				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
+    	// If we cannot write to the external storage (and the user wants to), make sure to inform the user
+	    if (!externalStorageWritable() && getGlobalState().getSketchbookDrive().type.requiresExternalStoragePermission()) {
     		AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
             	.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
@@ -2416,45 +2374,37 @@ public class EditorActivity extends AppCompatActivity {
     		return;
     	}
     	
-    	//The old example location
-    	File oldLoc = getGlobalState().getSketchLocation();
-    	
-    	//Get the sketch name so that we place the copied example at the root of sketchbook
-    	String sketchPath = "/" + getGlobalState().getSketchName();
-    	
-    	//Obtain the location of the sketch
-    	//Save examples to the sketchbook so that the user can copy examples to the sketchbook
-    	File sketchLoc = getGlobalState().getSketchLocation(sketchPath, APDE.SketchLocation.SKETCHBOOK);
-    	
-    	//Ensure that the sketch folder exists
-    	sketchLoc.mkdirs();
-    	
     	try {
-    		APDE.copyFile(oldLoc, sketchLoc);
-    		
-    		//We need to add it to the recent list
-    		getGlobalState().putRecentSketch(APDE.SketchLocation.SKETCHBOOK, sketchPath);
-    		
-    		getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
-    		
-    		//Make sure the code area is editable
-//			((CodeEditText) findViewById(R.id.code)).setFocusable(true);
-//			((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
-    		
-    		//Force the drawer to reload
-    		forceDrawerReload();
-    		
-    		supportInvalidateOptionsMenu();
+		    // The old example location
+		    MaybeDocumentFile oldLoc = getGlobalState().getSketchLocation();
+		
+		    // Get the sketch name so that we place the copied example at the root of sketchbook
+		    String sketchPath = "/" + getGlobalState().getSketchName();
+		
+		    // Obtain the location of the sketch
+		    // Save examples to the sketchbook so that the user can copy examples to the sketchbook
+		    MaybeDocumentFile sketchLoc = getGlobalState().getSketchLocation(sketchPath, APDE.SketchLocation.SKETCHBOOK);
+		
+		    // Ensure that the sketch folder exists
+		    sketchLoc.resolve();
+			
+    		APDE.copyDocumentFile(oldLoc.resolve(), sketchLoc, getContentResolver());
+			
+			getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
+			updateSketchPath(sketchPath);
 			
 			updateCodeAreaFocusable();
             
-            //Inform the user of success
+            // Inform the user of success
     		message(getResources().getText(R.string.message_sketch_save_success));
     		setSaved(true);
     	} catch (IOException e) {
-    		//Inform the user of failure
+    		// Inform the user of failure
     		error(getResources().getText(R.string.message_sketch_save_failure));
-    	}
+    	} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+		    error(getResources().getText(R.string.message_sketch_save_failure));
+		    e.printStackTrace();
+	    }
     }
 	
 	public void updateCodeAreaFocusable() {
@@ -2464,15 +2414,24 @@ public class EditorActivity extends AppCompatActivity {
 		}
 	}
 	
+	private void updateSketchPath(String sketchPath) throws MaybeDocumentFile.MaybeDocumentFileException {
+		APDE.SketchLocation sketchLocation = getGlobalState().getSketchLocationType();
+		
+		getGlobalState().putRecentSketch(sketchLocation, sketchPath);
+		getGlobalState().selectSketch(sketchPath, sketchLocation);
+		
+		forceDrawerReload();
+		supportInvalidateOptionsMenu();
+	}
+	
 	public void moveToSketchbook() {
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		
 		builder.setTitle(R.string.move_temp_to_sketchbook_title);
 		builder.setMessage(String.format(Locale.US, getResources().getString(R.string.move_temp_to_sketchbook_message), getGlobalState().getSketchName()));
 		
-		builder.setPositiveButton(R.string.move_temp_to_sketchbook_button, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
+		builder.setPositiveButton(R.string.move_temp_to_sketchbook_button, (dialog, which) -> {
+			try {
 				APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
 				APDE.SketchMeta dest = new APDE.SketchMeta(APDE.SketchLocation.SKETCHBOOK, "/" + source.getName());
 				
@@ -2480,29 +2439,33 @@ public class EditorActivity extends AppCompatActivity {
 				// TODO Maybe give the user options to replace / keep both in the new location?
 				// We don't need that much right now, they can deal with things manually...
 				if (getGlobalState().getSketchLocation(dest.getPath(), dest.getLocation()).exists()) {
-					AlertDialog.Builder builder = new AlertDialog.Builder(EditorActivity.this);
+					AlertDialog.Builder builder1 = new AlertDialog.Builder(EditorActivity.this);
 					
-					builder.setTitle(R.string.rename_sketch_failure_title);
-					builder.setMessage(R.string.rename_move_folder_failure_message);
+					builder1.setTitle(R.string.rename_sketch_failure_title);
+					builder1.setMessage(R.string.rename_move_folder_failure_message);
 					
-					builder.setPositiveButton(getResources().getString(R.string.ok), new DialogInterface.OnClickListener() {
-						@Override
-						public void onClick(DialogInterface dialog, int which) {}
+					builder1.setPositiveButton(getResources().getString(R.string.ok), (dialog1, which1) -> {
 					});
 					
-					builder.create().show();
+					builder1.create().show();
 					
 					return;
 				}
 				
 				getGlobalState().moveFolder(source, dest, EditorActivity.this);
-				supportInvalidateOptionsMenu();
+				
+				String sketchPath = "/" + getGlobalState().getSketchName();
+				getGlobalState().selectSketch(sketchPath, APDE.SketchLocation.SKETCHBOOK);
+				updateSketchPath(sketchPath);
+				
+				message(getResources().getText(R.string.message_sketch_save_success));
+				setSaved(true);
+			} catch (MaybeDocumentFile.MaybeDocumentFileException | FileNotFoundException e) {
+				e.printStackTrace();
 			}
 		});
 		
-		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {}
-		});
+		builder.setNegativeButton(R.string.cancel, (dialog, whichButton) -> {});
 		
 		builder.create().show();
 	}
@@ -2571,10 +2534,14 @@ public class EditorActivity extends AppCompatActivity {
 		alert.setPositiveButton(R.string.delete, (dialog, whichButton) -> {
 			deleteSketch();
 			
-			getGlobalState().selectNewTempSketch();
-			newSketch();
-			
-			toolbar.setTitle(getGlobalState().getSketchName());
+			try {
+				getGlobalState().selectNewTempSketch();
+				newSketch();
+				
+				toolbar.setTitle(getGlobalState().getSketchName());
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				e.printStackTrace();
+			}
 		});
 		
 		alert.setNegativeButton(R.string.cancel, (dialog, whichButton) -> {});
@@ -2586,17 +2553,12 @@ public class EditorActivity extends AppCompatActivity {
      * Deletes the current sketch
      */
     public void deleteSketch() {
-    	//Obtain the location of the sketch folder
-    	File sketchFolder = getGlobalState().getSketchLocation();
-    	if(sketchFolder.isDirectory()) {
-    		try {
-    			//Perform recursive file deletion on the sketch folder
-				APDE.deleteFile(sketchFolder);
-			} catch (IOException e) {
-				//Catch stuff, shouldn't be any problems, though
-				e.printStackTrace();
-			}
-    	}
+		try {
+			MaybeDocumentFile sketchFolder = getGlobalState().getSketchLocation();
+			sketchFolder.delete();
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+		}
     }
     
     /**
@@ -2677,70 +2639,74 @@ public class EditorActivity extends AppCompatActivity {
      * Reloads the navigation drawer
      */
     public void forceDrawerReload() {
-    	if (drawerOpen) {
-    		if (drawerSketchLocationType != null) {
-				getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
-			} else if (drawerRecentSketch) {
-				getSupportActionBar().setSubtitle(getResources().getString(R.string.drawer_folder_recent) + "/");
+		try {
+			if (drawerOpen) {
+				if (drawerSketchLocationType != null) {
+					getSupportActionBar().setSubtitle(drawerSketchLocationType.toReadableString(getGlobalState()) + drawerSketchPath + "/");
+				} else if (drawerRecentSketch) {
+					getSupportActionBar().setSubtitle(getResources().getString(R.string.drawer_folder_recent) + "/");
+				} else {
+					getSupportActionBar().setSubtitle(null);
+				}
 			} else {
 				getSupportActionBar().setSubtitle(null);
 			}
-		} else {
-			getSupportActionBar().setSubtitle(null);
-		}
-    	
-        final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
-        
-        ArrayList<FileNavigatorAdapter.FileItem> items;
-        
-        if(drawerSketchLocationType != null) {
-        	items = getGlobalState().listSketchContainingFolders(getGlobalState().getSketchLocation(drawerSketchPath, drawerSketchLocationType), new String[] {APDE.LIBRARIES_FOLDER},
-        			drawerSketchPath.length() > 0, drawerSketchLocationType.equals(APDE.SketchLocation.SKETCHBOOK) || drawerSketchLocationType.equals(APDE.SketchLocation.TEMPORARY),
-					new APDE.SketchMeta(drawerSketchLocationType, drawerSketchPath));
-        } else {
-        	if(drawerRecentSketch) {
-        		items = getGlobalState().listRecentSketches();
-        	} else {
-        		items = new ArrayList<FileNavigatorAdapter.FileItem>();
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_sketches), FileNavigatorAdapter.FileItemType.FOLDER));
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_examples), FileNavigatorAdapter.FileItemType.FOLDER));
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_library_examples), FileNavigatorAdapter.FileItemType.FOLDER));
-				items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_temporary), FileNavigatorAdapter.FileItemType.FOLDER));
-        		items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_recent), FileNavigatorAdapter.FileItemType.FOLDER));
-        	}
-        }
-        
-        int selected = -1;
-		
-        if(drawerSketchLocationType != null && drawerSketchLocationType.equals(getGlobalState().getSketchLocationType())
-        		&& getGlobalState().getSketchPath().equals(drawerSketchPath + "/" + getGlobalState().getSketchName())) {
-        	
-        	selected = FileNavigatorAdapter.indexOfSketch(items, getGlobalState().getSketchName());
-        } else if(drawerRecentSketch && !(getGlobalState().getRecentSketches().size() == 0)) {
-        	// In the recent screen, the top-most sketch is always currently selected...
-        	// It's not "0" because that's the UP button
-        	selected = 1;
-        }
-        
-        final FileNavigatorAdapter fileAdapter = new FileNavigatorAdapter(this, items, selected);
-        
-        // Load the list of sketches into the drawer
-		try {
-			drawerList.setAdapter(fileAdapter);
-		} catch (SecurityException e) {
-			// Nada
-			// For some reason we get security exceptions sometimes
-		}
-        drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-        
-        // Let the adapter handle long click events
-        // Used for drag and drop to move files...
-        drawerList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-			@Override
-			public boolean onItemLongClick(AdapterView<?> adapterView, View view, int position, long id) {
-				return fileAdapter.onLongClickItem(view, position);
+			
+			final ListView drawerList = (ListView) findViewById(R.id.drawer_list);
+			
+			ArrayList<FileNavigatorAdapter.FileItem> items;
+			
+			if (drawerSketchLocationType != null) {
+				items = getGlobalState().listSketchContainingFolders(getGlobalState().getSketchLocation(drawerSketchPath, drawerSketchLocationType), new String[]{APDE.LIBRARIES_FOLDER},
+						drawerSketchPath.length() > 0, drawerSketchLocationType.equals(APDE.SketchLocation.SKETCHBOOK) || drawerSketchLocationType.equals(APDE.SketchLocation.TEMPORARY),
+						new APDE.SketchMeta(drawerSketchLocationType, drawerSketchPath));
+			} else {
+				if (drawerRecentSketch) {
+					items = getGlobalState().listRecentSketches();
+				} else {
+					items = new ArrayList<FileNavigatorAdapter.FileItem>();
+					items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_sketches), FileNavigatorAdapter.FileItemType.FOLDER));
+					items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_examples), FileNavigatorAdapter.FileItemType.FOLDER));
+					items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_library_examples), FileNavigatorAdapter.FileItemType.FOLDER));
+					items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_temporary), FileNavigatorAdapter.FileItemType.FOLDER));
+					items.add(new FileNavigatorAdapter.FileItem(getResources().getString(R.string.drawer_folder_recent), FileNavigatorAdapter.FileItemType.FOLDER));
+				}
 			}
-		});
+			
+			int selected = -1;
+			
+			if (drawerSketchLocationType != null && drawerSketchLocationType.equals(getGlobalState().getSketchLocationType())
+					&& getGlobalState().getSketchPath().equals(drawerSketchPath + "/" + getGlobalState().getSketchName())) {
+				
+				selected = FileNavigatorAdapter.indexOfSketch(items, getGlobalState().getSketchName());
+			} else if (drawerRecentSketch && !(getGlobalState().getRecentSketches().size() == 0)) {
+				// In the recent screen, the top-most sketch is always currently selected...
+				// It's not "0" because that's the UP button
+				selected = 1;
+			}
+			
+			final FileNavigatorAdapter fileAdapter = new FileNavigatorAdapter(this, items, selected);
+			
+			// Load the list of sketches into the drawer
+			try {
+				drawerList.setAdapter(fileAdapter);
+			} catch (SecurityException e) {
+				// Nada
+				// For some reason we get security exceptions sometimes
+			}
+			drawerList.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+			
+			// Let the adapter handle long click events
+			// Used for drag and drop to move files...
+			drawerList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+				@Override
+				public boolean onItemLongClick(AdapterView<?> adapterView, View view, int position, long id) {
+					return fileAdapter.onLongClickItem(view, position);
+				}
+			});
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+		}
     }
     
     public void selectDrawerFolder(APDE.SketchLocation location) {
@@ -3401,8 +3367,14 @@ public class EditorActivity extends AppCompatActivity {
     	((TextView) findViewById(R.id.console)).setText("");
     	
     	if (isOldBuild()) {
-    		final BuildContext context = BuildContext.create(getGlobalState());
-			final Build builder = new Build(getGlobalState(), context);
+		    final BuildContext context;
+		    try {
+			    context = BuildContext.create(getGlobalState());
+		    } catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			    e.printStackTrace();
+				return;
+		    }
+		    final Build builder = new Build(getGlobalState(), context);
 	
 			//Build the sketch in a separate thread
 			Runnable task = () -> {
@@ -4163,11 +4135,9 @@ public class EditorActivity extends AppCompatActivity {
      * @param filename
      * @return success
      */
-    private boolean deleteLocalFile(String filename) {
-    	//Get the sketch folder location
-    	File sketchLoc = getGlobalState().getSketchLocation();
-    	//Get the file location
-    	File file = new File(sketchLoc + "/", filename);
+    private boolean deleteLocalFile(String filename) throws MaybeDocumentFile.MaybeDocumentFileException {
+    	MaybeDocumentFile sketchLoc = getGlobalState().getSketchLocation();
+		MaybeDocumentFile file = sketchLoc.child(filename, SketchFile.PDE_MIME_TYPE);
     	
     	//Delete the file
     	if (file.exists()) {
@@ -4183,39 +4153,43 @@ public class EditorActivity extends AppCompatActivity {
      * Called internally from delete tab dialog
      */
     private void deleteTabContinue() {
-    	if(tabs.size() > 0) {
-    		// Delete the tab from the sketch folder
-    		deleteLocalFile(getSelectedSketchFile().getFilename());
-			// Disable the tab (prevents it from being saved if we don't do things quite right)
-			getSelectedSketchFile().disable();
-	  
-			// Get the index before we delete the tab and
-			int selectedCodeIndex = getSelectedCodeIndex();
-			
-			tabs.remove(selectedCodeIndex);
-			
-	    	// If there are no more tabs
-	    	if(getCodeCount() <= 0) {
-	    		// Force remove all tabs
-	    		tabs.clear();
-	    		
-	    		// Force action menu refresh
-	    		supportInvalidateOptionsMenu();
-	    	}
-			
-			codePagerAdapter.notifyDataSetChanged();
-			
-			if (selectedCodeIndex == 0) {
-				selectCode(0);
-			} else if (selectedCodeIndex >= tabs.size() && tabs.size() > 0) {
-				selectCode(tabs.size() - 1);
+		try {
+			if (tabs.size() > 0) {
+				// Delete the tab from the sketch folder
+				deleteLocalFile(getSelectedSketchFile().getFilename());
+				// Disable the tab (prevents it from being saved if we don't do things quite right)
+				getSelectedSketchFile().disable();
+				
+				// Get the index before we delete the tab and
+				int selectedCodeIndex = getSelectedCodeIndex();
+				
+				tabs.remove(selectedCodeIndex);
+				
+				// If there are no more tabs
+				if (getCodeCount() <= 0) {
+					// Force remove all tabs
+					tabs.clear();
+					
+					// Force action menu refresh
+					supportInvalidateOptionsMenu();
+				}
+				
+				codePagerAdapter.notifyDataSetChanged();
+				
+				if (selectedCodeIndex == 0) {
+					selectCode(0);
+				} else if (selectedCodeIndex >= tabs.size() && tabs.size() > 0) {
+					selectCode(tabs.size() - 1);
+				}
+				
+				scheduleAutoCompile(true);
+				
+				// Inform the user in the message area
+				message(getResources().getText(R.string.tab_delete_success));
 			}
-			
-			scheduleAutoCompile(true);
-			
-	    	// Inform the user in the message area
-	    	message(getResources().getText(R.string.tab_delete_success));
-    	}
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+		}
     }
     
     //Called internally to create an input dialog
@@ -4260,84 +4234,57 @@ public class EditorActivity extends AppCompatActivity {
     	dialog.show();
     }
     
-    //Called internally when the add or rename tab dialog is closed
+    // Called internally when the add or rename tab dialog is closed
     private void checkInputDialog(int key, boolean completed, String value) {
-    	if(completed) {
-    		//Make sure that this is a valid name for a tab
-    		if(!(validateFileName(value) || (value.endsWith(".java") && value.length() > 5 && validateFileName(value.substring(0, value.length() - 5))))) {
+    	if (completed) {
+    		// Make sure that this is a valid name for a tab
+		    if (!(validateFileName(value) || (value.endsWith(".java") && value.length() > 5 && validateFileName(value.substring(0, value.length() - 5))))) {
     			return;
     		}
     		
     		switch(key) {
     		case RENAME_TAB:
-    			//Get the tab
-//    			Tab cur = tabBar.getSelectedTab();
-    			//Delete the tab from the sketch folder
-    			deleteLocalFile(getSelectedSketchFile().getFilename());
-    			
-    			//Change the tab as it is displayed
-//    			((TextView) ((LinearLayoutCompat) tabBar.getTabView(tabBar.getSelectedTab())).getChildAt(0)).setText(value); //This seems more complicated than it needs to be... but it's necessary to change the appearance of the tab name
-//    			tabBar.getSelectedTab().setText(value);
-//    			tabs.get(tabBar.getSelectedTab()).setTitle(value);
-    	    	getSelectedSketchFile().setTitle(value);
-				codePagerAdapter.notifyDataSetChanged();
-				
-				scheduleAutoCompile(true);
-				
-    	    	//Notify the user of success
-    			message(getResources().getText(R.string.tab_rename_success));
-    			
-    			break;
+				try {
+					// Delete the tab from the sketch folder
+					deleteLocalFile(getSelectedSketchFile().getFilename());
+					
+					// Change the tab as it is displayed
+					getSelectedSketchFile().setTitle(value);
+					codePagerAdapter.notifyDataSetChanged();
+					
+					scheduleAutoCompile(true);
+					
+					// Notify the user of success
+					message(getResources().getText(R.string.tab_rename_success));
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					e.printStackTrace();
+				}
+			
+			    break;
     		case NEW_TAB:
     			if (value.endsWith(".java")) {
-    				//Obtain a tab
-//    		    	ActionBar.Tab tab = getSupportActionBar().newTab();
-    		    	//Set the tab text
-//    		    	tab.setText(value);
-    		    	
-    		    	//Add the tab
-//    		    	tabBar.addSelectTab(tab);
-    		    	
-    		    	//Correctly instantiate with a .JAVA suffix
+    		    	// Correctly instantiate with a .JAVA suffix
     		    	SketchFile meta = new SketchFile(value.substring(0, value.length() - 5));
     		    	meta.setSuffix(".java");
     		    	
-//    		    	tabs.put(tab, meta);
 					addTab(meta);
 					selectCode(getCodeCount() - 1);
-    		    	
-    		    	//Clear the code area
-//    		    	((CodeEditText) findViewById(R.id.code)).setNoUndoText("");
-//    		    	((CodeEditText) findViewById(R.id.code)).clearTokens();
-    		    	
-    		    	//Make the tab non-all-caps
-//    		    	customizeTab(tab, value);
-    				
-    				//Select the new tab
-//    				tabBar.selectLastTab();
-//					selectCode(getCodeCount() - 1);
-    				//Perform a selection action
-//    				onTabSelected(tabBar.getSelectedTab());
     			} else {
-    				//Add the tab
+    				// Add the tab
     				addTab(value);
-    				//Select the new tab
-//    				tabBar.selectLastTab();
 					selectCode(getCodeCount() - 1);
-    				//Perform a selection action
-//    				onTabSelected(tabBar.getSelectedTab());
     			}
     			
-    			//Refresh options menu to remove "New Tab" button
+    			// Refresh options menu to remove "New Tab" button
 				if (getCodeCount() == 1) {
 					supportInvalidateOptionsMenu();
 				}
 				
-				//Make sure that the code area is editable
+				// Make sure that the code area is editable
 //				((CodeEditText) findViewById(R.id.code)).setFocusable(true);
 //				((CodeEditText) findViewById(R.id.code)).setFocusableInTouchMode(true);
 				
-				//Notify the user of success
+				// Notify the user of success
 				message(getResources().getText(R.string.tab_new_success));
 				
 				break;
@@ -4516,60 +4463,72 @@ public class EditorActivity extends AppCompatActivity {
 	}
 	
 	public void launchImportLibrary() {
-		getGlobalState().rebuildLibraryList();
-		final String[] libList = getGlobalState().listLibraries();
-		
-		//Display a dialog containing the list of libraries
-		
-		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setTitle(R.string.tool_import_library);
-		if(libList.length > 0) {
-			//Populate the list
-			builder.setItems(libList, new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int which) {
-					addImports(getGlobalState().getLibraryByName(libList[which]).getPackageList(getGlobalState()));
-				}
+		try {
+			getGlobalState().rebuildLibraryList();
+			final String[] libList = getGlobalState().listLibraries();
+			
+			//Display a dialog containing the list of libraries
+			
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setTitle(R.string.tool_import_library);
+			if (libList.length > 0) {
+				//Populate the list
+				builder.setItems(libList, new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int which) {
+						try {
+							addImports(getGlobalState().getLibraryByName(libList[which]).getPackageList(getGlobalState()));
+						} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+							e.printStackTrace();
+						}
+					}
+				});
+			} else {
+				//Show a message to the user
+				//This is a real hack... and a strong argument for using XML / layout inflaters
+				
+				TextView content = new TextView(this);
+				content.setText(R.string.library_manager_no_contributed_libraries); //The text we want
+				content.setTextColor(getResources().getColor(R.color.grayed_out)); //The color we want
+				content.setGravity(Gravity.CENTER); //Centered
+				content.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)); //Centered...
+				content.setPadding(60, 60, 60, 60); //... CENTERED!!!
+				content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+				
+				builder.setView(content);
+			}
+			
+			//The "Manage Libraries" button - null so that it won't automatically close itself
+			builder.setNeutralButton(R.string.library_manager_open, null);
+			final AlertDialog dialog = builder.create();
+			
+			//Fancy stuff...
+			//StackOverflow: http://stackoverflow.com/questions/2620444/how-to-prevent-a-dialog-from-closing-when-a-button-is-clicked
+			dialog.setOnShowListener(dialog1 -> {
+				Button b = ((AlertDialog) dialog1).getButton(AlertDialog.BUTTON_NEUTRAL);
+				b.setOnClickListener(view -> {
+					launchManageLibraries();
+					//It would be better if the dialog didn't fade out when we pressed the button... but this will have to do
+					//...it's better than having it reappear when we back out of the library manager
+					dialog1.dismiss();
+				});
 			});
-		} else {
-			//Show a message to the user
-			//This is a real hack... and a strong argument for using XML / layout inflaters
 			
-			TextView content = new TextView(this);
-			content.setText(R.string.library_manager_no_contributed_libraries); //The text we want
-			content.setTextColor(getResources().getColor(R.color.grayed_out)); //The color we want
-			content.setGravity(Gravity.CENTER); //Centered
-			content.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)); //Centered...
-			content.setPadding(60, 60, 60, 60); //... CENTERED!!!
-			content.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-			
-			builder.setView(content);
+			dialog.setCanceledOnTouchOutside(true);
+			dialog.show();
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
 		}
-		
-		//The "Manage Libraries" button - null so that it won't automatically close itself
-		builder.setNeutralButton(R.string.library_manager_open, null);
-		final AlertDialog dialog = builder.create();
-		
-		//Fancy stuff...
-		//StackOverflow: http://stackoverflow.com/questions/2620444/how-to-prevent-a-dialog-from-closing-when-a-button-is-clicked
-		dialog.setOnShowListener(dialog1 -> {
-			Button b = ((AlertDialog) dialog1).getButton(AlertDialog.BUTTON_NEUTRAL);
-			b.setOnClickListener(view -> {
-				launchManageLibraries();
-				//It would be better if the dialog didn't fade out when we pressed the button... but this will have to do
-				//...it's better than having it reappear when we back out of the library manager
-				dialog1.dismiss();
-			});
-		});
-		
-		dialog.setCanceledOnTouchOutside(true);
-		dialog.show();
 	}
 	
 	public void launchManageLibraries() {
-		getGlobalState().rebuildLibraryList();
-		
-		Intent intent = new Intent(this, LibraryManagerActivity.class);
-		startActivity(intent);
+		try {
+			getGlobalState().rebuildLibraryList();
+			
+			Intent intent = new Intent(this, LibraryManagerActivity.class);
+			startActivity(intent);
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	//Called internally to open the Sketch Properties activity
@@ -4588,7 +4547,7 @@ public class EditorActivity extends AppCompatActivity {
 	 * 
 	 * @param imports
 	 */
-	public void addImports(String[] imports) {
+	public void addImports(List<String> imports) {
 		//We can't have people messing with examples...
 		if(getGlobalState().isExample())
 			return;

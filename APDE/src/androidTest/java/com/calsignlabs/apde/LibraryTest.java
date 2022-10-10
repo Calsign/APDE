@@ -14,6 +14,7 @@ import static androidx.test.espresso.matcher.RootMatchers.isDialog;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
+import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
 import static com.calsignlabs.apde.TestUtil.deleteFile;
 import static com.calsignlabs.apde.TestUtil.getString;
 import static com.calsignlabs.apde.TestUtil.matchesAnyString;
@@ -21,11 +22,13 @@ import static com.calsignlabs.apde.TestUtil.newSketch;
 import static com.calsignlabs.apde.TestUtil.openMenu;
 import static com.calsignlabs.apde.TestUtil.sleep;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.in;
 
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 
 import androidx.test.espresso.intent.Intents;
@@ -35,6 +38,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.UiDevice;
 
 import com.calsignlabs.apde.contrib.Library;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -107,7 +111,13 @@ public class LibraryTest extends BaseTest {
 	 */
 	@Test
 	public void libraryTest() {
-		File tmpDir = new File(Environment.getExternalStorageDirectory(), "apde_test_temp");
+		File tmpDir;
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			// On Android 10+, need to put it somewhere we can read
+			tmpDir = new File(getInstrumentation().getTargetContext().getFilesDir(), "apde_test_temp");
+		} else {
+			tmpDir = new File(Environment.getExternalStorageDirectory(), "apde_test_temp");
+		}
 		File libraryZip = new File(tmpDir, LIB_NAME + ".zip");
 		
 		tmpDir.mkdir();
@@ -156,7 +166,7 @@ public class LibraryTest extends BaseTest {
 			
 			// TODO: use idling resource
 			// this is probably best achieved by migrating library installation to TaskManager
-			UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+			UiDevice device = UiDevice.getInstance(getInstrumentation());
 			device.findObject(
 					matchesAnyString(getString(R.string.library_manager_install_dialog_title)
 							+ " " + LIB_NAME)).waitUntilGone(20000);
@@ -249,11 +259,14 @@ public class LibraryTest extends BaseTest {
 			deleteFile(tmpDir, true);
 			
 			editorActivityRule.getScenario().onActivity(editorActivity -> {
-				File installedLibrary =
-						new File(new File(editorActivity.getGlobalState().getSketchbookFolder(),
-								"libraries"), LIB_NAME);
-				if (installedLibrary.exists()) {
-					deleteFile(installedLibrary, true);
+				try {
+					MaybeDocumentFile installedLibrary = editorActivity.getGlobalState().getSketchbookFolder().childDirectory("libraries").childDirectory(LIB_NAME);
+					if (installedLibrary.exists()) {
+						installedLibrary.delete();
+					}
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					e.printStackTrace();
+					throw new RuntimeException(e);
 				}
 			});
 		}

@@ -1,5 +1,6 @@
 package com.calsignlabs.apde;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -8,7 +9,10 @@ import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.ScrollView;
 
+import com.calsignlabs.apde.support.documentfile.DocumentFile;
+
 import com.calsignlabs.apde.build.CompilerProblem;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,6 +36,10 @@ import java.util.List;
  * This started out as a meta... but is has grown to incorporate far more information than that
  */
 public class SketchFile extends BareSketchFile implements Parcelable {
+	// NOTE: we can't use a recognized mime type (like text/plain) because the system will happily
+	// add a .txt extension for us, which is wrong.
+	public static String PDE_MIME_TYPE = "application/pde";
+	
 	//Filename meta
 	private String title;
 	private String suffix;
@@ -560,83 +568,49 @@ public class SketchFile extends BareSketchFile implements Parcelable {
 	/**
 	 * Writes this file in the directory specified by the path
 	 *
-	 * @param path
+	 * @param sketchFolder
 	 * @return success
 	 */
-	public boolean writeData(String path) {
-		//Create the output stream
-		BufferedOutputStream outputStream = null;
-		String filename = path + title + suffix;
-		boolean success;
+	public boolean writeData(MaybeDocumentFile sketchFolder, ContentResolver contentResolver)
+			throws MaybeDocumentFile.MaybeDocumentFileException {
+		String filename = getFilename();
+		MaybeDocumentFile file = sketchFolder.child(filename, PDE_MIME_TYPE);
 		
-		try {
-			//Write the data
-			outputStream = new BufferedOutputStream(new FileOutputStream(filename));
+		try (BufferedOutputStream outputStream = new BufferedOutputStream(file.openOut(contentResolver))) {
+			// Write the data
 			outputStream.write(getText().getBytes());
-			
-			success = true;
-		} catch (Exception e) { //Errors
+			return true;
+		} catch (Exception e) {
 			e.printStackTrace();
-			
-			success = false;
-			
-		} finally {
-			//Close the output stream
-			if (outputStream != null) {
-				try {
-					outputStream.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
+			return false;
 		}
-		
-		return success;
 	}
 	
 	/**
-	 * Loads data from the specified path into this meta object
+	 * Loads data from the specified file into this meta object
 	 *
-	 * @param filename
+	 * @param file
 	 * @return
 	 */
-	public boolean readData(String filename) {
-		//Create the input stream
-		BufferedInputStream inputStream = null;
-		StringBuilder output = new StringBuilder();
-		boolean success;
-		
-		try {
-			//Read the data
+	public boolean readData(DocumentFile file, ContentResolver contentResolver) {
+		try(BufferedInputStream inputStream = new BufferedInputStream(contentResolver.openInputStream(file.getUri()))) {
+			// Read the data
 			
-			inputStream = new BufferedInputStream(new FileInputStream(filename));
-			
+			StringBuilder output = new StringBuilder();
 			byte[] contents = new byte[1024];
-			int bytesRead = 0;
-			
+			int bytesRead;
 			while ((bytesRead = inputStream.read(contents)) != -1) {
 				output.append(new String(contents, 0, bytesRead));
 			}
 			
-			//Set the data
+			// Set the data
 			text = handleBadChars(output.toString());
 			
-			success = true;
-		} catch (Exception e) { //Errors
+			return true;
+		} catch (Exception e) {
 			e.printStackTrace();
-			
-			success = false;
-		} finally {
-			//Close the input stream
-			try {
-				if (inputStream != null)
-					inputStream.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			return false;
 		}
-		
-		return success;
 	}
 	
 	private static String handleBadChars(String string) {

@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -39,7 +40,7 @@ public class Preprocessor {
 	private Mode mode;
 	private String packageName, className;
 	
-	private String[] codeFolderPackages;
+	private Set<String> codeFolderPackages;
 	
 	private CharSequence preprocessedText;
 	private boolean isOpenGL;
@@ -48,7 +49,7 @@ public class Preprocessor {
 	
 	private List<CompilerProblem> compilerProblems;
 	
-	public Preprocessor(BuildContext context, Build build, String packageName, String className, String[] codeFolderPackages) {
+	public Preprocessor(BuildContext context, Build build, String packageName, String className, Set<String> codeFolderPackages) {
 		this.context = context;
 		this.packageName = packageName;
 		this.className = className;
@@ -64,7 +65,7 @@ public class Preprocessor {
 		this.context = context;
 		this.packageName = context.getPackageName();
 		this.className = context.getSketchName();
-		this.codeFolderPackages = null;
+		this.codeFolderPackages = Collections.emptySet();
 		
 		hasSyntaxErrors = false;
 		importedLibraries = new ArrayList<>();

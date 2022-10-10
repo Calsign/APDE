@@ -43,6 +43,7 @@ import com.calsignlabs.apde.contrib.ContributionManager;
 import com.calsignlabs.apde.contrib.Library;
 import com.calsignlabs.apde.support.CustomProgressDialog;
 import com.calsignlabs.apde.support.FileSelection;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import java.io.File;
 import java.util.List;
@@ -94,20 +95,24 @@ public class LibraryManagerActivity extends AppCompatActivity {
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		switch(requestCode) {
 		case REQUEST_CHOOSER:
-			if(resultCode == RESULT_OK) {
-				Uri uri = FileSelection.getSelectedUri(data);
-				String libraryName = ContributionManager.detectLibraryName(this, uri);
-				if (libraryName == null) {
-					alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), "Could not detect library name");
-				} else if (new Library(libraryName).getLibraryFolder(((APDE) getApplicationContext()).getLibrariesFolder()).exists()) {
-					alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_already_installed));
-				} else {
-					addZipLibrary(libraryName, uri);
+			if (resultCode == RESULT_OK) {
+				try {
+					Uri uri = FileSelection.getSelectedUri(data);
+					String libraryName = ContributionManager.detectLibraryName(this, uri);
+					if (libraryName == null) {
+						alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), "Could not detect library name");
+					} else if (new Library(libraryName, (APDE) getApplicationContext()).getLibraryFolder(((APDE) getApplicationContext()).getLibrariesFolder()).exists()) {
+						alert(getResources().getString(R.string.library_manager_install_invalid_file_error_title), getResources().getString(R.string.library_manager_install_invalid_file_error_message_already_installed));
+					} else {
+						addZipLibrary(libraryName, uri);
+					}
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					e.printStackTrace();
 				}
 			}
 			break;
 		case DX_DEXER_SELECT_INPUT_FILE:
-			if(resultCode == RESULT_OK) {
+			if (resultCode == RESULT_OK) {
 				Uri uri = FileSelection.getSelectedUri(data);
 				if (uri != null) {
 					dxDexerInputFile.setText(uri.toString());
@@ -116,7 +121,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 			
 			break;
 		case DX_DEXER_SELECT_OUTPUT_FILE:
-			if(resultCode == RESULT_OK) {
+			if (resultCode == RESULT_OK) {
 				Uri uri = FileSelection.getSelectedUri(data);
 				if (uri != null) {
 					dxDexerOutputFile.setText(uri.toString());
@@ -456,51 +461,51 @@ public class LibraryManagerActivity extends AppCompatActivity {
 			
 			final Library lib = getItem(position);
 			
-			if(view != null && view instanceof RelativeLayout) {
-				RelativeLayout container = (RelativeLayout) view;
-				TextView title = (TextView) container.findViewById(R.id.library_manager_list_item_title);
-				TextView author = (TextView) container.findViewById(R.id.library_manager_list_item_author);
-				TextView desc = (TextView) container.findViewById(R.id.library_manager_list_item_desc);
-				
-				title.setText(Html.fromHtml(toHtmlLinks(lib.getName())));
-				author.setText(Html.fromHtml(toHtmlLinks(
-						String.format(getApplication().getString(R.string.library_manager_library_author_by),
-						lib.getAuthorList(((APDE) getApplicationContext()).getLibrariesFolder())))));
-				desc.setText(Html.fromHtml(toHtmlLinks(lib.getSentence(((APDE) getApplicationContext()).getLibrariesFolder()))));
-				
-				title.setMovementMethod(LinkMovementMethod.getInstance());
-				author.setMovementMethod(LinkMovementMethod.getInstance());
-				desc.setMovementMethod(LinkMovementMethod.getInstance());
-				
-				ImageButton button = (ImageButton) container.findViewById(R.id.library_manager_list_item_actions);
-				
-				button.setOnClickListener(new View.OnClickListener() {
-					@Override
-					public void onClick(View button) {
-						//Create a PopupMenu anchored to the "more actions" button
-						//This is a custom implementation, designed to support API level 10+ (Android's PopupMenu is 11+)
-						PopupMenu popup = new PopupMenu(getActivityContext(), button);
+			if (view instanceof RelativeLayout) {
+				try {
+					RelativeLayout container = (RelativeLayout) view;
+					TextView title = container.findViewById(R.id.library_manager_list_item_title);
+					TextView author = container.findViewById(R.id.library_manager_list_item_author);
+					TextView desc = container.findViewById(R.id.library_manager_list_item_desc);
+					
+					MaybeDocumentFile librariesFolder = ((APDE) getApplicationContext()).getLibrariesFolder();
+					
+					title.setText(Html.fromHtml(toHtmlLinks(lib.getName())));
+					author.setText(Html.fromHtml(toHtmlLinks(
+							String.format(getApplication().getString(R.string.library_manager_library_author_by),
+							lib.getAuthorList(librariesFolder)))));
+					desc.setText(Html.fromHtml(toHtmlLinks(lib.getSentence(librariesFolder))));
+					
+					title.setMovementMethod(LinkMovementMethod.getInstance());
+					author.setMovementMethod(LinkMovementMethod.getInstance());
+					desc.setMovementMethod(LinkMovementMethod.getInstance());
+					
+					ImageButton button = container.findViewById(R.id.library_manager_list_item_actions);
+					
+					button.setOnClickListener(button1 -> {
+						// Create a PopupMenu anchored to the "more actions" button
+						// This is a custom implementation, designed to support API level 10+ (Android's PopupMenu is 11+)
+						PopupMenu popup = new PopupMenu(getActivityContext(), button1);
 						
-						//Populate the actions
+						// Populate the actions
 						MenuInflater inflater = getMenuInflater();
 						inflater.inflate(R.menu.library_manager_actions, popup.getMenu());
 						
-						//Detect presses
-						popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-							@Override
-							public boolean onMenuItemClick(MenuItem item) {
-								switch(item.getItemId()) {
-								case R.id.menu_contrib_uninstall:
-									launchUninstallDialog(lib);
-									return true;
-								}
-								
-								return false;
+						// Detect presses
+						popup.setOnMenuItemClickListener(item -> {
+							switch(item.getItemId()) {
+							case R.id.menu_contrib_uninstall:
+								launchUninstallDialog(lib);
+								return true;
 							}
+							
+							return false;
 						});
 						popup.show();
-					}
-				});
+					});
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					e.printStackTrace();
+				}
 			}
 			
 			return view;
@@ -619,7 +624,7 @@ public class LibraryManagerActivity extends AppCompatActivity {
 		
 		final APDE context = (APDE) getApplicationContext();
 		
-		final Library library = new Library(libraryName);
+		final Library library = new Library(libraryName, (APDE) getApplicationContext());
 		
 		//Initialize the progress dialog
 		final CustomProgressDialog dialog = new CustomProgressDialog(this, View.GONE, View.GONE);
@@ -640,9 +645,13 @@ public class LibraryManagerActivity extends AppCompatActivity {
 			}
 			
 			findViewById(R.id.library_manager_list).post(() -> {
-				context.rebuildLibraryList();
-				refreshLibraryList();
-				findViewById(R.id.library_manager_list).invalidate();
+				try {
+					context.rebuildLibraryList();
+					refreshLibraryList();
+					findViewById(R.id.library_manager_list).invalidate();
+				} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+					e.printStackTrace();
+				}
 				
 				dialog.dismiss();
 			});
@@ -690,9 +699,13 @@ public class LibraryManagerActivity extends AppCompatActivity {
 			
 			findViewById(R.id.library_manager_list).post(new Runnable() {
 				public void run() {
-					context.rebuildLibraryList();
-					refreshLibraryList();
-					findViewById(R.id.library_manager_list).invalidate();
+					try {
+						context.rebuildLibraryList();
+						refreshLibraryList();
+						findViewById(R.id.library_manager_list).invalidate();
+					} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+						e.printStackTrace();
+					}
 					
 					dialog.dismiss();
 				}

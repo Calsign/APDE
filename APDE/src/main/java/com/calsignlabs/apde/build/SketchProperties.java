@@ -1,6 +1,7 @@
 package com.calsignlabs.apde.build;
 import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.build.dag.BuildContext;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -27,17 +29,16 @@ public class SketchProperties {
 	public static final String KEY_ORIENTATION = "manifest.orientation";
 	public static final String KEY_PERMISSIONS = "manifest.permissions";
 	
-	public SketchProperties(BuildContext context, File propertiesFile) {
+	public SketchProperties(BuildContext context, MaybeDocumentFile propertiesFile) {
 		this.context = context;
 		try {
 			if (propertiesFile != null && propertiesFile.exists()) {
 				properties = new Properties(getDefaults());
-				InputStream inputStream = new FileInputStream(propertiesFile);
-				loadProperties(properties, inputStream);
+				loadProperties(properties, propertiesFile.openIn(context.getContentResolver()));
 			} else {
 				properties = getDefaults();
 			}
-		} catch (IOException e) {
+		} catch (IOException | MaybeDocumentFile.MaybeDocumentFileException e) {
 			e.printStackTrace();
 			properties = new Properties();
 		}
@@ -188,11 +189,11 @@ public class SketchProperties {
 		}
 	}
 	
-	public void save(File propertiesFile) {
+	public void save(MaybeDocumentFile propertiesFile) {
 		try {
-			OutputStream outputStream = new FileOutputStream(propertiesFile);
-			properties.store(new OutputStreamWriter(outputStream, "UTF-8"), null);
-		} catch (IOException e) {
+			OutputStream outputStream = propertiesFile.openOut(context.getContentResolver());
+			properties.store(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8), null);
+		} catch (IOException | MaybeDocumentFile.MaybeDocumentFileException e) {
 			e.printStackTrace();
 		}
 	}

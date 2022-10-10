@@ -13,6 +13,8 @@ import android.graphics.Point;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import androidx.appcompat.app.AlertDialog;
+import com.calsignlabs.apde.support.documentfile.DocumentFile;
+
 import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -29,8 +31,10 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.calsignlabs.apde.build.Build;
+import com.calsignlabs.apde.support.MaybeDocumentFile;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -111,19 +115,19 @@ public class FileNavigatorAdapter extends BaseAdapter {
 	@SuppressLint("NewApi")
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
-		//Let's see if we can convert the old view - otherwise inflate a new one
-		if(convertView == null) {
+		// Let's see if we can convert the old view - otherwise inflate a new one
+		if (convertView == null) {
 			LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		    convertView = inflater.inflate(R.layout.drawer_list_item, parent, false);
 		}
 		
 		final FileItem item = getItem(position);
 		
-		TextView path = ((TextView) convertView.findViewById(R.id.drawer_list_item_path));
-		TextView text = ((TextView) convertView.findViewById(R.id.drawer_list_item_text));
-		ImageView icon = ((ImageView) convertView.findViewById(R.id.drawer_list_item_icon));
+		TextView path = convertView.findViewById(R.id.drawer_list_item_path);
+		TextView text = convertView.findViewById(R.id.drawer_list_item_text);
+		ImageView icon = convertView.findViewById(R.id.drawer_list_item_icon);
 		
-		if(item.getPath().length() > 0) {
+		if (item.getPath().length() > 0) {
 			path.setVisibility(View.VISIBLE);
 			path.setText(item.getPath());
 		} else {
@@ -138,31 +142,37 @@ public class FileNavigatorAdapter extends BaseAdapter {
 			icon.setImageDrawable(context.getResources().getDrawable(R.drawable.ic_folder_closed));
 			break;
 		case SKETCH:
-			//Try to load the sketch's icon
+			// Try to load the sketch's icon
 			
-			File sketchFolder = ((APDE) context.getApplicationContext()).getSketchLocation(item.getSketch().getPath(), item.getSketch().getLocation());
-			String[] iconTitles = Build.ICON_LIST;
-			String iconPath = "";
-			
-			for (String iconTitle : iconTitles) {
-				File iconFile = new File(sketchFolder, iconTitle);
+			try {
+				MaybeDocumentFile sketchFolder = ((APDE) context.getApplicationContext())
+						.getSketchLocation(item.getSketch().getPath(), item.getSketch().getLocation());
+				String[] iconTitles = Build.ICON_LIST;
+				MaybeDocumentFile iconDocumentFile = null;
 				
-				if (iconFile.exists()) {
-					iconPath = iconFile.getAbsolutePath();
-					break;
+				for (String iconTitle : iconTitles) {
+					MaybeDocumentFile iconFile = sketchFolder.child(iconTitle, "image/png");
+					
+					if (iconFile.exists()) {
+						iconDocumentFile = iconFile;
+						break;
+					}
 				}
-			}
-			
-			if (!iconPath.equals("")) {
-				Bitmap curIcon = BitmapFactory.decodeFile(iconPath);
 				
-				if (curIcon != null) {
-					int iconSize = Math.round(36 * context.getResources().getDisplayMetrics().density);
-					icon.setImageBitmap(Bitmap.createScaledBitmap(curIcon, iconSize, iconSize, false));
+				if (iconDocumentFile != null) {
+					Bitmap curIcon = BitmapFactory.decodeStream(iconDocumentFile.openIn(context.getContentResolver()));
+					
+					if (curIcon != null) {
+						int iconSize = Math.round(36 * context.getResources().getDisplayMetrics().density);
+						icon.setImageBitmap(Bitmap.createScaledBitmap(curIcon, iconSize, iconSize, false));
+					} else {
+						//Uh-oh, some error occurred...
+					}
 				} else {
-					//Uh-oh, some error occurred...
+					icon.setImageDrawable(context.getResources().getDrawable(R.drawable.default_icon));
 				}
-			} else {
+			} catch (MaybeDocumentFile.MaybeDocumentFileException | FileNotFoundException e) {
+				e.printStackTrace();
 				icon.setImageDrawable(context.getResources().getDrawable(R.drawable.default_icon));
 			}
 			break;
@@ -339,17 +349,13 @@ public class FileNavigatorAdapter extends BaseAdapter {
 					return true;
 					
 				case DragEvent.ACTION_DRAG_EXITED:
+				case DragEvent.ACTION_DRAG_ENDED:
 					view.setBackgroundColor(context.getResources().getColor(R.color.red_select_light));
 					view.invalidate();
 					return true;
 					
 				case DragEvent.ACTION_DROP:
 					actionDeleteFolder();
-					return true;
-					
-				case DragEvent.ACTION_DRAG_ENDED:
-					view.setBackgroundColor(context.getResources().getColor(R.color.red_select_light));
-					view.invalidate();
 					return true;
 				}
 				
@@ -381,28 +387,27 @@ public class FileNavigatorAdapter extends BaseAdapter {
     	
 		final EditText input = global.createAlertDialogEditText(global.getEditor(), builder, "", false);
 		
-		builder.setPositiveButton(R.string.create, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				String folderName = input.getText().toString();
+		builder.setPositiveButton(R.string.create, (dialog, which) -> {
+			String folderName = input.getText().toString();
+			
+			if(!validateFolderName(folderName, global.getEditor())) {
+				if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+					((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
 				
-				if(!validateFolderName(folderName, global.getEditor())) {
-					if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-						((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
-					
-					return;
-				}
-				
+				return;
+			}
+			
+			try {
 				APDE.SketchMeta source = dragItem.getSketch();
 				APDE.SketchMeta dest = new APDE.SketchMeta(source.getLocation(), source.getParent() + "/" + folderName + "/" + source.getName());
 				
-				File newFolder = global.getSketchLocation(source.getParent() + "/" + folderName, source.getLocation());
+				MaybeDocumentFile newFolder = global.getSketchLocation(source.getParent() + "/" + folderName, source.getLocation());
 				
-				//Let's not overwrite anything...
-				//TODO Maybe give the user options to replace / keep both in the new location?
-				//We don't need that much right now, they can deal with things manually...
-				if(newFolder.exists()) {
-					if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+				// Let's not overwrite anything...
+				// TODO Maybe give the user options to replace / keep both in the new location?
+				// We don't need that much right now, they can deal with things manually...
+				if (newFolder.exists()) {
+					if (!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
 						((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
 					
 					showDialog(R.string.rename_sketch_failure_title, R.string.rename_move_folder_failure_message, global.getEditor());
@@ -412,17 +417,17 @@ public class FileNavigatorAdapter extends BaseAdapter {
 				
 				global.moveFolder(source, dest, global.getEditor());
 				
-				if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+				if (!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
 					((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+			} catch (MaybeDocumentFile.MaybeDocumentFileException | FileNotFoundException e) {
+				e.printStackTrace();
 			}
 		});
 		
-		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-    		public void onClick(DialogInterface dialog, int whichButton) {
-    			if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-    				((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
-    		}
-    	});
+		builder.setNegativeButton(R.string.cancel, (dialog, whichButton) -> {
+			if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+				((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+		});
 		
 		AlertDialog dialog = builder.create();
 		if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
@@ -438,9 +443,8 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		builder.setTitle(R.string.move_temp_to_sketchbook_title);
 		builder.setMessage(String.format(Locale.US, context.getResources().getString(R.string.move_temp_to_sketchbook_message), dragItem.getText()));
 		
-		builder.setPositiveButton(R.string.move_temp_to_sketchbook_button, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
+		builder.setPositiveButton(R.string.move_temp_to_sketchbook_button, (dialog, which) -> {
+			try {
 				APDE.SketchMeta source = dragItem.getSketch();
 				APDE.SketchMeta dest = new APDE.SketchMeta(APDE.SketchLocation.SKETCHBOOK, "/" + source.getName());
 				
@@ -454,12 +458,12 @@ public class FileNavigatorAdapter extends BaseAdapter {
 				}
 				
 				global.moveFolder(source, dest, global.getEditor());
+			} catch (MaybeDocumentFile.MaybeDocumentFileException | FileNotFoundException e) {
+				e.printStackTrace();
 			}
 		});
 		
-		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {}
-		});
+		builder.setNegativeButton(R.string.cancel, (dialog, whichButton) -> {});
 		
 		builder.create().show();
 	}
@@ -476,25 +480,26 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		
 		final EditText input = global.createAlertDialogEditText(global.getEditor(), builder, dragItem.getText(), true);
 		
-		builder.setPositiveButton(R.string.rename_folder_button, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				String folderName = input.getText().toString();
+		builder.setPositiveButton(R.string.rename_folder_button, (dialog, which) -> {
+			String folderName = input.getText().toString();
+			
+			if (!(isSketch ? validateSketchName(folderName, global.getEditor()) : validateFolderName(folderName, global.getEditor()))) {
+				if (!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+					((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
 				
-				if(!(isSketch ? validateSketchName(folderName, global.getEditor()) : validateFolderName(folderName, global.getEditor()))) {
-					if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
-						((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
-					
-					return;
-				}
-				
+				return;
+			}
+			
+			try {
 				APDE.SketchMeta source = dragItem.getSketch();
 				APDE.SketchMeta dest = new APDE.SketchMeta(source.getLocation(), source.getParent() + "/" + folderName);
 				
 				global.moveFolder(source, dest, global.getEditor());
 				
-				if(!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
+				if (!PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getBoolean("use_hardware_keyboard", false))
 					((InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+			} catch (MaybeDocumentFile.MaybeDocumentFileException | FileNotFoundException e) {
+				e.printStackTrace();
 			}
 		});
 		
@@ -521,37 +526,39 @@ public class FileNavigatorAdapter extends BaseAdapter {
 		builder.setTitle(String.format(Locale.US, context.getResources().getString(isSketch ? R.string.delete_sketch_dialog_title : R.string.drawer_delete_folder_dialog_title), dragItem.getText()));
 		builder.setMessage(String.format(Locale.US, context.getResources().getString(isSketch ? R.string.delete_sketch_dialog_message : R.string.drawer_delete_folder_dialog_message), dragItem.getText()));
 		
-		builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				try {
-					APDE.deleteFile(global.getSketchLocation(dragItem.getSketch().getPath(), dragItem.getSketch().getLocation()));
-				} catch (IOException e) {
-					e.printStackTrace();
+		builder.setPositiveButton(R.string.delete, (dialog, which) -> {
+			try {
+				MaybeDocumentFile file = global.getSketchLocation(dragItem.getSketch().getPath(), dragItem.getSketch().getLocation());
+				if (file.exists()) {
+					APDE.deleteDocumentFile(file.resolve());
 				}
-				
-				APDE.SketchLocation draggedLocation = dragItem.getSketch().getLocation();
-				APDE.SketchLocation selectedLocation = global.getSketchLocationType();
-				
-				String draggedPath = dragItem.getSketch().getPath();
-				String selectedPath = global.getSketchPath();
-				
-				boolean draggingFolderContainsSelected = draggedLocation.equals(selectedLocation) && selectedPath.startsWith(draggedPath + "/");
-				
-				if(draggingIsSelected || draggingFolderContainsSelected) {
-	    			global.selectNewTempSketch();
-	    			global.getEditor().newSketch();
-	    			
-	    			global.getEditor().getSupportActionBar().setTitle(global.getSketchName());
+			} catch (IOException | MaybeDocumentFile.MaybeDocumentFileException e) {
+				e.printStackTrace();
+			}
+			
+			APDE.SketchLocation draggedLocation = dragItem.getSketch().getLocation();
+			APDE.SketchLocation selectedLocation = global.getSketchLocationType();
+			
+			String draggedPath = dragItem.getSketch().getPath();
+			String selectedPath = global.getSketchPath();
+			
+			boolean draggingFolderContainsSelected = draggedLocation.equals(selectedLocation) && selectedPath.startsWith(draggedPath + "/");
+			
+			try {
+				if (draggingIsSelected || draggingFolderContainsSelected) {
+					global.selectNewTempSketch();
+					global.getEditor().newSketch();
+					
+					global.getEditor().getSupportActionBar().setTitle(global.getSketchName());
 				}
 				
 				global.getEditor().forceDrawerReload();
+			} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+				e.printStackTrace();
 			}
 		});
 		
-		builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-    		public void onClick(DialogInterface dialog, int whichButton) {}
-    	});
+		builder.setNegativeButton(R.string.cancel, (dialog, whichButton) -> {});
 		
 		builder.create().show();
 	}
@@ -733,17 +740,21 @@ public class FileNavigatorAdapter extends BaseAdapter {
 						return true;
 					
 					case DragEvent.ACTION_DROP:
-						//Don't flip out if we've navigated out of this folder...
-						//When scrolling, views are recycled and it makes a mess...
-						if(item != null && item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
-							APDE global = (APDE) context.getApplicationContext();
-							
-							APDE.SketchMeta source = dragItem.getSketch();
-							APDE.SketchMeta destFolder = item.getSketch();
-							
-							APDE.SketchMeta destSketch = new APDE.SketchMeta(destFolder.getLocation(), destFolder.getPath() + "/" + source.getName());
-							
-							global.moveFolder(source, destSketch, global.getEditor());
+						// Don't flip out if we've navigated out of this folder...
+						// When scrolling, views are recycled and it makes a mess...
+						if (item != null && item.isDroppable() && dragItem != null && !item.equals(dragItem)) {
+							try {
+								APDE global = (APDE) context.getApplicationContext();
+								
+								APDE.SketchMeta source = dragItem.getSketch();
+								APDE.SketchMeta destFolder = item.getSketch();
+								
+								APDE.SketchMeta destSketch = new APDE.SketchMeta(destFolder.getLocation(), destFolder.getPath() + "/" + source.getName());
+								
+								global.moveFolder(source, destSketch, global.getEditor());
+							} catch (MaybeDocumentFile.MaybeDocumentFileException | FileNotFoundException e) {
+								e.printStackTrace();
+							}
 						}
 						
 						return true;

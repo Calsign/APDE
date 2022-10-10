@@ -1,5 +1,9 @@
 package com.calsignlabs.apde.build.dag;
 
+import android.content.ContentResolver;
+
+import com.calsignlabs.apde.support.MaybeDocumentFile;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,16 +17,18 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 // TODO will we have problems with large files? (images, etc.)
 public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 	private static final int BUFFER_SIZE = 8192;
 	
-	enum Mode { FILE_DIFF, SOURCE_DEST_STREAM, SOURCE_DEST_FILE }
+	enum Mode { FILE_DIFF, DOCUMENT_DIFF, SOURCE_DEST_STREAM, SOURCE_DEST_FILE }
 	
 	private Mode mode;
 	
 	private Getter<File> fileGetter;
+	private Getter<MaybeDocumentFile> documentGetter;
 	private Getter<InputStream> inputStreamGetter;
 	private Getter<InputStream> baseGetter;
 	private Getter<File> sourceFileGetter;
@@ -37,6 +43,14 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 	public ChecksumChangeNoticer fileDiff(Getter<File> fileGetter) {
 		mode = Mode.FILE_DIFF;
 		this.fileGetter = fileGetter;
+		deps = fileGetter.getDependencies();
+		
+		return this;
+	}
+	
+	public ChecksumChangeNoticer documentDiff(Getter<MaybeDocumentFile> documentGetter) {
+		mode = Mode.DOCUMENT_DIFF;
+		this.documentGetter = documentGetter;
 		deps = fileGetter.getDependencies();
 		
 		return this;
@@ -144,6 +158,10 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 		}
 	}
 	
+	private static BigInteger calculateChecksum(MaybeDocumentFile document, boolean ignoreTitle) {
+		throw new RuntimeException("unimplemented");
+	}
+	
 	private static void buildFileStreamList(File file, List<InputStream> children, boolean ignoreTitle) throws FileNotFoundException {
 		if (!ignoreTitle) {
 			// Track file names
@@ -163,7 +181,13 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 	public static boolean sameChecksum(File a, File b, boolean ignoreTitle) {
 		BigInteger checksumA = calculateChecksum(a, ignoreTitle);
 		BigInteger checksumB = calculateChecksum(b, ignoreTitle);
-		return checksumA == null ? checksumB == null : checksumA.equals(checksumB);
+		return Objects.equals(checksumA, checksumB);
+	}
+	
+	public static boolean sameChecksum(File a, MaybeDocumentFile b, boolean ignoreTitle) {
+		BigInteger checksumA = calculateChecksum(a, ignoreTitle);
+		BigInteger checksumB = calculateChecksum(b, ignoreTitle);
+		return Objects.equals(checksumA, checksumB);
 	}
 	
 	private BigInteger checksum;
@@ -184,6 +208,9 @@ public class ChecksumChangeNoticer implements BuildTask.ChangeNoticer {
 				boolean changed = (checksum == null && newChecksum != null) || (checksum != null && !checksum.equals(newChecksum));
 				checksum = newChecksum;
 				return BuildTask.ChangeStatus.bool(changed);
+			case DOCUMENT_DIFF:
+				// TODO: this whole modular build system is currently unused, so let's not bother with this for now
+				throw new RuntimeException("unimplemented");
 			case SOURCE_DEST_STREAM:
 				BigInteger test = calculateChecksum(inputStreamGetter, context);
 				BigInteger base = calculateChecksum(baseGetter, context);
