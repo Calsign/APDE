@@ -2184,6 +2184,7 @@ public class EditorActivity extends AppCompatActivity {
     		
     		// Get all the files in the directory
     		DocumentFile[] files = sketchLoc.resolve().listFiles();
+                MaybeDocumentFile datadir = sketchLoc.resolve().directory("data");
     		
     		// Why do we need this...?
     		for (SketchFile meta : tabs) {
@@ -2218,6 +2219,34 @@ public class EditorActivity extends AppCompatActivity {
 					meta.getFragment().setSketchFile(meta);
 				}
     		}
+
+                if(datadir.exists()){
+                        DocumentFile[] datafiles = datadir.resolve().listFiles();
+                        for (DocumentFile file : datafiles) {
+    			    String name = file.getName();
+    			    if (name == null) {
+    				continue;
+			    }
+    			
+    		       	    String[] parts = name.split("\\.");
+    			    if (parts.length != 2) {
+    				continue;
+			    }
+    			    String title = parts[0];
+    			    String ext = parts[1];
+    			
+			    if (ext.equals("glsl") || ext.equals("frag") || ext.equals("vert") || ext.equals("txt") || ext.equals("json")) {
+					// Build a SketchFile object
+					SketchFile meta = new SketchFile("data/"+title);
+					meta.readData(file, getContentResolver());
+					meta.setExample(getGlobalState().isExample());
+					meta.setSuffix("." + ext);
+					
+					addTabWithoutPagerUpdate(meta);
+					meta.getFragment().setSketchFile(meta);
+				}
+    		         }
+                }
 		
 			codePagerAdapter.notifyDataSetChanged();
     		
