@@ -39,6 +39,8 @@
     <string name="prop_sketch_folder">Sketch Folder</string>
     <string name="prop_add_file">Add File</string>
     <string name="prop_add_file_desc">Add a file to the sketch\'s data folder</string>
+    <string name="prop_add_new_file">Add New File</string>
+    <string name="prop_add_new_file_desc">Add a blank file to the sketch\'s data folder</string>
 	<!-- The button shown in settings: -->
     <string name="prop_show_sketch_folder">Show Sketch Folder</string>
 	<!-- The title of the activity that is started after pressing the button in settings: -->
