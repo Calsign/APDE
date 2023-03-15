@@ -167,7 +167,7 @@ public class SketchPropertiesActivity extends AppCompatActivity implements Toolb
 			MaybeDocumentFile dest = dataFolder.child(name, mimeType);
                         dataFolder.resolve();
                         dest.resolve();
-		} catch (MaybeDocumentFile.MaybeDocumentFileException | IOException e) {
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
 			e.printStackTrace();
 		}
 	}
