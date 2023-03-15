@@ -2184,7 +2184,7 @@ public class EditorActivity extends AppCompatActivity {
     		
     		// Get all the files in the directory
     		DocumentFile[] files = sketchLoc.resolve().listFiles();
-                MaybeDocumentFile datadir = sketchLoc.resolve().directory("data");
+                MaybeDocumentFile datadir = sketchLoc.directory("data");
     		
     		// Why do we need this...?
     		for (SketchFile meta : tabs) {
