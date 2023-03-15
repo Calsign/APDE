@@ -13,13 +13,3 @@ jobs:
         java-version: 11
     - name: Build with Gradle
       run: ./gradlew :APDE:build
-    - name: upload release
-      uses: actions/upload-artifact@v3
-      with:
-        name: APDE.apk
-        path: APDE/build/outputs/apk/release/APDE-release-unsigned.apk
-    - name: upload debug
-      uses: actions/upload-artifact@v3
-      with:
-        name: APDE-debug.apk
-        path: APDE/build/outputs/apk/debug/APDE-debug.apk
