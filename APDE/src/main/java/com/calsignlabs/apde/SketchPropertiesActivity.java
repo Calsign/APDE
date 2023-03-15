@@ -160,9 +160,9 @@ public class SketchPropertiesActivity extends AppCompatActivity implements Toolb
 			// Get the location of this sketch's data folder
 			MaybeDocumentFile dataFolder = getGlobalState().getSketchLocation().childDirectory("data");
 			
-			name = DEFAULT_ADDED_FILENAME;
+			String name = DEFAULT_ADDED_FILENAME;
 			
-			mimeType = "application/octet-stream";
+			String mimeType = "application/octet-stream";
 			
 			MaybeDocumentFile dest = dataFolder.child(name, mimeType);
                         dataFolder.resolve();
