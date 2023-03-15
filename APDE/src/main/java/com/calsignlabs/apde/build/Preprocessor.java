@@ -149,7 +149,6 @@ public class Preprocessor {
 			// preserve the text, they rewrite it. This is OK, though, because there shouldn't be
 			// any problems with them that doesn't get picked up by the preprocessor.
 			List<String> settingsStatements = extractSettings(scrubbed);
-			replaceExit(scrubbed);
 			replaceTypeConstructors(scrubbed);
 			replaceHexLiterals(scrubbed);
 			
@@ -570,16 +569,6 @@ public class Preprocessor {
 			libraryPkg = dot == -1 ? libraryPkg : libraryPkg.substring(0, dot);
 			
 			checkImport(libraryPkg);
-		}
-	}
-	
-	private static final Pattern EXIT_REGEX = Pattern.compile("(?<=^|\\W)(exit)(?=\\s*\\()", Pattern.MULTILINE);
-	
-	private void replaceExit(CharSequence scrubbed) {
-		Matcher matcher = EXIT_REGEX.matcher(scrubbed);
-		while (matcher.find()) {
-			// Converts int() to PApplet.parseInt()
-			transform.replace(matcher.start(1), matcher.group(1).length(), "getActivity().finish");
 		}
 	}
 	
