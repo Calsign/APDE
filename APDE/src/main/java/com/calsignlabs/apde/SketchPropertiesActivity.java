@@ -154,4 +154,21 @@ public class SketchPropertiesActivity extends AppCompatActivity implements Toolb
 			e.printStackTrace();
 		}
 	}
+	
+	public void addNewFile() {
+		try {
+			// Get the location of this sketch's data folder
+			MaybeDocumentFile dataFolder = getGlobalState().getSketchLocation().childDirectory("data");
+			
+			String name = DEFAULT_ADDED_FILENAME;
+			
+			String mimeType = "application/octet-stream";
+			
+			MaybeDocumentFile dest = dataFolder.child(name, mimeType);
+                        dataFolder.resolve();
+                        dest.resolve();
+		} catch (MaybeDocumentFile.MaybeDocumentFileException e) {
+			e.printStackTrace();
+		}
+	}
 }

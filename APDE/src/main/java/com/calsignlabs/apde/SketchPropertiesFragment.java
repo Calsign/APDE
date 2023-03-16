@@ -135,6 +135,12 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 			return true;
 		});
 		
+		Preference launchAddNewFile = findPreference("prop_add_new_file");
+		launchAddNewFile.setOnPreferenceClickListener(preference -> {
+			launchAddNewFile();
+			return true;
+		});
+		
 		Preference launchAddFile = findPreference("prop_add_file");
 		launchAddFile.setOnPreferenceClickListener(preference -> {
 			launchAddFile();
@@ -274,6 +280,10 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 	public void launchAddFile() {
 		Intent intent = FileSelection.createFileSelectorIntent(true, null);
 		getSketchPropertiesActivity().startActivityForResult(intent, SketchPropertiesActivity.REQUEST_CHOOSER);
+	}
+	
+	public void launchAddNewFile() {
+		getSketchPropertiesActivity().addNewFile();
 	}
 	
 	@SuppressLint({ "InlinedApi", "NewApi" })
