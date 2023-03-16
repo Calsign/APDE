@@ -85,6 +85,10 @@
 		android:id="@+id/menu_rename"
 		app:showAsAction="never"
 		android:title="@string/editor_menu_rename_sketch" />
+	<item
+		android:id="@+id/menu_duplicate"
+		app:showAsAction="never"
+		android:title="@string/editor_menu_duplicate_sketch" />
 	<item android:id="@+id/menu_delete"
 		  app:showAsAction="never"
 		  android:title="@string/editor_menu_delete_sketch" />
