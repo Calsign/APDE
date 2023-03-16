@@ -7,6 +7,9 @@
         android:id="@+id/menu_tab_rename"
         android:title="@string/editor_menu_tab_rename"/>
     <item
+        android:id="@+id/menu_tab_duplicate"
+        android:title="@string/editor_menu_tab_duplicate"/>
+    <item
         android:id="@+id/menu_tab_delete"
         android:title="@string/editor_menu_tab_delete"/>
 </menu>
