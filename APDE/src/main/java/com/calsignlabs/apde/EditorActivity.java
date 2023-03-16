@@ -1759,6 +1759,53 @@ public class EditorActivity extends AppCompatActivity {
 		}
 		dialog.show();
 	}
+	
+	/**
+	 * Open the duplicate sketch AlertDialog
+	 */
+	public void launchDuplicateSketch() {
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		
+		alert.setTitle(String.format(Locale.US, getResources().getString(R.string.duplicate_sketch_title), getGlobalState().getSketchName()));
+		alert.setMessage(R.string.duplicate_sketch_message);
+		
+		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
+		
+		alert.setPositiveButton(R.string.duplicate_sketch_button, (dialog, whichButton) -> {
+			String sketchName = input.getText().toString();
+			
+			try {
+				if (validateSketchName(sketchName) && !sketchName.equals(getGlobalState().getSketchName())) {
+					APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
+					APDE.SketchMeta dest = new APDE.SketchMeta(source.getLocation(), source.getParent() + "/" + sketchName);
+					
+					getGlobalState().copyFolder(source, dest, EditorActivity.this);
+					
+					getGlobalState().setSketchName(sketchName);
+					updateSketchPath("/" + sketchName);
+				}
+				
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+				}
+			} catch (MaybeDocumentFile.MaybeDocumentFileException | FileNotFoundException e) {
+				e.printStackTrace();
+			}
+		});
+		
+		alert.setNegativeButton(R.string.cancel, (dialog, whichButton) -> {
+			if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+				((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+			}
+		});
+		
+		// Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
+		AlertDialog dialog = alert.create();
+		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+			dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+		}
+		dialog.show();
+	}
     
     /**
      * Called when the user selects "Load Sketch" - this will open the navigation drawer
@@ -2996,6 +3043,9 @@ public class EditorActivity extends AppCompatActivity {
             	return true;
 			case R.id.menu_rename:
 				launchRenameSketch();
+				return true;
+			case R.id.menu_duplicate:
+				launchDuplicateSketch();
 				return true;
             case R.id.menu_copy_to_sketchbook:
             	copyToSketchbook();
