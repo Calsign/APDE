@@ -101,6 +101,10 @@
         app:showAsAction="never"
         android:title="@string/editor_menu_tab_rename" />
     <item
+        android:id="@+id/menu_tab_duplicate"
+        app:showAsAction="never"
+        android:title="@string/editor_menu_tab_duplicate" />
+    <item
         android:id="@+id/menu_tab_delete"
         app:showAsAction="never"
         android:title="@string/editor_menu_tab_delete" />
