@@ -1759,6 +1759,53 @@ public class EditorActivity extends AppCompatActivity {
 		}
 		dialog.show();
 	}
+	
+	/**
+	 * Open the duplicate sketch AlertDialog
+	 */
+	public void launchDuplicateSketch() {
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		
+		alert.setTitle(String.format(Locale.US, getResources().getString(R.string.duplicate_sketch_title), getGlobalState().getSketchName()));
+		alert.setMessage(R.string.duplicate_sketch_message);
+		
+		final EditText input = getGlobalState().createAlertDialogEditText(this, alert, getGlobalState().getSketchName(), true);
+		
+		alert.setPositiveButton(R.string.duplicate_sketch_button, (dialog, whichButton) -> {
+			String sketchName = input.getText().toString();
+			
+			try {
+				if (validateSketchName(sketchName) && !sketchName.equals(getGlobalState().getSketchName())) {
+					APDE.SketchMeta source = new APDE.SketchMeta(getGlobalState().getSketchLocationType(), getGlobalState().getSketchPath());
+					APDE.SketchMeta dest = new APDE.SketchMeta(source.getLocation(), source.getParent() + "/" + sketchName);
+					
+					getGlobalState().copyFolder(source, dest, EditorActivity.this);
+					
+					getGlobalState().setSketchName(sketchName);
+					updateSketchPath("/" + sketchName);
+				}
+				
+				if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+					((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+				}
+			} catch (MaybeDocumentFile.MaybeDocumentFileException | FileNotFoundException e) {
+				e.printStackTrace();
+			}
+		});
+		
+		alert.setNegativeButton(R.string.cancel, (dialog, whichButton) -> {
+			if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+				((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
+			}
+		});
+		
+		// Show the soft keyboard if the hardware keyboard is unavailable (hopefully)
+		AlertDialog dialog = alert.create();
+		if (!PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("use_hardware_keyboard", false)) {
+			dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+		}
+		dialog.show();
+	}
     
     /**
      * Called when the user selects "Load Sketch" - this will open the navigation drawer
@@ -2795,9 +2842,11 @@ public class EditorActivity extends AppCompatActivity {
         	menu.findItem(R.id.menu_redo).setVisible(false);
         	menu.findItem(R.id.menu_tab_delete).setVisible(false);
         	menu.findItem(R.id.menu_tab_rename).setVisible(false);
+        	menu.findItem(R.id.menu_tab_duplicate).setVisible(false);
         	menu.findItem(R.id.menu_save).setVisible(false);
 			menu.findItem(R.id.menu_delete).setVisible(false);
 			menu.findItem(R.id.menu_rename).setVisible(false);
+			menu.findItem(R.id.menu_duplicate).setVisible(false);
         	menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
 			menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
         	menu.findItem(R.id.menu_new).setVisible(false);
@@ -2816,6 +2865,7 @@ public class EditorActivity extends AppCompatActivity {
             	menu.findItem(R.id.menu_run).setVisible(true);
             	menu.findItem(R.id.menu_tab_delete).setVisible(true);
             	menu.findItem(R.id.menu_tab_rename).setVisible(true);
+            	menu.findItem(R.id.menu_tab_duplicate).setVisible(true);
             	
             	menu.findItem(R.id.menu_tools).setVisible(true);
             	
@@ -2841,6 +2891,7 @@ public class EditorActivity extends AppCompatActivity {
             	menu.findItem(R.id.menu_redo).setVisible(false);
     	    	menu.findItem(R.id.menu_tab_delete).setVisible(false);
             	menu.findItem(R.id.menu_tab_rename).setVisible(false);
+            	menu.findItem(R.id.menu_tab_duplicate).setVisible(false);
             	menu.findItem(R.id.menu_tools).setVisible(false);
             }
         	
@@ -2856,6 +2907,7 @@ public class EditorActivity extends AppCompatActivity {
 				menu.findItem(R.id.menu_save).setVisible(true);
 				menu.findItem(R.id.menu_delete).setVisible(true);
 				menu.findItem(R.id.menu_rename).setVisible(true);
+				menu.findItem(R.id.menu_duplicate).setVisible(true);
 				menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
 				menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
 				break;
@@ -2863,6 +2915,7 @@ public class EditorActivity extends AppCompatActivity {
         		menu.findItem(R.id.menu_save).setVisible(true);
 				menu.findItem(R.id.menu_delete).setVisible(true);
 				menu.findItem(R.id.menu_rename).setVisible(false);
+				menu.findItem(R.id.menu_duplicate).setVisible(false);
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(false);
 				menu.findItem(R.id.menu_move_to_sketchbook).setVisible(true);
         		break;
@@ -2870,6 +2923,7 @@ public class EditorActivity extends AppCompatActivity {
         		menu.findItem(R.id.menu_save).setVisible(true);
 				menu.findItem(R.id.menu_delete).setVisible(true);
 				menu.findItem(R.id.menu_rename).setVisible(true);
+				menu.findItem(R.id.menu_duplicate).setVisible(true);
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
 				menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
         		break;
@@ -2878,6 +2932,7 @@ public class EditorActivity extends AppCompatActivity {
         		menu.findItem(R.id.menu_save).setVisible(false);
 				menu.findItem(R.id.menu_delete).setVisible(false);
 				menu.findItem(R.id.menu_rename).setVisible(false);
+				menu.findItem(R.id.menu_duplicate).setVisible(false);
         		menu.findItem(R.id.menu_copy_to_sketchbook).setVisible(true);
 				menu.findItem(R.id.menu_move_to_sketchbook).setVisible(false);
         		break;
@@ -2897,6 +2952,7 @@ public class EditorActivity extends AppCompatActivity {
         menu.findItem(R.id.menu_tab_new).setVisible(false);
         menu.findItem(R.id.menu_tab_delete).setVisible(false);
     	menu.findItem(R.id.menu_tab_rename).setVisible(false);
+    	menu.findItem(R.id.menu_tab_duplicate).setVisible(false);
 		
 		// With auto-saving, we don't actually need to let the user save the sketch manually
 		// However, the keyboard shortcut will still be available
@@ -2997,6 +3053,9 @@ public class EditorActivity extends AppCompatActivity {
 			case R.id.menu_rename:
 				launchRenameSketch();
 				return true;
+			case R.id.menu_duplicate:
+				launchDuplicateSketch();
+				return true;
             case R.id.menu_copy_to_sketchbook:
             	copyToSketchbook();
             	return true;
@@ -3020,6 +3079,9 @@ public class EditorActivity extends AppCompatActivity {
             	return true;
             case R.id.menu_tab_rename:
             	renameTab();
+            	return true;
+            case R.id.menu_tab_duplicate:
+            	duplicateTab();
             	return true;
             case R.id.menu_tab_delete:
             	deleteTab();
@@ -3999,6 +4061,9 @@ public class EditorActivity extends AppCompatActivity {
 					case R.id.menu_tab_rename:
 						renameTab();
 						return true;
+					case R.id.menu_tab_duplicate:
+						duplicateTab();
+						return true;
 					case R.id.menu_tab_delete:
 						deleteTab();
 						return true;
@@ -4105,6 +4170,14 @@ public class EditorActivity extends AppCompatActivity {
     private void renameTab() {
     	if(tabs.size() > 0 && !getGlobalState().isExample())
     		createInputDialog(getResources().getString(R.string.tab_rename_dialog_title), getResources().getString(R.string.tab_rename_dialog_message), getSelectedSketchFile().getTitle(), RENAME_TAB);
+    }
+    
+	/**
+	 * Creates a user input dialog for duplicating the current tab
+	 */
+    private void duplicateTab() {
+    	if(tabs.size() > 0 && !getGlobalState().isExample())
+    		createInputDialog(getResources().getString(R.string.tab_duplicate_dialog_title), getResources().getString(R.string.tab_duplicate_dialog_message), getSelectedSketchFile().getTitle(), DUPLICATE_TAB);
     }
     
     /**
