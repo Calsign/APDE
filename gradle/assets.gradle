@@ -165,10 +165,10 @@ dependencies {
     commonArtifacts 'androidx.appcompat:appcompat:1.3.1'
     commonArtifacts files(project.androidCore)
 
-    // vr
-    vrArtifacts 'com.google.vr:sdk-audio:1.160.0'
-    vrArtifacts 'com.google.vr:sdk-base:1.160.0'
-    vrArtifacts files(vrJar)
+    // vr disabled temporarily: old Google VR artifacts were JCenter-only.
+    // vrArtifacts 'com.google.vr:sdk-audio:1.160.0'
+    // vrArtifacts 'com.google.vr:sdk-base:1.160.0'
+    // vrArtifacts files(vrJar)
 
     // ar
     arArtifacts 'com.google.ar:core:1.28.0'
@@ -181,7 +181,7 @@ dependencies {
 }
 
 project.handleArtifacts project.configurations.commonArtifacts, true
-project.handleArtifacts project.configurations.vrArtifacts
+// project.handleArtifacts project.configurations.vrArtifacts
 project.handleArtifacts project.configurations.arArtifacts
 project.handleArtifacts project.configurations.watchArtifacts
 
