@@ -1,6 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
+    namespace 'com.calsignlabs.apde.sketchpreview'
+
     compileSdkVersion 32
 
     defaultConfig {
@@ -18,6 +20,10 @@ android {
         }
     }
 
+    lint {
+        disable 'ExpiredTargetSdkVersion'
+    }
+
     sourceSets {
         main {
             // we copy the icons from APDE
@@ -30,7 +36,7 @@ preBuild.dependsOn project.createPreviewRes
 
 dependencies {
     // use the same dependencies that we use to build apps in APDE
-    rootProject.configurations.commonArtifacts.each {
-        implementation files(it)
+    implementation files(rootProject.configurations.commonArtifacts.files) {
+        builtBy rootProject.configurations.commonArtifacts.buildDependencies
     }
 }

@@ -141,6 +141,7 @@ def handleArtifacts(Configuration configuration, boolean is_common = false) {
         }
         def name = configuration.name + '__' + it.name
         def (jarTask, manifestParse) = createArtifactTasks(name, it)
+        jarTask.dependsOn configuration.buildDependencies
         jarTasks.add(jarTask)
         jars.from(jarTask.output)
         if (manifestParse != null) {

@@ -172,7 +172,9 @@ dependencies {
 
     // ar
     arArtifacts 'com.google.ar:core:1.28.0'
-    arArtifacts files(arJar)
+    arArtifacts files(arJar) {
+        builtBy unzipAndroidMode
+    }
 
     // watch face
     watchArtifacts 'com.google.android.gms:play-services-wearable:17.1.0'
