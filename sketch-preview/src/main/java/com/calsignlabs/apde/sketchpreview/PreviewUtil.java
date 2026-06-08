@@ -71,6 +71,7 @@ public class PreviewUtil {
 	public static void setupSketchDex(Context context, String path) {
 		try {
 			copyUri(context, Uri.parse(path), getSketchDex(context));
+			markDexReadOnly(getSketchDex(context));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -119,7 +120,9 @@ public class PreviewUtil {
 				if (dexedLib != null) {
 					try {
 						// It's too much work to get the name from the URI, so just use incremental names
-						copyUri(context, Uri.parse(dexedLib), new File(getDexedLibsDir(context), "lib" + index + "-dex.jar"));
+						File targetFile = new File(getDexedLibsDir(context), "lib" + index + "-dex.jar");
+						copyUri(context, Uri.parse(dexedLib), targetFile);
+						markDexReadOnly(targetFile);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -183,6 +186,9 @@ public class PreviewUtil {
 	}
 	
 	public static void copyUri(Context context, Uri sourceFile, File targetFile) throws IOException {
+		if (targetFile.exists() && !targetFile.setWritable(true, true)) {
+			throw new IOException("Failed to make target file writable: " + targetFile.getAbsolutePath());
+		}
 		BufferedInputStream from = new BufferedInputStream(context.getContentResolver().openInputStream(sourceFile));
 		BufferedOutputStream to = new BufferedOutputStream(new FileOutputStream(targetFile));
 		byte[] buffer = new byte[16 * 1024];
@@ -193,6 +199,12 @@ public class PreviewUtil {
 		from.close();
 		to.flush();
 		to.close();
+	}
+	
+	private static void markDexReadOnly(File dexFile) throws IOException {
+		if (!dexFile.setReadOnly()) {
+			throw new IOException("Failed to mark dex file read-only: " + dexFile.getAbsolutePath());
+		}
 	}
 	
 	/**
