@@ -190,6 +190,10 @@ public class SketchProperties {
 	
 	public void save(File propertiesFile) {
 		try {
+			File parent = propertiesFile.getParentFile();
+			if (parent != null && !(parent.exists() || parent.mkdirs())) {
+				throw new IOException("Could not create sketch folder: " + parent.getAbsolutePath());
+			}
 			OutputStream outputStream = new FileOutputStream(propertiesFile);
 			properties.store(new OutputStreamWriter(outputStream, "UTF-8"), null);
 		} catch (IOException e) {
