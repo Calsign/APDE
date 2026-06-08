@@ -44,6 +44,7 @@ import java.util.Objects;
 public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 	@SuppressWarnings("FieldCanBeLocal")
 	private SharedPreferences.OnSharedPreferenceChangeListener prefListener;
+	private SharedPreferences sketchPreferences;
 	
 	// The change icon dialog layout
 	private ScrollView changeIconLayout;
@@ -77,10 +78,15 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 	
 	@Override
 	public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-		//Switch to the preferences for the current sketch
-		getPreferenceManager().setSharedPreferencesName(getGlobalState().getSketchName());
+		SketchPropertiesActivity activity = getSketchPropertiesActivity();
+		APDE global = activity.getGlobalState();
+		String sketchName = global.getSketchName();
+		File sketchPropertiesFile = global.getSketchPropertiesFile();
 		
-		updatePrefs(getGlobalState());
+		//Switch to the preferences for the current sketch
+		getPreferenceManager().setSharedPreferencesName(sketchName);
+		
+		updatePrefs(global);
 		
 		// In the simplified UI, fragments are not used at all and we instead
 		// use the older PreferenceActivity APIs.
@@ -141,8 +147,8 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 			return true;
 		});
 		
-		if (getGlobalState().isTemp() || getGlobalState().isSketchbook() &&
-				getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.INTERNAL)) {
+		if (global.isTemp() || global.isSketchbook() &&
+				global.getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.INTERNAL)) {
 			
 			// We can't show the sketch folder of a temp sketch because it's in the internal storage
 			// And we can't show sketches when the drive is set to internal
@@ -159,7 +165,7 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 		});
 		
 		//If this is an example...
-		if(getGlobalState().isExample()) {
+		if(global.isExample()) {
 			//...disable all of the preferences
 			findPreference("prop_manifest").setEnabled(false);
 			findPreference("prop_sketch_folder").setEnabled(false);
@@ -169,7 +175,7 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 		// ...or a local instance, for that matter
 		// StackOverflow: http://stackoverflow.com/questions/2542938/sharedpreferences-onsharedpreferencechangelistener-not-being-called-consistently
 		prefListener = (pref, key) -> {
-			SketchProperties properties = getGlobalState().getProperties();
+			SketchProperties properties = global.getProperties();
 			
 			if (key.equals("prop_pretty_name"))
 				properties.setDisplayName(pref.getString(key, ""));
@@ -188,17 +194,27 @@ public class SketchPropertiesFragment extends PreferenceFragmentCompat {
 			if (key.equals("prop_orientation"))
 				properties.setOrientation(pref.getString("prop_orientation", getResources().getString(R.string.prop_orientation_default)));
 			
-			properties.save(getGlobalState().getSketchPropertiesFile());
+			properties.save(sketchPropertiesFile);
 		};
 		
-		if (!getGlobalState().isExample() && !getGlobalState().isTemp()) {
+		if (!global.isExample() && !global.isTemp()) {
 			// Set "Show Sketch Folder"'s summary to be the absolute path of the sketch
-			findPreference("prop_show_sketch_folder").setSummary(getGlobalState().getSketchLocation().getAbsolutePath());
+			findPreference("prop_show_sketch_folder").setSummary(global.getSketchLocation().getAbsolutePath());
 		}
 		
 		// Detect changes to the preferences so that we can save them to the manifest file directly
 		// TODO This isn't an optimal solution - we still use SharedPreferences
-		getSketchPropertiesActivity().getSharedPreferences(getGlobalState().getSketchName(), 0).registerOnSharedPreferenceChangeListener(prefListener);
+		sketchPreferences = activity.getSharedPreferences(sketchName, 0);
+		sketchPreferences.registerOnSharedPreferenceChangeListener(prefListener);
+	}
+	
+	@Override
+	public void onDestroy() {
+		if (sketchPreferences != null && prefListener != null) {
+			sketchPreferences.unregisterOnSharedPreferenceChangeListener(prefListener);
+		}
+		
+		super.onDestroy();
 	}
 	
 	private static Preference.OnPreferenceChangeListener sBindPreferenceSummaryToValueListener = new Preference.OnPreferenceChangeListener() {
