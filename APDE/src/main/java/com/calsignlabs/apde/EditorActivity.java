@@ -3,6 +3,7 @@ package com.calsignlabs.apde;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -262,6 +263,7 @@ public class EditorActivity extends AppCompatActivity {
 	private boolean FLAG_SCREEN_OVERLAY_INSTALL_ANYWAY = false;
 	private boolean FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = false;
 	private boolean FLAG_FIRST_AUTO_COMPILE = true;
+	private boolean externalStorageAccessDialogShowing = false;
 	
     @SuppressLint("NewApi")
 	@Override
@@ -1004,31 +1006,82 @@ public class EditorActivity extends AppCompatActivity {
 		super.onStart();
 		
 		getGlobalState().writeCodeDeletionDebugStatus("onStart()");
-		
+	}
+
+	private boolean usesExternalSketchbookDrive() {
 		APDE.StorageDrive.StorageDriveType storageDriveType =
-				getGlobalState().getSketchbookStorageDrive().type;
-		boolean isExternal =
-				storageDriveType.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL)
-						|| storageDriveType.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL);
-		
-		if (isExternal) {
-			// Make sure we have WRITE_EXTERNAL_STORAGE
-			if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-				AlertDialog.Builder builder = new AlertDialog.Builder(this);
-				builder.setTitle(R.string.external_storage_dialog_title);
-				builder.setMessage(R.string.external_storage_dialog_message);
-				builder.setPositiveButton(R.string.external_storage_dialog_grant_permission_button, (dialog, which) -> {
-					ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_REQUEST_CODE);
+				getGlobalState().getSketchbookDrive().type;
+		return storageDriveType.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL)
+				|| storageDriveType.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL);
+	}
+
+	private void promptForExternalStorageAccessIfNeeded() {
+		if (!usesExternalSketchbookDrive() || hasExternalStorageAccess()
+				|| externalStorageAccessDialogShowing) {
+			return;
+		}
+
+		externalStorageAccessDialogShowing = true;
+
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.external_storage_dialog_title);
+		builder.setMessage(R.string.external_storage_dialog_message);
+		builder.setPositiveButton(R.string.external_storage_dialog_grant_permission_button, (dialog, which) -> {
+			requestExternalStorageAccess();
+			dialog.cancel();
+		});
+		builder.setNeutralButton(R.string.external_storage_dialog_use_internal_storage_button,
+				(dialog, which) -> {
+					getGlobalState().useInternalStorageDrive();
 					dialog.cancel();
 				});
-				builder.setNeutralButton(R.string.external_storage_dialog_use_internal_storage_button,
-						(dialog, which) -> {
-							getGlobalState().useInternalStorageDrive();
-							dialog.cancel();
-						});
-				
-				builder.show();
+		builder.setOnDismissListener(dialog -> externalStorageAccessDialogShowing = false);
+
+		builder.show();
+	}
+
+	private boolean blockExternalSketchbookWriteIfUnavailable() {
+		if (externalStorageWritable() || !usesExternalSketchbookDrive()) {
+			return false;
+		}
+
+		if (!hasExternalStorageAccess()) {
+			promptForExternalStorageAccessIfNeeded();
+			return true;
+		}
+
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
+				.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
+				.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {}
+				}).show();
+
+		return true;
+	}
+
+	private boolean hasExternalStorageAccess() {
+		if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+			return Environment.isExternalStorageManager();
+		}
+		return ContextCompat.checkSelfPermission(this,
+				android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+	}
+
+	private void requestExternalStorageAccess() {
+		if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+			try {
+				Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+				intent.setData(Uri.parse("package:" + getPackageName()));
+				startActivity(intent);
+			} catch (ActivityNotFoundException e) {
+				startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
 			}
+		} else {
+			ActivityCompat.requestPermissions(this,
+					new String[] {android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
+					PERMISSIONS_REQUEST_CODE);
 		}
 	}
 	
@@ -1325,6 +1378,7 @@ public class EditorActivity extends AppCompatActivity {
     	super.onResume();
 		
 		getGlobalState().writeCodeDeletionDebugStatus("onResume()");
+		promptForExternalStorageAccessIfNeeded();
 		
     	//Reference the SharedPreferences text size value
 //    	((CodeEditText) findViewById(R.id.code)).refreshTextSize();
@@ -2327,16 +2381,7 @@ public class EditorActivity extends AppCompatActivity {
      */
     public void saveSketch() {
     	//If we cannot write to the external storage (and the user wants to), make sure to inform the user
-    	if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
-				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
-    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
-            	.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
-            	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-            		@Override
-            		public void onClick(DialogInterface dialog, int which) {}
-            }).show();
-            
+    	if(blockExternalSketchbookWriteIfUnavailable()) {
     		return;
     	}
 	
@@ -2412,16 +2457,7 @@ public class EditorActivity extends AppCompatActivity {
     
     public void copyToSketchbook() {
     	//If we cannot write to the external storage (and the user wants to), make sure to inform the user
-		if(!externalStorageWritable() && (getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.EXTERNAL)
-				|| getGlobalState().getSketchbookDrive().type.equals(APDE.StorageDrive.StorageDriveType.PRIMARY_EXTERNAL))) {
-    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(getResources().getText(R.string.external_storage_unavailable_dialog_title))
-            	.setMessage(getResources().getText(R.string.external_storage_unavailable_dialog_message)).setCancelable(false)
-            	.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-            		@Override
-            		public void onClick(DialogInterface dialog, int which) {}
-            }).show();
-            
+		if(blockExternalSketchbookWriteIfUnavailable()) {
     		return;
     	}
     	
@@ -4457,8 +4493,7 @@ public class EditorActivity extends AppCompatActivity {
 	 */
 	private boolean externalStorageWritable() {
 		String state = Environment.getExternalStorageState();
-		if (Environment.MEDIA_MOUNTED.equals(state)) return true;
-		else return false;
+		return Environment.MEDIA_MOUNTED.equals(state) && hasExternalStorageAccess();
 	}
 	
 	//Called internally to determine if a file / tab name is valid
