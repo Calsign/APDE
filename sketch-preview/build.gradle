@@ -3,12 +3,12 @@ apply plugin: 'com.android.application'
 android {
     namespace 'com.calsignlabs.apde.sketchpreview'
 
-    compileSdkVersion 32
+    compileSdkVersion 35
 
     defaultConfig {
         applicationId "com.calsignlabs.apde.sketchpreview"
         minSdkVersion 19
-        targetSdkVersion 32
+        targetSdkVersion 35
         versionCode 1
         versionName "1.0"
     }

@@ -19,7 +19,7 @@ task previewBuildManifest(type: EditManifestTask) {
     input = new File(rootProject.projectDir, 'sketch-preview/src/main/AndroidManifest.xml')
     output = new File(project.previewBuild, 'AndroidManifest.xml')
     minSdk = 19
-    targetSdk = 29
+    targetSdk = 35
 }
 
 task previewBuildResValues(type: Copy) {
