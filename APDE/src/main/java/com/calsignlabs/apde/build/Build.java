@@ -196,7 +196,12 @@ public class Build {
 			//If we built on the internal storage, we need to delete the copied APK file
 			//This is so that the package installer can still see it
 			
-			File destApkFile = new File(editor.getFilesDir(), ((APDE) editor.getApplicationContext()).getSketchName() + ".apk");
+			File destApkFile;
+			if (android.os.Build.VERSION.SDK_INT >= 24) {
+				destApkFile = new File(new File(editor.getFilesDir(), "apks"), ((APDE) editor.getApplicationContext()).getSketchName() + ".apk");
+			} else {
+				destApkFile = new File(editor.getFilesDir(), ((APDE) editor.getApplicationContext()).getSketchName() + ".apk");
+			}
 			if (!destApkFile.delete()) {
 				System.out.println(editor.getResources().getString(R.string.build_delete_old_apk_failed));
 			} else if (verbose) {
@@ -207,12 +212,9 @@ public class Build {
 	
 	public static void launchSketchPostLaunch(EditorActivity editor) {
 		String packageName = editor.getGlobalState().getSketchPackageName();
-		Intent intent = editor.getPackageManager().getLaunchIntentForPackage(packageName);
-		
-		if (intent == null) {
-			System.err.println(editor.getResources().getString(R.string.build_launch_sketch_activity_failure));
-			return;
-		}
+		Intent intent = new Intent(Intent.ACTION_MAIN);
+		intent.addCategory(Intent.CATEGORY_LAUNCHER);
+		intent.setComponent(new ComponentName(packageName, packageName + ".MainActivity"));
 		
 		if (shouldLaunchSplitScreen(editor.getGlobalState())) {
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
