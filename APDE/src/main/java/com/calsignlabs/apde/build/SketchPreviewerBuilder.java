@@ -13,15 +13,14 @@ import com.android.tools.aapt2.Aapt2Jni;
 import com.calsignlabs.apde.APDE;
 import com.calsignlabs.apde.EditorActivity;
 import com.calsignlabs.apde.R;
+import com.calsignlabs.apde.support.ApkSignerUtil;
 import com.calsignlabs.apde.task.Task;
 
 import org.xml.sax.SAXException;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -29,11 +28,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
 
 import javax.xml.parsers.ParserConfigurationException;
 
-import kellinwood.security.zipsigner.ZipSigner;
+import kellinwood.zipio.ZioEntry;
+import kellinwood.zipio.ZipInput;
+import kellinwood.zipio.ZipOutput;
 import processing.data.XML;
 
 /**
@@ -147,30 +147,22 @@ public class SketchPreviewerBuilder extends Task {
 	 * @throws IOException if some IO thing failed
 	 */
 	protected static void addFileZip(File inZip, File outZip, String addFileName, File addFile) throws IOException {
-		try (ZipInputStream inputStream = new ZipInputStream(new BufferedInputStream(new FileInputStream(inZip)));
-		     InputStream addInpuStream = new BufferedInputStream(new FileInputStream(addFile));
-		     ZipOutputStream outputStream = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outZip)))) {
-			
-			int read;
-			byte[] buffer = new byte[4096];
-			
-			// copy over all existing entries
-			ZipEntry entry;
-			while ((entry = inputStream.getNextEntry()) != null) {
-				outputStream.putNextEntry(new ZipEntry(entry.getName()));
-				while ((read = inputStream.read(buffer)) > 0) {
-					outputStream.write(buffer, 0, read);
-				}
-				outputStream.closeEntry();
+		ZipInput input = null;
+		ZipOutput output = null;
+		try {
+			input = ZipInput.read(inZip.getAbsolutePath());
+			output = new ZipOutput(outZip);
+			for (ZioEntry entry : input.getEntries().values()) {
+				output.write(entry);
 			}
-			
-			outputStream.putNextEntry(new ZipEntry(addFileName));
-			while ((read = addInpuStream.read(buffer)) > 0) {
-				outputStream.write(buffer, 0, read);
+			output.write(new ZioEntry(addFileName, addFile.getAbsolutePath()));
+		} finally {
+			if (output != null) {
+				output.close();
 			}
-			outputStream.closeEntry();
-			
-			outputStream.flush();
+			if (input != null) {
+				input.close();
+			}
 		}
 	}
 	
@@ -327,16 +319,8 @@ public class SketchPreviewerBuilder extends Task {
 	}
 	
 	protected void signApk() throws BuildFailedException {
-		String mode = "testkey";
-		String inFilename = getUnsignedApk().getAbsolutePath();
-		String outFilename = getFinalApk().getAbsolutePath();
-		
-		ZipSigner signer;
-		
 		try {
-			signer = new ZipSigner();
-			signer.setKeymode(mode);
-			signer.signZip(inFilename, outFilename);
+			ApkSignerUtil.signDebugApk(getUnsignedApk(), getFinalApk(), 19);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new BuildFailedException();

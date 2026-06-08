@@ -46,6 +46,10 @@
 -keep class org.eclipse.core.internal.runtime.** { *; }
 -keep class org.eclipse.jgit.nls.TranslationBundle { *; }
 -keep class * extends org.eclipse.jgit.nls.TranslationBundle { *; }
+-keepattributes RuntimeVisibleAnnotations
+-keep class com.android.apksig.internal.asn1.** { *; }
+-keep class com.android.apksig.internal.pkcs7.** { *; }
+-keep class com.android.apksig.internal.x509.** { *; }
 -keep class androidx.test.** { *; }
 -keep class androidx.drawerlayout.widget.DrawerLayout$SimpleDrawerListener { *; }
 -keep class com.android.tools.aapt2.Aapt2Jni { *; }

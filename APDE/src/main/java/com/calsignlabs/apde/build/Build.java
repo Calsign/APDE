@@ -34,11 +34,11 @@ import com.calsignlabs.apde.R;
 import com.calsignlabs.apde.SketchFile;
 import com.calsignlabs.apde.build.dag.BuildContext;
 import com.calsignlabs.apde.contrib.Library;
+import com.calsignlabs.apde.support.ApkSignerUtil;
 import com.calsignlabs.apde.support.FileSelection;
-import com.calsignlabs.apde.support.InputStreamKeySigner;
+import com.calsignlabs.apde.support.InputStreamKeyStore;
 
 import org.eclipse.jdt.core.compiler.IProblem;
-import org.spongycastle.jce.provider.BouncyCastleProvider;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -56,7 +56,6 @@ import java.io.RandomAccessFile;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
-import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -73,7 +72,6 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import kellinwood.security.zipsigner.ZipSigner;
 import processing.core.PApplet;
 
 public class Build {
@@ -89,6 +87,7 @@ public class Build {
 	private File binFolder;
 	private File tmpFolder;
 	private File dexedLibsFolder;
+	private int manifestMinSdk;
 	
 	private List<Library> importedLibraries;
 	
@@ -416,6 +415,7 @@ public class Build {
 			manifest = new Manifest(buildContext);
 			manifest.initBlank();
 			manifest.loadProperties(editor.getGlobalState().getProperties(buildContext), sketchName); // unsure whether to use sketchName or sketchClassName here
+			manifestMinSdk = manifest.getMinSdk();
 			
 			// We need to do this after we load the manifest because it depends on permissions
 			if (getAppComponent() == ComponentTarget.PREVIEW && !stopAfterCompile) {
@@ -1082,7 +1082,7 @@ public class Build {
 		if (debug) {
 			System.out.println(editor.getResources().getString(R.string.build_zipsigner));
 			
-			//Sign the APK using ZipSigner
+			// Sign the APK
 			signApk();
 		} else {
 			System.out.println(editor.getResources().getString(R.string.build_signing_private_key));
@@ -1389,33 +1389,21 @@ public class Build {
 	}
 	
 	private void signApk() {
-		String mode = "testkey";
-		String inFilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned";
-		String outFilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk";
-		
-		ZipSigner signer;
+		File inputApk = new File(binFolder, sketchName + ".apk.unsigned");
+		File outputApk = new File(binFolder, sketchName + ".apk");
 		
 		try {
-			signer = new ZipSigner();
-			
-			signer.setKeymode(mode);
-			
-			signer.signZip(inFilename, outFilename);
+			ApkSignerUtil.signDebugApk(inputApk, outputApk, manifestMinSdk);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
 	private void signApkRelease(String outputFilename) {
-		Security.addProvider(new BouncyCastleProvider());
-		
-		String inFilename = binFolder.getAbsolutePath() + "/" + sketchName + ".apk.unsigned";
-		
-		ZipSigner signer;
+		File inputApk = new File(binFolder, sketchName + ".apk.unsigned");
+		File outputApk = new File(outputFilename);
 		
 		try {
-			signer = new ZipSigner();
-			
 			if (keystore == null) {
 				System.err.println("Got a bad keystore");
 				return;
@@ -1427,9 +1415,10 @@ public class Build {
 				return;
 			}
 			
-			//Let's take advantage of ZipSigner's ability to load JKS keystores as well
-			InputStreamKeySigner.signZip(signer, FileSelection.fdIn(fd), keystorePassword, keyAlias, keyAliasPassword,
-					"SHA1WITHRSA", inFilename, outputFilename);
+			InputStreamKeyStore.LoadedKey key = InputStreamKeyStore.loadKey(FileSelection.fdIn(fd),
+					keystorePassword, keyAlias, keyAliasPassword);
+			ApkSignerUtil.signApk(inputApk, outputApk, keyAlias, key.getPrivateKey(),
+					key.getCertificates(), manifestMinSdk, true, false);
 			
 			FileSelection.closeFd(fd);
 		} catch (Exception e) {
