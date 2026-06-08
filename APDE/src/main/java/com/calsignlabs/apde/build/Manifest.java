@@ -224,6 +224,7 @@ public class Manifest {
 				app.setString("android:label", className);
 			}
 			app.setString("android:debuggable", "true");
+			setExportedForIntentFilterComponents(app);
 			
 			// Services need the label also in the service section
 			if (appComp == ComponentTarget.WALLPAPER || appComp == ComponentTarget.WATCHFACE) {
@@ -239,9 +240,21 @@ public class Manifest {
 				}
 			}
 			
-			save(file);
+			save(mf, file);
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+
+	private void setExportedForIntentFilterComponents(XML app) {
+		for (XML component : app.getChildren()) {
+			String name = component.getName();
+			if (("activity".equals(name) || "activity-alias".equals(name) || "service".equals(name) || "receiver".equals(name))
+					&& component.getChild("intent-filter") != null
+					&& component.getString("android:exported", null) == null) {
+				// Preserve Android's pre-S default for components with intent filters.
+				component.setString("android:exported", "true");
+			}
 		}
 	}
 	
@@ -386,6 +399,10 @@ public class Manifest {
 	 * Save to the sketch folder, so that it can be copied in later.
 	 */
 	protected void save(File file) {
+		save(xml, file);
+	}
+	
+	protected void save(XML xml, File file) {
 		try {
 			PrintWriter writer = new PrintWriter(file);
 			writer.print(xml.toString());
