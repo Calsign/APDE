@@ -294,7 +294,7 @@ public class EditorActivity extends AppCompatActivity {
 		};
 		
 		// Register receiver for sketch logs / console output
-		registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
+		registerConsoleBroadcastReceiver();
 	
 		wearConsoleReceiver = messageEvent -> {
 			if (messageEvent.getPath().equals("/apde_receive_logs")) {
@@ -1403,7 +1403,7 @@ public class EditorActivity extends AppCompatActivity {
         getGlobalState().initProcessingPrefs();
         
         //Register receiver for sketch logs / console output
-        registerReceiver(consoleBroadcastReceiver, new IntentFilter("com.calsignlabs.apde.LogBroadcast"));
+		registerConsoleBroadcastReceiver();
 		
         //In case the user has enabled / disabled undo / redo in settings
         supportInvalidateOptionsMenu();
@@ -1865,9 +1865,9 @@ public class EditorActivity extends AppCompatActivity {
 	}
 	
 	@Override
-	public void onDestroy() {
-		// Unregister the log / console receiver
-		unregisterReceiver(consoleBroadcastReceiver);
+	    public void onDestroy() {
+			// Unregister the log / console receiver
+			unregisterReceiver(consoleBroadcastReceiver);
 		
 		// Stop the print streams. It seems like sometimes the app gets destroyed without restarting
 		// the JVM, and in this situation we start piping the new console streams into the old one;
@@ -1878,11 +1878,20 @@ public class EditorActivity extends AppCompatActivity {
 		
 		getGlobalState().writeCodeDeletionDebugStatus("onDestroy()");
 		
-    	super.onDestroy();
+	    	super.onDestroy();
+		}
+
+	private void registerConsoleBroadcastReceiver() {
+		IntentFilter filter = new IntentFilter("com.calsignlabs.apde.LogBroadcast");
+		if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+			registerReceiver(consoleBroadcastReceiver, filter, Context.RECEIVER_EXPORTED);
+		} else {
+			registerReceiver(consoleBroadcastReceiver, filter);
+		}
 	}
-	
-	/**
-	 * Saves the sketch for when the activity is closing
+		
+		/**
+		 * Saves the sketch for when the activity is closing
 	 */
 	public void saveSketchForStop() {
 		getGlobalState().writeCodeDeletionDebugStatus("begin saveSketchForStop()");

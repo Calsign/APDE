@@ -751,7 +751,9 @@ public class ModularBuild {
 	
 	private void launchPreview(BuildContext context) {
 		// Stop the old sketch
-		global.sendBroadcast(new Intent("com.calsignlabs.apde.STOP_SKETCH_PREVIEW"));
+		Intent stopPreview = new Intent("com.calsignlabs.apde.STOP_SKETCH_PREVIEW");
+		stopPreview.setPackage("com.calsignlabs.apde.sketchpreview");
+		global.sendBroadcast(stopPreview);
 		
 		String dexUri = makeFileAvailableToPreview(PREVIEW_SKETCH_DEX.get(context)).toString();
 		String dataUri = context.hasData() ?

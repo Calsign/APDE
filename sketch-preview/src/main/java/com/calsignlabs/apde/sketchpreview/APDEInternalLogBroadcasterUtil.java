@@ -61,6 +61,7 @@ public class APDEInternalLogBroadcasterUtil {
 			public void run() {
 				android.content.Intent intent = new android.content.Intent();
 				intent.setAction("com.calsignlabs.apde.LogBroadcast");
+				intent.setPackage("com.calsignlabs.apde");
 				intent.putExtra("com.calsignlabs.apde.LogSeverity", severity);
 				intent.putExtra("com.calsignlabs.apde.LogMessage", message);
 				intent.putExtra("com.calsignlabs.apde.LogException", exception);

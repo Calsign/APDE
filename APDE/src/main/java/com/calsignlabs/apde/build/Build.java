@@ -1265,7 +1265,9 @@ public class Build {
 	 */
 	private void launchPreview(Manifest manifest, File classesDex, File[] dexedLibs) {
 		// Stop the old sketch
-		editor.sendBroadcast(new Intent("com.calsignlabs.apde.STOP_SKETCH_PREVIEW"));
+		Intent stopPreview = new Intent("com.calsignlabs.apde.STOP_SKETCH_PREVIEW");
+		stopPreview.setPackage("com.calsignlabs.apde.sketchpreview");
+		editor.sendBroadcast(stopPreview);
 		
 		File dexFile = new File(editor.getFilesDir(), "sketch.dex");
 		Uri dexUri;

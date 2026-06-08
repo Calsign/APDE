@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -44,7 +45,12 @@ public class PreviewActivity extends AppCompatActivity {
 			}
 		};
 		
-		registerReceiver(broadcastReceiver, new IntentFilter("com.calsignlabs.apde.STOP_SKETCH_PREVIEW"));
+		IntentFilter filter = new IntentFilter("com.calsignlabs.apde.STOP_SKETCH_PREVIEW");
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+			registerReceiver(broadcastReceiver, filter, Context.RECEIVER_EXPORTED);
+		} else {
+			registerReceiver(broadcastReceiver, filter);
+		}
 		
 		if (getIntent().getAction() != null && getIntent().getAction().equals("com.calsignlabs.apde.RUN_SKETCH_PREVIEW")) {
 			init();
