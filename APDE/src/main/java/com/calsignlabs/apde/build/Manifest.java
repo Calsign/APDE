@@ -34,6 +34,10 @@ import processing.data.XML;
 
 public class Manifest {
 	public static final String MANIFEST_XML = "AndroidManifest.xml";
+
+    // Newer devices require a minimum target sdk to allow installing apps, so we want to never
+    // produce apks with target sdks that are too old.
+    private static final int MIN_TARGET_SDK = 26;
 	
 	public static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd.HHmm", Locale.US);
 	
@@ -301,7 +305,7 @@ public class Manifest {
 	 * @param targetSdk
 	 */
 	public void setTargetSdk(int targetSdk) {
-		xml.getChild("uses-sdk").setInt("android:targetSdkVersion", targetSdk);
+		xml.getChild("uses-sdk").setInt("android:targetSdkVersion", Math.max(targetSdk, MIN_TARGET_SDK));
 	}
 	
 	public void setMinSdk(int minSdk) {
