@@ -1,0 +1,12 @@
+# Test-only dependencies pull in compiler/doclet and desktop APIs that are not
+# available on Android but are not used by the instrumentation tests at runtime.
+-dontwarn com.sun.**
+-dontwarn java.awt.**
+-dontwarn java.lang.management.**
+-dontwarn java.lang.reflect.AnnotatedType
+-dontwarn javax.**
+-dontwarn kotlin.jvm.internal.SourceDebugExtension
+-dontwarn org.objectweb.asm.**
+
+-keep class kotlin.** { *; }
+-keep class kotlinx.** { *; }

@@ -20,6 +20,8 @@ import static com.calsignlabs.apde.TestUtil.sleep;
 import static org.hamcrest.Matchers.allOf;
 
 import android.Manifest;
+import android.os.Build;
+import android.os.ParcelFileDescriptor;
 
 import androidx.test.espresso.NoMatchingRootException;
 import androidx.test.espresso.NoMatchingViewException;
@@ -39,9 +41,13 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.rules.ExternalResource;
+import org.junit.rules.RuleChain;
+import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
@@ -57,6 +63,30 @@ public abstract class BaseTest {
 			deleteFile(file, false);
 		}
 	}
+
+	private static void executeShellCommand(String command) throws IOException {
+		try (ParcelFileDescriptor fd = getInstrumentation().getUiAutomation().executeShellCommand(command);
+				FileInputStream input = new FileInputStream(fd.getFileDescriptor())) {
+			byte[] buffer = new byte[1024];
+			while (input.read(buffer) != -1) {
+				// Read until EOF so the command completes before the activity launches.
+			}
+		}
+	}
+
+	private static void grantManageExternalStoragePermission() {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+			return;
+		}
+
+		String packageName = getInstrumentation().getTargetContext().getPackageName();
+		try {
+			executeShellCommand("appops set --uid " + packageName + " MANAGE_EXTERNAL_STORAGE allow");
+			executeShellCommand("appops set " + packageName + " MANAGE_EXTERNAL_STORAGE allow");
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
 	
 	@BeforeClass
 	public static void performBeforeClass() {
@@ -64,13 +94,24 @@ public abstract class BaseTest {
 		// eraseData();
 	}
 	
-	@Rule
 	public ActivityScenarioRule<EditorActivity> editorActivityRule
 			= new ActivityScenarioRule<>(EditorActivity.class);
 	
-	@Rule
 	public GrantPermissionRule permissionsRule
 			= GrantPermissionRule.grant(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+	private final TestRule manageExternalStorageRule = new ExternalResource() {
+		@Override
+		protected void before() {
+			grantManageExternalStoragePermission();
+		}
+	};
+
+	@Rule
+	public RuleChain ruleChain = RuleChain
+			.outerRule(manageExternalStorageRule)
+			.around(permissionsRule)
+			.around(editorActivityRule);
 	
 	public void clearCrashDialog() {
 		// TODO: it may be possible to make this better with UiWatcher or something

@@ -51,5 +51,7 @@
 -keep class com.android.apksig.internal.pkcs7.** { *; }
 -keep class com.android.apksig.internal.x509.** { *; }
 -keep class androidx.test.** { *; }
+-keep class kotlin.** { *; }
+-keep class kotlinx.** { *; }
 -keep class androidx.drawerlayout.widget.DrawerLayout$SimpleDrawerListener { *; }
 -keep class com.android.tools.aapt2.Aapt2Jni { *; }

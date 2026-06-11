@@ -87,6 +87,44 @@ public class TestUtil {
 	public static UiSelector matchesAnyString(String... strings) {
 		return new UiSelector().textMatches(String.join("|", strings));
 	}
+
+	private static boolean clickIfExists(UiDevice device, UiSelector selector, long timeout)
+			throws UiObjectNotFoundException {
+		UiObject object = device.findObject(selector);
+		if (object.waitForExists(timeout)) {
+			object.click();
+			return true;
+		}
+		return false;
+	}
+
+	private static boolean clickTextOrDescriptionIfExists(UiDevice device, String regex, long timeout)
+			throws UiObjectNotFoundException {
+		if (clickIfExists(device, new UiSelector().textMatches(regex), timeout)) {
+			return true;
+		}
+		return clickIfExists(device, new UiSelector().descriptionMatches(regex), timeout);
+	}
+
+	private static void dismissAppScanRecommendedIfNeeded(UiDevice device)
+			throws UiObjectNotFoundException {
+		UiObject title = device.findObject(new UiSelector()
+				.textMatches("(?i).*app scan recommended.*|.*play protect.*"));
+		if (!title.waitForExists(500)) {
+			return;
+		}
+
+        // TODO(will): for some reason I can't automatically press the "Install without scanning"
+        // button
+        UiObject scanApp = device.findObject(matchesAnyString("Scan app", "SCAN APP"));
+        scanApp.waitForExists(500);
+        scanApp.click();
+
+        UiObject install = device.findObject(matchesAnyString("Install", "INSTALL"));
+        // scan can take a while :(
+        install.waitForExists(50000);
+        install.click();
+	}
 	
 	/**
 	 * Given an install dialog on the screen, performs the install. Navigates into settings to
@@ -104,12 +142,21 @@ public class TestUtil {
 			// TODO: support internationalization of these strings
 			
 			UiSelector install = matchesAnyString("Install", "INSTALL");
+			dismissAppScanRecommendedIfNeeded(device);
 			
 			UiObject settings = device.findObject(matchesAnyString("Settings", "SETTINGS"));
 			if (settings.waitForExists(200)) {
 				settings.click();
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 					device.findObject(matchesAnyString("Allow from this source")).click();
+
+					UiObject installButton = device.findObject(install);
+					if (installButton.waitForExists(1000)) {
+						installButton.click();
+					}
+
+					dismissAppScanRecommendedIfNeeded(device);
+
 					device.pressBack();
 				} else {
 					UiSelector unknownSources = matchesAnyString("Unknown sources");
@@ -136,7 +183,9 @@ public class TestUtil {
 				}
 			}
 			
-			device.findObject(install).click();
+			dismissAppScanRecommendedIfNeeded(device);
+			clickIfExists(device, install, 5000);
+
 			if (openApp) {
 				device.findObject(matchesAnyString("Open", "OPEN")).click();
 			} else {
