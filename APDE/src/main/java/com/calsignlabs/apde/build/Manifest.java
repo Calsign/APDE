@@ -38,7 +38,7 @@ public class Manifest {
     // Newer devices require a minimum target sdk to allow installing apps, so we want to never
     // produce apks with target sdks that are too old.
     private static final int MIN_TARGET_SDK = 26;
-	
+
 	public static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd.HHmm", Locale.US);
 	
 	public static ArrayList<Permission> permissions;
@@ -208,6 +208,10 @@ public class Manifest {
 	 * Also fill in any missing attributes that aren't yet set properly.
 	 */
 	protected void writeCopy(File file, String className, ComponentTarget appComp) {
+		writeCopy(file, className, appComp, true);
+	}
+
+	protected void writeCopy(File file, String className, ComponentTarget appComp, boolean debuggable) {
 		// write a copy to the build location
 		save(file);
 		
@@ -227,7 +231,7 @@ public class Manifest {
 			if (label.length() == 0) {
 				app.setString("android:label", className);
 			}
-			app.setString("android:debuggable", "true");
+			app.setString("android:debuggable", Boolean.toString(debuggable));
 			setExportedForIntentFilterComponents(app);
 			
 			// Services need the label also in the service section

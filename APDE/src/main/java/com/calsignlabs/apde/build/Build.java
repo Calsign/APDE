@@ -502,7 +502,7 @@ public class Build {
 			}
 			
 			File tempManifest = new File(buildFolder, "AndroidManifest.xml");
-			manifest.writeCopy(tempManifest, sketchClassName, getAppComponent());
+			manifest.writeCopy(tempManifest, sketchClassName, getAppComponent(), debug);
 			
 			if(!running.get()) { //CHECK
 				cleanUpHalt();
