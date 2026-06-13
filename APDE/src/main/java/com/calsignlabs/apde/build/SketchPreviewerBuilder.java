@@ -173,7 +173,7 @@ public class SketchPreviewerBuilder extends Task {
 			postStatus(R.string.preview_build_copying_preview_build_directory);
 			copyPreviewBuild();
 			postStatus(R.string.preview_build_copying_android_jar);
-			copyAndroidJar();
+			extractBuildResources();
 			postStatus(R.string.preview_build_setting_manifest_permissions);
 			setManifestPermissions();
 			postStatus(R.string.preview_build_running_aapt);
@@ -199,14 +199,12 @@ public class SketchPreviewerBuilder extends Task {
 		}
 	}
 	
-	protected void copyAndroidJar() throws BuildFailedException {
-		if (!getAndroidJarLoc().exists()) {
-			try {
-				StaticBuildResources.copyAndroidJar(editor);
-			} catch (IOException e) {
-				e.printStackTrace();
-				throw new BuildFailedException();
-			}
+	protected void extractBuildResources() throws BuildFailedException {
+		try {
+			StaticBuildResources.extractAll(editor);
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new BuildFailedException();
 		}
 	}
 	

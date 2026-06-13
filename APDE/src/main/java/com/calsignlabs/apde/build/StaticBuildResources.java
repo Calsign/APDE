@@ -1,18 +1,17 @@
 package com.calsignlabs.apde.build;
 
 import android.content.Context;
-import android.content.res.AssetManager;
-
-import com.calsignlabs.apde.R;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipFile;
 
 /**
  * Manages static build resources, build files that don't change between builds. We store them
@@ -23,9 +22,13 @@ import java.util.zip.ZipInputStream;
 public class StaticBuildResources {
 	public static void extractAll(Context context) throws IOException {
 		copyAndroidJar(context);
+		deleteFile(getResCompiledDir(context));
 		extractAssets(context, "res-compiled", StaticBuildResources.getResCompiledDir(context), true);
+		deleteFile(getJniLibsDir(context));
 		extractAssets(context, "jniLibs", StaticBuildResources.getJniLibsDir(context), false);
+		deleteFile(getLibsDir(context));
 		extractAssets(context, "libs", StaticBuildResources.getLibsDir(context), false);
+		deleteFile(getLibsDexDir(context));
 		extractAssets(context, "libs-dex", StaticBuildResources.getLibsDexDir(context), false);
 	}
 	
@@ -72,52 +75,137 @@ public class StaticBuildResources {
 			assetsPrefix = assetsPrefix + "/";
 		}
 		
-		AssetManager am = context.getAssets();
-		
 		outputDir.mkdir();
 		
-		String[] assetFiles = am.list(assetsPrefix);
-		if (assetFiles == null) {
-			System.err.println("Could not access assets directory: " + assetsPrefix);
-			throw new IOException("Could not access assets directory: " + assetsPrefix);
+		String[] assetFiles = listAssetFiles(context, assetsPrefix);
+		if (assetFiles.length == 0) {
+			throw new IOException("No assets found in directory: " + assetsPrefix);
 		}
 		for (String asset : assetFiles) {
 			String targetPrefix = asset.substring(0, asset.indexOf("__"));
 			File targetOutputDir = new File(outputDir, targetPrefix);
 			if (unzip) {
-				createFolderFromZippedAssets(am, assetsPrefix + asset, targetOutputDir);
+				createFolderFromZippedAssets(context, assetsPrefix + asset, targetOutputDir);
 			} else {
-				InputStream inputStream = am.open(assetsPrefix + asset);
-				createFileFromInputStream(inputStream, new File(targetOutputDir, asset));
-				inputStream.close();
+				createFileFromAsset(context, assetsPrefix + asset, new File(targetOutputDir, asset));
 			}
 		}
 	}
 	
-	private static File createFolderFromZippedAssets(AssetManager am, String zipFile, File destFile) {
+	private static String[] listAssetFiles(Context context, String assetsPrefix) throws IOException {
+		String[] assetFiles = context.getAssets().list(assetsPrefix);
+		if (assetFiles != null && assetFiles.length > 0) {
+			return assetFiles;
+		}
+		
+		List<String> zipAssetFiles = new ArrayList<>();
+		String zipPrefix = "assets/" + assetsPrefix;
+		try (ZipFile apk = new ZipFile(context.getApplicationInfo().sourceDir)) {
+			Enumeration<? extends ZipEntry> entries = apk.entries();
+			while (entries.hasMoreElements()) {
+				String name = entries.nextElement().getName();
+				if (!name.startsWith(zipPrefix) || name.length() == zipPrefix.length()) {
+					continue;
+				}
+				
+				String childName = name.substring(zipPrefix.length());
+				int slash = childName.indexOf('/');
+				if (slash >= 0) {
+					childName = childName.substring(0, slash);
+				}
+				
+				if (childName.length() > 0 && !zipAssetFiles.contains(childName)) {
+					zipAssetFiles.add(childName);
+				}
+			}
+		}
+		
+		return zipAssetFiles.toArray(new String[0]);
+	}
+	
+	private static void createFileFromAsset(Context context, String assetPath, File destFile) throws IOException {
 		try {
-			ZipInputStream inputStream = new ZipInputStream(am.open(zipFile));
+			InputStream inputStream = context.getAssets().open(assetPath);
+			if (createFileFromInputStream(inputStream, destFile) == null) {
+				throw new IOException("Failed to extract asset: " + assetPath);
+			}
+			return;
+		} catch (IOException ignored) {
+			// Fall through to reading directly from the APK.
+		}
+		
+		try (ZipFile apk = new ZipFile(context.getApplicationInfo().sourceDir)) {
+			ZipEntry entry = apk.getEntry("assets/" + assetPath);
+			if (entry == null) {
+				throw new IOException("Could not access asset: " + assetPath);
+			}
 			
+			if (createFileFromInputStream(apk.getInputStream(entry), destFile) == null) {
+				throw new IOException("Failed to extract asset: " + assetPath);
+			}
+		}
+	}
+	
+	private static void createFolderFromZippedAssets(Context context, String zipFile, File destFile) throws IOException {
+		try {
+			InputStream inputStream = context.getAssets().open(zipFile);
+			createFolderFromZipInputStream(inputStream, zipFile, destFile);
+			return;
+		} catch (IOException ignored) {
+			// Fall through to reading directly from the APK.
+		}
+		
+		try (ZipFile apk = new ZipFile(context.getApplicationInfo().sourceDir)) {
+			ZipEntry entry = apk.getEntry("assets/" + zipFile);
+			if (entry == null) {
+				throw new IOException("Could not access asset zip: " + zipFile);
+			}
+			
+			createFolderFromZipInputStream(apk.getInputStream(entry), zipFile, destFile);
+		}
+	}
+	
+	private static void createFolderFromZipInputStream(InputStream input, String zipFile, File destFile) throws IOException {
+		try (ZipInputStream inputStream = new ZipInputStream(input)) {
+			boolean found = false;
 			ZipEntry zipEntry = null;
 			while ((zipEntry = inputStream.getNextEntry()) != null) {
+				found = true;
 				File file = new File(destFile.getAbsolutePath(), zipEntry.getName());
 				
 				if (zipEntry.isDirectory()) {
 					file.mkdirs();
 				} else {
-					createFileFromInputStream(inputStream, file, false);
+					if (createFileFromInputStream(inputStream, file, false) == null) {
+						throw new IOException("Failed to extract " + zipEntry.getName() + " from " + zipFile);
+					}
 					inputStream.closeEntry();
 				}
 			}
 			
-			inputStream.close();
-			
-			return destFile;
-		} catch (IOException e) {
-			e.printStackTrace();
+			if (!found) {
+				throw new IOException("No entries found in asset zip: " + zipFile);
+			}
+		}
+	}
+	
+	private static void deleteFile(File file) throws IOException {
+		if (!file.exists()) {
+			return;
 		}
 		
-		return null;
+		if (file.isDirectory()) {
+			File[] children = file.listFiles();
+			if (children != null) {
+				for (File child : children) {
+					deleteFile(child);
+				}
+			}
+		}
+		
+		if (!file.delete()) {
+			throw new IOException("Failed to delete file: " + file.getAbsolutePath());
+		}
 	}
 	
 	public static File createFileFromInputStream(InputStream inputStream, File destFile) {
