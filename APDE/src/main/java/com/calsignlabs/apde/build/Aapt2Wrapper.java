@@ -34,6 +34,10 @@ public class Aapt2Wrapper {
 		}
 	}
 	
+	public static List<Aapt2Jni.Log> getLogs() {
+		return useAapt2Bin() ? Collections.<Aapt2Jni.Log>emptyList() : Aapt2Jni.getLogs();
+	}
+	
 	public static void compile(APDE context, List<String> args) throws InvocationFailedException, IOException, InterruptedException {
 		if (useAapt2Bin()) {
 			List<String> fullArgs = new ArrayList<>(args);

@@ -769,7 +769,7 @@ public class Build {
 			if (customProblems) {
 				// add problems
 				// they will be reported after compilation
-				for (Aapt2Jni.Log log : Aapt2Jni.getLogs()) {
+				for (Aapt2Jni.Log log : Aapt2Wrapper.getLogs()) {
 					compilerProblems.add(Aapt2Wrapper.buildCompilerProblem(log));
 				}
 			}
