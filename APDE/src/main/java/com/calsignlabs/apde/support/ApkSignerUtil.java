@@ -18,7 +18,7 @@ public class ApkSignerUtil {
 		ZipSigner signer = new ZipSigner();
 		signer.setKeymode(DEBUG_KEY_MODE);
 
-		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) {
+		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
 			signer.signZip(inputApk.getAbsolutePath(), outputApk.getAbsolutePath());
 			return;
 		}
@@ -31,6 +31,13 @@ public class ApkSignerUtil {
 	public static void signApk(File inputApk, File outputApk, String signerName,
 			PrivateKey privateKey, List<X509Certificate> certificates, int minSdkVersion,
 			boolean signV1, boolean debuggable) throws Exception {
+		if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
+			ZipSigner signer = new ZipSigner();
+			signer.setKeys(signerName, certificates.get(0), privateKey, null);
+			signer.signZip(inputApk.getAbsolutePath(), outputApk.getAbsolutePath());
+			return;
+		}
+
 		ApkSigner.SignerConfig signerConfig = new ApkSigner.SignerConfig.Builder(
 				signerName,
 				privateKey,
