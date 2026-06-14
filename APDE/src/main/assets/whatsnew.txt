@@ -1,3 +1,16 @@
+v0.5.3
+
+ - Switch to AAPT2
+   - Fixes build on newer Android versions
+   - Reports AAPT2 errors
+ - Upgrade Android mode to 4.6.0 (413)
+ - Bug fixes and improvements
+
+APDE will no longer be released on Google Play due to Google's policy
+changes.
+
+------------------------------------------------------------------------
+
 v0.5.2-pre2 Alpha
 
  - Real-time compilation
