@@ -309,19 +309,27 @@ public class Manifest {
 	 * @param targetSdk
 	 */
 	public void setTargetSdk(int targetSdk) {
-		xml.getChild("uses-sdk").setInt("android:targetSdkVersion", Math.max(targetSdk, MIN_TARGET_SDK));
+		getUsesSdk().setInt("android:targetSdkVersion", Math.max(targetSdk, MIN_TARGET_SDK));
 	}
 	
 	public void setMinSdk(int minSdk) {
-		xml.getChild("uses-sdk").setInt("android:minSdkVersion", minSdk);
+		getUsesSdk().setInt("android:minSdkVersion", minSdk);
 	}
 	
 	public int getTargetSdk() {
-		return xml.getChild("uses-sdk").getInt("android:targetSdkVersion", context.getResources().getInteger(R.integer.prop_target_sdk_default));
+		return getUsesSdk().getInt("android:targetSdkVersion", context.getResources().getInteger(R.integer.prop_target_sdk_default));
 	}
 	
 	public int getMinSdk() {
-		return xml.getChild("uses-sdk").getInt("android:minSdkVersion", context.getResources().getInteger(R.integer.prop_min_sdk_default));
+		return getUsesSdk().getInt("android:minSdkVersion", context.getResources().getInteger(R.integer.prop_min_sdk_default));
+	}
+
+	private XML getUsesSdk() {
+		XML usesSdk = xml.getChild("uses-sdk");
+		if (usesSdk == null) {
+			usesSdk = xml.addChild("uses-sdk");
+		}
+		return usesSdk;
 	}
 	
 	/**
@@ -373,7 +381,7 @@ public class Manifest {
 					xml.setString("android:versionName", versionName);
 				}
 				if (targetSdk != -1) {
-					xml.getChild("uses-sdk").setString("android:targetSdkVersion", Integer.toString(targetSdk));
+					getUsesSdk().setString("android:targetSdkVersion", Integer.toString(targetSdk));
 				}
 				if (orientation != null) {
 					xml.getChild("application").getChild("activity").setString("android:screenOrientation", orientation);
@@ -435,11 +443,12 @@ public class Manifest {
 	
 	public void updateProcessing3() {
 		xml.getChild("application").getChild("activity").setString("android:name", ".MainActivity");
-		if (xml.getChild("uses-sdk").getInt("android:minSdkVersion") < 17) {
-			xml.getChild("uses-sdk").setInt("android:minSdkVersion", 17);
+		XML usesSdk = getUsesSdk();
+		if (usesSdk.getInt("android:minSdkVersion") < 17) {
+			usesSdk.setInt("android:minSdkVersion", 17);
 		}
-		if (xml.getChild("uses-sdk").getInt("android:targetSdkVersion") < 17) {
-			xml.getChild("uses-sdk").setInt("android:targetSdkVersion", 17);
+		if (usesSdk.getInt("android:targetSdkVersion") < 17) {
+			usesSdk.setInt("android:targetSdkVersion", 17);
 		}
 	}
 	

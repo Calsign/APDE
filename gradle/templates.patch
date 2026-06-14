@@ -15,11 +15,10 @@ diff --git ARManifest.xml.tmpl ARManifest.xml.tmpl
 index 4201872..add528d 100644
 --- ARManifest.xml.tmpl
 +++ ARManifest.xml.tmpl
-@@ -5,7 +5,7 @@
+@@ -5,6 +5,7 @@
      package=""
      android:versionCode="1"
      android:versionName="1.0">
--  <uses-sdk android:minSdkVersion="@@min_sdk@@" />
 +  <uses-sdk android:minSdkVersion="@@min_sdk@@" android:targetSdkVersion="@@target_sdk@@" />
    <uses-permission android:name="android.permission.CAMERA"/>
    <uses-feature android:name="android.hardware.camera.ar" android:required="true"/>
@@ -41,11 +40,10 @@ diff --git AppManifest.xml.tmpl AppManifest.xml.tmpl
 index f8f0cba..3a545d6 100644
 --- AppManifest.xml.tmpl
 +++ AppManifest.xml.tmpl
-@@ -3,7 +3,7 @@
+@@ -3,6 +3,7 @@
            package=""
            android:versionCode="1"
-           android:versionName="1.0">              
--    <uses-sdk android:minSdkVersion="@@min_sdk@@" />    
+           android:versionName="1.0">
 +    <uses-sdk android:minSdkVersion="@@min_sdk@@" android:targetSdkVersion="@@target_sdk@@" />
      <application android:label=""
                   android:icon="@mipmap/ic_launcher">
@@ -74,11 +72,10 @@ diff --git VRManifest.xml.tmpl VRManifest.xml.tmpl
 index e6e842b..d70c577 100644
 --- VRManifest.xml.tmpl
 +++ VRManifest.xml.tmpl
-@@ -3,7 +3,7 @@
+@@ -3,6 +3,7 @@
            package=""
            android:versionCode="1"
-           android:versionName="1.0">              
--    <uses-sdk android:minSdkVersion="@@min_sdk@@" />
+           android:versionName="1.0">
 +    <uses-sdk android:minSdkVersion="@@min_sdk@@" android:targetSdkVersion="@@target_sdk@@" />
      <uses-permission android:name="android.permission.VIBRATE" />
      <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -94,11 +91,10 @@ diff --git WallpaperManifest.xml.tmpl WallpaperManifest.xml.tmpl
 index 1bd1b42..afde065 100644
 --- WallpaperManifest.xml.tmpl
 +++ WallpaperManifest.xml.tmpl
-@@ -3,7 +3,7 @@
+@@ -3,6 +3,7 @@
            package=""
            android:versionCode="1"
-           android:versionName="1.0">              
--    <uses-sdk android:minSdkVersion="@@min_sdk@@" />
+           android:versionName="1.0">
 +    <uses-sdk android:minSdkVersion="@@min_sdk@@" android:targetSdkVersion="@@target_sdk@@" />
      <uses-feature android:name="android.software.live_wallpaper" />       
      <application android:label=""
@@ -122,11 +118,10 @@ diff --git WatchFaceManifest.xml.tmpl WatchFaceManifest.xml.tmpl
 index a00fa04..ed89194 100644
 --- WatchFaceManifest.xml.tmpl
 +++ WatchFaceManifest.xml.tmpl
-@@ -3,7 +3,7 @@
+@@ -3,6 +3,7 @@
            package=""
            android:versionCode="1"
-           android:versionName="1.0">              
--    <uses-sdk android:minSdkVersion="@@min_sdk@@" />
+           android:versionName="1.0">
 +    <uses-sdk android:minSdkVersion="@@min_sdk@@" android:targetSdkVersion="@@target_sdk@@" />
      <uses-feature android:name="android.hardware.type.watch" />
      <uses-permission android:name="android.permission.WAKE_LOCK" />     

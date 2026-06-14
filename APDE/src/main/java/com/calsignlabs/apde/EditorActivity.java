@@ -5043,6 +5043,16 @@ public class EditorActivity extends AppCompatActivity {
 				FLAG_PREVIEW_COMPONENT_TARGET_NEWLY_UPDATED = true;
 			}
 		});
+
+        // v0.5.3
+
+        // Re-extract static build resources
+        upgradeChanges.add(new UpgradeChange(22) {
+			@Override
+			public void run() {
+				getGlobalState().getTaskManager().launchTask("reExtractStaticBuildResources", false, null, false, new ExtractStaticBuildResources());
+			}
+		});
 		
 		// Process changes
 		

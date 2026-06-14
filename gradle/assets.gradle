@@ -8,7 +8,7 @@ apply from: new File(rootProject.projectDir, 'gradle/artifacts.gradle')
  */
 
 task downloadAndroidMode(type: Download) {
-    src 'https://github.com/processing/processing-android/releases/download/android-279/AndroidMode-279.zip'
+    src 'https://github.com/processing/processing-android/releases/download/android-412/AndroidMode.zip'
     dest new File(project.downloads, 'AndroidMode.zip')
     overwrite false
 }
