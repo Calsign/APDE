@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+	<!-- The title of the app - APDE. I don't whether or not this will actually get translated. -->
+	<string name="apde_app_title">APDE</string>
+	<string name="title_activity_editor">APDE</string>
+
+	<!-- Items that appear in the editor (or sketch properties) menu. -->
+	<string name="editor_menu_save_sketch">Salvar sketch</string>
+	<string name="editor_menu_load_sketch">Carregar sketch</string>
+	<string name="editor_menu_run_sketch">Executar</string>
+	<string name="editor_menu_stop_sketch">Parar</string>
+	<string name="editor_menu_comp_select_app">App</string>
+	<string name="editor_menu_comp_select_wallpaper">Papel de parede</string>
+	<string name="editor_menu_comp_select_watchface">Mostrador</string>
+	<string name="editor_menu_comp_select_vr">VR</string>
+	<string name="editor_menu_comp_select_preview">Visualização</string>
+	<string name="editor_menu_undo">Desfazer</string>
+	<string name="editor_menu_redo">Refazer</string>
+	<string name="editor_menu_tools">Ferramentas</string>
+	<string name="editor_menu_new_sketch">Novo sketch</string>
+	<string name="editor_menu_rename_sketch">Renomear sketch</string>
+	<string name="editor_menu_delete_sketch">Excluir sketch</string>
+	<string name="editor_menu_open_sketch_properties">Propriedades do sketch</string>
+	<string name="editor_menu_copy_to_sketchbook">Copiar para o Sketchbook</string>
+	<string name="editor_menu_move_temp_to_sketchbook">Mover para o Sketchbook</string>
+	<!-- Note that "copy sketch" currently only appears in the sketch properties menu. -->
+	<string name="editor_menu_copy_sketch">Copiar sketch</string>
+
+	<string name="editor_menu_tab_new">Nova aba</string>
+	<string name="editor_menu_tab_rename">Renomear aba</string>
+	<string name="editor_menu_tab_delete">Excluir aba</string>
+
+	<!-- This is the title of the settings activity. -->
+	<string name="title_activity_settings">Configurações</string>
+
+	<!-- This is the last menu item in all activities except for settings activities themselves. -->
+	<string name="menu_open_settings">Configurações</string>
+
+	<string name="title_activity_sketch_properties">Propriedades do sketch</string>
+
+	<!-- Generic dialog options used in a lot of places. -->
+	<string name="ok">OK</string>
+	<string name="cancel">Cancelar</string>
+	<string name="delete">Excluir</string>
+	<string name="create">Criar</string>
+	<string name="overflow_more">Mais</string>
+
+	<!-- An empty array - used in some cases. Should not be translated. -->
+	<string-array name="empty"></string-array>
+
+	<!-- This dialog is shown to the user when they try to save a sketch to the external storage
+	     but the external storage is unavailable. -->
+	<string name="external_storage_unavailable_dialog_title">Armazenamento externo indisponível</string>
+	<string name="external_storage_unavailable_dialog_message">O sketch não pode ser salvo porque o armazenamento externo do seu dispositivo está indisponível ou não permite gravação.</string>
+
+	<!-- Messages shown to the user upon success/failure of saving the sketch. -->
+	<string name="message_sketch_save_success">O sketch foi salvo.</string>
+	<string name="message_sketch_save_failure">O sketch não foi salvo corretamente.</string>
+
+	<!-- Error messages shown to the user when they try to create or rename a tab to an invalid
+	     name. -->
+	<string name="tab_name_invalid_first_char">Erro: os nomes das abas não podem começar com número ou sublinhado!</string>
+	<string name="tab_name_invalid_char">Erro: os nomes das abas só podem conter letras, números e sublinhados!</string>
+	<string name="tab_name_invalid_no_char">Erro: os nomes das abas precisam conter texto!</string>
+	<string name="tab_name_invalid_same_title">Erro: esta aba já existe!</string>
+
+	<!-- Error messages shown to the user when trying to name the sketch something invalid when
+	     the message area is not visible - i.e. the drawer and sketch properties. -->
+	<string name="sketch_name_invalid_dialog_title">Nome inválido</string>
+	<string name="sketch_name_invalid_dialog_message_no_char">Os nomes dos sketches precisam conter texto!</string>
+	<string name="sketch_name_invalid_dialog_message_first_char">Os nomes dos sketches não podem começar com número ou sublinhado!</string>
+	<string name="sketch_name_invalid_dialog_message_invalid_char">Os nomes dos sketches só podem conter letras, números e sublinhados!</string>
+
+	<!-- Error messages shown to the user when trying to name the sketch something invalid when
+	     the message area is visible - i.e. the editor. -->
+	<string name="sketch_name_invalid_first_char">Erro: os nomes dos sketches não podem começar com número ou sublinhado!</string>
+	<string name="sketch_name_invalid_char">Erro: os nomes dos sketches só podem conter letras, números e sublinhados!</string>
+	<string name="sketch_name_invalid_no_char">Erro: os nomes dos sketches precisam conter texto!</string>
+
+	<!-- Error messages shown to the user when trying to name a folder something invalid from
+	     the drawer. -->
+	<string name="folder_name_invalid_folder_no_text">Os nomes das pastas precisam conter texto!</string>
+	<string name="folder_name_folder_invalid_char">Os nomes das pastas só podem conter letras, números, sublinhados e espaços!</string>
+
+	<!-- Dialogs and messages shown for creating, renaming, and deleting tabs in the editor. -->
+	<string name="tab_new_dialog_title">Nova aba</string>
+	<string name="tab_new_dialog_message">Digite o nome da nova aba:</string>
+	<string name="tab_new_success">A aba foi criada.</string>
+	<string name="tab_delete_dialog_title">Excluir aba?</string>
+	<string name="tab_delete_dialog_message">Tem certeza de que deseja excluir esta aba?</string>
+	<string name="tab_delete_success">A aba foi excluída.</string>
+	<string name="tab_rename_dialog_title">Renomear aba</string>
+	<string name="tab_rename_dialog_message">Digite o novo nome da aba:</string>
+	<string name="tab_rename_success">A aba foi renomeada.</string>
+
+	<!-- The names of the top-level folders in the drawer -->
+	<string name="drawer_folder_sketches">Sketches</string>
+	<string name="drawer_folder_examples">Exemplos</string>
+	<string name="drawer_folder_library_examples">Exemplos de bibliotecas</string>
+	<string name="drawer_folder_temporary">Temporário</string>
+	<string name="drawer_folder_recent">Recentes</string>
+
+	<!-- These are the accessibility labels for the drawer open/close button. -->
+	<string name="drawer_open_accessibility_text">Carregar sketch</string>
+	<string name="drawer_close_accessibility_text">Voltar ao sketch</string>
+
+	<string name="drawer_list_icon_accessibility_text">Ícone</string>
+
+	<!-- Delete sketch confirmation dialog. -->
+	<string name="delete_sketch_dialog_title">Excluir \&quot;<xliff:g example="testSketch" id="sketchName">%1$s</xliff:g>\&quot;?</string>
+	<string name="delete_sketch_dialog_message">Tem certeza de que deseja excluir \&quot;<xliff:g example="testSketch" id="sketchName">%1$s</xliff:g>\&quot;?</string>
+
+	<!-- Build messages. -->
+	<string name="build_message_begin">Compilando o sketch…</string>
+	<string name="build_message_gen_project">Criando o projeto Android…</string>
+	<string name="build_message_run_aapt">Empacotando recursos…</string>
+	<string name="build_message_run_ecj">Compilando…</string>
+	<string name="build_message_run_dx">Gerando DEX dos arquivos compilados…</string>
+	<string name="build_message_run_apkbuilder">Criando o arquivo APK…</string>
+	<string name="build_message_run_zipsigner_debug">Assinando o APK com um certificado de depuração…</string>
+	<string name="build_message_run_zipsigner_export">Assinando o APK com um certificado privado…</string>
+	<string name="build_message_run_sketch">Executando o sketch…</string>
+	<string name="build_message_send_to_watch">Enviando o sketch para o relógio…</string>
+	<string name="build_message_failed">A compilação falhou; verifique o console para mais informações.</string>
+	<string name="build_message_stopped_early">A compilação foi interrompida antes de o sketch ser iniciado.</string>
+	<string name="build_message_preview_launch">Abrindo a visualização do sketch…</string>
+
+	<!-- Title of the file chooser activity. -->
+	<string name="file_chooser_title">Selecionar arquivo</string>
+
+	<!-- Some tools. -->
+	<string name="tool_auto_format">Formatar automaticamente</string>
+	<string name="tool_auto_format_success">Formatação automática concluída</string>
+	<!-- These tools are contextual. -->
+	<string name="tool_comment_uncomment">Comentar/Descomentar</string>
+	<string name="tool_increase_indent">Aumentar recuo</string>
+	<string name="tool_decrease_indent">Diminuir recuo</string>
+
+	<!-- Character insert tray. -->
+	<string name="toggle_char_inserts_accessibility_text">Alternar bandeja de caracteres</string>
+	<string name="toggle_problem_overview_accessibility_text">Alternar visão geral de problemas</string>
+
+	<!-- Note; this settings activity is not currently used. -->
+	<string name="title_activity_character_tray_settings">Bandeja de caracteres especiais</string>
+
+	<!-- Import library and library manager. -->
+	<string name="tool_import_library">Importar biblioteca</string>
+	<string name="library_manager_no_contributed_libraries">A pasta de bibliotecas está vazia</string>
+	<string name="library_manager_open">Gerenciar bibliotecas</string>
+	<string name="title_activity_library_manager">Gerenciador de bibliotecas</string>
+	<string name="library_manager_menu_install_zip_library">Instalar biblioteca compactada</string>
+	<string name="library_manager_install_select_library_zip">Selecionar arquivo da biblioteca</string>
+	<string name="library_manager_install_dialog_title">Instalando</string>
+	<string name="library_manager_install_message_copying">Copiando</string>
+	<string name="library_manager_install_message_extracting">Extraindo</string>
+	<string name="library_manager_install_message_dexing">Gerando DEX</string>
+	<string name="library_manager_contrib_menu_uninstall">Desinstalar</string>
+	<string name="library_manager_contrib_uninstall_warning_title">Desinstalar</string>
+	<string name="library_manager_contrib_uninstall_warning_message">será desinstalada.</string>
+	<string name="library_manager_library_uninstall_dialog_title">Desinstalando</string>
+	<string name="library_manager_install_invalid_file_error_title">Arquivo inválido</string>
+	<string name="library_manager_install_invalid_file_error_message_nonexistant">O arquivo solicitado não existe. Tente usar outro gerenciador de arquivos.</string>
+	<string name="library_manager_install_invalid_file_error_message_not_zip">O arquivo solicitado não é um arquivo ZIP.</string>
+	<string name="library_manager_install_invalid_file_error_message_already_installed">A biblioteca solicitada já foi instalada.</string>
+	<string name="library_manager_menu_get_libraries">Obter bibliotecas</string>
+
+	<!-- Used by task manager. -->
+	<string name="task_run_in_background">Executar em segundo plano</string>
+
+	<!-- Color selector tool. -->
+	<string name="tool_color_selector">Seletor de cores</string>
+	<string name="tool_color_selector_red">Vermelho</string>
+	<string name="tool_color_selector_green">Verde</string>
+	<string name="tool_color_selector_blue">Azul</string>
+	<string name="tool_color_selector_hue">Matiz</string>
+	<string name="tool_color_selector_saturation">Saturação</string>
+	<string name="tool_color_selector_brightness">Brilho</string>
+	<string name="tool_color_selector_red_initial">R:</string>
+	<string name="tool_color_selector_green_initial">G:</string>
+	<string name="tool_color_selector_blue_initial">B:</string>
+	<string name="tool_color_selector_hue_initial">H:</string>
+	<string name="tool_color_selector_saturation_initial">S:</string>
+	<string name="tool_color_selector_brightness_initial">B:</string>
+	<string name="tool_color_selector_copy_hex_to_clipboard">Copiar hex para a área de transferência</string>
+	<string name="tool_color_selector_hex_color">Cor hexadecimal</string>
+	<string name="tool_color_selector_copy_hex_to_clipboard_success">Dados da cor hexadecimal copiados para a área de transferência.</string>
+
+	<!-- Used in the drawer file manager. -->
+	<string name="drawer_folder_empty">A pasta está vazia</string>
+	<string name="drawer_new_folder">Nova pasta</string>
+	<string name="drawer_edit_folder">Renomear pasta</string>
+	<string name="drawer_delete_folder">Excluir pasta</string>
+	<string name="drawer_delete_folder_dialog_title">Excluir \&quot;<xliff:g example="testSketch" id="sketchName">%1$s</xliff:g>\&quot;?</string>
+	<string name="drawer_delete_folder_dialog_message">Tem certeza de que deseja excluir a pasta \&quot;<xliff:g example="testFolder" id="folderName">%1$s</xliff:g>\&quot;?</string>
+	<string name="drawer_move_to_new_folder_title">Mover para nova pasta</string>
+	<string name="drawer_move_to_new_folder_message">Digite o nome da nova pasta:</string>
+	<!-- Used in the drawer and elsewhere. -->
+	<string name="rename_sketch_failure_title">Não é possível mover o sketch</string>
+	<string name="rename_sketch_failure_message">Já existe outro arquivo com o mesmo nome na pasta de destino.</string>
+	<string name="rename_move_folder_failure_title">Não é possível mover a pasta</string>
+	<string name="rename_move_folder_failure_message">Já existe outro arquivo com o mesmo nome na pasta de destino.</string>
+	<string name="rename_sketch_title">Renomear \&quot;<xliff:g example="testSketch" id="sketchName">%1$s</xliff:g>\&quot;</string>
+	<string name="rename_sketch_message">Digite o novo nome do sketch:</string>
+	<string name="rename_sketch_button">Renomear</string>
+	<string name="rename_folder_title">Renomear a pasta \&quot;<xliff:g example="testFolder" id="folderName">%1$s</xliff:g>\&quot;</string>
+	<string name="rename_folder_message">Digite o novo nome da pasta:</string>
+	<string name="rename_folder_button">Renomear</string>
+	<string name="move_temp_to_sketchbook_title">Mover para o Sketchbook</string>
+	<string name="move_temp_to_sketchbook_message">Mover \&quot;<xliff:g example="sketch_20171221a" id="sketchName">%1$s</xliff:g>\&quot; do armazenamento temporário para o Sketchbook?</string>
+	<string name="move_temp_to_sketchbook_button">Mover</string>
+
+	<!-- Export eclipse project tool. -->
+	<string name="export_gradle_project">Exportar projeto Gradle</string>
+	<string name="export_gradle_project_success">O projeto Gradle foi exportado.</string>
+
+	<!-- Export signed package tool. -->
+	<string name="export_signed_package">Exportar pacote assinado</string>
+	<string name="export_signed_package_keystore_file">Keystore</string>
+	<string name="export_signed_package_keystore_file_select">Selecionar arquivo de keystore</string>
+	<string name="export_signed_package_keystore_new">Criar keystore</string>
+	<string name="export_signed_package_keystore_password">Senha do keystore</string>
+	<string name="export_signed_package_keystore_password_confirm">Confirmar senha do keystore</string>
+	<string name="export_signed_package_key_alias">Alias da chave</string>
+	<string name="export_signed_package_key_alias_new">Criar chave</string>
+	<string name="export_signed_package_key_alias_password">Senha da chave</string>
+	<string name="export_signed_package_key_alias_password_confirm">Confirmar senha da chave</string>
+	<string name="export_signed_package_export">Exportar</string>
+	<string name="export_signed_package_no_aliases">Alias (keystore vazio)</string>
+	<string name="export_signed_package_certificate_validity">Validade (anos):</string>
+	<string name="export_signed_package_certificate_name">Nome e sobrenome:</string>
+	<string name="export_signed_package_certificate_organizational_unit">Unidade organizacional:</string>
+	<string name="export_signed_package_certificate_organization">Organização:</string>
+	<string name="export_signed_package_certificate_city">Cidade ou localidade:</string>
+	<string name="export_signed_package_certificate_state">Estado ou província:</string>
+	<string name="export_signed_package_certificate_country">Código do país (XX):</string>
+	<string name="export_signed_package_certificate_field_empty_default">Desconhecido</string>
+	<string name="export_signed_package_certificate_validity_default">25</string>
+	<string name="export_signed_package_success">O pacote assinado foi exportado.</string>
+	<string name="export_signed_package_error_keystore_file_nonexistant">O arquivo de keystore não existe</string>
+	<string name="export_signed_package_error_keystore_not_recoverable">Keystore não recuperável; a senha pode estar incorreta</string>
+	<string name="export_signed_package_info_enter_keystore_file">Digite ou selecione o caminho do arquivo de keystore</string>
+	<string name="export_signed_package_info_enter_keystore_password">Digite a senha do keystore</string>
+	<string name="export_signed_package_info_enter_key_password">Digite a senha da chave</string>
+	<string name="export_signed_package_error_key_not_recoverable">Chave não recuperável; a senha pode estar incorreta</string>
+	<string name="export_signed_package_error_unexpected">Ocorreu um erro inesperado</string>
+	<string name="export_signed_package_info_create_key">Pressione o botão \&quot;+\&quot; para criar uma nova chave</string>
+	<!-- Note that the formattedDate field in the following strings are populated by a date
+	     formatted using the format specified by export_signed_package_date_format. -->
+	<string name="export_signed_package_info_export_ready">Pronto para exportar o sketch \&quot;<xliff:g example="testSketch" id="sketchName">%1$s</xliff:g>\&quot;\n\nO certificado expira em <xliff:g example="Thursday, December 21, 2017" id="formattedDate">%2$s</xliff:g></string>
+	<string name="export_signed_package_error_certificate_expired">O certificado expirou em <xliff:g example="Thursday, December 21, 2017" id="formattedDate">%1$s</xliff:g></string>
+	<string name="export_signed_package_error_certificate_not_yet_valid">O certificado só é válido a partir de <xliff:g example="Thursday, December 21, 2017" id="formattedDate">%1$s</xliff:g></string>
+	<!-- This is a date formatted using Java's SimpleDateFormat. See the following link for more
+	     information: https://developer.android.com/reference/java/text/SimpleDateFormat.html -->
+	<string name="export_signed_package_date_format">EEEE, d \'de\' MMMM \'de\' yyyy</string>
+	<string name="export_signed_package_error_passwords_disagree">As senhas não coincidem</string>
+	<string name="export_signed_package_warning_keystore_exists">Vai sobrescrever o arquivo existente</string>
+	<string name="export_signed_package_warning_short_password">Considere usar uma senha mais longa</string>
+	<!-- Keystore type is one of keystore_type_jks or keystore_type_bks. -->
+	<string name="export_signed_package_info_create_keystore_ready">Pronto para criar o keystore <xliff:g example="JKS" id="keystoreType">%1$s</xliff:g></string>
+	<string name="export_signed_package_info_enter_alias">Digite o alias da chave</string>
+	<string name="export_signed_package_info_enter_alias_password">Digite a senha da chave</string>
+	<string name="export_signed_package_info_enter_certificate_validity">Digite a validade do certificado</string>
+	<string name="export_signed_package_info_create_key_ready">Pronto para criar a chave</string>
+	<string name="export_signed_package_warning_key_exists">Vai sobrescrever a chave existente</string>
+	<string name="export_signed_package_warning_certificate_validity_short">Os certificados devem ser válidos por pelo menos 25 anos</string>
+	<string name="export_signed_package_warning_certificate_empty">Considere fornecer as informações do certificado</string>
+	<string name="export_signed_package_keystore_type_jks">JKS</string>
+	<string name="export_signed_package_keystore_type_bks">BKS</string>
+	<string name="export_signed_package_long_info_message">Gera um APK em modo de lançamento. Isso é recomendado para criar versões de produção de sketches adequadas para compartilhar com amigos ou enviar para o Google Play. No entanto, as ferramentas do SDK do Android são mais apropriadas para essa tarefa e devem ser usadas preferencialmente, especialmente para aplicativos profissionais e/ou comerciais.\n\nOs keystores gerados e usados pelo APDE são armazenados no armazenamento externo do dispositivo. A segurança desses keystores está, portanto, ligada à segurança do hardware do dispositivo e de quaisquer outros aplicativos que possam ter acesso ao armazenamento externo. Além disso, a segurança das chaves geradas e usadas pelo APDE está ligada à força das senhas usadas para protegê-las. O APDE recomenda uma senha com pelo menos oito caracteres, mas isso não é, de forma alguma, uma garantia de segurança da senha.\n\nSe um aplicativo for enviado para o Google Play, ele deve ser assinado com a mesma chave/certificado para que as atualizações sejam entregues sem problemas. Se uma chave/certificado diferente for usado, então um novo aplicativo com um nome de pacote diferente deve ser criado.\n\nA CalsignLabs, William Smith, etc. não se responsabilizam por quaisquer danos de segurança ou legais causados pelo uso ou mau uso da funcionalidade de exportação fornecida pelo APDE.</string>
+	<string name="export_signed_package_long_info_title">Informações sobre exportar pacote assinado</string>
+	<string name="export_signed_package_long_info_button">Informações</string>
+	<string name="export_signed_package_certificate_info">Informações do certificado</string>
+	<!-- These two labels are only used in the certificate info dialog. -->
+	<string name="export_signed_package_certificate_info_expiration_date">Data de expiração:</string>
+	<string name="export_signed_package_certificate_info_key_alias">Alias da chave:</string>
+
+	<!-- The library install failure dialog. -->
+	<string name="library_install_failure_title">Falha na instalação</string>
+	<string name="library_install_failure_message">A instalação da biblioteca falhou. Isso normalmente é causado por uma biblioteca mal formatada. Consulte o console para ver o stack trace.</string>
+
+	<!-- DX Dexer available from the library manager menu. -->
+	<string name="library_manager_menu_dx_dexer">DX Dexer</string>
+	<string name="dx_dexer_dex_button">Dex</string>
+	<string name="dx_dexer_input_file">Arquivo de entrada</string>
+	<string name="dx_dexer_output_file">Arquivo de saída</string>
+	<string name="dx_dexer_select_input_file">Selecionar arquivo de entrada</string>
+	<string name="dx_dexer_select_output_file">Selecionar arquivo de saída</string>
+	<string name="dx_dexer_error_enter_input_file">Digite o caminho do arquivo de entrada</string>
+	<string name="dx_dexer_error_enter_output_file">Digite o caminho do arquivo de saída</string>
+	<string name="dx_dexer_error_input_file_exist">O arquivo de entrada não existe</string>
+	<string name="dx_dexer_error_output_file_exist">O arquivo de saída não pode existir</string>
+	<string name="dx_dexer_error_input_file_directory">O arquivo de entrada não pode ser uma pasta</string>
+	<string name="dx_dexer_error_input_extension">O arquivo de entrada deve ser um arquivo .JAR, .ZIP ou .APK</string>
+	<string name="dx_dexer_error_output_extension">O arquivo de saída deve ser um arquivo .DEX, .JAR, .ZIP ou .APK</string>
+	<string name="dx_dexer_info_ready">Pronto para executar o DX Dexer</string>
+	<string name="dx_dexer_dialog_title">Gerando DEX</string>
+
+	<!-- Examples update. -->
+	<string name="examples_update_success">Os exemplos foram atualizados.</string>
+	<string name="examples_update_dialog_update_button">Atualizar</string>
+	<string name="examples_update_dialog_title">Atualizar exemplos</string>
+	<string name="examples_update_dialog_message">Há uma atualização disponível para o repositório de exemplos.\n\nRealizar esta atualização vai se conectar aos servidores do GitHub.\n\nAs atualizações de exemplos podem ser configuradas em Configurações > Geral > Atualizações de exemplos.</string>
+	<string name="examples_update_dialog_dont_show_again">Não mostrar novamente</string>
+	<string name="examples_update_dialog_disable_warning">Não verificará atualizações de exemplos a menos que você reative as verificações nas Configurações.</string>
+	<string name="examples_update_progress_message">Atualizando exemplos…</string>
+	<!-- Examples update settings force re-download button. -->
+	<string name="examples_update_settings_download_now">Baixar exemplos novamente agora</string>
+	<string name="examples_update_settings_download_now_mobile_data_error_dialog_title">Sem Wi-Fi</string>
+	<string name="examples_update_settings_download_now_mobile_data_error_dialog_message">Não é possível baixar os exemplos agora porque o dispositivo não está conectado a uma rede Wi-Fi. O download de exemplos por dados móveis está desativado.</string>
+
+	<!-- Name of the git manager tool. -->
+	<string name="tool_git_manager">Gerenciador Git</string>
+
+	<!-- File deletion task. -->
+	<string name="task_delete_begin">Excluindo arquivo&#8230;</string>
+	<string name="task_delete_finish">Arquivo excluído.</string>
+	<string name="task_delete_failure">Falha ao excluir o arquivo.</string>
+
+	<!-- Find/replace tool. -->
+	<string name="tool_find_replace">Localizar/Substituir</string>
+	<string name="tool_find_replace_find">Localizar</string>
+	<string name="tool_find_replace_replace">Substituir</string>
+	<string name="tool_find_replace_close">Fechar</string>
+	<string name="tool_find_replace_replace_all">Substituir tudo</string>
+	<string name="tool_find_replace_more_options">Mais opções</string>
+	<string name="tool_find_replace_replace_and_find">Substituir e localizar</string>
+	<string name="tool_find_replace_expand_collapse">Expandir/Recolher</string>
+	<string name="tool_find_replace_expand">Expandir</string>
+	<string name="tool_find_replace_collapse">Recolher</string>
+	<string name="tool_find_replace_options_direction">Direção</string>
+	<string name="tool_find_replace_options_direction_forward">Para frente</string>
+	<string name="tool_find_replace_options_direction_backward">Para trás</string>
+	<string name="tool_find_replace_options_scope">Escopo</string>
+	<string name="tool_find_replace_options_scope_selection">Seleção</string>
+	<string name="tool_find_replace_options_scope_current_tab">Aba atual</string>
+	<string name="tool_find_replace_options_scope_all_tabs">Todas as abas</string>
+	<string name="tool_find_replace_options_highlight_all">Destacar tudo</string>
+	<string name="tool_find_replace_options_wrap_around">Voltar ao início</string>
+	<string name="tool_find_replace_options_case_sensitive">Diferenciar maiúsculas de minúsculas</string>
+	<string name="tool_find_replace_options_reg_exp">Expressões regulares</string>
+	<string name="tool_find_replace_end">Fim do arquivo alcançado</string>
+
+	<!-- Uninstall sketch tool. -->
+	<string name="tool_uninstall_sketch">Desinstalar sketch</string>
+	<string name="tool_uninstall_sketch_error_not_installed_dialog_title">Sketch não instalado</string>
+	<string name="tool_uninstall_sketch_error_not_installed_dialog_message">O sketch não pode ser desinstalado porque não está instalado.</string>
+
+	<!-- Manage wallpapers tool. -->
+	<string name="tool_manage_wallpapers">Papéis de parede ao vivo</string>
+
+	<!-- What's new dialog. -->
+	<string name="whats_new">Novidades</string>
+	<string name="whats_new_more">Mais mudanças</string>
+	<string name="whats_new_keep_showing">Mostrar quando o APDE for atualizado</string>
+
+	<!-- The text added to the end of a sketch name when it is copied with "copy sketch" in sketch
+	     properties. -->
+	<string name="copy_suffix">_copia</string>
+
+	<!-- Warning for when there is a screen overlay preventing the user from using the system
+	     package installer. See the following link for more information:
+	     https://github.com/Calsign/APDE/wiki/Screen-Overlays-and-the-Install-Screen -->
+	<string name="screen_overlay_dialog_title">Sobreposição de tela detectada</string>
+	<string name="screen_overlay_dialog_message">Desative o app de sobreposição de tela durante a instalação do sketch.\n\nOutro app está desenhando sobre toda a tela no momento. Esse app pode ser o Twilight, o Lux ou um app semelhante de escurecimento de tela/filtro de luz azul. Como recurso de segurança, o sistema Android impedirá que você pressione o botão \"Instalar\" na tela do instalador de pacotes enquanto esse app estiver ativado.\n\nPressione \"Informações\" abaixo para mais informações online. Pressione \"Instalar\" se quiser prosseguir mesmo assim.</string>
+	<string name="screen_overlay_dialog_dont_show_again">Não mostrar novamente</string>
+	<string name="screen_overlay_info_wiki_url">https://github.com/Calsign/APDE/wiki/Screen-Overlays-and-the-Install-Screen</string>
+	<string name="screen_overlay_dialog_install_anyway">Instalar</string>
+
+	<!-- Find in reference tool (contextual). -->
+	<string name="tool_find_in_reference">Localizar na referência</string>
+	<!-- Note that the token will be one that cannot be found in the refernece. The example, PImage,
+	     can be found in the reference. -->
+	<string name="tool_find_in_reference_failure_not_found">Não foi possível encontrar \"<xliff:g example="PImage" id="token">%1$s</xliff:g>\" na referência</string>
+	<!-- Open reference tool. -->
+	<string name="tool_open_reference">Abrir referência</string>
+	<!-- The reference activity. -->
+	<string name="title_activity_reference">Referência</string>
+	<string name="reference_menu_open_uri_external_browser">Abrir no navegador</string>
+	<!-- The reference viewer can display the main Processing reference and the smaller reference
+	     on the Android Processing site. These strings identify which site the user is currently
+	     browsing. These strings should probably not be translated. -->
+	<string name="reference_source_processing">Processing</string>
+	<string name="reference_source_android_processing">Android Processing</string>
+
+	<!-- External sketches are sketches that exist outside of the sketch folder and are loaded
+	     through an external file manager. -->
+	<string name="sketch_load_external_success">Sketch externo carregado.</string>
+
+	<!-- Used in the library manager to indicate the author of the libary. The library author is
+	     provided by the library's properties file and includes the name and a URL. -->
+	<string name="library_manager_library_author_by">por <xliff:g example="William Smith (calsignlabs.com)" id="author">%1$s</xliff:g></string>
+
+	<!-- Extract static build resources button in settings. -->
+	<string name="task_extract_static_build_resources_start">Extraindo recursos de compilação estáticos…</string>
+	<string name="task_extract_static_build_resources_done">Extração dos recursos de compilação estáticos concluída.</string>
+
+	<string name="apde_0_5_upgrade_error">\n\nErro ao atualizar as informações do último sketch aberto para a v0.5.0.\nReporte o stack trace acima ao desenvolvedor.\n\nO seu último sketch aberto foi copiado para um sketch temporário.\nO sketch original continua lá.\n\nVocê não deve ver esta mensagem novamente.</string>
+
+	<!-- Watchfaces -->
+	<string name="watchface_watch_disconnected_dialog_title">Relógio indisponível</string>
+	<string name="watchface_watch_disconnected_dialog_message">Não foi possível conectar ao app complementar do Wear. Verifique se o relógio está conectado ao celular e se o app APDE Wear Companion está instalado no relógio.</string>
+
+	<!-- Preview -->
+	<string name="preview_sketch_previewer_install_dialog_title">Instalar o visualizador de sketches</string>
+	<string name="preview_sketch_previewer_install_dialog_message">Instale o APK do visualizador de sketches uma vez para visualizar sketches sem precisar instalá-los sempre.\n\nObservação: é necessário reinstalar para conceder novas permissões ao visualizador.</string>
+	<string name="preview_sketch_previewer_install_dialog_install_button">Instalar</string>
+	<string name="task_install_sketch_previewer">Instalar o visualizador de sketches</string>
+
+	<!-- Problem overview -->
+	<string name="problem_overview_list_empty_message">Nenhum problema encontrado</string>
+	<!-- This is the tag for the clipboard data -->
+	<string name="problem_overview_list_copy_description">Problema do APDE</string>
+	<string name="problem_overview_list_copy_toast_message">Copiado para a área de transferência</string>
+
+	<!-- Build misc. -->
+	<string name="build_copying">Copiando…</string>
+
+	<!-- External storage permissions -->
+	<string name="external_storage_dialog_title">Acesso ao armazenamento externo</string>
+	<string name="external_storage_dialog_message">O APDE precisa de acesso ao armazenamento externo para armazenar sketches lá. Conceda as permissões necessárias ou altere o local do Sketchbook para o armazenamento interno.</string>
+	<string name="external_storage_dialog_grant_permission_button">Conceder permissão</string>
+	<string name="external_storage_dialog_use_internal_storage_button">Usar armazenamento interno</string>
+</resources>
